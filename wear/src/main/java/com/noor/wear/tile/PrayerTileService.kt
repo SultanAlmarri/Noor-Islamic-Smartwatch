@@ -40,7 +40,7 @@ class PrayerTileService : TileService() {
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> =
         SuspendToFutureAdapter.launchFuture {
-            val config = (application as NoorWearApp).config.current()
+            val config = (application as NoorWearApp).config.currentOrPull()
             val device = requestParams.deviceConfiguration
             val timeline = TimelineBuilders.Timeline.Builder()
             if (config == null) {

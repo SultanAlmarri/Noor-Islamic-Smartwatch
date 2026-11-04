@@ -34,6 +34,9 @@ class ConfigRepository(private val context: Context) {
 
     suspend fun current(): WatchConfig? = config.first()
 
+    /** The stored configuration, or the one waiting in the Data Layer if the watch app was installed after the phone published it. */
+    suspend fun currentOrPull(): WatchConfig? = current() ?: run { pullFromDataLayer(); current() }
+
     /** Stores a configuration from the phone. Returns true when it changed anything the watch shows. */
     suspend fun save(encoded: String): Boolean {
         val incoming = WatchConfig.decode(encoded) ?: return false

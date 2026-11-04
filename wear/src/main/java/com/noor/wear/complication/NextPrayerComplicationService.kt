@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit
 class NextPrayerComplicationService : SuspendingTimelineComplicationDataSourceService() {
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationDataTimeline? {
-        val config = (application as NoorWearApp).config.current()
+        val config = (application as NoorWearApp).config.currentOrPull()
             ?: return ComplicationDataTimeline(NoDataComplicationData(), emptyList())
         val now = Instant.now()
         val intervals = Intervals.upcoming(config, now)
