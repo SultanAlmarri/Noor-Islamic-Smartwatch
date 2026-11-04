@@ -29,5 +29,5 @@ jobs:
           git config user.name "noor-accuracy-bot"
           git config user.email "noor-accuracy-bot@users.noreply.github.com"
           git add accuracy/blind
-          git diff --cached --quiet || git commit -m "Blind test: IACAD $(date -u +%Y-%m) official month and score"
+          git diff --cached --quiet || git commit -m "Blind test: re-score $(date -u +%Y-%m-%d) (IACAD fetch: ${{ steps.fetch.outcome }})"
           git push
