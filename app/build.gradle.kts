@@ -31,7 +31,14 @@ android {
     }
     buildFeatures { compose = true; buildConfig = true }
     androidResources { generateLocaleConfig = true }
-    testOptions { unitTests { isReturnDefaultValues = true; isIncludeAndroidResources = true } }
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+            isIncludeAndroidResources = true
+            // Optional mirror for Robolectric's Android jars (-Probolectric.repo=<url>) where Maven Central is rate-limited.
+            all { t -> providers.gradleProperty("robolectric.repo").orNull?.let { t.systemProperty("robolectric.dependency.repo.url", it) } }
+        }
+    }
 }
 
 kotlin { jvmToolchain(17) }

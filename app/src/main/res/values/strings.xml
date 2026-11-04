@@ -11,6 +11,7 @@
     <string name="in_duration">in %1$s</string>
     <string name="hours_minutes">%1$s h %2$s min</string>
     <string name="minutes_only">%1$s min</string>
+    <string name="remaining">remaining</string>
     <string name="less_than_minute">less than a minute</string>
     <string name="today">Today</string>
     <string name="tomorrow">Tomorrow</string>

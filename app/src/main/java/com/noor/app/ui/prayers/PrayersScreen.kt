@@ -133,13 +133,7 @@ fun PrayersScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onO
                         PrayerIcon(st.next.prayer, 26.dp, c.gold)
                         Spacer(Modifier.height(4.dp))
                         Text(f.countdown(st.untilNext), style = MaterialTheme.typography.titleLarge, color = c.textPrimary, fontWeight = FontWeight.Medium)
-                        val (h, m) = f.hoursMinutes(st.untilNext)
-                        val rel = when {
-                            h > 0 -> stringResource(R.string.hours_minutes, f.digits(h.toString()), f.digits(m.toString()))
-                            m > 0 -> stringResource(R.string.minutes_only, f.digits(m.toString()))
-                            else -> stringResource(R.string.less_than_minute)
-                        }
-                        Text(rel, style = MaterialTheme.typography.labelSmall, color = c.textSecondary, textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.remaining), style = MaterialTheme.typography.labelSmall, color = c.textSecondary, textAlign = TextAlign.Center)
                     }
                 }
             }

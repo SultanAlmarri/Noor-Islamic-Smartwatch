@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -66,6 +67,7 @@ class ScreenshotTest {
                 LocalContext provides ctx,
                 LocalConfiguration provides config,
                 LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
+                LocalActivityResultRegistryOwner provides rule.activity,
             ) {
                 NoorTheme(theme) {
                     NoorBackground {

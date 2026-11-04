@@ -11,6 +11,7 @@
     <string name="in_duration">بعد %1$s</string>
     <string name="hours_minutes">%1$s س %2$s د</string>
     <string name="minutes_only">%1$s دقيقة</string>
+    <string name="remaining">متبقٍ</string>
     <string name="less_than_minute">أقل من دقيقة</string>
     <string name="today">اليوم</string>
     <string name="tomorrow">غدًا</string>
