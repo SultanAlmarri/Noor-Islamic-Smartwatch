@@ -5,3 +5,7 @@
 
 Every month the workflow `.github/workflows/iacad-monthly.yml` makes one request to IACAD's public prayer-times feed,
 stores the month under `official/`, and rewrites `REPORT.md` with the score and every difference.
+
+**Status 4 Nov 2026:** IACAD's server refuses requests from GitHub's machines (HTTP 403). The request is not disguised to
+get around that. Until it is accepted, each month is captured from an ordinary browser visit to the official page and
+committed to `official/`; the workflow still re-scores everything on every push.
