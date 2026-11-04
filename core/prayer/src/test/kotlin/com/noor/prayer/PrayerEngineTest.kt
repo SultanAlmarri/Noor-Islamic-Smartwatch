@@ -20,6 +20,15 @@ class PrayerEngineTest {
         assertTrue(r.maxAbsSeconds < 0.5, "max deviation ${r.maxAbsSeconds}s at ${r.worst}")
     }
 
+    /** Official Dulook DXB times for April and December 2026 (December was predicted before it was seen). */
+    @Test fun dulookRecordingAgreement() {
+        val r = GoldenChecks.dulookRecording()
+        println("Dulook recording: ${r.exact}/${r.compared} exact, max ${r.maxAbsMinutes} min; ${r.misses}")
+        assertEquals(42, r.compared)
+        assertEquals(39, r.exact, "update docs/PRAYER_ACCURACY.md if this changes")
+        assertEquals(1, r.maxAbsMinutes)
+    }
+
     /** Locks the documented accuracy against official IACAD data; a change must be deliberate. */
     @Test fun iacadOfficialAgreementIsAsDocumented() {
         val r = GoldenChecks.iacadOfficial()

@@ -71,9 +71,18 @@ object GoldenChecks {
     data class OfficialResult(val compared: Int, val exact: Int, val perPrayer: Map<Prayer, Int>, val maxAbsMinutes: Int, val misses: List<String>)
 
     /** Dubai profile vs official IACAD times of the current convention era (from 20 Aug 2020). */
-    fun iacadOfficial(): OfficialResult {
-        val rows = resource("iacad_official_archive_2014_2023.csv").drop(1).map { it.split(',') } +
-            resource("iacad_api_2026-11.iso.csv").drop(1).map { it.split(',') }
+    fun iacadOfficial(): OfficialResult = compareDubai(
+        resource("iacad_official_archive_2014_2023.csv").drop(1).map { it.split(',') } +
+            resource("iacad_api_2026-11.iso.csv").drop(1).map { it.split(',') },
+    )
+
+    /** Dates read from the user's recording of the official Dulook DXB app (outside the Nov 2026 feed: Apr and Dec 2026). */
+    fun dulookRecording(): OfficialResult {
+        val feedDates = resource("iacad_api_2026-11.iso.csv").drop(1).map { it.substringBefore(',') }.toSet()
+        return compareDubai(resource("dulook_dxb_recording_2026.csv").drop(1).map { it.split(',') }.filter { it[0] !in feedDates })
+    }
+
+    private fun compareDubai(rows: List<List<String>>): OfficialResult {
         val zone = ZoneId.of("Asia/Dubai")
         var n = 0; var exact = 0; var maxAbs = 0
         val per = order.associateWith { 0 }.toMutableMap()
