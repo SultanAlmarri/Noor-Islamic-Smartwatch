@@ -73,12 +73,14 @@ class WatchSoundSender(private val context: Context, private val custom: CustomS
         val channels = Wearable.getChannelClient(context)
         val channel = channels.openChannel(nodeId, "$PATH_PREFIX$id/$ext").await()
         try {
+            // Closing the stream marks the end of the file; the watch closes the channel once it has stored it.
             withTimeout(120_000) {
                 channels.getOutputStream(channel).await().use { out -> open().use { it.copyTo(out, 64 * 1024) } }
             }
             Log.i(TAG, "Sent $id to $nodeId")
-        } finally {
+        } catch (e: Exception) {
             runCatching { channels.close(channel).await() }
+            throw e
         }
     }
 

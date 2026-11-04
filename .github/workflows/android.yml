@@ -21,14 +21,16 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
 
+      # Robolectric downloads its Android jars at test time; Maven Central sometimes refuses runners (HTTP 429), so the
+      # tests use Google's public mirror of Maven Central for those jars.
       - name: Prayer engine tests (accuracy against reference and official IACAD data)
         run: ./gradlew :core:prayer:test --stacktrace
 
       - name: Phone app tests (unit + rendered screens)
-        run: ./gradlew :alerts:testDebugUnitTest :app:testDebugUnitTest --stacktrace
+        run: ./gradlew :alerts:testDebugUnitTest :app:testDebugUnitTest --stacktrace -Probolectric.repo=https://maven-central.storage-download.googleapis.com/maven2/
 
       - name: Watch app tests (unit + rendered screens, tile, complication data; watch face validated by Google's validator)
-        run: ./gradlew :wear:testDebugUnitTest --stacktrace
+        run: ./gradlew :wear:testDebugUnitTest --stacktrace -Probolectric.repo=https://maven-central.storage-download.googleapis.com/maven2/
 
       - name: Build installable APKs
         run: ./gradlew :app:assembleRelease :wear:assembleRelease --stacktrace

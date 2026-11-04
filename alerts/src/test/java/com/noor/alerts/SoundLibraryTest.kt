@@ -17,6 +17,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34])
 class SoundLibraryTest {
 
     @get:Rule val tmp = TemporaryFolder()

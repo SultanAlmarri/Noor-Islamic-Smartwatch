@@ -107,7 +107,8 @@ fun AdhanScreen(
             SettingsItem(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_master), status, null) {
                 NoorSwitch(a.enabled) { on ->
                     vm.setEnabled(on)
-                    if (on && ready.canRequestNotifications) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    // The phone needs the permission only when it alerts itself (the watch asks on the watch).
+                    if (on && ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
             if (a.enabled && a.device.includes(AlertDevice.PHONE)) {
