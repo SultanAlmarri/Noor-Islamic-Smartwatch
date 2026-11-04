@@ -2,19 +2,18 @@ package com.noor.app
 
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.noor.app.data.ThemeMode
@@ -43,7 +42,7 @@ import java.util.Locale
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "w412dp-h915dp-xxhdpi")
 class ScreenshotTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private enum class Screen { PRAYERS, SETTINGS, WATCH, ACCURACY }
 
@@ -85,7 +84,11 @@ class ScreenshotTest {
             if (waitFor != null) rule.waitUntil(20_000) { rule.onAllNodesWithText(waitFor, substring = true).fetchSemanticsNodes().isNotEmpty() }
             rule.mainClock.advanceTimeBy(1200)
             rule.waitForIdle()
-            val bmp = rule.onRoot().captureToImage().asAndroidBitmap()
+            // captureToImage() waits on a PixelCopy callback posted to the main looper, which Robolectric runs on the
+            // test thread, so it deadlocks. Drawing the window's view tree into a bitmap is the same software render.
+            val root = rule.activity.window.decorView
+            val bmp = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.ARGB_8888)
+            root.draw(Canvas(bmp))
             val dir = File("build/screenshots").apply { mkdirs() }
             File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
