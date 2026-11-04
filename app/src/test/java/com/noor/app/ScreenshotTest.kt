@@ -42,6 +42,12 @@ import com.noor.app.ui.today.DayCache
 import com.noor.app.ui.today.TodayContent
 import com.noor.app.ui.today.TodayUi
 import com.noor.app.ui.watch.WatchScreen
+import com.noor.app.data.compass.CompassReading
+import com.noor.app.ui.qibla.CalibrationGuide
+import com.noor.app.ui.qibla.QiblaContent
+import com.noor.app.ui.qibla.QiblaPlace
+import com.noor.prayer.qibla.CompassAssessor
+import com.noor.prayer.qibla.Qibla
 import com.noor.app.util.Formatter
 import com.noor.prayer.Schedule
 import kotlinx.coroutines.runBlocking
@@ -69,7 +75,7 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -82,6 +88,13 @@ class ScreenshotTest {
         return TodayUi(s, place, profile, now, state, now.atZone(place.zone).toLocalDate(), refreshing = false, lastRefresh = null)
     }
 
+    /** A synthetic reading, as CompassSensor would produce it (no sensors under Robolectric). */
+    private fun reading(heading: Double, accuracyDeg: Double?, magStatus: Int, fieldUt: Double, tilt: Double) = CompassReading(
+        trueHeadingDeg = heading, declinationDeg = 1.95, headingAccuracyDeg = accuracyDeg, magnetometerStatus = magStatus,
+        fieldMicroTesla = fieldUt, expectedFieldMicroTesla = 44.0, tiltDeg = tilt,
+        assessment = CompassAssessor.assess(accuracyDeg, magStatus, fieldUt, 44.0, tilt), source = CompassReading.Source.ROTATION_VECTOR,
+    )
+
     @Test fun renderScreens() {
         val app = RuntimeEnvironment.getApplication() as NoorApplication
         runBlocking {
@@ -92,6 +105,7 @@ class ScreenshotTest {
         var screen by mutableStateOf(Screen.TODAY)
         var theme by mutableStateOf(ThemeMode.DARK)
         var arabic by mutableStateOf(false)
+        var reading by mutableStateOf<CompassReading?>(null)
         rule.setContent {
             val ctxBase = LocalContext.current
             val config = Configuration(ctxBase.resources.configuration).apply {
@@ -119,6 +133,15 @@ class ScreenshotTest {
                                 Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(NoorTheme.colors.surface)) {
                                     CalendarPicker(LocalDate.of(2026, 12, 18), u.today!!, s.hijriAdjust,
                                         Formatter(arabic, Numerals.WESTERN, TimeFormat.H12), {}, Modifier.padding(horizontal = 12.dp, vertical = 16.dp))
+                                }
+                            }
+                            Screen.QIBLA -> {
+                                val place = PrayerProvider.place(s)
+                                QiblaContent(pad, QiblaPlace(s, place, place?.let { Qibla.from(it.point) }), reading, false, {})
+                            }
+                            Screen.CALIBRATION -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(NoorTheme.colors.surface).padding(top = 24.dp)) {
+                                    CalibrationGuide(reading)
                                 }
                             }
                             Screen.SETTINGS -> SettingsScreen(pad, {}, {})
@@ -149,6 +172,21 @@ class ScreenshotTest {
         screen = Screen.TODAY; theme = ThemeMode.LIGHT; arabic = false; shot("06_today_day_en", "Maghrib")
         screen = Screen.TODAY_OTHER_DATE; shot("07_other_date_day_en", "18 December 2026")
         theme = ThemeMode.DARK
+        val qibla = Qibla.from(PrayerProvider.place(base)!!.point).bearingDeg
+        reading = reading(174.82, 7.5, 3, 44.0, 3.0)
+        screen = Screen.QIBLA; shot("11_qibla_turn_night_en", "Turn right")
+        reading = reading(qibla - 1.2, 6.0, 3, 44.0, 2.0)
+        shot("12_qibla_aligned_night_en", "Facing the Qibla")
+        reading = reading(301.4, 34.0, 1, 71.0, 4.0)
+        shot("13_qibla_poor_night_en", "Poor")
+        reading = reading(250.0, 8.0, 3, 44.0, 62.0)
+        shot("14_qibla_not_flat_night_en", "Hold your phone flat")
+        arabic = true; reading = reading(174.82, 7.5, 3, 44.0, 3.0)
+        shot("15_qibla_turn_night_ar", "القبلة")
+        arabic = false; theme = ThemeMode.LIGHT; reading = reading(qibla - 1.2, 6.0, 3, 44.0, 2.0)
+        shot("16_qibla_aligned_day_en", "Facing the Qibla")
+        theme = ThemeMode.DARK; reading = reading(301.4, 34.0, 1, 71.0, 4.0)
+        screen = Screen.CALIBRATION; shot("17_calibration_night_en", "Calibrate")
         screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")

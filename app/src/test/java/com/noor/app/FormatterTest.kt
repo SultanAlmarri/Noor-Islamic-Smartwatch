@@ -28,4 +28,14 @@ class FormatterTest {
         assertEquals("7:05", f.countdown(Duration.ofSeconds(7 * 60 + 5)))
         assertEquals(1L to 8L, f.hoursMinutes(Duration.ofSeconds(3600 + 7 * 60 + 5)))
     }
+
+    @Test fun degreesHaveExactlyTwoDecimals() {
+        val f = Formatter(false, Numerals.WESTERN, TimeFormat.H12)
+        assertEquals("\u200E259.39°\u200E", f.degrees(259.3912))
+        assertEquals("\u200E0.05°\u200E", f.degrees(0.049))
+        assertEquals("\u200E+\u200E83.49°\u200E", f.signedDegrees(83.49))
+        val a = Formatter(true, Numerals.ARABIC_INDIC, TimeFormat.H12)
+        assertEquals("\u200E٢٥٩٫٣٩°\u200E", a.degrees(259.39))
+        assertEquals("1,633 km", f.kilometres(1633.169))
+    }
 }

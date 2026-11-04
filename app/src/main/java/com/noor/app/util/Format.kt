@@ -9,7 +9,6 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -70,6 +69,22 @@ class Formatter(val arabic: Boolean, private val numerals: Numerals, private val
 
     fun number(n: Int): String = digits(n.toString())
 
+    /** Degrees with exactly two decimals, e.g. "259.39°" (Arabic-Indic numerals use the Arabic decimal separator). */
+    fun degrees(d: Double): String {
+        val s = String.format(Locale.US, "%.2f", d)
+        // Left-to-right marks keep "°" and any sign beside the number inside Arabic sentences.
+        return LRM + (if (numerals == Numerals.ARABIC_INDIC) digits(s).replace('.', '٫') else s) + "°" + LRM
+    }
+
+    /** Signed degrees: "+83.49°" / "−43.09°". */
+    fun signedDegrees(d: Double): String = LRM + (if (d > 0) "+" else if (d < 0) "−" else "") + degrees(kotlin.math.abs(d))
+
+    /** Whole kilometres with grouping, e.g. "1,633 km". */
+    fun kilometres(km: Double): String {
+        val s = String.format(Locale.US, "%,d", Math.round(km))
+        return (if (numerals == Numerals.ARABIC_INDIC) digits(s).replace(',', '٬') else s) + if (arabic) " كم" else " km"
+    }
+
     fun weekday(date: LocalDate): String = date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
 
     fun weekdayShort(d: DayOfWeek): String =
@@ -86,6 +101,5 @@ class Formatter(val arabic: Boolean, private val numerals: Numerals, private val
 
     fun monthYear(ym: YearMonth): String = "${monthName(ym.month)} ${digits(ym.year.toString())}"
 
-    @Suppress("unused")
-    private val iso = DateTimeFormatter.ISO_LOCAL_DATE
+    private companion object { const val LRM = "\u200E" }
 }

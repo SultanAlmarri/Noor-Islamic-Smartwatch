@@ -33,6 +33,7 @@ import com.noor.app.data.AppSettings
 import com.noor.app.ui.components.NoorBackground
 import com.noor.app.ui.onboarding.OnboardingScreen
 import com.noor.app.ui.today.TodayScreen
+import com.noor.app.ui.qibla.QiblaScreen
 import com.noor.app.ui.settings.AccuracyScreen
 import com.noor.app.ui.settings.CityPickerScreen
 import com.noor.app.ui.settings.SettingsScreen
@@ -61,6 +62,7 @@ private object Routes {
     const val ONBOARDING = "onboarding"
     const val PRAYERS = "prayers"
     const val WATCH = "watch"
+    const val QIBLA = "qibla"
     const val SETTINGS = "settings"
     const val CITIES = "cities"
     const val ACCURACY = "accuracy"
@@ -71,7 +73,7 @@ private fun NoorRoot(s: AppSettings) {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
-    val topLevel = route in setOf(Routes.PRAYERS, Routes.WATCH, Routes.SETTINGS)
+    val topLevel = route in setOf(Routes.PRAYERS, Routes.QIBLA, Routes.WATCH, Routes.SETTINGS)
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = { if (topLevel) NoorBottomBar(nav, route) },
@@ -89,6 +91,7 @@ private fun NoorRoot(s: AppSettings) {
             composable(Routes.PRAYERS) {
                 TodayScreen(content, onOpenLocation = { nav.navigate(Routes.SETTINGS) }, onOpenSource = { nav.navigate(Routes.ACCURACY) })
             }
+            composable(Routes.QIBLA) { QiblaScreen(content, onOpenLocation = { nav.navigate(Routes.SETTINGS) }) }
             composable(Routes.WATCH) { WatchScreen(content) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) })
@@ -119,6 +122,8 @@ private fun NoorBottomBar(nav: NavHostController, route: String?) {
         NavigationBarItem(route == Routes.PRAYERS, { go(Routes.PRAYERS) },
             icon = { Icon(painterResource(R.drawable.ic_prayer_isha), null, modifier = Modifier.padding(1.dp)) },
             label = { Text(stringResource(R.string.tab_today)) }, colors = colors)
+        NavigationBarItem(route == Routes.QIBLA, { go(Routes.QIBLA) },
+            icon = { Icon(painterResource(R.drawable.ic_kaaba), null) }, label = { Text(stringResource(R.string.tab_qibla)) }, colors = colors)
         NavigationBarItem(route == Routes.WATCH, { go(Routes.WATCH) },
             icon = { Icon(Icons.Rounded.Watch, null) }, label = { Text(stringResource(R.string.tab_watch)) }, colors = colors)
         NavigationBarItem(route == Routes.SETTINGS, { go(Routes.SETTINGS) },
