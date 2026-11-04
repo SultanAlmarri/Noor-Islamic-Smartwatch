@@ -50,6 +50,15 @@ data class WatchPreviewState(
  */
 @Composable
 fun WatchPreview(state: WatchPreviewState?, modifier: Modifier = Modifier, diameter: Dp = 196.dp, description: String) {
+    // An illustration inside a fixed circle: its text keeps its size whatever the system font scale.
+    val d = androidx.compose.ui.platform.LocalDensity.current
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, 1f)) {
+        WatchPreviewBody(state, modifier, diameter, description)
+    }
+}
+
+@Composable
+private fun WatchPreviewBody(state: WatchPreviewState?, modifier: Modifier, diameter: Dp, description: String) {
     Box(modifier.size(diameter + 28.dp).semantics { contentDescription = description }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(diameter + 28.dp)) {
             val c = center

@@ -67,7 +67,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -136,7 +135,7 @@ fun rememberDaylight(s: AppSettings, tables: OfficialTimetables?): Boolean? {
     }
 }
 
-private object Routes {
+internal object Routes {
     const val ONBOARDING = "onboarding"
     const val PRAYERS = "prayers"
     const val WATCH = "watch"
@@ -187,7 +186,15 @@ private fun NoorRoot(s: AppSettings) {
 
     Scaffold(
         containerColor = Color.Transparent,
-        bottomBar = { if (topLevel) NoorTabBar(nav, route) },
+        bottomBar = {
+            if (topLevel) NoorTabBar(route) { r ->
+                nav.navigate(r) {
+                    popUpTo(Routes.PRAYERS) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        },
     ) { padding ->
         val content = PaddingValues(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())
         NavHost(
@@ -230,16 +237,12 @@ private fun NoorRoot(s: AppSettings) {
 
 /** Five destinations. The selected one is gold, with a soft pill behind its icon; a light tick confirms the change. */
 @Composable
-private fun NoorTabBar(nav: NavHostController, route: String?) {
+internal fun NoorTabBar(route: String?, onSelect: (String) -> Unit) {
     val c = NoorTheme.colors
     val view = LocalView.current
     fun go(r: String) {
         if (r != route) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-        nav.navigate(r) {
-            popUpTo(Routes.PRAYERS) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
-        }
+        onSelect(r)
     }
     Column(Modifier.fillMaxWidth().background(c.surface)) {
         Hairline()

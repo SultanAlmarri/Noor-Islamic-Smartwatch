@@ -312,4 +312,7 @@
     <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك، واتجاه القبلة، والأذان، على هاتفك وساعتك.</string>
     <string name="onboarding_private">يبقى موقعك على هذا الهاتف.</string>
     <string name="adhan_custom_empty_title">أصواتك الخاصة</string>
+    <string name="today_suhoor">نهاية السحور</string>
+    <string name="today_iftar">الإفطار</string>
+    <string name="search_no_results">لا يوجد مكان يطابق «%1$s». جرّب اسم المدينة بالعربية أو الإنجليزية.</string>
 </resources>

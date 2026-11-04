@@ -1,6 +1,7 @@
 package com.noor.app.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -70,18 +71,25 @@ fun CityPickerScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Sett
         results = if (query.isBlank()) g.places.sortedByDescending { it.population }.take(40) else g.search(query, 60)
     }
     Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.cancel), tint = c.textPrimary) }
-            Text(stringResource(R.string.location_manual), style = MaterialTheme.typography.titleLarge, color = c.textPrimary)
-        }
-        OutlinedTextField(
+        com.noor.app.ui.adhan.BackHeader(stringResource(R.string.location_manual), onDone)
+        // A filled search field, as quiet as the rest of the page until it is used.
+        androidx.compose.material3.TextField(
             value = query, onValueChange = { query = it }, singleLine = true,
-            leadingIcon = { Icon(Icons.Rounded.Search, null) },
-            placeholder = { Text(stringResource(R.string.search_city_world)) },
-            shape = RoundedCornerShape(20.dp),
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = c.gold, cursorColor = c.gold),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            leadingIcon = { Icon(Icons.Rounded.Search, null, tint = c.textMuted) },
+            placeholder = { Text(stringResource(R.string.search_city_world), color = c.textMuted) },
+            shape = RoundedCornerShape(16.dp),
+            colors = androidx.compose.material3.TextFieldDefaults.colors(
+                focusedContainerColor = c.surfaceRaised, unfocusedContainerColor = c.surface, cursorColor = c.gold,
+                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+            ),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp),
         )
+        if (gaz == null) Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), color = c.gold, strokeWidth = 2.dp)
+        } else if (results.isEmpty() && query.isNotBlank()) {
+            Text(stringResource(R.string.search_no_results, query), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 24.dp))
+        }
         LazyColumn(Modifier.fillMaxSize()) {
             items(results, key = { it.id }) { place ->
                 val selected = s?.manualPlace?.let { Gazetteer.distanceKm(it.point, place.point) < 0.05 } == true

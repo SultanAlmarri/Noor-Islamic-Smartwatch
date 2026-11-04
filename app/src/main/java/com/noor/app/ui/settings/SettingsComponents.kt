@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import com.noor.app.R
 import com.noor.app.ui.components.GlassCard
 import com.noor.app.ui.theme.NoorTheme
@@ -105,28 +107,36 @@ fun NoorSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
     )
 }
 
+/** A single choice from a short list: the chosen row is marked in gold; picking closes the dialog. */
 @Composable
 fun <T> ChoiceDialog(title: String, options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, onDismiss: () -> Unit) {
     val c = NoorTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        containerColor = c.surface, titleContentColor = c.textPrimary, textContentColor = c.textSecondary,
+        shape = RoundedCornerShape(28.dp),
+        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
             LazyColumn {
                 items(options) { (value, label) ->
+                    val on = value == selected
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onSelect(value); onDismiss() }.padding(vertical = 6.dp),
+                        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(14.dp))
+                            .then(if (on) Modifier.background(c.gold.copy(alpha = if (c.isDark) 0.12f else 0.10f)) else Modifier)
+                            .clickable(role = androidx.compose.ui.semantics.Role.RadioButton) { onSelect(value); onDismiss() }
+                            .semantics { this.selected = on }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(selected = value == selected, onClick = { onSelect(value); onDismiss() },
-                            colors = RadioButtonDefaults.colors(selectedColor = c.gold))
-                        Spacer(Modifier.width(8.dp))
-                        Text(label, style = MaterialTheme.typography.bodyLarge)
+                        Text(label, style = MaterialTheme.typography.bodyLarge, color = if (on) c.goldText else c.textPrimary, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                            if (on) Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, tint = c.gold, modifier = Modifier.size(20.dp))
+                        }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = c.gold) } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = c.goldText) } },
     )
 }
 

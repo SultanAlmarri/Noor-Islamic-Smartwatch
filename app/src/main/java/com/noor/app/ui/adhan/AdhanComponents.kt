@@ -58,10 +58,8 @@ fun WarningRow(text: String, action: String?, onAction: (() -> Unit)?, icon: Ima
         Spacer(Modifier.width(14.dp))
         Text(text, style = MaterialTheme.typography.bodySmall.copy(lineHeight = 17.sp), color = c.textSecondary, modifier = Modifier.weight(1f))
         if (action != null && onAction != null) {
-            Spacer(Modifier.width(10.dp))
-            Text(action, color = c.goldText, style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(c.gold.copy(alpha = 0.14f)).clickable(role = Role.Button, onClick = onAction)
-                    .padding(horizontal = 14.dp, vertical = 7.dp))
+            Spacer(Modifier.width(6.dp))
+            com.noor.app.ui.components.PillButton(action, onClick = onAction)
         }
     }
 }

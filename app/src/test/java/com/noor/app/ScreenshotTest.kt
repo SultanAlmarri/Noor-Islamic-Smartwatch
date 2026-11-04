@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -81,7 +82,7 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -120,12 +121,14 @@ class ScreenshotTest {
         var watch by mutableStateOf<WatchScene?>(null)
         var singapore by mutableStateOf(false)
         var clock by mutableStateOf(now)
+        var fontScale by mutableStateOf(1f)
         val sgBase = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualPlace = com.noor.app.data.KnownLocation(
             com.noor.prayer.GeoPoint(1.28967, 103.85007), "Asia/Singapore", "Singapore", "SG", null, 0L, "سنغافورة"))
         rule.setContent {
             val ctxBase = LocalContext.current
             val config = Configuration(ctxBase.resources.configuration).apply {
                 setLocale(if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH)
+                this.fontScale = fontScale
                 setLayoutDirection(if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH)
             }
             val ctx = ctxBase.createConfigurationContext(config)
@@ -135,6 +138,7 @@ class ScreenshotTest {
                 LocalConfiguration provides config,
                 LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
                 LocalActivityResultRegistryOwner provides rule.activity,
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(androidx.compose.ui.platform.LocalDensity.current.density, fontScale),
             ) {
                 val s = (if (singapore) sgBase else base).copy(theme = theme)
                 val tables = app.container.timetables
@@ -176,6 +180,11 @@ class ScreenshotTest {
                             Screen.ADHAN_LIBRARY -> com.noor.app.ui.adhan.SoundLibraryScreen(pad, {})
                             Screen.ADHAN_SOUNDS -> com.noor.app.ui.adhan.MySoundsScreen(pad, {})
                             Screen.ONBOARDING -> com.noor.app.ui.onboarding.OnboardingScreen(pad, {}, {})
+                            Screen.CITIES -> com.noor.app.ui.settings.CityPickerScreen(pad, {})
+                            Screen.SHELL -> Column(Modifier.fillMaxSize()) {
+                                Box(Modifier.weight(1f)) { TodayContent(u, PaddingValues(top = 28.dp), { cache.resolved(s, u.place!!, u.profile!!, it) }, {}, {}, {}) }
+                                NoorTabBar(Routes.PRAYERS) {}
+                            }
                         }
                     }
                 }
@@ -232,6 +241,12 @@ class ScreenshotTest {
         shot("23_watch_wearos5_night_en", "Needs Wear OS 6")
         arabic = true; watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport)), now = t0); shot("24_watch_done_night_ar", "قيد الاستخدام")
         arabic = false
+        // (Dialogs open in their own window, which this window capture cannot see; they are checked on a device.)
+        screen = Screen.CITIES; shot("44_cities_night_en", "China")
+        screen = Screen.SHELL; shot("46_app_shell_night_en", "Maghrib")
+        theme = ThemeMode.LIGHT; shot("47_app_shell_day_en", "Maghrib")
+        arabic = true; shot("48_app_shell_day_ar", "المغرب"); arabic = false; theme = ThemeMode.DARK
+        screen = Screen.TODAY; fontScale = 1.3f; shot("45_today_large_text_en", "Maghrib"); fontScale = 1f
         // Singapore: MUIS's own published times for the date (official timetable), not a calculation.
         singapore = true; screen = Screen.TODAY; shot("25_today_singapore_official_en", "Official timetable")
         singapore = false

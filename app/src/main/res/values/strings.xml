@@ -312,4 +312,7 @@
     <string name="onboarding_tagline">Prayer times from the sky above you, the Qibla and the Adhan, on your phone and your watch.</string>
     <string name="onboarding_private">Your location stays on this phone.</string>
     <string name="adhan_custom_empty_title">Your own sounds</string>
+    <string name="today_suhoor">Suhoor ends</string>
+    <string name="today_iftar">Iftar</string>
+    <string name="search_no_results">No place matches “%1$s”. Try the city’s name in English or Arabic.</string>
 </resources>

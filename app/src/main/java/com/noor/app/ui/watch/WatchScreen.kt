@@ -44,7 +44,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -193,7 +193,7 @@ private fun WatchCard(
     GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
         // Header: watch and connection
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(c.gold.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(c.gold.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Watch, null, tint = c.gold, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
@@ -315,10 +315,7 @@ private fun PrimaryButton(text: String, onClick: () -> Unit) {
 @Composable
 private fun SecondaryButton(text: String, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    OutlinedButton(onClick = onClick, shape = RoundedCornerShape(14.dp), modifier = Modifier.padding(top = 6.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, c.gold.copy(alpha = 0.5f))) {
-        Text(text, style = MaterialTheme.typography.titleSmall, color = c.goldText)
-    }
+    com.noor.app.ui.components.PillButton(text, Modifier.padding(top = 2.dp), onClick)
 }
 
 @Composable

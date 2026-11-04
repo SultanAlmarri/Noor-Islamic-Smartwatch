@@ -292,7 +292,10 @@ private fun Countdown(text: String) {
     val cut = text.lastIndexOf(':').takeIf { it > 0 } ?: text.length
     val main = text.substring(0, cut)
     val secs = text.substring(cut)
-    val style = MaterialTheme.typography.displayLarge.merge(Tabular).copy(fontSize = 78.sp, letterSpacing = (-2).sp, fontWeight = FontWeight.Light)
+    // The countdown grows with the user's font size, but not past what fits on one line of a phone screen.
+    val scale = LocalDensity.current.fontScale
+    val size = if (scale > 1.15f) (78f * 1.15f / scale).sp else 78.sp
+    val style = MaterialTheme.typography.displayLarge.merge(Tabular).copy(fontSize = size, letterSpacing = (-2).sp, fontWeight = FontWeight.Light)
     // Numbers read left to right in Arabic too; only the block's position follows the layout direction.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.semantics(mergeDescendants = true) {}) {
@@ -361,8 +364,12 @@ private fun DateBar(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(f.weekday(date), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = c.textPrimary, maxLines = 1)
-                Text("  " + f.gregorianDate(date), style = MaterialTheme.typography.titleMedium, color = c.textSecondary, maxLines = 1)
+                // One text, so that with large fonts the date wraps instead of being cut.
+                Text(buildAnnotatedString {
+                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = c.textPrimary)) { append(f.weekday(date)) }
+                    append("  ")
+                    withStyle(SpanStyle(color = c.textSecondary)) { append(f.gregorianDate(date)) }
+                }, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.weight(1f, fill = false))
                 Spacer(Modifier.width(6.dp))
                 Icon(Icons.Rounded.CalendarMonth, null, tint = c.gold, modifier = Modifier.size(16.dp))
             }
@@ -377,9 +384,7 @@ private fun DateBar(
     AnimatedVisibility(!isToday, enter = fadeIn(tween(NoorMotion.Quick)) + expandVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
         exit = fadeOut(tween(NoorMotion.Quick)) + shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease))) {
         Box(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.today), style = MaterialTheme.typography.labelLarge, color = c.goldText, maxLines = 1,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(c.gold.copy(alpha = 0.14f)).clickable(onClick = onToday)
-                    .padding(horizontal = 16.dp, vertical = 6.dp))
+            com.noor.app.ui.components.PillButton(stringResource(R.string.today), onClick = onToday)
         }
     }
 }
@@ -396,6 +401,10 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
         (Duration.between(st.current!!.at, u.now).seconds / total).coerceIn(0f, 1f)
     } else 0f
     val fill by animateFloatAsState(progress, tween(600), label = "lineFill")
+    // In Ramadan the day turns on two moments: the end of Suhoor at Fajr and Iftar at Maghrib.
+    val ramadan = HijriDate.of(date, u.settings.hijriAdjust).isRamadan
+    val suhoor = stringResource(R.string.today_suhoor)
+    val iftar = stringResource(R.string.today_iftar)
     Column(Modifier.fillMaxWidth()) {
         if (official) Row(Modifier.padding(start = 4.dp, top = 6.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Verified, null, tint = c.success, modifier = Modifier.size(15.dp))
@@ -413,11 +422,14 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
             val fillAbove = if (isNext && list.getOrNull(i - 1) == current) (fill * 2f - 1f).coerceIn(0f, 1f) else 0f
             TimelineRow(
                 p, f.prayerName(p, date), f.prayerNameOther(p, date), day.minutes[p]?.let { f.time(it) },
-                status = when {
-                    isCurrent -> stringResource(R.string.now)
-                    isNext && st != null -> stringResource(R.string.today_in, durationText(Duration.between(u.now, st.next.at), f))
-                    else -> null
-                },
+                status = listOfNotNull(
+                    when {
+                        isCurrent -> stringResource(R.string.now)
+                        isNext && st != null -> stringResource(R.string.today_in, durationText(Duration.between(u.now, st.next.at), f))
+                        else -> null
+                    },
+                    if (ramadan && p == Prayer.FAJR) suhoor else if (ramadan && p == Prayer.MAGHRIB) iftar else null,
+                ).joinToString(" · ").ifEmpty { null },
                 isCurrent = isCurrent, isNext = isNext, passed = passed,
                 first = i == 0, last = i == list.size - 1,
                 lineAboveDone = passed || isCurrent, lineBelowDone = passed, fillAbove = fillAbove, fillBelow = fillBelow, f = f,

@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 4 November 2026 (version 0.5.0).
+Living document: each development phase adds its section. Last updated 5 November 2026 (version 0.6.0).
 
 ## Modules
 
@@ -112,7 +112,17 @@ Full details: `ALERTS.md`; sounds and credits: `SOUNDS.md`.
 - Phone/Watch/Both: each device alerts only when chosen; phone notifications are local-only, so nothing is duplicated.
 - Full Adhans and imported sounds for watch alerts travel over a Data Layer channel; the watch reports what it holds.
 
-## Known limitations (0.5.0)
+## Design system
+
+Full description: `DESIGN.md`.
+
+- `core/prayer`: `astro/SunPath` (the day's solar elevation curve) and `sky/SkyPalette` (sky colours by elevation, OKLab
+  blending) are pure Kotlin, so the phone's sky and the watch's glow are the same colours.
+- `app/ui/components`: `SkyBackdrop` (sky, stars, moon by Hijri day, sun path, prayer markers), `Motion` (timings, the
+  ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
+- `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
+
+## Known limitations (0.6.0)
 
 - Nothing in this version has been tested on a real phone or watch yet; all results above come from unit tests and
   software-rendered screens. Alerts in particular (alarm timing, playback, lock screen, Do Not Disturb, watch transfer)

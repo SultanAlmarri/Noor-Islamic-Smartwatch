@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.noor.app.ui.theme.NoorTheme
@@ -79,6 +81,20 @@ fun ScreenTitle(title: String, subtitle: String? = null, leading: (@Composable (
             leading?.invoke()
             if (subtitle != null) androidx.compose.material3.Text(subtitle, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = c.textSecondary)
         }
+    }
+}
+
+/** Noor's small action: gold text on a soft gold pill, with a full 48 dp touch target around it. */
+@Composable
+fun PillButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val c = NoorTheme.colors
+    Box(
+        modifier.minimumInteractiveComponentSize().clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick,
+            indication = null, interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }),
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) {
+        androidx.compose.material3.Text(text, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = c.goldText, maxLines = 1,
+            modifier = Modifier.clip(RoundedCornerShape(50)).background(c.gold.copy(alpha = if (c.isDark) 0.16f else 0.14f)).padding(horizontal = 16.dp, vertical = 8.dp))
     }
 }
 

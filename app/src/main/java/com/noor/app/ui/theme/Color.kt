@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
  * Noor palette. Two deliberately designed themes, not an inversion of each other:
  * night is a deep ink with warm gold light; day is a warm paper with ink text and a darker, readable gold.
  * Surfaces are solid (no glass, no heavy gradients); hierarchy comes from spacing, type and one accent colour.
+ * Every text colour meets WCAG AA (4.5:1) on the backgrounds it is used on, in both themes (checked when designing 0.6.0).
  */
 @Immutable
 data class NoorColors(
@@ -57,7 +58,7 @@ val NightColors = NoorColors(
     onGold = Color(0xFF1C1407),
     textPrimary = Color(0xFFF5F2EA),
     textSecondary = Color(0xFFA9B1C1),
-    textMuted = Color(0xFF6F7889),
+    textMuted = Color(0xFF8A93A4),
     pattern = Color(0x0DE3C27E),
     success = Color(0xFF6FD3A6),
     warning = Color(0xFFF2C14E),
@@ -73,18 +74,18 @@ val DayColors = NoorColors(
     surfaceRaised = Color(0xFFFBF6EA),
     separator = Color(0x14000000),
     outline = Color(0x1F000000),
-    gold = Color(0xFFB4883A),
+    gold = Color(0xFFA8792C),
     goldText = Color(0xFF8A6524),
     goldSoft = Color(0xFF7C5A1F),
     goldDeep = Color(0xFF8A6424),
-    onGold = Color(0xFFFFFFFF),
+    onGold = Color(0xFF1A1206),
     textPrimary = Color(0xFF17191F),
     textSecondary = Color(0xFF575E6B),
-    textMuted = Color(0xFF8B909A),
+    textMuted = Color(0xFF676D78),
     pattern = Color(0x0FB4883A),
-    success = Color(0xFF1F8A62),
-    warning = Color(0xFFB7791F),
-    danger = Color(0xFFD64545),
+    success = Color(0xFF17724F),
+    warning = Color(0xFF935F12),
+    danger = Color(0xFFB83333),
 )
 
 val LocalNoorColors = staticCompositionLocalOf { NightColors }
