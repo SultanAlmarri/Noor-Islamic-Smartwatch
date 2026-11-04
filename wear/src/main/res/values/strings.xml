@@ -27,4 +27,10 @@
     <string name="face_permission_settings">Permission declined. To use Noor as your watch face, long-press the current face and choose Noor, or allow it in Settings › Apps › Noor.</string>
     <string name="try_again">Try again</string>
     <string name="face_setup_title">Noor watch face</string>
+    <string name="alerts_title">Prayer alerts</string>
+    <string name="alerts_need_notifications">Allow notifications so prayer alerts can sound on this watch.</string>
+    <string name="alerts_need_exact">Allow exact alarms so alerts come at the exact minute.</string>
+    <string name="alerts_allow">Allow</string>
+    <string name="alerts_next">Next: %1$s %2$s</string>
+    <string name="alerts_none">No prayer alerts on the watch.</string>
 </resources>

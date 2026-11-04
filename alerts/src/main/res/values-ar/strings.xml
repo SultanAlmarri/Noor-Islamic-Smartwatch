@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="noor_alert_jumuah">الجمعة</string>
+    <string name="noor_alert_title">حان وقت صلاة %1$s</string>
+    <string name="noor_alert_title_sunrise">الشروق · انتهى وقت الفجر</string>
+    <string name="noor_alert_late">تعذّر التنبيه في وقته لأن الجهاز كان مغلقًا أو في سكون عميق. دخل الوقت الساعة %1$s.</string>
+    <string name="noor_alert_stop">إيقاف</string>
+    <string name="noor_alert_test_note">تنبيه تجريبي</string>
+    <string name="noor_alert_quiet_dnd">صامت لأن وضع «عدم الإزعاج» مفعّل.</string>
+    <string name="noor_alert_quiet_ringer">صامت لأن الجهاز على الوضع الصامت أو الاهتزاز.</string>
+    <string name="noor_alert_quiet_call">صامت أثناء المكالمة.</string>
+    <string name="noor_alert_blocked_background">تعذّر تشغيل الصوت لأن المنبّهات الدقيقة غير مسموح بها لتطبيق نور. اسمح بها من نور › الأذان.</string>
+    <string name="noor_alert_short_of">%1$s (مختصر)</string>
+    <string name="noor_alert_sub_full">التسجيل الكامل غير موجود على هذا الجهاز، فشُغّلت النسخة المختصرة.</string>
+    <string name="noor_alert_sub_no_full">لا يتوفر من هذا التسجيل إلا مطلعه، فشُغّلت النسخة المختصرة.</string>
+    <string name="noor_alert_sub_custom">الصوت الذي استوردته غير موجود، فشُغّل الجرس الافتراضي.</string>
+    <string name="noor_alert_sub_sound">الصوت المختار غير متوفر، فشُغّل الجرس الافتراضي.</string>
+    <string name="noor_alert_sub_fajr">أذان الفجر خاص بصلاة الفجر، فشُغّل الأذان المعتاد.</string>
+    <string name="noor_channel_adhan">الأذان</string>
+    <string name="noor_channel_adhan_desc">يظهر أثناء تشغيل الأذان أو صوت التنبيه، مع زر إيقاف.</string>
+    <string name="noor_channel_notify">إشعارات أوقات الصلاة</string>
+    <string name="noor_channel_notify_desc">الصلوات المضبوطة على «إشعار». يستخدم صوت الإشعارات ويتبع وضع «عدم الإزعاج».</string>
+    <string name="noor_channel_silent">إشعارات الصلاة الصامتة</string>
+    <string name="noor_channel_silent_desc">الصلوات المضبوطة على «صامت»، والتنبيهات التي أسكتها «عدم الإزعاج»، والوقت بعد انتهاء الصوت.</string>
+</resources>

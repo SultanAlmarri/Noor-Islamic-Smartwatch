@@ -17,3 +17,4 @@ rootProject.name = "NoorIslamicSmartwatch"
 include(":app")
 include(":wear")
 include(":core:prayer")
+include(":alerts")

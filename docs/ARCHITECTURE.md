@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 4 November 2026 (version 0.4.0).
+Living document: each development phase adds its section. Last updated 4 November 2026 (version 0.5.0).
 
 ## Modules
 
@@ -8,7 +8,8 @@ Living document: each development phase adds its section. Last updated 4 Novembe
 | --- | --- | --- |
 | `core/prayer` | Prayer engine, calculation profiles, Hijri date, schedule, phone↔watch formats (`WatchConfig`, `WatchReport`), Qibla geodesy, compass maths, country flags | No (pure Kotlin, tested on the JVM) |
 | `app` | Phone app: Today, Qibla, Watch, Settings; location, Data Layer sync, watch setup, compass sensors | Yes |
-| `wear` | Watch app: app screen, tile, complication, Watch Face Push, settings receiver, status reporter | Yes (Wear OS 4+) |
+| `alerts` | Prayer alerts shared by phone and watch: alarm scheduling, Adhan player service, notifications, sound library, imported sounds | Yes (Android library) |
+| `wear` | Watch app: app screen, tile, complication, Watch Face Push, settings receiver, status reporter, prayer alerts | Yes (Wear OS 4+) |
 | `legacy/watchface-v1.3.2` | The original watch face, frozen | Resources only |
 
 Anything that must give the same answer on phone and watch lives in `core/prayer`, so both run the same code.
@@ -98,9 +99,25 @@ Full details and sources: `AUTHORITIES.md`.
   own position elsewhere.
 - **Flags** (`geo/Flags.kt`): shared by phone and watch; Israel shows the Palestinian flag (product decision).
 
-## Known limitations (0.4.0)
+## Adhan and prayer alerts
+
+Full details: `ALERTS.md`; sounds and credits: `SOUNDS.md`.
+
+- Choices live in `AlertSettings` (core), stored on the phone and carried to the watch inside `WatchConfig`.
+- `AlertPlanner` (core, pure Kotlin) decides which alarms to arm and whether a firing alarm is still valid; both devices
+  use it with the same `WatchConfig`, so alerts happen exactly at the displayed times.
+- The `alerts` library does the Android side: `AlertScheduler` (AlarmManager, exact when allowed), `AlertReceiver`,
+  `AdhanService` (foreground media playback with Stop), `AlertPlayer` (alarm stream, focus, gradual volume, limit),
+  `AlertNotifications` (three channels), `SoundLibrary` and `CustomSounds`.
+- Phone/Watch/Both: each device alerts only when chosen; phone notifications are local-only, so nothing is duplicated.
+- Full Adhans and imported sounds for watch alerts travel over a Data Layer channel; the watch reports what it holds.
+
+## Known limitations (0.5.0)
 
 - Nothing in this version has been tested on a real phone or watch yet; all results above come from unit tests and
-  software-rendered screens.
+  software-rendered screens. Alerts in particular (alarm timing, playback, lock screen, Do Not Disturb, watch transfer)
+  need a device test; "Test this alert" exists for that.
+- Wear OS may not show a settings page for exact alarms on every watch; the watch then falls back to the app's settings
+  page, and alerts there may be a few minutes late until it is allowed.
 - The Play Store install path cannot be exercised until Noor is published on Google Play.
 - The Hijri date follows Umm al-Qura; months decided by local moon sighting can differ by a day (user adjustment ±2).

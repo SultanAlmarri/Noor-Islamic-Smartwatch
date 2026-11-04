@@ -77,7 +77,7 @@ internal val Mist = Color(0xFFB7C0D2)
 internal val Night = Color(0xFF16233A)
 internal val Kufi = FontFamily(Font(R.font.reem_kufi))
 
-private val NoorWearColors = ColorScheme(
+internal val NoorWearColors = ColorScheme(
     primary = Gold,
     primaryDim = Color(0xFFB98F45),
     primaryContainer = Color(0xFF3A2E17),
@@ -193,6 +193,7 @@ private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, show
                         modifier = Modifier.padding(top = 6.dp),
                     )
                 }
+                item { AlertSection(c, t) }
                 if (showFaceSection) item { FaceSection(autoStart = false) }
             }
         }

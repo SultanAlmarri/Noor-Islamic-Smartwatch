@@ -20,12 +20,22 @@ data class WatchReport(
     /** When the watch last stored settings from the phone. */
     val configReceivedAtMs: Long?,
     val updatedAtMs: Long,
+    /** Whether the watch may show notifications (null = older watch app that does not report it). */
+    val notificationsAllowed: Boolean? = null,
+    /** Whether the watch may set exact alarms (null = not reported). */
+    val exactAlarms: Boolean? = null,
+    /** Alerts armed on the watch right now. */
+    val alertsArmed: Int? = null,
+    /** Sounds the phone sent to the watch (full Adhans, imported sounds), by id. */
+    val sounds: Set<String> = emptySet(),
 ) {
     fun encode(): String = buildString {
         fun put(k: String, v: Any?) { if (v != null) append(k).append('=').append(v).append('\n') }
         put("v", 1); put("code", appVersionCode); put("name", appVersionName.replace("\n", " ")); put("sdk", sdkInt)
         put("push", facePushSupported); put("faceBundled", faceBundledVersion); put("faceInstalled", faceInstalledVersion)
         put("faceActive", faceActive); put("configAt", configReceivedAtMs); put("updated", updatedAtMs)
+        put("notif", notificationsAllowed); put("exact", exactAlarms); put("armed", alertsArmed)
+        if (sounds.isNotEmpty()) put("sounds", sounds.sorted().joinToString(","))
     }
 
     companion object {
@@ -47,6 +57,10 @@ data class WatchReport(
                 faceActive = m["faceActive"] == "true",
                 configReceivedAtMs = m["configAt"]?.toLongOrNull(),
                 updatedAtMs = m["updated"]?.toLongOrNull() ?: 0L,
+                notificationsAllowed = m["notif"]?.let { it == "true" },
+                exactAlarms = m["exact"]?.let { it == "true" },
+                alertsArmed = m["armed"]?.toIntOrNull(),
+                sounds = m["sounds"]?.split(',')?.filter { com.noor.prayer.alerts.SoundIds.isValid(it) }?.toSet().orEmpty(),
             )
         }.getOrNull()
     }

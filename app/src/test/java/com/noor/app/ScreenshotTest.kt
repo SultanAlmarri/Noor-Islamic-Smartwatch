@@ -81,7 +81,7 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -167,6 +167,11 @@ class ScreenshotTest {
                             Screen.SETTINGS -> SettingsScreen(pad, {}, {})
                             Screen.WATCH -> WatchScreen(pad)
                             Screen.ACCURACY -> AccuracyScreen(pad, {})
+                            Screen.ADHAN -> com.noor.app.ui.adhan.AdhanScreen(pad, {}, {}, {})
+                            Screen.ADHAN_FAJR -> com.noor.app.ui.adhan.PrayerAlertScreen(pad, com.noor.prayer.Prayer.FAJR, {}, {})
+                            Screen.ADHAN_SHURUQ -> com.noor.app.ui.adhan.PrayerAlertScreen(pad, com.noor.prayer.Prayer.SHURUQ, {}, {})
+                            Screen.ADHAN_LIBRARY -> com.noor.app.ui.adhan.SoundLibraryScreen(pad, {})
+                            Screen.ADHAN_SOUNDS -> com.noor.app.ui.adhan.MySoundsScreen(pad, {})
                         }
                     }
                 }
@@ -229,5 +234,20 @@ class ScreenshotTest {
         screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
+        // Adhan & alerts: off (first run), then on for phone and watch, the Fajr editor, sunrise, library and imports.
+        screen = Screen.ADHAN; shot("26_adhan_off_night_en", "Turn on to hear the Adhan")
+        runBlocking { app.container.settings.updateAlerts { it.copy(enabled = true, device = com.noor.prayer.alerts.AlertDevice.BOTH) } }
+        shot("27_adhan_on_night_en", "Gradual volume")
+        screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Malmö")
+        screen = Screen.ADHAN_SHURUQ; runBlocking {
+            app.container.settings.updateAlerts { it.with(com.noor.prayer.Prayer.SHURUQ, it.alert(com.noor.prayer.Prayer.SHURUQ).copy(enabled = true, mode = com.noor.prayer.alerts.AlertMode.SOUND, soundId = "alt.morning_birds")) }
+        }
+        shot("29_adhan_sunrise_night_en", "Morning birds")
+        screen = Screen.ADHAN_LIBRARY; shot("30_adhan_library_night_en", "Casablanca")
+        screen = Screen.ADHAN_SOUNDS; shot("31_adhan_my_sounds_night_en", "Import a sound")
+        screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "التنبيه على")
+        screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "مالمو")
+        arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Gradual volume")
+        screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Malmö")
     }
 }

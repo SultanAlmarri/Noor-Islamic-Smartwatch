@@ -16,6 +16,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 | Watch face via the watch app | v1.3.2 face packaged for Watch Face Push (Wear OS 6); passes all 10 checks of Google's official validator at every build |
 | Watch face v1.3.2 (`com.noorface.prayer`) | Preserved unchanged in `legacy/`; still installed separately |
 | Blind accuracy test | Predictions for Dec 2026 – Jun 2027 frozen; scored monthly against IACAD (`accuracy/blind/`) |
+| Adhan and prayer alerts (`alerts`) | Built and tested on the computer: per-prayer Adhan/short/sound/imported/notification/silent, phone/watch/both, gradual volume, Do Not Disturb choice, exact alarms, 7 licensed Adhan recordings and 7 original sounds ([ALERTS.md](docs/ALERTS.md), [SOUNDS.md](docs/SOUNDS.md)) |
 | Watch-face editor | Next stage |
 | Device testing | **Not done yet.** Everything above is tested on the computer (unit tests, software-rendered screens), not on a phone or watch |
 
@@ -25,12 +26,14 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 |---|---|
 | `core/prayer` | Pure Kotlin prayer engine and the phone↔watch settings format (`WatchConfig`), shared by both apps |
 | `app` | Phone app: Jetpack Compose, Material 3, DataStore, WorkManager, fused location, Wear OS Data Layer |
+| `alerts` | Prayer alerts shared by both apps: AlarmManager scheduling, Adhan player service, notifications, sound library |
 | `wear` | Watch app: Compose for Wear OS (Material 3), tile (ProtoLayout Material 3), complication data source, Watch Face Push |
 | `legacy/` | Frozen copy of the working watch face v1.3.2 and its APK |
 | `tools/watchface/` | Packages the watch face for Watch Face Push and validates it with Google's validator |
+| `tools/sounds/` | Generates the alert sounds, fetches and verifies the licensed Adhan recordings, builds the sound library |
 | `accuracy/` | Official IACAD datasets, research tools, blind test |
 | `signing/` | Public development keys (see its README); no release key is stored here |
-| `docs/` | `ARCHITECTURE.md` (how each part works), `INSTALL.md`, `PRAYER_ACCURACY.md` |
+| `docs/` | `ARCHITECTURE.md` (how each part works), `ALERTS.md`, `SOUNDS.md`, `INSTALL.md`, `PRAYER_ACCURACY.md` |
 
 ## How phone and watch work together
 
@@ -47,7 +50,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 Requires JDK 17 and the Android SDK (compileSdk 35 for the phone, 36 for the watch), and Python 3 for the watch-face step.
 
 ```
-./gradlew :core:prayer:test :app:testDebugUnitTest :wear:testDebugUnitTest
+./gradlew :core:prayer:test :alerts:testDebugUnitTest :app:testDebugUnitTest :wear:testDebugUnitTest
 ./gradlew :app:assembleRelease :wear:assembleRelease
 ```
 

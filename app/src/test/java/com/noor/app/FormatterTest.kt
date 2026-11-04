@@ -38,4 +38,14 @@ class FormatterTest {
         assertEquals("\u200E٢٥٩٫٣٩°\u200E", a.degrees(259.39))
         assertEquals("1,633 km", f.kilometres(1633.169))
     }
+
+    @Test fun soundLengthsReadNaturally() {
+        val f = Formatter(false, Numerals.WESTERN, TimeFormat.H12)
+        assertEquals("0.5 s", f.duration(0.45))
+        assertEquals("22 s", f.duration(22.4))
+        assertEquals("2:56", f.duration(176.5))
+        val a = Formatter(true, Numerals.ARABIC_INDIC, TimeFormat.H12)
+        assertEquals("٠٫٥ ث", a.duration(0.45))
+        assertEquals("٤:٠٣", a.duration(242.9))
+    }
 }

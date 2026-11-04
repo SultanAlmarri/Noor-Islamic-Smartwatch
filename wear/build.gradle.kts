@@ -13,8 +13,8 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 33 // Wear OS 4+ (Galaxy Watch 4 and later are on Wear OS 5 or 6)
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
     }
 
     signingConfigs {
@@ -56,6 +56,7 @@ kotlin { jvmToolchain(17) }
 
 dependencies {
     implementation(project(":core:prayer"))
+    implementation(project(":alerts"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

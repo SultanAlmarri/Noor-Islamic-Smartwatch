@@ -95,6 +95,9 @@ class WatchReportTest {
         assertEquals(r, WatchReport.decode(r.encode()))
         val installed = r.copy(faceInstalledVersion = 1, faceActive = true)
         assertEquals(installed, WatchReport.decode(installed.encode()))
+        val alerts = r.copy(notificationsAllowed = false, exactAlarms = true, alertsArmed = 5, sounds = setOf("adhan.makkah_maghrib_2012", "custom.ab-12"))
+        assertEquals(alerts, WatchReport.decode(alerts.encode()))
+        assertNull(WatchReport.decode(r.encode())!!.notificationsAllowed) // an older watch app reports nothing: unknown, not "no"
         assertNull(WatchReport.decode("nonsense"))
         assertEquals(34, WatchReport.decode("code=1\nsdk=34\nunknown=x\n")!!.sdkInt)
     }

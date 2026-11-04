@@ -48,6 +48,9 @@ class ConfigRepository(private val context: Context) {
             p[keyReceived] = System.currentTimeMillis()
         }
         if (changed) refreshSurfaces(context)
+        // Prayer alerts on the watch follow the phone's choices (when the user chose "Watch" or "Both").
+        ReceivedSounds.prune(context, incoming)
+        com.noor.alerts.AlertScheduler.reschedule(context)
         StatusPublisher.publish(context)
         return changed
     }

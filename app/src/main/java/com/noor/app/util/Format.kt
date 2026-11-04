@@ -69,6 +69,20 @@ class Formatter(val arabic: Boolean, private val numerals: Numerals, private val
 
     fun number(n: Int): String = digits(n.toString())
 
+    /** Length of a sound: "0.5 s", "22 s", "3:05". */
+    fun duration(seconds: Double): String {
+        val unit = if (arabic) " ث" else " s"
+        if (seconds < 1.0) return digits("%.1f".format(Locale.ENGLISH, seconds)).replace('.', if (arabic) '٫' else '.') + unit
+        val t = kotlin.math.round(seconds).toLong().coerceAtLeast(1)
+        return if (t < 60) digits(t.toString()) + unit else digits("%d:%02d".format(t / 60, t % 60))
+    }
+
+    /** Clock time of an instant in [zone], in the user's format. */
+    fun timeAt(at: java.time.Instant, zone: java.time.ZoneId): String {
+        val z = at.atZone(zone)
+        return timeText(z.hour * 60 + z.minute)
+    }
+
     /** Degrees with exactly two decimals, e.g. "259.39°" (Arabic-Indic numerals use the Arabic decimal separator). */
     fun degrees(d: Double): String {
         val s = String.format(Locale.US, "%.2f", d)

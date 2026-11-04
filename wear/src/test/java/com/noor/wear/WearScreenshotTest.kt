@@ -1,5 +1,13 @@
 package com.noor.wear
 
+import androidx.compose.foundation.background
+
+import androidx.compose.ui.unit.dp
+
+import androidx.compose.foundation.layout.padding
+
+import androidx.compose.foundation.layout.fillMaxSize
+
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -71,6 +79,29 @@ class WearScreenshotTest {
         val bmp = Bitmap.createBitmap(v.width, v.height, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp); c.drawColor(Color.BLACK); v.draw(c)
         return bmp
+    }
+
+    /** The prayer-alert section the watch shows when the user chose "Watch" or "Both" on the phone. */
+    @Test fun alertSection() {
+        val cfg = TestConfigs.dubai("en").copy(alerts = com.noor.prayer.alerts.AlertSettings(enabled = true, device = com.noor.prayer.alerts.AlertDevice.BOTH))
+        var key by mutableStateOf(0)
+        rule.setContent {
+            androidx.wear.compose.material3.MaterialTheme(colorScheme = com.noor.wear.ui.NoorWearColors) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
+                    .then(androidx.compose.ui.Modifier.background(androidx.compose.ui.graphics.Color.Black)).padding(28.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    androidx.compose.runtime.key(key) { com.noor.wear.ui.AlertSection(cfg, WearText(cfg)) }
+                }
+            }
+        }
+        rule.waitUntil(10_000) { rule.onAllNodesWithText("Allow notifications", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        rule.mainClock.advanceTimeBy(800); rule.waitForIdle()
+        save(drawView(rule.activity.window.decorView), "w05_alerts_permission")
+        org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
+        key++
+        rule.waitUntil(10_000) { rule.onAllNodesWithText("Next:", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        rule.mainClock.advanceTimeBy(800); rule.waitForIdle()
+        save(drawView(rule.activity.window.decorView), "w06_alerts_ready")
     }
 
     @Test fun appTileAndComplication() {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Noor's crescent and star, for the status bar (Android tints it). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp"
+    android:viewportWidth="64" android:viewportHeight="64">
+    <group android:translateX="-18.75" android:translateY="-22.75">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M45.17 30.15 A26.0 26.0 0 1 0 71.88 66.29 A22.5 22.5 0 0 1 45.17 30.15 Z"/>
+        <path android:fillColor="#FFFFFFFF" android:pathData="M71.00 27.50 L72.49 32.40 L77.01 29.99 L74.60 34.51 L79.50 36.00 L74.60 37.49 L77.01 42.01 L72.49 39.60 L71.00 44.50 L69.51 39.60 L64.99 42.01 L67.40 37.49 L62.50 36.00 L67.40 34.51 L64.99 29.99 L69.51 32.40 Z"/>
+    </group>
+</vector>

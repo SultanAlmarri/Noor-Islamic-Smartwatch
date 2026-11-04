@@ -29,6 +29,12 @@ object StatusPublisher {
                 faceActive = (face as? FaceState.Ready)?.active == true,
                 configReceivedAtMs = app.config.receivedAt.first(),
                 updatedAtMs = System.currentTimeMillis(),
+                notificationsAllowed = androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled(),
+                exactAlarms = com.noor.alerts.AlertScheduler.canScheduleExact(context),
+                alertsArmed = app.config.current()?.let { c ->
+                    c.alerts?.let { com.noor.prayer.alerts.AlertPlanner.plan(c, it, com.noor.prayer.alerts.AlertDevice.WATCH, java.time.Instant.now()).size }
+                },
+                sounds = ReceivedSounds.ids(context),
             )
             val req = PutDataMapRequest.create(WatchReport.PATH).apply { dataMap.putString(WatchReport.KEY, report.encode()) }
                 .asPutDataRequest().setUrgent()

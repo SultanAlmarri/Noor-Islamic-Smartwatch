@@ -16,7 +16,12 @@ import java.time.LocalDate
  * (Singapore Open Data Licence), which adds each new year when MUIS releases it. Runs only when the user's authority
  * is MUIS, at most once a week, and sends nothing about the user (a plain request for the public dataset).
  */
-class TimetableUpdater(private val context: Context, private val tables: OfficialTimetables) {
+class TimetableUpdater(
+    private val context: Context,
+    private val tables: OfficialTimetables,
+    /** Called after a newer table was stored, so alerts and the watch pick it up. */
+    private val onUpdated: suspend () -> Unit = {},
+) {
     private val prefs = context.getSharedPreferences("noor_timetables", Context.MODE_PRIVATE)
 
     suspend fun refreshIfDue(authority: Authority?) {
@@ -28,7 +33,7 @@ class TimetableUpdater(private val context: Context, private val tables: Officia
         if (System.currentTimeMillis() - last < 7 * 86_400_000L) return
         if (current?.last != null && current.last!! > LocalDate.now().plusDays(330)) { mark(id); return }
         val fresh = withContext(Dispatchers.IO) { runCatching { fetchMuis() }.onFailure { Log.i(TAG, "MUIS refresh failed: ${it.message}") }.getOrNull() }
-        if (fresh != null && fresh.size > (current?.size ?: 0)) tables.store(id, fresh)
+        if (fresh != null && fresh.size > (current?.size ?: 0)) { tables.store(id, fresh); onUpdated() }
         mark(id)
     }
 

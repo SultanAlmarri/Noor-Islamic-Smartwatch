@@ -4,6 +4,7 @@ import com.noor.prayer.AsrSchool
 import com.noor.prayer.GeoPoint
 import com.noor.prayer.HighLatitudeRule
 import com.noor.prayer.Prayer
+import com.noor.prayer.alerts.AlertSettings
 
 enum class LocationMode { AUTO, MANUAL }
 enum class Language(val tag: String) { SYSTEM(""), ENGLISH("en"), ARABIC("ar") }
@@ -58,4 +59,6 @@ data class AppSettings(
     val timeFormat: TimeFormat = TimeFormat.H12,
     val theme: ThemeMode = ThemeMode.DARK,
     val hijriAdjust: Int = 0,
+    /** Adhan and prayer notifications (shared with the watch through the watch config). */
+    val alerts: AlertSettings = AlertSettings(),
 )

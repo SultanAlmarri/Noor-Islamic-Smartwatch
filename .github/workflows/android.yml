@@ -25,7 +25,7 @@ jobs:
         run: ./gradlew :core:prayer:test --stacktrace
 
       - name: Phone app tests (unit + rendered screens)
-        run: ./gradlew :app:testDebugUnitTest --stacktrace
+        run: ./gradlew :alerts:testDebugUnitTest :app:testDebugUnitTest --stacktrace
 
       - name: Watch app tests (unit + rendered screens, tile, complication data; watch face validated by Google's validator)
         run: ./gradlew :wear:testDebugUnitTest --stacktrace

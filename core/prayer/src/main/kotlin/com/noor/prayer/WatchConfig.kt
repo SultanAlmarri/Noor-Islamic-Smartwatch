@@ -1,5 +1,6 @@
 package com.noor.prayer
 
+import com.noor.prayer.alerts.AlertSettings
 import com.noor.prayer.authority.Timetable
 import java.time.Instant
 import java.time.LocalDate
@@ -32,6 +33,8 @@ data class WatchConfig(
     val countryCode: String? = null,
     /** The authority's own published times for the coming weeks, when the phone has them; used as published. */
     val official: Timetable? = null,
+    /** The user's Adhan and notification choices; the watch alerts only when they include the watch. */
+    val alerts: AlertSettings? = null,
 ) {
     val zone: ZoneId get() = ZoneId.of(zoneId)
     val profile: CalculationProfile get() = Profiles.byId(profileId) ?: Profiles.MWL
@@ -65,6 +68,7 @@ data class WatchConfig(
         put("updated", updatedAtEpochMs)
         put("cc", countryCode)
         if (official != null && official.size > 0) put("official", official.id + "|" + official.encode().replace('\n', ';'))
+        put("alerts", alerts?.encode())
     }
 
     companion object {
@@ -95,6 +99,7 @@ data class WatchConfig(
                 official = m["official"]?.let { v ->
                     val id = v.substringBefore('|'); Timetable.parse(id, v.substringAfter('|').replace(';', '\n')).takeIf { it.size > 0 }
                 },
+                alerts = m["alerts"]?.let(AlertSettings::decode),
             )
         }.getOrNull()
     }

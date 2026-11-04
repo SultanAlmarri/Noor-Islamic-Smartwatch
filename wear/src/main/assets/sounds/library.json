@@ -1,0 +1,318 @@
+{
+ "version": 1,
+ "sounds": [
+  {
+   "id": "adhan.makkah_maghrib_2012",
+   "kind": "adhan",
+   "title_en": "Makkah",
+   "title_ar": "مكة المكرمة",
+   "place_en": "al-Masjid al-Haram · Maghrib, 2012",
+   "place_ar": "المسجد الحرام · المغرب، 2012",
+   "categories": [
+    "renowned",
+    "traditional"
+   ],
+   "fajr": false,
+   "file": "sounds/adhan_makkah_maghrib_2012.ogg",
+   "seconds": 176.5,
+   "short": {
+    "file": "sounds/adhan_makkah_maghrib_2012_short.ogg",
+    "seconds": 32.1
+   },
+   "credit": {
+    "author": "3omar Faruq",
+    "licence": "CC BY 3.0",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Maghrib_Adhan_at_the_Masjid_al_Haram,_Mecca_-_25_Feb,_2012.webm",
+    "changes": "Audio only (video removed); full version: 114.2–290.7 s of the original; short version: 114.2–146.3 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
+   },
+   "note_en": "Recorded among the worshippers in the Haram, so the crowd can be heard.",
+   "note_ar": "سُجّل بين المصلّين في الحرم، لذا يُسمع صوت الحشود."
+  },
+  {
+   "id": "adhan.makkah_2013",
+   "kind": "adhan",
+   "title_en": "Makkah (opening)",
+   "title_ar": "مكة المكرمة (المطلع)",
+   "place_en": "al-Masjid al-Haram · 2013",
+   "place_ar": "المسجد الحرام · 2013",
+   "categories": [
+    "renowned",
+    "traditional"
+   ],
+   "fajr": false,
+   "short": {
+    "file": "sounds/adhan_makkah_2013_short.ogg",
+    "seconds": 25.7
+   },
+   "credit": {
+    "author": "Seyfula Islam",
+    "licence": "CC BY 3.0",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Adhan,_Great_Mosque_of_Mecca_-_Jan_21,_2013.webm",
+    "changes": "Audio only (video removed); short version: 7.8–33.5 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
+   },
+   "note_en": "The original recording stops before the end of the Adhan, so only its opening is offered.",
+   "note_ar": "التسجيل الأصلي ينقطع قبل نهاية الأذان، لذا يُقدَّم مطلعه فقط."
+  },
+  {
+   "id": "adhan.madinah_2018",
+   "kind": "adhan",
+   "title_en": "Madinah (opening)",
+   "title_ar": "المدينة المنورة (المطلع)",
+   "place_en": "Madinah · 2018",
+   "place_ar": "المدينة المنورة · 2018",
+   "categories": [
+    "renowned",
+    "traditional"
+   ],
+   "fajr": false,
+   "short": {
+    "file": "sounds/adhan_madinah_2018_short.ogg",
+    "seconds": 29.45
+   },
+   "credit": {
+    "author": "B9.",
+    "licence": "Public domain",
+    "licence_url": "",
+    "source": "https://commons.wikimedia.org/wiki/File:Oraci%C3%B3n_Al-Azzan.ogg",
+    "changes": "Audio only (video removed); short version: 0.55–30.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
+   },
+   "note_en": "The recording contains the opening takbir only.",
+   "note_ar": "يحتوي التسجيل على التكبير الأول فقط."
+  },
+  {
+   "id": "adhan.malmo_fajr_2012",
+   "kind": "adhan",
+   "title_en": "Malmö",
+   "title_ar": "مالمو",
+   "place_en": "Islamic Center Malmö, Sweden · 2012",
+   "place_ar": "المركز الإسلامي في مالمو، السويد · 2012",
+   "categories": [
+    "fajr",
+    "regional"
+   ],
+   "fajr": true,
+   "file": "sounds/adhan_malmo_fajr_2012.ogg",
+   "seconds": 242.95,
+   "short": {
+    "file": "sounds/adhan_malmo_fajr_2012_short.ogg",
+    "seconds": 44.4
+   },
+   "credit": {
+    "author": "Islamic Center Malmö",
+    "licence": "CC BY 3.0",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Eid_al-Fitr_Fajr_azan_at_Malm%C3%B6_Mosque_-_19_August_2012.webm",
+    "changes": "Audio only (video removed); full version: 4.6–247.55 s of the original; short version: 4.6–49.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
+   },
+   "note_en": "Includes “As-salatu khayrun min an-nawm”. The original recording ends during the last phrase; a short fade was added.",
+   "note_ar": "يتضمن «الصلاة خير من النوم». ينتهي التسجيل الأصلي أثناء العبارة الأخيرة، فأضيف تلاشٍ قصير."
+  },
+  {
+   "id": "adhan.shalqar_2014",
+   "kind": "adhan",
+   "title_en": "Shalqar",
+   "title_ar": "شالقار",
+   "place_en": "Matey Qoqanuly Mosque, Kazakhstan · 2014",
+   "place_ar": "مسجد ماتاي قوقانولي، كازاخستان · 2014",
+   "categories": [
+    "regional"
+   ],
+   "fajr": false,
+   "file": "sounds/adhan_shalqar_2014.ogg",
+   "seconds": 131.7,
+   "short": {
+    "file": "sounds/adhan_shalqar_2014_short.ogg",
+    "seconds": 23.2
+   },
+   "credit": {
+    "author": "Esetok",
+    "licence": "CC BY-SA 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Adhan_in_Shalqar_mosque.webm",
+    "changes": "Audio only (video removed); full version: 2.8–134.5 s of the original; short version: 2.8–26.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
+    "derivative_licence": "CC BY-SA 4.0"
+   }
+  },
+  {
+   "id": "adhan.casablanca_2019",
+   "kind": "adhan",
+   "title_en": "Casablanca",
+   "title_ar": "الدار البيضاء",
+   "place_en": "Beside the Hassan II Mosque, Morocco · 2019",
+   "place_ar": "بجوار مسجد الحسن الثاني، المغرب · 2019",
+   "categories": [
+    "regional"
+   ],
+   "fajr": false,
+   "file": "sounds/adhan_casablanca_2019.ogg",
+   "seconds": 92.1,
+   "short": {
+    "file": "sounds/adhan_casablanca_2019_short.ogg",
+    "seconds": 30.9
+   },
+   "credit": {
+    "author": "Fraguando",
+    "licence": "CC BY-SA 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Llamada_a_oraci%C3%B3n_Mezquita_Hassan_II.wav",
+    "changes": "Audio only (video removed); full version: 3.8–95.9 s of the original; short version: 3.8–34.7 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
+    "derivative_licence": "CC BY-SA 4.0"
+   },
+   "note_en": "An outdoor recording by the Atlantic; the sea and the city can be heard.",
+   "note_ar": "تسجيل في الهواء الطلق قرب المحيط الأطلسي؛ يُسمع البحر والمدينة."
+  },
+  {
+   "id": "adhan.istanbul_2025",
+   "kind": "adhan",
+   "title_en": "Istanbul (street recording)",
+   "title_ar": "إسطنبول (تسجيل من الشارع)",
+   "place_en": "Istanbul, Türkiye · 2025",
+   "place_ar": "إسطنبول، تركيا · 2025",
+   "categories": [
+    "regional"
+   ],
+   "fajr": false,
+   "short": {
+    "file": "sounds/adhan_istanbul_2025_short.ogg",
+    "seconds": 50.0
+   },
+   "credit": {
+    "author": "Viceskeeni2",
+    "licence": "CC0",
+    "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "source": "https://commons.wikimedia.org/wiki/File:Adhan_in_Istanbul.webm",
+    "changes": "Audio only (video removed); short version: 0.0–50.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
+   },
+   "note_en": "A 50-second excerpt recorded in the street, with the city around it.",
+   "note_ar": "مقطع من 50 ثانية سُجّل في الشارع مع أصوات المدينة."
+  },
+  {
+   "id": "alt.two_ticks",
+   "kind": "alt",
+   "title_en": "Two ticks",
+   "title_ar": "نقرتان",
+   "categories": [
+    "brief"
+   ],
+   "file": "sounds/alt_two_ticks.ogg",
+   "seconds": 0.45,
+   "credit": {
+    "author": "Noor (original sound, tools/sounds/synthesize.py)",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "",
+    "changes": ""
+   }
+  },
+  {
+   "id": "alt.gentle_tone",
+   "kind": "alt",
+   "title_en": "Gentle tone",
+   "title_ar": "نغمة لطيفة",
+   "categories": [
+    "brief"
+   ],
+   "file": "sounds/alt_gentle_tone.ogg",
+   "seconds": 1.6,
+   "credit": {
+    "author": "Noor (original sound, tools/sounds/synthesize.py)",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "",
+    "changes": ""
+   }
+  },
+  {
+   "id": "alt.soft_chime",
+   "kind": "alt",
+   "title_en": "Soft chime",
+   "title_ar": "جرس ناعم",
+   "categories": [
+    "short"
+   ],
+   "file": "sounds/alt_soft_chime.ogg",
+   "seconds": 3.0,
+   "credit": {
+    "author": "Noor (original sound, tools/sounds/synthesize.py)",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "",
+    "changes": ""
+   }
+  },
+  {
+   "id": "alt.subtle_bell",
+   "kind": "alt",
+   "title_en": "Subtle bell",
+   "title_ar": "جرس هادئ",
+   "categories": [
+    "short"
+   ],
+   "file": "sounds/alt_subtle_bell.ogg",
+   "seconds": 3.5,
+   "credit": {
+    "author": "Noor (original sound, tools/sounds/synthesize.py)",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "",
+    "changes": ""
+   }
+  },
+  {
+   "id": "alt.melodic_chimes",
+   "kind": "alt",
+   "title_en": "Melodic chimes",
+   "title_ar": "أجراس لحنية",
+   "categories": [
+    "short"
+   ],
+   "file": "sounds/alt_melodic_chimes.ogg",
+   "seconds": 9.0,
+   "credit": {
+    "author": "Noor (original sound, tools/sounds/synthesize.py)",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "",
+    "changes": ""
+   }
+  },
+  {
+   "id": "alt.morning_birds",
+   "kind": "alt",
+   "title_en": "Morning birds",
+   "title_ar": "عصافير الصباح",
+   "categories": [
+    "long"
+   ],
+   "file": "sounds/alt_morning_birds.ogg",
+   "seconds": 22.0,
+   "credit": {
+    "author": "Noor (original sound, tools/sounds/synthesize.py)",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "",
+    "changes": ""
+   }
+  },
+  {
+   "id": "alt.calm_ambience",
+   "kind": "alt",
+   "title_en": "Calm ambience",
+   "title_ar": "أجواء هادئة",
+   "categories": [
+    "long"
+   ],
+   "file": "sounds/alt_calm_ambience.ogg",
+   "seconds": 30.0,
+   "credit": {
+    "author": "Noor (original sound, tools/sounds/synthesize.py)",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "",
+    "changes": ""
+   }
+  }
+ ]
+}

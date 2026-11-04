@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Mosque
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material3.Icon
@@ -31,7 +32,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.noor.app.data.AppSettings
 import com.noor.app.ui.components.NoorBackground
+import com.noor.app.ui.adhan.AdhanScreen
+import com.noor.app.ui.adhan.MySoundsScreen
+import com.noor.app.ui.adhan.PrayerAlertScreen
+import com.noor.app.ui.adhan.SoundLibraryScreen
 import com.noor.app.ui.onboarding.OnboardingScreen
+import com.noor.prayer.Prayer
 import com.noor.app.ui.today.TodayScreen
 import com.noor.app.ui.qibla.QiblaScreen
 import com.noor.app.ui.settings.AccuracyScreen
@@ -66,6 +72,11 @@ private object Routes {
     const val SETTINGS = "settings"
     const val CITIES = "cities"
     const val ACCURACY = "accuracy"
+    const val ADHAN = "adhan"
+    const val ADHAN_PRAYER = "adhan/prayer/{p}"
+    const val ADHAN_LIBRARY = "adhan/library"
+    const val ADHAN_SOUNDS = "adhan/sounds"
+    fun adhanPrayer(p: Prayer) = "adhan/prayer/${p.name}"
 }
 
 @Composable
@@ -73,7 +84,7 @@ private fun NoorRoot(s: AppSettings) {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
-    val topLevel = route in setOf(Routes.PRAYERS, Routes.QIBLA, Routes.WATCH, Routes.SETTINGS)
+    val topLevel = route in setOf(Routes.PRAYERS, Routes.QIBLA, Routes.ADHAN, Routes.WATCH, Routes.SETTINGS)
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = { if (topLevel) NoorBottomBar(nav, route) },
@@ -92,6 +103,16 @@ private fun NoorRoot(s: AppSettings) {
                 TodayScreen(content, onOpenLocation = { nav.navigate(Routes.SETTINGS) }, onOpenSource = { nav.navigate(Routes.ACCURACY) })
             }
             composable(Routes.QIBLA) { QiblaScreen(content, onOpenLocation = { nav.navigate(Routes.SETTINGS) }) }
+            composable(Routes.ADHAN) {
+                AdhanScreen(content, onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) },
+                    onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) })
+            }
+            composable(Routes.ADHAN_PRAYER) { e ->
+                val p = e.arguments?.getString("p")?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: Prayer.FAJR
+                PrayerAlertScreen(content, p, onBack = { nav.popBackStack() }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) })
+            }
+            composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(content, onBack = { nav.popBackStack() }) }
+            composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.WATCH) { WatchScreen(content) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) })
@@ -124,6 +145,8 @@ private fun NoorBottomBar(nav: NavHostController, route: String?) {
             label = { Text(stringResource(R.string.tab_today)) }, colors = colors)
         NavigationBarItem(route == Routes.QIBLA, { go(Routes.QIBLA) },
             icon = { Icon(painterResource(R.drawable.ic_kaaba), null) }, label = { Text(stringResource(R.string.tab_qibla)) }, colors = colors)
+        NavigationBarItem(route == Routes.ADHAN, { go(Routes.ADHAN) },
+            icon = { Icon(Icons.Rounded.Mosque, null) }, label = { Text(stringResource(R.string.tab_adhan)) }, colors = colors)
         NavigationBarItem(route == Routes.WATCH, { go(Routes.WATCH) },
             icon = { Icon(Icons.Rounded.Watch, null) }, label = { Text(stringResource(R.string.tab_watch)) }, colors = colors)
         NavigationBarItem(route == Routes.SETTINGS, { go(Routes.SETTINGS) },

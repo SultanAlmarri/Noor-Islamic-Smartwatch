@@ -90,6 +90,7 @@ class WearSync(private val context: Context, private val settings: SettingsRepos
                 updatedAtEpochMs = now,
                 countryCode = place.countryCode,
                 official = official,
+                alerts = s.alerts,
             )
         }
     }

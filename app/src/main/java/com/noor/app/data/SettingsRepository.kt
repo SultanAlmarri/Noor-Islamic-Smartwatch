@@ -14,6 +14,7 @@ import com.noor.prayer.AsrSchool
 import com.noor.prayer.GeoPoint
 import com.noor.prayer.HighLatitudeRule
 import com.noor.prayer.Prayer
+import com.noor.prayer.alerts.AlertSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -46,6 +47,7 @@ class SettingsRepository(private val context: Context) {
         val timeFormat = stringPreferencesKey("time_format")
         val theme = stringPreferencesKey("theme")
         val hijri = intPreferencesKey("hijri_adjust")
+        val alerts = stringPreferencesKey("alerts_v1")
         fun offset(p: Prayer) = intPreferencesKey("offset_${p.name.lowercase()}")
     }
 
@@ -75,6 +77,7 @@ class SettingsRepository(private val context: Context) {
             timeFormat = p.enum(K.timeFormat, TimeFormat.H12),
             theme = p.enum(K.theme, ThemeMode.DARK),
             hijriAdjust = p[K.hijri] ?: 0,
+            alerts = AlertSettings.decode(p[K.alerts]),
         )
     }
 
@@ -99,6 +102,11 @@ class SettingsRepository(private val context: Context) {
     suspend fun setTimeFormat(f: TimeFormat) = context.dataStore.edit { it[K.timeFormat] = f.name }
     suspend fun setTheme(t: ThemeMode) = context.dataStore.edit { it[K.theme] = t.name }
     suspend fun setHijriAdjust(d: Int) = context.dataStore.edit { it[K.hijri] = d.coerceIn(-2, 2) }
+
+    /** Read-modify-write in one transaction, so quick successive changes never overwrite each other. */
+    suspend fun updateAlerts(change: (AlertSettings) -> AlertSettings) = context.dataStore.edit {
+        it[K.alerts] = change(AlertSettings.decode(it[K.alerts])).encode()
+    }
 
     suspend fun saveLocation(l: KnownLocation) = context.dataStore.edit {
         it[K.lat] = l.point.latitude

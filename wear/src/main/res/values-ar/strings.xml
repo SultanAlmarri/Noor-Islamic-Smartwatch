@@ -27,4 +27,10 @@
     <string name="face_permission_settings">تم رفض الإذن. لاستخدام واجهة نور اضغط مطولاً على الواجهة الحالية واختر نور، أو اسمح بذلك من الإعدادات › التطبيقات › نور.</string>
     <string name="try_again">إعادة المحاولة</string>
     <string name="face_setup_title">واجهة نور</string>
+    <string name="alerts_title">تنبيهات الصلاة</string>
+    <string name="alerts_need_notifications">اسمح بالإشعارات لتعمل تنبيهات الصلاة على هذه الساعة.</string>
+    <string name="alerts_need_exact">اسمح بالمنبّهات الدقيقة لتصل التنبيهات في دقيقتها تمامًا.</string>
+    <string name="alerts_allow">السماح</string>
+    <string name="alerts_next">التالي: %1$s %2$s</string>
+    <string name="alerts_none">لا توجد تنبيهات صلاة على الساعة.</string>
 </resources>

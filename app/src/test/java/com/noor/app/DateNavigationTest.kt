@@ -70,4 +70,37 @@ class BundledDataTest {
         org.junit.Assert.assertEquals(1096, app.container.timetables.get("muis_singapore")?.size)
         org.junit.Assert.assertTrue((app.container.timetables.get("iacad_dubai")?.size ?: 0) >= 90)
     }
+
+    /** Every sound the library lists is really packaged, credited and licensed for redistribution. */
+    @org.junit.Test fun soundLibraryIsCompleteAndCredited() {
+        val app = org.robolectric.RuntimeEnvironment.getApplication()
+        val text = app.assets.open(com.noor.alerts.SoundLibrary.ASSET_PATH).bufferedReader().readText()
+        val entries = com.noor.alerts.SoundLibrary.parse(text)
+        fun exists(path: String) = runCatching { app.assets.open(path).close(); true }.getOrDefault(false)
+        val allowed = setOf("CC0", "Public domain", "CC BY 3.0", "CC BY 4.0", "CC BY-SA 3.0", "CC BY-SA 4.0")
+        org.junit.Assert.assertTrue(entries.size >= 10)
+        for (e in entries) {
+            e.file?.let { org.junit.Assert.assertTrue("missing ${e.id} full", exists(it)) }
+            e.shortFile?.let { org.junit.Assert.assertTrue("missing ${e.id} short", exists(it)) }
+            org.junit.Assert.assertTrue("no audio for ${e.id}", e.file != null || e.shortFile != null)
+            val credit = e.credit
+            org.junit.Assert.assertNotNull("no credit for ${e.id}", credit)
+            org.junit.Assert.assertTrue("licence ${credit!!.licence}", credit.licence in allowed)
+            if (e.kind == com.noor.alerts.SoundKind.ADHAN) {
+                org.junit.Assert.assertTrue(credit.author.isNotBlank())
+                org.junit.Assert.assertTrue(credit.sourceUrl!!.startsWith("https://commons.wikimedia.org/"))
+                org.junit.Assert.assertTrue(e.titleAr.isNotBlank() && e.placeAr != null)
+                org.junit.Assert.assertNotNull(e.shortFile)
+            }
+        }
+        val lib = com.noor.alerts.SoundLibrary.get(app)
+        // The defaults exist, with their full recordings; Fajr has a Fajr Adhan; other prayers never get it.
+        listOf(com.noor.prayer.alerts.SoundIds.DEFAULT_ADHAN, com.noor.prayer.alerts.SoundIds.DEFAULT_FAJR_ADHAN).forEach {
+            org.junit.Assert.assertTrue(it, lib.byId(it)?.let(lib::hasFull) == true)
+        }
+        org.junit.Assert.assertTrue(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_FAJR_ADHAN)!!.fajr)
+        org.junit.Assert.assertNotNull(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_SOUND))
+        org.junit.Assert.assertTrue(lib.adhansFor(com.noor.prayer.Prayer.ASR).none { it.fajr })
+        org.junit.Assert.assertTrue(lib.sounds.map { it.categories.first() }.toSet().containsAll(setOf("brief", "short", "long")))
+    }
 }

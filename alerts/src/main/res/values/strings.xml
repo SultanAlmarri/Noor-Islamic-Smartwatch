@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="noor_alert_jumuah">Jumu’ah</string>
+    <string name="noor_alert_title">Time for %1$s</string>
+    <string name="noor_alert_title_sunrise">Sunrise · Fajr time has ended</string>
+    <string name="noor_alert_late">This alert could not sound on time because the device was off or in deep sleep. The time began at %1$s.</string>
+    <string name="noor_alert_stop">Stop</string>
+    <string name="noor_alert_test_note">Test alert</string>
+    <string name="noor_alert_quiet_dnd">Silent because Do Not Disturb is on.</string>
+    <string name="noor_alert_quiet_ringer">Silent because the device is set to silent or vibrate.</string>
+    <string name="noor_alert_quiet_call">Silent during a call.</string>
+    <string name="noor_alert_blocked_background">The sound could not start because exact alarms are not allowed for Noor. Allow them in Noor › Adhan.</string>
+    <string name="noor_alert_short_of">%1$s (short)</string>
+    <string name="noor_alert_sub_full">The full recording is not on this device, so the short version played.</string>
+    <string name="noor_alert_sub_no_full">Only the opening of this recording exists, so the short version played.</string>
+    <string name="noor_alert_sub_custom">Your imported sound is missing, so the default chime played.</string>
+    <string name="noor_alert_sub_sound">The chosen sound is not available, so the default chime played.</string>
+    <string name="noor_alert_sub_fajr">The Fajr Adhan is only used for Fajr, so the standard Adhan played.</string>
+    <string name="noor_channel_adhan">Adhan</string>
+    <string name="noor_channel_adhan_desc">Shown while the Adhan or an alert sound plays, with a Stop button.</string>
+    <string name="noor_channel_notify">Prayer time notifications</string>
+    <string name="noor_channel_notify_desc">Prayers set to “Notification”. Uses your notification sound and follows Do Not Disturb.</string>
+    <string name="noor_channel_silent">Silent prayer notifications</string>
+    <string name="noor_channel_silent_desc">Prayers set to “Silent”, alerts silenced by Do Not Disturb, and the time after a sound has finished.</string>
+</resources>

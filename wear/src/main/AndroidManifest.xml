@@ -53,6 +53,11 @@
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/noor/" />
             </intent-filter>
+            <!-- Full Adhans and imported sounds sent from the phone for alerts on the watch. -->
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/noor/sound/" />
+            </intent-filter>
         </service>
 
         <!-- "Next prayer" complication for any watch face. -->

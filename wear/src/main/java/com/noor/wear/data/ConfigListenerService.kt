@@ -1,5 +1,6 @@
 package com.noor.wear.data
 
+import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
@@ -17,5 +18,11 @@ class ConfigListenerService : WearableListenerService() {
             .mapNotNull { DataMapItem.fromDataItem(it.dataItem).dataMap.getString(ConfigRepository.KEY_CONFIG) }
         if (payloads.isEmpty()) return
         runBlocking { repo.save(payloads.last()) }
+    }
+
+    /** The phone sends a full Adhan or an imported sound for a prayer that alerts on the watch. */
+    override fun onChannelOpened(channel: ChannelClient.Channel) {
+        if (!channel.path.startsWith(ReceivedSounds.PATH_PREFIX)) return
+        if (ReceivedSounds.receive(this, channel)) runBlocking { StatusPublisher.publish(this@ConfigListenerService) }
     }
 }
