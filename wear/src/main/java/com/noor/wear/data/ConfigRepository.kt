@@ -48,6 +48,7 @@ class ConfigRepository(private val context: Context) {
             p[keyReceived] = System.currentTimeMillis()
         }
         if (changed) refreshSurfaces(context)
+        StatusPublisher.publish(context)
         return changed
     }
 

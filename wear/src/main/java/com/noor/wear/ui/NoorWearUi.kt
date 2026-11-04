@@ -96,14 +96,14 @@ private val NoorWearColors = ColorScheme(
 )
 
 @Composable
-fun NoorWearUi(repo: ConfigRepository) {
+fun NoorWearUi(repo: ConfigRepository, faceSetup: Boolean) {
     val config by repo.config.collectAsState(initial = null)
-    NoorWearContent(config)
+    NoorWearContent(config, faceSetup = faceSetup)
 }
 
 /** The whole watch UI for a given configuration; [clock] is replaceable so previews and tests are deterministic. */
 @Composable
-fun NoorWearContent(config: WatchConfig?, clock: () -> Instant = Instant::now, showFaceSection: Boolean = true) {
+fun NoorWearContent(config: WatchConfig?, clock: () -> Instant = Instant::now, showFaceSection: Boolean = true, faceSetup: Boolean = false) {
     val t = remember(config) { WearText(config) }
     val base = LocalContext.current
     val ctx = remember(base, config?.language) { base.localizedFor(config) }
@@ -117,7 +117,11 @@ fun NoorWearContent(config: WatchConfig?, clock: () -> Instant = Instant::now, s
             LocalLayoutDirection provides if (t.arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
         ) {
             AppScaffold {
-                if (config == null) SetupScreen() else PrayerScreen(config, t, clock, showFaceSection)
+                when {
+                    faceSetup -> FaceSetupScreen()
+                    config == null -> SetupScreen()
+                    else -> PrayerScreen(config, t, clock, showFaceSection)
+                }
             }
         }
     }
@@ -189,7 +193,7 @@ private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, show
                         modifier = Modifier.padding(top = 6.dp),
                     )
                 }
-                if (showFaceSection) item { FaceSection() }
+                if (showFaceSection) item { FaceSection(autoStart = false) }
             }
         }
     }
@@ -238,52 +242,5 @@ private fun PrayerRow(p: Prayer, time: String, t: WearText, isCurrent: Boolean, 
         )
         Text(time, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (isCurrent || isNext) FontWeight.SemiBold else FontWeight.Normal),
             color = if (isNext) Gold else Ink)
-    }
-}
-
-@Composable
-private fun FaceSection() {
-    val context = LocalContext.current
-    val push = remember { FacePush(context) }
-    val scope = rememberCoroutineScope()
-    var state by remember { mutableStateOf<FaceState?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { state = push.state() }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) scope.launch { busy = true; state = push.activate(); busy = false }
-    }
-
-    val s = state ?: return
-    if (s is FaceState.Unsupported || s is FaceState.NotBundled) return // Nothing the user can act on here.
-
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(stringResource(R.string.watch_face), style = MaterialTheme.typography.labelMedium, color = Gold)
-        Spacer(Modifier.height(4.dp))
-        when {
-            busy -> Text(stringResource(R.string.face_working), style = MaterialTheme.typography.labelSmall, color = Mist)
-            s is FaceState.Failed -> Text(stringResource(R.string.face_error, s.message), style = MaterialTheme.typography.labelSmall, color = Mist, textAlign = TextAlign.Center)
-            s is FaceState.Ready && s.active && !s.updateAvailable -> Text(stringResource(R.string.face_active), style = MaterialTheme.typography.labelSmall, color = Mist)
-            s is FaceState.Ready -> {
-                val label = when {
-                    !s.installed -> R.string.face_install
-                    s.updateAvailable -> R.string.face_update
-                    else -> R.string.face_activate
-                }
-                Button(
-                    onClick = {
-                        if (s.installed && !s.updateAvailable) {
-                            val granted = context.checkSelfPermission(FacePush.PERMISSION_ACTIVATE) == PackageManager.PERMISSION_GRANTED
-                            if (granted) scope.launch { busy = true; state = push.activate(); busy = false }
-                            else permission.launch(FacePush.PERMISSION_ACTIVATE)
-                        } else scope.launch { busy = true; state = push.installOrUpdate(); busy = false }
-                    },
-                    colors = ButtonDefaults.filledTonalButtonColors(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(label), maxLines = 2) }
-                if (!s.installed) Unit
-                else if (!s.active) Text(stringResource(R.string.face_added), style = MaterialTheme.typography.labelSmall, color = Mist,
-                    textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
-            }
-        }
     }
 }

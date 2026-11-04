@@ -24,4 +24,7 @@
     <string name="face_error">Could not install: %1$s</string>
     <string name="face_working">Working…</string>
     <string name="method">Method</string>
+    <string name="face_permission_settings">Permission declined. To use Noor as your watch face, long-press the current face and choose Noor, or allow it in Settings › Apps › Noor.</string>
+    <string name="try_again">Try again</string>
+    <string name="face_setup_title">Noor watch face</string>
 </resources>

@@ -30,7 +30,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 | `tools/watchface/` | Packages the watch face for Watch Face Push and validates it with Google's validator |
 | `accuracy/` | Official IACAD datasets, research tools, blind test |
 | `signing/` | Public development keys (see its README); no release key is stored here |
-| `docs/` | `INSTALL.md`, `PRAYER_ACCURACY.md` |
+| `docs/` | `ARCHITECTURE.md` (how each part works), `INSTALL.md`, `PRAYER_ACCURACY.md` |
 
 ## How phone and watch work together
 

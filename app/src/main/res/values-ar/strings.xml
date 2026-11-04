@@ -23,7 +23,6 @@
     <string name="offline_ready">يعمل دون إنترنت. تُحسب الأوقات على هذا الهاتف.</string>
 
     <string name="watch_title">ساعة جالاكسي</string>
-    <string name="watch_face_installed">واجهة نور للساعة</string>
     <string name="watch_editor_title">محرّر واجهة الساعة</string>
     <string name="watch_editor_body">المرحلة التالية: الخطوط والألوان والأحجام والأرقام والأيقونات والتخطيط والسمات المحفوظة وتصميم منفصل للعرض الدائم، مع معاينة حية، تُرسل إلى الساعة كإصدار جديد من واجهة نور.</string>
     <string name="in_development">قيد التطوير</string>
@@ -87,11 +86,6 @@
     <string name="watch_sync_title">المزامنة بين الهاتف والساعة</string>
     <string name="watch_checking">جارٍ البحث عن ساعتك…</string>
     <string name="watch_no_wear_os">خدمات Wear OS غير متاحة على هذا الهاتف. ثبّت تطبيق Galaxy Wearable واربط ساعتك.</string>
-    <string name="watch_none_connected">لا توجد ساعة متصلة الآن</string>
-    <string name="watch_connected">متصلة: %1$s</string>
-    <string name="watch_app_missing">نور غير مثبّت على الساعة بعد</string>
-    <string name="watch_app_installed">نور مثبّت على %1$s</string>
-    <string name="watch_last_sent">أُرسلت الإعدادات الساعة %1$s. تستلمها الساعة فور اتصالها.</string>
     <string name="watch_not_sent">لم تُرسل الإعدادات بعد</string>
     <string name="watch_sync_failed">تعذّر تسليم الإعدادات إلى Wear OS. حاول مرة أخرى.</string>
     <string name="watch_needs_location">اختر الموقع أولاً</string>
@@ -99,7 +93,6 @@
     <string name="watch_syncing">جارٍ المزامنة…</string>
     <string name="watch_on_watch_title">على الساعة</string>
     <string name="watch_on_watch_body">يحسب تطبيق نور على الساعة المواقيت نفسها التي يحسبها هذا الهاتف، بالموقع والجهة والتعديلات نفسها، ويواصل العمل دون الهاتف. ويضيف بطاقة «مواقيت الصلاة» وإضافة «الصلاة القادمة» يمكنك وضعها على أي واجهة.</string>
-    <string name="watch_face_body">يبقى الإصدار 1.3.2 مثبّتاً دون تغيير. ويحمل تطبيق الساعة هذه الواجهة أيضاً، وعلى Wear OS 6 يضيفها إلى قائمة الواجهات من الساعة نفسها. وسيوصل المحرّر تصاميمك بالطريقة نفسها.</string>
     <string name="previous">السابق</string>
     <string name="next_page">التالي</string>
     <string name="previous_day">اليوم السابق</string>
@@ -144,4 +137,33 @@
     <string name="cal_step4">ثم أدر الهاتف ببطء دورة كاملة وهو مستوٍ.</string>
     <string name="cal_step5">ضعه مستوياً وانتظر بضع ثوانٍ حتى تستقر القراءة.</string>
     <string name="cal_live">الدقة الحالية: %1$s</string>
+    <string name="watch_no_wear_os_title">خدمات Wear OS غير موجودة</string>
+    <string name="watch_none_title">لا توجد ساعة متصلة</string>
+    <string name="watch_none_body">اربط ساعة جالاكسي بتطبيق Galaxy Wearable (أو ساعة Wear OS أخرى بتطبيقها المرافق)، وأبقِ البلوتوث مفعّلاً، ثم عد إلى هنا.</string>
+    <string name="watch_generic_name">ساعتك</string>
+    <string name="watch_connected_short">متصلة</string>
+    <string name="watch_not_connected_short">غير متصلة الآن</string>
+    <string name="step_app_title">نور على الساعة</string>
+    <string name="step_app_done">مثبّت · الإصدار %1$s</string>
+    <string name="step_app_unreached">لم تستجب الساعة. تأكد أنها متصلة ونشطة ثم أعد المحاولة.</string>
+    <string name="step_app_waiting">متجر Play مفتوح على ساعتك. اضغط تثبيت هناك؛ تتحدث هذه الصفحة تلقائياً عند الانتهاء.</string>
+    <string name="step_app_timeout">لم يُثبَّت بعد. إذا أُغلقت صفحة المتجر فافتحها مرة أخرى.</string>
+    <string name="step_app_dev">هذا إصدار تطويري وليس من Google Play، لذا يُثبَّت تطبيق الساعة بشكل منفصل (راجع الدليل). عندما يصبح نور على Google Play يفتح هذا الزر متجر الساعة للتثبيت بضغطة واحدة.</string>
+    <string name="step_app_todo">يفتح نور في متجر Play على ساعتك: ضغطة واحدة هناك تثبّته.</string>
+    <string name="step_app_button">التثبيت على الساعة</string>
+    <string name="step_app_again">فتح متجر Play على الساعة مجدداً</string>
+    <string name="step_app_guide">فتح دليل التثبيت</string>
+    <string name="step_sync_title">إعدادات الصلاة على الساعة</string>
+    <string name="step_after_install">متاح بعد تثبيت نور على الساعة.</string>
+    <string name="step_sync_done">استلمتها الساعة الساعة %1$s. تحسب المواقيت بنفسها من الآن.</string>
+    <string name="step_sync_sent">أُرسلت الساعة %1$s. تستلمها الساعة فور اتصالها.</string>
+    <string name="step_face_title">واجهة نور</string>
+    <string name="step_face_needs6">تتطلب Wear OS 6. تعمل هذه الساعة بـ Wear OS %1$s؛ البطاقة والإضافة تعملان بدونه.</string>
+    <string name="step_face_done">قيد الاستخدام.</string>
+    <string name="step_face_waiting">أكّد على ساعتك. يطلب Wear OS الإذن مرة واحدة لتغيير الواجهة.</string>
+    <string name="step_face_installed">أُضيفت إلى واجهات ساعتك. لم تتغير الواجهات الأخرى.</string>
+    <string name="step_face_todo">يضيف واجهة نور إلى ساعتك ويجعلها الواجهة الحالية بعد تأكيدك على الساعة.</string>
+    <string name="step_face_button">استخدام واجهة نور</string>
+    <string name="watch_open_on_watch">فتح نور على الساعة</string>
+    <string name="step_face_open_first">افتح نور على الساعة مرة واحدة لإكمال الإعداد.</string>
 </resources>

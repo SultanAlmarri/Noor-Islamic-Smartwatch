@@ -21,6 +21,7 @@ wearProtolayout = "1.4.2"
 wearComplications = "1.3.0"
 watchFacePush = "1.0.0"
 concurrentFutures = "1.2.0"
+wearRemote = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -56,6 +57,7 @@ wear-protolayout-material3 = { group = "androidx.wear.protolayout", name = "prot
 wear-protolayout-expression = { group = "androidx.wear.protolayout", name = "protolayout-expression", version.ref = "wearProtolayout" }
 wear-complications-source = { group = "androidx.wear.watchface", name = "watchface-complications-data-source-ktx", version.ref = "wearComplications" }
 wear-watchfacepush = { group = "androidx.wear.watchfacepush", name = "watchfacepush", version.ref = "watchFacePush" }
+wear-remote-interactions = { group = "androidx.wear", name = "wear-remote-interactions", version.ref = "wearRemote" }
 androidx-concurrent-futures = { group = "androidx.concurrent", name = "concurrent-futures-ktx", version.ref = "concurrentFutures" }
 
 [plugins]

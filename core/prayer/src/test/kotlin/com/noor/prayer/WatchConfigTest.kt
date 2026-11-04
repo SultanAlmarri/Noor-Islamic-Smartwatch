@@ -77,3 +77,14 @@ class DaylightSavingTest {
         assertTrue(gap in 1438..1441, "solar days stay ~24 h apart: $gap")
     }
 }
+
+class WatchReportTest {
+    @Test fun roundTripAndTolerance() {
+        val r = WatchReport(2, "0.2.0", 36, true, 1, null, false, 1_793_000_000_000, 1_793_000_100_000)
+        assertEquals(r, WatchReport.decode(r.encode()))
+        val installed = r.copy(faceInstalledVersion = 1, faceActive = true)
+        assertEquals(installed, WatchReport.decode(installed.encode()))
+        assertNull(WatchReport.decode("nonsense"))
+        assertEquals(34, WatchReport.decode("code=1\nsdk=34\nunknown=x\n")!!.sdkInt)
+    }
+}

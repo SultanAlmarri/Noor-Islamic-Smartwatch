@@ -42,6 +42,12 @@ import com.noor.app.ui.today.DayCache
 import com.noor.app.ui.today.TodayContent
 import com.noor.app.ui.today.TodayUi
 import com.noor.app.ui.watch.WatchScreen
+import com.noor.app.ui.watch.WatchContent
+import com.noor.app.ui.watch.WatchActions
+import com.noor.app.ui.watch.Pending
+import com.noor.app.data.WatchNode
+import com.noor.app.data.WatchSetupState
+import com.noor.prayer.WatchReport
 import com.noor.app.data.compass.CompassReading
 import com.noor.app.ui.qibla.CalibrationGuide
 import com.noor.app.ui.qibla.QiblaContent
@@ -75,7 +81,7 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -95,6 +101,11 @@ class ScreenshotTest {
         assessment = CompassAssessor.assess(accuracyDeg, magStatus, fieldUt, 44.0, tilt), source = CompassReading.Source.ROTATION_VECTOR,
     )
 
+    private data class WatchScene(
+        val state: WatchSetupState, val fromPlay: Boolean = true, val lastSent: Long? = null,
+        val installs: Map<String, Pending> = emptyMap(), val faces: Map<String, Pending> = emptyMap(), val now: Long = 1_793_801_000_000L,
+    )
+
     @Test fun renderScreens() {
         val app = RuntimeEnvironment.getApplication() as NoorApplication
         runBlocking {
@@ -106,6 +117,7 @@ class ScreenshotTest {
         var theme by mutableStateOf(ThemeMode.DARK)
         var arabic by mutableStateOf(false)
         var reading by mutableStateOf<CompassReading?>(null)
+        var watch by mutableStateOf<WatchScene?>(null)
         rule.setContent {
             val ctxBase = LocalContext.current
             val config = Configuration(ctxBase.resources.configuration).apply {
@@ -143,6 +155,10 @@ class ScreenshotTest {
                                 Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(NoorTheme.colors.surface).padding(top = 24.dp)) {
                                     CalibrationGuide(reading)
                                 }
+                            }
+                            Screen.WATCH_STATE -> watch?.let { w ->
+                                WatchContent(pad, w.state, true, w.lastSent, w.installs, w.faces, false, false, w.fromPlay,
+                                    Formatter(arabic, Numerals.WESTERN, TimeFormat.H12), WatchActions({}, {}, {}, {}, {}), now = w.now)
                             }
                             Screen.SETTINGS -> SettingsScreen(pad, {}, {})
                             Screen.WATCH -> WatchScreen(pad)
@@ -187,6 +203,22 @@ class ScreenshotTest {
         shot("16_qibla_aligned_day_en", "Facing the Qibla")
         theme = ThemeMode.DARK; reading = reading(301.4, 34.0, 1, 71.0, 4.0)
         screen = Screen.CALIBRATION; shot("17_calibration_night_en", "Calibrate")
+        // Watch setup, every state from nothing to done (as the phone would see it).
+        val gw = WatchNode("node1", "Galaxy Watch5 Pro (4E2A)")
+        val t0 = 1_793_801_000_000L
+        val doneReport = WatchReport(2, "0.3.0", 36, true, 1, 1, true, t0 - 60_000, t0)
+        screen = Screen.WATCH_STATE
+        watch = WatchScene(WatchSetupState(false, emptyList(), emptySet(), emptyMap())); shot("18_watch_none_night_en", "No watch connected")
+        watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap()), fromPlay = false); shot("19_watch_dev_build_night_en", "development build")
+        watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap()), installs = mapOf("node1" to Pending(t0 - 30_000, true)), now = t0)
+        shot("20_watch_installing_night_en", "Tap Install there")
+        watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport.copy(faceInstalledVersion = 1, faceActive = false))), now = t0)
+        shot("21_watch_face_ready_night_en", "Use the Noor watch face")
+        watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport)), now = t0); shot("22_watch_done_night_en", "In use")
+        watch = WatchScene(WatchSetupState(false, listOf(gw.copy(name = "Galaxy Watch4")), setOf("node1"), mapOf("node1" to doneReport.copy(sdkInt = 34, facePushSupported = false, faceActive = false, faceInstalledVersion = null))), now = t0)
+        shot("23_watch_wearos5_night_en", "Needs Wear OS 6")
+        arabic = true; watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport)), now = t0); shot("24_watch_done_night_ar", "قيد الاستخدام")
+        arabic = false
         screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")

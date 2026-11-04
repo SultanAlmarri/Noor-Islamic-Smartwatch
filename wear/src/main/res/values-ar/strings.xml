@@ -24,4 +24,7 @@
     <string name="face_error">تعذّر التثبيت: %1$s</string>
     <string name="face_working">جارٍ العمل…</string>
     <string name="method">الطريقة</string>
+    <string name="face_permission_settings">تم رفض الإذن. لاستخدام واجهة نور اضغط مطولاً على الواجهة الحالية واختر نور، أو اسمح بذلك من الإعدادات › التطبيقات › نور.</string>
+    <string name="try_again">إعادة المحاولة</string>
+    <string name="face_setup_title">واجهة نور</string>
 </resources>

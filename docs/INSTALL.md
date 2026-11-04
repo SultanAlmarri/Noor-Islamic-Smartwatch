@@ -35,12 +35,16 @@ adb install Noor-watch.apk
 
 ## Connect them
 
-1. On the phone: Noor → **Watch** tab. It should list your watch and "Noor installed on …". Tap **Sync now**.
+1. On the phone: Noor → **Watch** tab. Your watch appears with three steps: Noor on the watch, prayer settings,
+   Noor watch face. Each turns green only when the watch itself confirms it.
 2. On the watch: open Noor. It shows the next prayer, a countdown and today's times for the phone's location and method.
 3. Tile: swipe to the end of the tiles → **+** → **Prayer times**.
 4. Complication: long-press the watch face → **Customise** → a complication slot → **Noor → Next prayer**.
-5. Watch face (Wear OS 6): installing the watch app adds **Noor** to the watch face list. If it is not there, open Noor on
-   the watch, scroll down, **Add to watch**.
+5. Watch face (Wear OS 6): on the phone, Watch tab → **Use the Noor watch face**. The watch opens Noor's face setup;
+   confirm the permission on the watch once. Your other watch faces are not changed.
+
+Once Noor is published on Google Play, step "Noor on the watch" becomes a single button on the phone that opens the
+Play Store on the watch, where one tap installs it; no computer needed.
 
 After the first sync the watch calculates on its own; the phone can be off or out of range. Changing location or settings
 on the phone updates the watch the next time they are connected.

@@ -29,10 +29,19 @@
             android:name=".ui.MainActivity"
             android:exported="true"
             android:taskAffinity=""
+            android:launchMode="singleTask"
             android:theme="@style/Theme.Noor.Wear.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Opened from the phone (RemoteActivityHelper): noor://open and noor://face/activate -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="noor" android:host="open" />
+                <data android:scheme="noor" android:host="face" />
             </intent-filter>
         </activity>
 
