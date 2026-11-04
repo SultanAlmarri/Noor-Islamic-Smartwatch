@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Picture shown in the tile picker: next prayer in gold over the day's times. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="192dp" android:height="192dp"
+    android:viewportWidth="192" android:viewportHeight="192">
+    <path android:fillColor="#FF060B15" android:pathData="M96,0a96,96 0 1,0 0.01,0z"/>
+    <path android:fillColor="#FFB7C0D2" android:pathData="M76,34h40a3,3 0 0 1 0,6h-40a3,3 0 0 1 0,-6z"/>
+    <path android:fillColor="#FFE3C27E" android:pathData="M58,56h76a9,9 0 0 1 0,18h-76a9,9 0 0 1 0,-18z"/>
+    <path android:fillColor="#FFF7F2E7" android:pathData="M70,82h52a6,6 0 0 1 0,12h-52a6,6 0 0 1 0,-12z"/>
+    <path android:fillColor="#33E3C27E" android:pathData="M40,106h112a14,14 0 0 1 0,28h-112a14,14 0 0 1 0,-28z"/>
+    <path android:fillColor="#FFB7C0D2" android:pathData="M54,116h30a4,4 0 0 1 0,8h-30a4,4 0 0 1 0,-8zM108,116h30a4,4 0 0 1 0,8h-30a4,4 0 0 1 0,-8z"/>
+    <path android:fillColor="#FFE3C27E" android:pathData="M62,148h68a16,16 0 0 1 0,32h-68a16,16 0 0 1 0,-32z"/>
+</vector>

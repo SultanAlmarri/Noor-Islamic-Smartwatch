@@ -24,27 +24,40 @@ jobs:
       - name: Prayer engine tests (accuracy against reference and official IACAD data)
         run: ./gradlew :core:prayer:test --stacktrace
 
-      - name: App unit tests
+      - name: Phone app tests (unit + rendered screens)
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
+      - name: Watch app tests (unit + rendered screens, tile, complication data; watch face validated by Google's validator)
+        run: ./gradlew :wear:testDebugUnitTest --stacktrace
+
       - name: Build installable APKs
-        run: ./gradlew :app:assembleDebug :app:assembleRelease --stacktrace
+        run: ./gradlew :app:assembleRelease :wear:assembleRelease --stacktrace
 
       - name: Collect outputs
         if: always()
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/debug/app-debug.apk out/Noor-debug.apk 2>/dev/null || true
-          cp app/build/outputs/apk/release/app-release.apk out/Noor-release-test-signed.apk 2>/dev/null || true
+          cp app/build/outputs/apk/release/app-release.apk out/Noor-phone.apk 2>/dev/null || true
+          cp wear/build/outputs/apk/release/wear-release.apk out/Noor-watch.apk 2>/dev/null || true
+          cp wear/build/generated/watchface/validation.txt out/watchface-validation.txt 2>/dev/null || true
           (cd core/prayer/build && zip -qr ../../../out/engine-test-report.zip reports test-results) 2>/dev/null || true
           (cd app/build && zip -qr ../../out/app-test-report.zip reports test-results) 2>/dev/null || true
-          (cd app/build/screenshots && zip -qr ../../../out/screenshots.zip .) 2>/dev/null || true
+          (cd wear/build && zip -qr ../../out/watch-test-report.zip reports test-results) 2>/dev/null || true
+          mkdir -p shots && cp app/build/screenshots/*.png wear/build/screenshots/* shots/ 2>/dev/null || true
+          (cd shots && zip -qr ../out/screenshots.zip .) 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: noor-build-${{ github.run_number }}
           path: out/
+
+      - name: Remove assets of the previous naming from the rolling release
+        if: github.ref == 'refs/heads/main' && success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for a in Noor-debug.apk Noor-release-test-signed.apk; do gh release delete-asset dev-latest "$a" --yes 2>/dev/null || true; done
 
       - name: Publish rolling development build
         if: github.ref == 'refs/heads/main' && success()
@@ -55,10 +68,13 @@ jobs:
           prerelease: true
           body: |
             Automatic build of `${{ github.sha }}` (run ${{ github.run_number }}).
-            Test build, signed with the debug key. Not a store release.
+            Development build signed with the public development key (signing/README.md). Not a store release.
+            Noor-phone.apk goes on the phone, Noor-watch.apk on the watch (see docs/INSTALL.md).
           files: |
-            out/Noor-debug.apk
-            out/Noor-release-test-signed.apk
+            out/Noor-phone.apk
+            out/Noor-watch.apk
+            out/watchface-validation.txt
             out/engine-test-report.zip
             out/app-test-report.zip
+            out/watch-test-report.zip
             out/screenshots.zip

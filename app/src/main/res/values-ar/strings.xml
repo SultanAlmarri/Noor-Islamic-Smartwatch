@@ -24,11 +24,8 @@
 
     <string name="watch_title">ساعة جالاكسي</string>
     <string name="watch_face_installed">واجهة نور للساعة</string>
-    <string name="watch_face_version">الإصدار %1$s، مثبّتة بشكل منفصل</string>
-    <string name="watch_sync_title">المزامنة بين الهاتف والساعة</string>
-    <string name="watch_sync_body">غير متاحة بعد. مزامنة الأوقات والموقع والطريقة والتصميم مع الساعة هي المرحلة التالية من التطوير. تواصل الواجهة الحساب بنفسها حتى ذلك الحين.</string>
     <string name="watch_editor_title">محرّر واجهة الساعة</string>
-    <string name="watch_editor_body">بعد المزامنة: الخطوط والألوان والأحجام والأرقام والأيقونات والتخطيط والسمات المحفوظة وتصميم منفصل للعرض الدائم، مع معاينة حية.</string>
+    <string name="watch_editor_body">المرحلة التالية: الخطوط والألوان والأحجام والأرقام والأيقونات والتخطيط والسمات المحفوظة وتصميم منفصل للعرض الدائم، مع معاينة حية، تُرسل إلى الساعة كإصدار جديد من واجهة نور.</string>
     <string name="in_development">قيد التطوير</string>
 
     <string name="settings_location">الموقع</string>
@@ -87,4 +84,20 @@
     <string name="bg_perm_continue">متابعة</string>
     <string name="bg_perm_not_now">ليس الآن</string>
     <string name="permission_denied">لم يُمنح إذن الموقع. اختر مدينة أو اسمح بالموقع من إعدادات النظام.</string>
+    <string name="watch_sync_title">المزامنة بين الهاتف والساعة</string>
+    <string name="watch_checking">جارٍ البحث عن ساعتك…</string>
+    <string name="watch_no_wear_os">خدمات Wear OS غير متاحة على هذا الهاتف. ثبّت تطبيق Galaxy Wearable واربط ساعتك.</string>
+    <string name="watch_none_connected">لا توجد ساعة متصلة الآن</string>
+    <string name="watch_connected">متصلة: %1$s</string>
+    <string name="watch_app_missing">نور غير مثبّت على الساعة بعد</string>
+    <string name="watch_app_installed">نور مثبّت على %1$s</string>
+    <string name="watch_last_sent">أُرسلت الإعدادات الساعة %1$s. تستلمها الساعة فور اتصالها.</string>
+    <string name="watch_not_sent">لم تُرسل الإعدادات بعد</string>
+    <string name="watch_sync_failed">تعذّر تسليم الإعدادات إلى Wear OS. حاول مرة أخرى.</string>
+    <string name="watch_needs_location">اختر الموقع أولاً</string>
+    <string name="watch_sync_now">مزامنة الآن</string>
+    <string name="watch_syncing">جارٍ المزامنة…</string>
+    <string name="watch_on_watch_title">على الساعة</string>
+    <string name="watch_on_watch_body">يحسب تطبيق نور على الساعة المواقيت نفسها التي يحسبها هذا الهاتف، بالموقع والجهة والتعديلات نفسها، ويواصل العمل دون الهاتف. ويضيف بطاقة «مواقيت الصلاة» وإضافة «الصلاة القادمة» يمكنك وضعها على أي واجهة.</string>
+    <string name="watch_face_body">يبقى الإصدار 1.3.2 مثبّتاً دون تغيير. ويحمل تطبيق الساعة هذه الواجهة أيضاً، وعلى Wear OS 6 يضيفها إلى قائمة الواجهات من الساعة نفسها. وسيوصل المحرّر تصاميمك بالطريقة نفسها.</string>
 </resources>

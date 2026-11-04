@@ -15,4 +15,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "NoorIslamicSmartwatch"
 include(":app")
+include(":wear")
 include(":core:prayer")

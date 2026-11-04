@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the Noor watch face icon ic_isha.svg by tools/svg_to_vector.py -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="96" android:viewportHeight="96">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M41.36 26.13 A26.00 26.00 0 1 0 67.28 63.57 A23.00 23.00 0 0 1 41.36 26.13 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M72.0 17.0 L70.1 22.1 L65.0 24.0 L70.1 25.9 L72.0 31.0 L73.9 25.9 L79.0 24.0 L73.9 22.1 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M80.0 45.5 L78.8 48.8 L75.5 50.0 L78.8 51.2 L80.0 54.5 L81.2 51.2 L84.5 50.0 L81.2 48.8 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M58.0 10.5 L57.1 13.1 L54.5 14.0 L57.1 14.9 L58.0 17.5 L58.9 14.9 L61.5 14.0 L58.9 13.1 Z"/>
+</vector>

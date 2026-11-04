@@ -12,17 +12,28 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
+    }
+
+    signingConfigs {
+        // Shared with the watch app: the Wear OS Data Layer only connects apps with the same id and signature.
+        create("dev") {
+            storeFile = rootProject.file("signing/noor-dev.keystore")
+            storePassword = "noor-dev-key"
+            keyAlias = "noor-dev"
+            keyPassword = "noor-dev-key"
+        }
     }
 
     buildTypes {
+        debug { signingConfig = signingConfigs.getByName("dev") }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Test builds are signed with the debug key until a release key is created (see docs/RELEASE.md).
-            signingConfig = signingConfigs.getByName("debug")
+            // Test builds use the public development key (signing/README.md); Play releases need a private key.
+            signingConfig = signingConfigs.getByName("dev")
         }
     }
     compileOptions {
@@ -63,6 +74,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.play.services.wearable)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

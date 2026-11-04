@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Noor</string>
+    <string name="complication_next">Next prayer</string>
+    <string name="tile_label">Prayer times</string>
+    <string name="next">Next</string>
+    <string name="now">Now</string>
+    <string name="remaining">remaining</string>
+    <string name="today">Today</string>
+    <string name="open">Open</string>
+    <string name="setup_title">Open Noor on your phone</string>
+    <string name="setup_body">Your location and calculation method come from the Noor phone app. After the first sync the watch calculates on its own, offline.</string>
+    <string name="setup_waiting">Waiting for the phone…</string>
+    <string name="synced_from_phone">From phone · %1$s</string>
+    <string name="offline_note">Calculated on the watch</string>
+    <string name="watch_face">Noor watch face</string>
+    <string name="face_install">Add to watch</string>
+    <string name="face_update">Update watch face</string>
+    <string name="face_activate">Use as watch face</string>
+    <string name="face_active">In use</string>
+    <string name="face_added">Added. Long-press the watch face to choose it.</string>
+    <string name="face_needs_wear6">Needs Wear OS 6</string>
+    <string name="face_unavailable">Not included in this build</string>
+    <string name="face_error">Could not install: %1$s</string>
+    <string name="face_working">Working…</string>
+    <string name="method">Method</string>
+</resources>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <!-- Installs and updates the Noor watch face on the watch (Wear OS 6 Watch Face Push). -->
+    <uses-permission android:name="com.google.wear.permission.PUSH_WATCH_FACES" />
+    <!-- Lets the app make the Noor watch face the active one, once, after the user agrees. -->
+    <uses-permission android:name="com.google.wear.permission.SET_PUSHED_WATCH_FACE_AS_ACTIVE" />
+
+    <application
+        android:name=".NoorWearApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault">
+
+        <!-- Settings come from the Noor phone app; times are then calculated on the watch, offline. -->
+        <meta-data android:name="com.google.android.wearable.standalone" android:value="false" />
+
+        <!-- The Noor watch face (assets/default_watchface.apk, built by tools/watchface/build_pushed_face.py) is added to
+             the watch face picker when this app is installed; it does not replace the face in use. -->
+        <meta-data
+            android:name="com.google.android.wearable.marketplace.DEFAULT_WATCHFACE_VALIDATION_TOKEN"
+            android:value="@string/default_wf_token" />
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Noor.Wear.Starting">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Receives settings and location from the phone. -->
+        <service
+            android:name=".data.ConfigListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/noor/" />
+            </intent-filter>
+        </service>
+
+        <!-- "Next prayer" complication for any watch face. -->
+        <service
+            android:name=".complication.NextPrayerComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_prayer_dhuhr"
+            android:label="@string/complication_next"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT,LONG_TEXT,RANGED_VALUE" />
+            <!-- The timeline already covers two days; this periodic refresh only extends it. -->
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="21600" />
+        </service>
+
+        <!-- "Prayer times" tile. -->
+        <service
+            android:name=".tile.PrayerTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_prayer_maghrib"
+            android:label="@string/tile_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/tile_preview" />
+            <meta-data
+                android:name="com.google.android.wearable.tile.PREVIEW"
+                android:resource="@drawable/tile_preview" />
+        </service>
+
+        <!-- Recalculate when the watch's clock or zone changes. -->
+        <receiver android:name=".data.TimeChangeReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

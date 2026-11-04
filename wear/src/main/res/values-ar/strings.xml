@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">نور</string>
+    <string name="complication_next">الصلاة القادمة</string>
+    <string name="tile_label">مواقيت الصلاة</string>
+    <string name="next">القادمة</string>
+    <string name="now">الآن</string>
+    <string name="remaining">متبقٍ</string>
+    <string name="today">اليوم</string>
+    <string name="open">فتح</string>
+    <string name="setup_title">افتح نور على هاتفك</string>
+    <string name="setup_body">يأتي موقعك وطريقة الحساب من تطبيق نور على الهاتف. بعد أول مزامنة تحسب الساعة المواقيت بنفسها دون اتصال.</string>
+    <string name="setup_waiting">بانتظار الهاتف…</string>
+    <string name="synced_from_phone">من الهاتف · %1$s</string>
+    <string name="offline_note">محسوبة على الساعة</string>
+    <string name="watch_face">واجهة نور</string>
+    <string name="face_install">إضافة إلى الساعة</string>
+    <string name="face_update">تحديث الواجهة</string>
+    <string name="face_activate">استخدامها واجهةً للساعة</string>
+    <string name="face_active">قيد الاستخدام</string>
+    <string name="face_added">تمت الإضافة. اضغط مطولاً على الواجهة لاختيارها.</string>
+    <string name="face_needs_wear6">تتطلب Wear OS 6</string>
+    <string name="face_unavailable">غير مضمّنة في هذا الإصدار</string>
+    <string name="face_error">تعذّر التثبيت: %1$s</string>
+    <string name="face_working">جارٍ العمل…</string>
+    <string name="method">الطريقة</string>
+</resources>

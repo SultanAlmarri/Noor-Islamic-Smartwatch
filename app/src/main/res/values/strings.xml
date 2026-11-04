@@ -24,11 +24,8 @@
 
     <string name="watch_title">Galaxy Watch</string>
     <string name="watch_face_installed">Noor watch face</string>
-    <string name="watch_face_version">Version %1$s, installed separately</string>
-    <string name="watch_sync_title">Phone–watch sync</string>
-    <string name="watch_sync_body">Not available yet. Sync of prayer times, location, method and design to the watch is the next stage of development. The watch face keeps calculating on its own until then.</string>
     <string name="watch_editor_title">Watch face editor</string>
-    <string name="watch_editor_body">Coming after sync: fonts, colours, sizes, numerals, icons, layout, saved themes and a separate Always-On design, with a live preview.</string>
+    <string name="watch_editor_body">Next stage: fonts, colours, sizes, numerals, icons, layout, saved themes and a separate Always-On design, with a live preview, sent to the watch as a new version of the Noor face.</string>
     <string name="in_development">In development</string>
 
     <string name="settings_location">Location</string>
@@ -87,4 +84,20 @@
     <string name="bg_perm_continue">Continue</string>
     <string name="bg_perm_not_now">Not now</string>
     <string name="permission_denied">Location permission not granted. Choose a city or allow location in system settings.</string>
+    <string name="watch_sync_title">Phone–watch sync</string>
+    <string name="watch_checking">Checking for your watch…</string>
+    <string name="watch_no_wear_os">Wear OS services are not available on this phone. Install the Galaxy Wearable app and pair your watch.</string>
+    <string name="watch_none_connected">No watch connected right now</string>
+    <string name="watch_connected">Connected: %1$s</string>
+    <string name="watch_app_missing">Noor is not installed on the watch yet</string>
+    <string name="watch_app_installed">Noor installed on %1$s</string>
+    <string name="watch_last_sent">Settings sent at %1$s. The watch receives them as soon as it connects.</string>
+    <string name="watch_not_sent">Settings not sent yet</string>
+    <string name="watch_sync_failed">Could not hand the settings to Wear OS. Try again.</string>
+    <string name="watch_needs_location">Choose a location first</string>
+    <string name="watch_sync_now">Sync now</string>
+    <string name="watch_syncing">Syncing…</string>
+    <string name="watch_on_watch_title">On the watch</string>
+    <string name="watch_on_watch_body">The Noor watch app calculates the same times as this phone, with the same location, authority and adjustments, and keeps working without the phone. It adds a “Prayer times” tile and a “Next prayer” complication you can put on any watch face.</string>
+    <string name="watch_face_body">Version 1.3.2 stays installed and unchanged. The watch app also carries this face and, on Wear OS 6, adds it to the watch face list from the watch itself. The editor will deliver your designs the same way.</string>
 </resources>

@@ -10,3 +10,7 @@ captures/
 *.keystore
 *.jks
 !legacy/**/*.apk
+# Development-only keys are public on purpose (stable signature for phone↔watch pairing and app updates).
+# A private release key must never be committed.
+!signing/noor-dev.keystore
+!signing/noor-watchface-dev.keystore
