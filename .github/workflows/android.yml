@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -37,6 +37,8 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk out/Noor-debug.apk 2>/dev/null || true
           cp app/build/outputs/apk/release/app-release.apk out/Noor-release-test-signed.apk 2>/dev/null || true
           (cd core/prayer/build && zip -qr ../../../out/engine-test-report.zip reports test-results) 2>/dev/null || true
+          (cd app/build && zip -qr ../../out/app-test-report.zip reports test-results) 2>/dev/null || true
+          (cd app/build/screenshots && zip -qr ../../../out/screenshots.zip .) 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -58,3 +60,5 @@ jobs:
             out/Noor-debug.apk
             out/Noor-release-test-signed.apk
             out/engine-test-report.zip
+            out/app-test-report.zip
+            out/screenshots.zip

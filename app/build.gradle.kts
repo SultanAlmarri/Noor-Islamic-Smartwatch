@@ -31,7 +31,7 @@ android {
     }
     buildFeatures { compose = true; buildConfig = true }
     androidResources { generateLocaleConfig = true }
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions { unitTests { isReturnDefaultValues = true; isIncludeAndroidResources = true } }
 }
 
 kotlin { jvmToolchain(17) }
@@ -58,4 +58,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }
