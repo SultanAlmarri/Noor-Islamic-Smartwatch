@@ -1,0 +1,1 @@
+INFO: ?  PASSED : /home/claude/project/NoorWatchFace/watchface/src/main/res/raw/watchface.xml is valid against watch face format version #4

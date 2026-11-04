@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the Noor watch face icon ic_fajr.svg by tools/svg_to_vector.py -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="96" android:viewportHeight="96">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M46.21 14.12 A14.00 14.00 0 1 0 60.55 34.20 A12.50 12.50 0 0 1 46.21 14.12 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M22.0 24.5 L20.5 28.5 L16.5 30.0 L20.5 31.5 L22.0 35.5 L23.5 31.5 L27.5 30.0 L23.5 28.5 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M74.0 16.5 L72.5 20.5 L68.5 22.0 L72.5 23.5 L74.0 27.5 L75.5 23.5 L79.5 22.0 L75.5 20.5 Z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M30.0 6.5 L29.1 9.1 L26.5 10.0 L29.1 10.9 L30.0 13.5 L30.9 10.9 L33.5 10.0 L30.9 9.1 Z"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M12 72 L84 72"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M61.8 68.3 L68.1 59.3"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M48 64 L48 53"/>
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M34.2 68.3 L27.9 59.3"/>
+</vector>

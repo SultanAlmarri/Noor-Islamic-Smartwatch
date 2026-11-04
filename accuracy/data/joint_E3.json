@@ -1,0 +1,1569 @@
+{
+ "era": [
+  "2020-08-20",
+  "2026-12-31"
+ ],
+ "days": 98,
+ "top": [
+  {
+   "mode": "ceil",
+   "lat": 25.16,
+   "lon": 55.1875,
+   "total": 542,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 89,
+    "dhuhr": 91,
+    "asr": 88,
+    "maghrib": 96,
+    "isha": 94
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -5,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.16,
+   "lon": 55.3125,
+   "total": 542,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 89,
+    "dhuhr": 91,
+    "asr": 88,
+    "maghrib": 96,
+    "isha": 94
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.13,
+   "lon": 55.1925,
+   "total": 541,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 92,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 88
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.13,
+   "lon": 55.4425,
+   "total": 541,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 92,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 88
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.16,
+   "lon": 55.4375,
+   "total": 541,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 89,
+    "dhuhr": 91,
+    "asr": 88,
+    "maghrib": 96,
+    "isha": 94
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.13,
+   "lon": 55.3175,
+   "total": 541,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 92,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 88
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.1,
+   "lon": 55.19,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 85,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 95,
+    "isha": 86
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.1,
+   "lon": 55.44,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 85,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 95,
+    "isha": 86
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.11,
+   "lon": 55.1875,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 85,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 94,
+    "isha": 87
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.11,
+   "lon": 55.4375,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 85,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 94,
+    "isha": 87
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.12,
+   "lon": 55.1925,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 95,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.12,
+   "lon": 55.195,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 97,
+    "isha": 87
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.6,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.12,
+   "lon": 55.1875,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 88
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.13,
+   "lon": 55.445,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 92,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 93,
+    "isha": 89
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.14,
+   "lon": 55.1975,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 81,
+    "shuruq": 91,
+    "dhuhr": 92,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 90
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -5,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.14,
+   "lon": 55.19,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 90,
+    "dhuhr": 91,
+    "asr": 89,
+    "maghrib": 98,
+    "isha": 89
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.14,
+   "lon": 55.195,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 92,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 89
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -5,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.15,
+   "lon": 55.19,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 89,
+    "dhuhr": 91,
+    "asr": 88,
+    "maghrib": 97,
+    "isha": 91
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -5,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.15,
+   "lon": 55.44,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 89,
+    "dhuhr": 91,
+    "asr": 88,
+    "maghrib": 97,
+    "isha": 91
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.1,
+   "lon": 55.315,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 85,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 95,
+    "isha": 86
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.11,
+   "lon": 55.3125,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 85,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 94,
+    "isha": 87
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.12,
+   "lon": 55.32,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 97,
+    "isha": 87
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.6,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.12,
+   "lon": 55.3175,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 95,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.12,
+   "lon": 55.3125,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 88
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.13,
+   "lon": 55.32,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 92,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 93,
+    "isha": 89
+   },
+   "fajr_angle": 17.6,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.14,
+   "lon": 55.315,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 90,
+    "dhuhr": 91,
+    "asr": 89,
+    "maghrib": 98,
+    "isha": 89
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.14,
+   "lon": 55.32,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 92,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 89
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.15,
+   "lon": 55.315,
+   "total": 540,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 89,
+    "dhuhr": 91,
+    "asr": 88,
+    "maghrib": 97,
+    "isha": 91
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.11,
+   "lon": 55.185,
+   "total": 539,
+   "of": 588,
+   "per": {
+    "fajr": 86,
+    "shuruq": 92,
+    "dhuhr": 88,
+    "asr": 91,
+    "maghrib": 94,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.15,
+   "lon": 55.445,
+   "total": 539,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 90,
+    "maghrib": 98,
+    "isha": 90
+   },
+   "fajr_angle": 18.0,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.11,
+   "lon": 55.31,
+   "total": 539,
+   "of": 588,
+   "per": {
+    "fajr": 86,
+    "shuruq": 92,
+    "dhuhr": 88,
+    "asr": 91,
+    "maghrib": 94,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.13,
+   "lon": 55.3125,
+   "total": 539,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 89,
+    "dhuhr": 91,
+    "asr": 89,
+    "maghrib": 97,
+    "isha": 89
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.14,
+   "lon": 55.3225,
+   "total": 539,
+   "of": 588,
+   "per": {
+    "fajr": 80,
+    "shuruq": 91,
+    "dhuhr": 92,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 90
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.15,
+   "lon": 55.32,
+   "total": 539,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 90,
+    "maghrib": 98,
+    "isha": 90
+   },
+   "fajr_angle": 18.0,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.1,
+   "lon": 55.1875,
+   "total": 538,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 92,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 86
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.16,
+   "lon": 55.44,
+   "total": 538,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 89,
+    "maghrib": 97,
+    "isha": 92
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.17,
+   "lon": 55.1875,
+   "total": 538,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 96,
+    "isha": 94
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.17,
+   "lon": 55.4375,
+   "total": 538,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 96,
+    "isha": 94
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.11,
+   "lon": 55.3175,
+   "total": 538,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 92,
+    "maghrib": 95,
+    "isha": 86
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.15,
+   "lon": 55.3125,
+   "total": 538,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 90,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 96,
+    "isha": 91
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.16,
+   "lon": 55.315,
+   "total": 538,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 89,
+    "maghrib": 97,
+    "isha": 92
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.17,
+   "lon": 55.3125,
+   "total": 538,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 96,
+    "isha": 94
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.1,
+   "lon": 55.3125,
+   "total": 537,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 91,
+    "dhuhr": 91,
+    "asr": 91,
+    "maghrib": 95,
+    "isha": 86
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.1,
+   "lon": 55.305,
+   "total": 537,
+   "of": 588,
+   "per": {
+    "fajr": 85,
+    "shuruq": 91,
+    "dhuhr": 87,
+    "asr": 92,
+    "maghrib": 94,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.16,
+   "lon": 55.31,
+   "total": 536,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 90,
+    "dhuhr": 88,
+    "asr": 87,
+    "maghrib": 95,
+    "isha": 92
+   },
+   "fajr_angle": 17.4,
+   "isha_angle": 17.6,
+   "dip": 0.12,
+   "offsets": {
+    "fajr": -4,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.09,
+   "lon": 55.1775,
+   "total": 535,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 92,
+    "dhuhr": 87,
+    "asr": 92,
+    "maghrib": 92,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.09,
+   "lon": 55.18,
+   "total": 535,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 90,
+    "dhuhr": 87,
+    "asr": 93,
+    "maghrib": 93,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.09,
+   "lon": 55.43,
+   "total": 535,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 90,
+    "dhuhr": 87,
+    "asr": 93,
+    "maghrib": 93,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.17,
+   "lon": 55.44,
+   "total": 535,
+   "of": 588,
+   "per": {
+    "fajr": 81,
+    "shuruq": 88,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 95,
+    "isha": 93
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.09,
+   "lon": 55.3025,
+   "total": 535,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 92,
+    "dhuhr": 87,
+    "asr": 92,
+    "maghrib": 92,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.09,
+   "lon": 55.305,
+   "total": 535,
+   "of": 588,
+   "per": {
+    "fajr": 84,
+    "shuruq": 90,
+    "dhuhr": 87,
+    "asr": 93,
+    "maghrib": 93,
+    "isha": 88
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.17,
+   "lon": 55.315,
+   "total": 535,
+   "of": 588,
+   "per": {
+    "fajr": 81,
+    "shuruq": 88,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 95,
+    "isha": 93
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.18,
+   "lon": 55.19,
+   "total": 534,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 94,
+    "isha": 93
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -3,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.18,
+   "lon": 55.44,
+   "total": 534,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 94,
+    "isha": 93
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.09,
+   "lon": 55.3075,
+   "total": 534,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 90,
+    "dhuhr": 88,
+    "asr": 93,
+    "maghrib": 94,
+    "isha": 86
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.17,
+   "lon": 55.32,
+   "total": 534,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 88,
+    "dhuhr": 91,
+    "asr": 89,
+    "maghrib": 92,
+    "isha": 92
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.6,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  },
+  {
+   "mode": "round",
+   "lat": 25.18,
+   "lon": 55.315,
+   "total": 534,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 87,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 94,
+    "isha": 93
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.8,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.08,
+   "lon": 55.175,
+   "total": 532,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 92,
+    "dhuhr": 86,
+    "asr": 94,
+    "maghrib": 91,
+    "isha": 86
+   },
+   "fajr_angle": 18.0,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 1
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.08,
+   "lon": 55.425,
+   "total": 532,
+   "of": 588,
+   "per": {
+    "fajr": 83,
+    "shuruq": 92,
+    "dhuhr": 86,
+    "asr": 94,
+    "maghrib": 91,
+    "isha": 86
+   },
+   "fajr_angle": 18.0,
+   "isha_angle": 17.8,
+   "dip": 0.13,
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 2
+   }
+  },
+  {
+   "mode": "ceil",
+   "lat": 25.18,
+   "lon": 55.4425,
+   "total": 532,
+   "of": 588,
+   "per": {
+    "fajr": 82,
+    "shuruq": 86,
+    "dhuhr": 91,
+    "asr": 87,
+    "maghrib": 94,
+    "isha": 92
+   },
+   "fajr_angle": 17.8,
+   "isha_angle": 17.6,
+   "dip": 0.11,
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 3
+   }
+  }
+ ]
+}

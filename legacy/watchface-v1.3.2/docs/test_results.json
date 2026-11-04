@@ -1,0 +1,887 @@
+[
+ {
+  "check": "icon glyphs keep their position (side bearing = outline start)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "icon glyphs match the existing PNG icons (IoU fajr 0.986, sunrise 0.987, dhuhr 0.990, asr 0.990, maghrib 0.985, isha 0.993)",
+  "passed": true,
+  "detail": "{'fajr': {'mean_abs': 0.0014263344226579523, 'max_abs': 0.0862745098039216, 'iou': 0.9864153451483088, 'px_over_25': 0}, 'sunrise': {'mean_abs': 0.001702920751633987, 'max_abs': 0.2196078431372549, 'iou': 0.9866526589624293, 'px_over_25': 0}, 'dhuhr': {'mean_abs': 0.0013020833333333333, 'max_abs': 0.11764705882352938, 'iou': 0.9901939420353018, 'px_over_25': 0}, 'asr': {'mean_abs': 0.0012867491035766154, 'max_abs': 0.11372549019607836, 'iou': 0.9901504321375627, 'px_over_25': 0}, 'maghrib': {'mean_abs': 0.0018505752995642702, 'max_abs': 0.23529411764705876, 'iou': 0.9854576704184473, 'px_over_25': 0}, 'isha': {'mean_abs': 0.0008595452069716775, 'max_abs': 0.09019607843137256, 'iou': 0.9927870795885064, 'px_over_25': 0}}"
+ },
+ {
+  "check": "no private-use character (other than the proven zero-width pad) in any clock or text font; the countdown holds only digits, : + −, no-break spaces and the pad (6624 texts)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "every font file name carries this release's tag (c01_v7)",
+  "passed": true,
+  "detail": "['c01_v7', 'c01i_v7', 'c02_v7', 'c02i_v7']"
+ },
+ {
+  "check": "no Condition, Transform or Variant reads a computed prayer time (Reference)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "prayer name, icon, time and countdown all read the prayer times through Template parameters (584)",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "v1.2.1 under the simulated watch shows the reported bug (always FAJR)",
+  "passed": true,
+  "detail": "['FAJR', 'FAJR', 'FAJR', 'FAJR', 'FAJR', 'FAJR', 'FAJR', 'FAJR']"
+ },
+ {
+  "check": "v1.3 shows the right event all day: FAJR FAJR DHUHR DHUHR ASR MAGHRIB ISHA FAJR",
+  "passed": true,
+  "detail": "[('FAJR', 'FAJR'), ('FAJR', 'FAJR'), ('DHUHR', 'DHUHR'), ('DHUHR', 'DHUHR'), ('ASR', 'ASR'), ('MAGHRIB', 'MAGHRIB'), ('ISHA', 'ISHA'), ('FAJR', 'FAJR')]"
+ },
+ {
+  "check": "icon, name, time and countdown always show the same event (1336 screens)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "no number on the face is formatted by the system locale (no *_Z, month/day names, numberFormat, icuText)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "system language English or Arabic: every one of 1248 digits drawn in the chosen numerals (clock, seconds, date, prayer time, countdown, steps, heart rate, battery; normal + Always-On)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "6 size settings scale only their element, normal and Always-On independently",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "default layout: everything inside the circle, nothing overlapping (30 screens)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "prayer section at 120 % + 120 %: side by side, inside the circle, no overlap (720 screens)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "countdown gap never below 14 px, default font at most 28 px, every event ({} 16.4-21.6 px; {'lang': 'ar', 'digits': 'arab'} 19.0-26.3 px; {'lang': 'ar', 'digits': 'latn'} 19.0-26.3 px; {'textfont': 't02', 'clockfont': 'c04'} 16.1-18.7 px; {'textfont': 't08', 'clockfont': 'c13', 'lang': 'ar'} 20.4-32.9 px; {'textfont': 't06', 'clockfont': 'c10'} 15.5-19.8 px)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "no whitespace inside any Template or Font text (484 templates)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "rendered texts carry no leading/trailing whitespace 16:56:32 {}",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "rendered texts carry no leading/trailing whitespace 16:56:32 {'lang': 'ar', 'digits': 'arab'}",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "rendered texts carry no leading/trailing whitespace 05:00:00 {}",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "rendered texts carry no leading/trailing whitespace 05:00:00 {'lang': 'ar', 'digits': 'arab'}",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "every list option has its labelled picture (338 options)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "every setting and option name exists in English and Arabic",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "20 settings (format limit 20)",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "accent colours offered: 24",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "all 20 clock fonts and 10 text fonts render clock, seconds, event, time, countdown (180 screens)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "every drawn character exists in its font",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "float32 evaluation gives the same minute for 6720 prayer times (5 differ by 1 min)",
+  "passed": true,
+  "detail": "[('mct', 2, 15, 'REFERENCE.e1', 2322.0, 2323.0), ('cai', 7, 1, 'REFERENCE.e7', 3641.0, 3640.0), ('del', 1, 15, 'REFERENCE.e3', 2723.0, 2724.0), ('par', 5, 15, 'REFERENCE.e2', 2244.0, 2245.0), ('par', 6, 1, 'REFERENCE.e1', 2084.0, 2083.0)]"
+ },
+ {
+  "check": "every WFF expression in the XML parses (1663 expressions)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "countdown normal: -4055 s -> -1:07",
+  "passed": true,
+  "detail": "got '-1:07'"
+ },
+ {
+  "check": "countdown normal: -455 s -> -7",
+  "passed": true,
+  "detail": "got '-7'"
+ },
+ {
+  "check": "countdown normal: -545 s -> -9",
+  "passed": true,
+  "detail": "got '-9'"
+ },
+ {
+  "check": "countdown normal: -330 s -> -5",
+  "passed": true,
+  "detail": "got '-5'"
+ },
+ {
+  "check": "countdown normal: -1800 s -> -30",
+  "passed": true,
+  "detail": "got '-30'"
+ },
+ {
+  "check": "countdown normal: -4145 s -> -1:09",
+  "passed": true,
+  "detail": "got '-1:09'"
+ },
+ {
+  "check": "countdown normal: -32412 s -> -9:00",
+  "passed": true,
+  "detail": "got '-9:00'"
+ },
+ {
+  "check": "countdown normal: -7500 s -> -2:05",
+  "passed": true,
+  "detail": "got '-2:05'"
+ },
+ {
+  "check": "countdown normal: +545 s -> +9",
+  "passed": true,
+  "detail": "got '+9'"
+ },
+ {
+  "check": "countdown normal: +600 s -> +10",
+  "passed": true,
+  "detail": "got '+10'"
+ },
+ {
+  "check": "countdown normal: +3900 s -> +1:05",
+  "passed": true,
+  "detail": "got '+1:05'"
+ },
+ {
+  "check": "countdown normal: +0 s -> +0",
+  "passed": true,
+  "detail": "got '+0'"
+ },
+ {
+  "check": "countdown normal: -1 s -> -0",
+  "passed": true,
+  "detail": "got '-0'"
+ },
+ {
+  "check": "countdown normal: -59 s -> -0",
+  "passed": true,
+  "detail": "got '-0'"
+ },
+ {
+  "check": "countdown normal: -60 s -> -1",
+  "passed": true,
+  "detail": "got '-1'"
+ },
+ {
+  "check": "countdown normal: -61 s -> -1",
+  "passed": true,
+  "detail": "got '-1'"
+ },
+ {
+  "check": "countdown normal: -3599 s -> -59",
+  "passed": true,
+  "detail": "got '-59'"
+ },
+ {
+  "check": "countdown normal: -3600 s -> -1:00",
+  "passed": true,
+  "detail": "got '-1:00'"
+ },
+ {
+  "check": "countdown normal: +3599 s -> +59",
+  "passed": true,
+  "detail": "got '+59'"
+ },
+ {
+  "check": "countdown normal: +3600 s -> +1:00",
+  "passed": true,
+  "detail": "got '+1:00'"
+ },
+ {
+  "check": "countdown normal: -36610 s -> -10:10",
+  "passed": true,
+  "detail": "got '-10:10'"
+ },
+ {
+  "check": "countdown normal: -43200 s -> -12:00",
+  "passed": true,
+  "detail": "got '-12:00'"
+ },
+ {
+  "check": "countdown normal: -86399 s -> -23:59",
+  "passed": true,
+  "detail": "got '-23:59'"
+ },
+ {
+  "check": "countdown normal: +1799 s -> +29",
+  "passed": true,
+  "detail": "got '+29'"
+ },
+ {
+  "check": "countdown always-on: -4055 s -> -1:07",
+  "passed": true,
+  "detail": "got '-1:07'"
+ },
+ {
+  "check": "countdown always-on: -455 s -> -7",
+  "passed": true,
+  "detail": "got '-7'"
+ },
+ {
+  "check": "countdown always-on: -545 s -> -9",
+  "passed": true,
+  "detail": "got '-9'"
+ },
+ {
+  "check": "countdown always-on: -330 s -> -5",
+  "passed": true,
+  "detail": "got '-5'"
+ },
+ {
+  "check": "countdown always-on: -1800 s -> -30",
+  "passed": true,
+  "detail": "got '-30'"
+ },
+ {
+  "check": "countdown always-on: -4145 s -> -1:09",
+  "passed": true,
+  "detail": "got '-1:09'"
+ },
+ {
+  "check": "countdown always-on: -32412 s -> -9:00",
+  "passed": true,
+  "detail": "got '-9:00'"
+ },
+ {
+  "check": "countdown always-on: -7500 s -> -2:05",
+  "passed": true,
+  "detail": "got '-2:05'"
+ },
+ {
+  "check": "countdown always-on: +545 s -> +9",
+  "passed": true,
+  "detail": "got '+9'"
+ },
+ {
+  "check": "countdown always-on: +600 s -> +10",
+  "passed": true,
+  "detail": "got '+10'"
+ },
+ {
+  "check": "countdown always-on: +3900 s -> +1:05",
+  "passed": true,
+  "detail": "got '+1:05'"
+ },
+ {
+  "check": "countdown always-on: +0 s -> +0",
+  "passed": true,
+  "detail": "got '+0'"
+ },
+ {
+  "check": "countdown always-on: -1 s -> -0",
+  "passed": true,
+  "detail": "got '-0'"
+ },
+ {
+  "check": "countdown always-on: -59 s -> -0",
+  "passed": true,
+  "detail": "got '-0'"
+ },
+ {
+  "check": "countdown always-on: -60 s -> -1",
+  "passed": true,
+  "detail": "got '-1'"
+ },
+ {
+  "check": "countdown always-on: -61 s -> -1",
+  "passed": true,
+  "detail": "got '-1'"
+ },
+ {
+  "check": "countdown always-on: -3599 s -> -59",
+  "passed": true,
+  "detail": "got '-59'"
+ },
+ {
+  "check": "countdown always-on: -3600 s -> -1:00",
+  "passed": true,
+  "detail": "got '-1:00'"
+ },
+ {
+  "check": "countdown always-on: +3599 s -> +59",
+  "passed": true,
+  "detail": "got '+59'"
+ },
+ {
+  "check": "countdown always-on: +3600 s -> +1:00",
+  "passed": true,
+  "detail": "got '+1:00'"
+ },
+ {
+  "check": "countdown always-on: -36610 s -> -10:10",
+  "passed": true,
+  "detail": "got '-10:10'"
+ },
+ {
+  "check": "countdown always-on: -43200 s -> -12:00",
+  "passed": true,
+  "detail": "got '-12:00'"
+ },
+ {
+  "check": "countdown always-on: -86399 s -> -23:59",
+  "passed": true,
+  "detail": "got '-23:59'"
+ },
+ {
+  "check": "countdown always-on: +1799 s -> +29",
+  "passed": true,
+  "detail": "got '+29'"
+ },
+ {
+  "check": "forms the spec rules out never appear (-07, -1:7, seconds anywhere)",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "FAJR at T-61 s shows FAJR -1",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:09 AM', 'countdown': '-1'}"
+ },
+ {
+  "check": "FAJR at T-1 s shows FAJR -0",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:09 AM', 'countdown': '-0'}"
+ },
+ {
+  "check": "FAJR at T+0 s shows FAJR +0",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:09 AM', 'countdown': '+0'}"
+ },
+ {
+  "check": "FAJR at T+1 s shows FAJR +0",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:09 AM', 'countdown': '+0'}"
+ },
+ {
+  "check": "FAJR at T+60 s shows FAJR +1",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:09 AM', 'countdown': '+1'}"
+ },
+ {
+  "check": "FAJR at T+1799 s shows FAJR +29",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:09 AM', 'countdown': '+29'}"
+ },
+ {
+  "check": "FAJR at T+30:00 switches to the next event",
+  "passed": true,
+  "detail": "{'name': 'SHURUQ', 'time': '6:24 AM', 'countdown': '-45'}"
+ },
+ {
+  "check": "SHURUQ at T-61 s shows SHURUQ -1",
+  "passed": true,
+  "detail": "{'name': 'SHURUQ', 'time': '6:24 AM', 'countdown': '-1'}"
+ },
+ {
+  "check": "SHURUQ at T-1 s shows SHURUQ -0",
+  "passed": true,
+  "detail": "{'name': 'SHURUQ', 'time': '6:24 AM', 'countdown': '-0'}"
+ },
+ {
+  "check": "SHURUQ at T+0 s shows SHURUQ +0",
+  "passed": true,
+  "detail": "{'name': 'SHURUQ', 'time': '6:24 AM', 'countdown': '+0'}"
+ },
+ {
+  "check": "SHURUQ at T+1 s shows SHURUQ +0",
+  "passed": true,
+  "detail": "{'name': 'SHURUQ', 'time': '6:24 AM', 'countdown': '+0'}"
+ },
+ {
+  "check": "SHURUQ at T+60 s shows SHURUQ +1",
+  "passed": true,
+  "detail": "{'name': 'SHURUQ', 'time': '6:24 AM', 'countdown': '+1'}"
+ },
+ {
+  "check": "SHURUQ at T+1799 s shows SHURUQ +29",
+  "passed": true,
+  "detail": "{'name': 'SHURUQ', 'time': '6:24 AM', 'countdown': '+29'}"
+ },
+ {
+  "check": "SHURUQ at T+30:00 switches to the next event",
+  "passed": true,
+  "detail": "{'name': 'DHUHR', 'time': '12:05 PM', 'countdown': '-5:11'}"
+ },
+ {
+  "check": "DHUHR at T-61 s shows DHUHR -1",
+  "passed": true,
+  "detail": "{'name': 'DHUHR', 'time': '12:05 PM', 'countdown': '-1'}"
+ },
+ {
+  "check": "DHUHR at T-1 s shows DHUHR -0",
+  "passed": true,
+  "detail": "{'name': 'DHUHR', 'time': '12:05 PM', 'countdown': '-0'}"
+ },
+ {
+  "check": "DHUHR at T+0 s shows DHUHR +0",
+  "passed": true,
+  "detail": "{'name': 'DHUHR', 'time': '12:05 PM', 'countdown': '+0'}"
+ },
+ {
+  "check": "DHUHR at T+1 s shows DHUHR +0",
+  "passed": true,
+  "detail": "{'name': 'DHUHR', 'time': '12:05 PM', 'countdown': '+0'}"
+ },
+ {
+  "check": "DHUHR at T+60 s shows DHUHR +1",
+  "passed": true,
+  "detail": "{'name': 'DHUHR', 'time': '12:05 PM', 'countdown': '+1'}"
+ },
+ {
+  "check": "DHUHR at T+1799 s shows DHUHR +29",
+  "passed": true,
+  "detail": "{'name': 'DHUHR', 'time': '12:05 PM', 'countdown': '+29'}"
+ },
+ {
+  "check": "DHUHR at T+30:00 switches to the next event",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '-2:40'}"
+ },
+ {
+  "check": "ASR at T-61 s shows ASR -1",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '-1'}"
+ },
+ {
+  "check": "ASR at T-1 s shows ASR -0",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '-0'}"
+ },
+ {
+  "check": "ASR at T+0 s shows ASR +0",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '+0'}"
+ },
+ {
+  "check": "ASR at T+1 s shows ASR +0",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '+0'}"
+ },
+ {
+  "check": "ASR at T+60 s shows ASR +1",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '+1'}"
+ },
+ {
+  "check": "ASR at T+1799 s shows ASR +29",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '+29'}"
+ },
+ {
+  "check": "ASR at T+30:00 switches to the next event",
+  "passed": true,
+  "detail": "{'name': 'MAGHRIB', 'time': '5:40 PM', 'countdown': '-1:55'}"
+ },
+ {
+  "check": "MAGHRIB at T-61 s shows MAGHRIB -1",
+  "passed": true,
+  "detail": "{'name': 'MAGHRIB', 'time': '5:40 PM', 'countdown': '-1'}"
+ },
+ {
+  "check": "MAGHRIB at T-1 s shows MAGHRIB -0",
+  "passed": true,
+  "detail": "{'name': 'MAGHRIB', 'time': '5:40 PM', 'countdown': '-0'}"
+ },
+ {
+  "check": "MAGHRIB at T+0 s shows MAGHRIB +0",
+  "passed": true,
+  "detail": "{'name': 'MAGHRIB', 'time': '5:40 PM', 'countdown': '+0'}"
+ },
+ {
+  "check": "MAGHRIB at T+1 s shows MAGHRIB +0",
+  "passed": true,
+  "detail": "{'name': 'MAGHRIB', 'time': '5:40 PM', 'countdown': '+0'}"
+ },
+ {
+  "check": "MAGHRIB at T+60 s shows MAGHRIB +1",
+  "passed": true,
+  "detail": "{'name': 'MAGHRIB', 'time': '5:40 PM', 'countdown': '+1'}"
+ },
+ {
+  "check": "MAGHRIB at T+1799 s shows MAGHRIB +29",
+  "passed": true,
+  "detail": "{'name': 'MAGHRIB', 'time': '5:40 PM', 'countdown': '+29'}"
+ },
+ {
+  "check": "MAGHRIB at T+30:00 switches to the next event",
+  "passed": true,
+  "detail": "{'name': 'ISHA', 'time': '6:56 PM', 'countdown': '-46'}"
+ },
+ {
+  "check": "ISHA at T-61 s shows ISHA -1",
+  "passed": true,
+  "detail": "{'name': 'ISHA', 'time': '6:56 PM', 'countdown': '-1'}"
+ },
+ {
+  "check": "ISHA at T-1 s shows ISHA -0",
+  "passed": true,
+  "detail": "{'name': 'ISHA', 'time': '6:56 PM', 'countdown': '-0'}"
+ },
+ {
+  "check": "ISHA at T+0 s shows ISHA +0",
+  "passed": true,
+  "detail": "{'name': 'ISHA', 'time': '6:56 PM', 'countdown': '+0'}"
+ },
+ {
+  "check": "ISHA at T+1 s shows ISHA +0",
+  "passed": true,
+  "detail": "{'name': 'ISHA', 'time': '6:56 PM', 'countdown': '+0'}"
+ },
+ {
+  "check": "ISHA at T+60 s shows ISHA +1",
+  "passed": true,
+  "detail": "{'name': 'ISHA', 'time': '6:56 PM', 'countdown': '+1'}"
+ },
+ {
+  "check": "ISHA at T+1799 s shows ISHA +29",
+  "passed": true,
+  "detail": "{'name': 'ISHA', 'time': '6:56 PM', 'countdown': '+29'}"
+ },
+ {
+  "check": "ISHA at T+30:00 switches to the next event",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:09 AM', 'countdown': '-9:43'}"
+ },
+ {
+  "check": "Shuruq is a separate event, not one of the five prayers",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "across midnight 2026-11-03 -> 2026-11-04: FAJR countdown continuous",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:09 AM', 'countdown': '-5:09'} | {'name': 'FAJR', 'time': '5:09 AM', 'countdown': '-5:09'} | -5:09 -5:09"
+ },
+ {
+  "check": "across midnight 2026-12-31 -> 2027-01-01: FAJR countdown continuous",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:42 AM', 'countdown': '-5:42'} | {'name': 'FAJR', 'time': '5:42 AM', 'countdown': '-5:42'} | -5:42 -5:42"
+ },
+ {
+  "check": "across midnight 2028-02-28 -> 2028-02-29: FAJR countdown continuous",
+  "passed": true,
+  "detail": "{'name': 'FAJR', 'time': '5:25 AM', 'countdown': '-5:25'} | {'name': 'FAJR', 'time': '5:25 AM', 'countdown': '-5:25'} | -5:25 -5:25"
+ },
+ {
+  "check": "London 21 Jun: Isha (middle-of-night high-latitude rule) is after midnight",
+  "passed": true,
+  "detail": "T=90120"
+ },
+ {
+  "check": "London 22 Jun 00:xx shows ISHA (yesterday's) with +10",
+  "passed": true,
+  "detail": "{'name': 'ISHA', 'time': '1:02 AM', 'countdown': '+10'}"
+ },
+ {
+  "check": "rotation lon 2026-06-22 (1470 probes incl. every boundary +/-2 s)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "date line Tuesday, 3/11/2026",
+  "passed": true,
+  "detail": "['Tuesday, 3/11/2026', '4:56', '32', 'PM']"
+ },
+ {
+  "check": "clock 16:56:32 -> 4:56 :32 PM",
+  "passed": true,
+  "detail": "['Tuesday, 3/11/2026', '4:56', '32', 'PM', '\\ue005']"
+ },
+ {
+  "check": "date line Friday, 9/4/2027",
+  "passed": true,
+  "detail": "['Friday, 9/4/2027', '12:05', '00', 'AM']"
+ },
+ {
+  "check": "clock 00:05:00 -> 12:05 :00 AM",
+  "passed": true,
+  "detail": "['Friday, 9/4/2027', '12:05', '00', 'AM', '\\ue001']"
+ },
+ {
+  "check": "date line Friday, 25/12/2026",
+  "passed": true,
+  "detail": "['Friday, 25/12/2026', '12:30', '09', 'PM']"
+ },
+ {
+  "check": "clock 12:30:09 -> 12:30 :09 PM",
+  "passed": true,
+  "detail": "['Friday, 25/12/2026', '12:30', '09', 'PM', '\\ue003']"
+ },
+ {
+  "check": "date line Sunday, 1/11/2026",
+  "passed": true,
+  "detail": "['Sunday, 1/11/2026', '9:07', '00', 'AM']"
+ },
+ {
+  "check": "clock 09:07:00 -> 9:07 :00 AM",
+  "passed": true,
+  "detail": "['Sunday, 1/11/2026', '9:07', '00', 'AM', '\\ue003']"
+ },
+ {
+  "check": "Arabic (arab digits): weekday + D/M/YYYY",
+  "passed": true,
+  "detail": "['الثلاثاء، 3/11/2026', '3:10']"
+ },
+ {
+  "check": "Arabic (arab digits): event name العصر",
+  "passed": true,
+  "detail": "{'name': 'العصر', 'time': '3:15 م', 'countdown': '-5'}"
+ },
+ {
+  "check": "Arabic (arab digits): AM/PM uses م",
+  "passed": true,
+  "detail": "{'name': 'العصر', 'time': '3:15 م', 'countdown': '-5'}"
+ },
+ {
+  "check": "ar/arab: every number drawn with Arabic-Indic digits",
+  "passed": true,
+  "detail": "['c01i_v7', 't01i_v7']"
+ },
+ {
+  "check": "Arabic (latn digits): weekday + D/M/YYYY",
+  "passed": true,
+  "detail": "['الثلاثاء، 3/11/2026', '3:10']"
+ },
+ {
+  "check": "Arabic (latn digits): event name العصر",
+  "passed": true,
+  "detail": "{'name': 'العصر', 'time': '3:15 م', 'countdown': '-5'}"
+ },
+ {
+  "check": "Arabic (latn digits): AM/PM uses م",
+  "passed": true,
+  "detail": "{'name': 'العصر', 'time': '3:15 م', 'countdown': '-5'}"
+ },
+ {
+  "check": "ar/latn: every number drawn with Western digits",
+  "passed": true,
+  "detail": "['c01_v7', 't01_v7']"
+ },
+ {
+  "check": "English (latn digits): event name ASR",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '-5'}"
+ },
+ {
+  "check": "en/latn: every number drawn with Western digits",
+  "passed": true,
+  "detail": "['c01_v7', 't01_v7']"
+ },
+ {
+  "check": "English (arab digits): event name ASR",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '-5'}"
+ },
+ {
+  "check": "en/arab: every number drawn with Arabic-Indic digits",
+  "passed": true,
+  "detail": "['c01i_v7', 't01i_v7']"
+ },
+ {
+  "check": "Arabic name for FAJR is الفجر",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "Arabic name for SHURUQ is الشروق",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "Arabic name for DHUHR is الظهر",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "Arabic name for ASR is العصر",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "Arabic name for MAGHRIB is المغرب",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "Arabic name for ISHA is العشاء",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "normal mode shows seconds, steps, BPM, battery",
+  "passed": true,
+  "detail": "['Tuesday, 3/11/2026', '4:56', '32', 'PM', '\\ue005', '\\ue000', 'MAGHRIB', '5:40 PM', '\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0−\\ue000\\ue000\\ue00043', '8,532', '72', '76%']"
+ },
+ {
+  "check": "always-on hides the clock's seconds",
+  "passed": true,
+  "detail": "['Tuesday, 3/11/2026', '4:56', 'PM', '\\ue005', '\\ue000', 'MAGHRIB', '5:40 PM', '\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0−\\ue000\\ue000\\ue00043', '8,532', '72', '76%']"
+ },
+ {
+  "check": "always-on keeps steps, heart rate and battery",
+  "passed": true,
+  "detail": "['Tuesday, 3/11/2026', '4:56', 'PM', '\\ue005', '\\ue000', 'MAGHRIB', '5:40 PM', '\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0−\\ue000\\ue000\\ue00043', '8,532', '72', '76%']"
+ },
+ {
+  "check": "countdown has no seconds, same on both displays (-43 / -43)",
+  "passed": true,
+  "detail": "('-43', '-43')"
+ },
+ {
+  "check": "always-on keeps the event icon (maghrib)",
+  "passed": true,
+  "detail": "(('maghrib', False), ('maghrib', False))"
+ },
+ {
+  "check": "always-on keeps clock, date, prayer name and time",
+  "passed": true,
+  "detail": "['Tuesday, 3/11/2026', '4:56', 'PM', '\\ue005', '\\ue000', 'MAGHRIB', '5:40 PM', '\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0\\xa0−\\ue000\\ue000\\ue00043', '8,532', '72', '76%']"
+ },
+ {
+  "check": "the divider line under the clock is gone",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "steps complication SHORT_TEXT renders 8,532",
+  "passed": true,
+  "detail": "['8,532']"
+ },
+ {
+  "check": "steps complication GOAL_PROGRESS renders 8532",
+  "passed": true,
+  "detail": "['8532']"
+ },
+ {
+  "check": "steps complication RANGED_VALUE renders 8532",
+  "passed": true,
+  "detail": "['8532']"
+ },
+ {
+  "check": "steps complication EMPTY renders ––",
+  "passed": true,
+  "detail": "['––']"
+ },
+ {
+  "check": "battery 12%% shows '12%%' and red fill",
+  "passed": true,
+  "detail": "['12%']"
+ },
+ {
+  "check": "Dubai chosen, watch on UTC-10 -> neutral dash, never a wrong countdown",
+  "passed": true,
+  "detail": "['—']"
+ },
+ {
+  "check": "Dubai chosen, watch on UTC+12 -> neutral dash, never a wrong countdown",
+  "passed": true,
+  "detail": "['—']"
+ },
+ {
+  "check": "London chosen, watch on UTC+8 -> neutral dash, never a wrong countdown",
+  "passed": true,
+  "detail": "['—']"
+ },
+ {
+  "check": "London on UTC+0 is accepted (no dash)",
+  "passed": true,
+  "detail": "{'name': 'DHUHR', 'time': '11:47 AM', 'countdown': '-1:47'}"
+ },
+ {
+  "check": "Fajr +2 min adjustment moves Fajr by exactly 120 s",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "Isha -10 min adjustment moves Isha by exactly -600 s",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "Hanafi Asr is later than standard Asr (Dubai)",
+  "passed": true,
+  "detail": ""
+ },
+ {
+  "check": "Umm al-Qura Isha = Maghrib + 90 min",
+  "passed": true,
+  "detail": "5400"
+ },
+ {
+  "check": "time-zone change keeps the same countdown for the same instant",
+  "passed": true,
+  "detail": "{'name': 'ASR', 'time': '3:15 PM', 'countdown': '-1:15', 'ev': 'asr', 'T': 54900} / {'name': 'ASR', 'time': '2:15 PM', 'countdown': '-1:15', 'ev': 'asr', 'T': 51300}"
+ },
+ {
+  "check": "every city x month x method: Fajr<Shuruq<Dhuhr<Asr<Maghrib<Isha (35 cities)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "rotation dxb 2026-11-03 (4356 probes incl. every boundary +/-2 s)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "rotation dxb 2026-06-21 (2916 probes incl. every boundary +/-2 s)",
+  "passed": true,
+  "detail": "[]"
+ },
+ {
+  "check": "rotation mak 2026-12-21 (2916 probes incl. every boundary +/-2 s)",
+  "passed": true,
+  "detail": "[]"
+ }
+]

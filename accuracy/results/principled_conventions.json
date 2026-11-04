@@ -1,0 +1,518 @@
+[
+ {
+  "dip": 0.0,
+  "mode": "ceil",
+  "split": "all E3 (in-sample)",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.215,
+   "angle": 18.0,
+   "dip": 0.0,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 3,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    477,
+    588
+   ]
+  }
+ },
+ {
+  "dip": 0.0,
+  "mode": "ceil",
+  "split": "train E3 2020-23 -> test Nov 2026",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.213,
+   "angle": 18.0,
+   "dip": 0.0,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 3,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    332,
+    408
+   ],
+   "Nov 2026": [
+    143,
+    180
+   ]
+  }
+ },
+ {
+  "dip": 0.0,
+  "mode": "ceil",
+  "split": "train Nov 2026 -> test E3 2020-23",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.157,
+   "angle": 18.0,
+   "dip": 0.0,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -5,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    150,
+    180
+   ],
+   "E3 2020-23": [
+    306,
+    408
+   ]
+  }
+ },
+ {
+  "dip": 0.0,
+  "mode": "round",
+  "split": "all E3 (in-sample)",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.34,
+   "angle": 18.0,
+   "dip": 0.0,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 4,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    477,
+    588
+   ]
+  }
+ },
+ {
+  "dip": 0.0,
+  "mode": "round",
+  "split": "train E3 2020-23 -> test Nov 2026",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.338,
+   "angle": 18.0,
+   "dip": 0.0,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 4,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    332,
+    408
+   ],
+   "Nov 2026": [
+    143,
+    180
+   ]
+  }
+ },
+ {
+  "dip": 0.0,
+  "mode": "round",
+  "split": "train Nov 2026 -> test E3 2020-23",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.277,
+   "angle": 18.0,
+   "dip": 0.0,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -4,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    150,
+    180
+   ],
+   "E3 2020-23": [
+    304,
+    408
+   ]
+  }
+ },
+ {
+  "dip": 0.1,
+  "mode": "ceil",
+  "split": "all E3 (in-sample)",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.189,
+   "angle": 18.0,
+   "dip": 0.1,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    527,
+    588
+   ]
+  }
+ },
+ {
+  "dip": 0.1,
+  "mode": "ceil",
+  "split": "train E3 2020-23 -> test Nov 2026",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.177,
+   "angle": 18.0,
+   "dip": 0.1,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    359,
+    408
+   ],
+   "Nov 2026": [
+    167,
+    180
+   ]
+  }
+ },
+ {
+  "dip": 0.1,
+  "mode": "ceil",
+  "split": "train Nov 2026 -> test E3 2020-23",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.186,
+   "angle": 18.0,
+   "dip": 0.1,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    170,
+    180
+   ],
+   "E3 2020-23": [
+    353,
+    408
+   ]
+  }
+ },
+ {
+  "dip": 0.1,
+  "mode": "round",
+  "split": "all E3 (in-sample)",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.314,
+   "angle": 18.0,
+   "dip": 0.1,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    527,
+    588
+   ]
+  }
+ },
+ {
+  "dip": 0.1,
+  "mode": "round",
+  "split": "train E3 2020-23 -> test Nov 2026",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.302,
+   "angle": 18.0,
+   "dip": 0.1,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    359,
+    408
+   ],
+   "Nov 2026": [
+    167,
+    180
+   ]
+  }
+ },
+ {
+  "dip": 0.1,
+  "mode": "round",
+  "split": "train Nov 2026 -> test E3 2020-23",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.311,
+   "angle": 18.0,
+   "dip": 0.1,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    170,
+    180
+   ],
+   "E3 2020-23": [
+    353,
+    408
+   ]
+  }
+ },
+ {
+  "dip": 0.19,
+  "mode": "ceil",
+  "split": "all E3 (in-sample)",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.189,
+   "angle": 18.0,
+   "dip": 0.19,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    486,
+    588
+   ]
+  }
+ },
+ {
+  "dip": 0.19,
+  "mode": "ceil",
+  "split": "train E3 2020-23 -> test Nov 2026",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.193,
+   "angle": 18.0,
+   "dip": 0.19,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    333,
+    408
+   ],
+   "Nov 2026": [
+    152,
+    180
+   ]
+  }
+ },
+ {
+  "dip": 0.19,
+  "mode": "ceil",
+  "split": "train Nov 2026 -> test E3 2020-23",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.186,
+   "angle": 18.0,
+   "dip": 0.19,
+   "mode": "ceil",
+   "offsets": {
+    "fajr": -2,
+    "shuruq": -4,
+    "dhuhr": 2,
+    "asr": 0,
+    "maghrib": 2,
+    "isha": 0
+   }
+  },
+  "res": {
+   "train": [
+    155,
+    180
+   ],
+   "E3 2020-23": [
+    326,
+    408
+   ]
+  }
+ },
+ {
+  "dip": 0.19,
+  "mode": "round",
+  "split": "all E3 (in-sample)",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.314,
+   "angle": 18.0,
+   "dip": 0.19,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    486,
+    588
+   ]
+  }
+ },
+ {
+  "dip": 0.19,
+  "mode": "round",
+  "split": "train E3 2020-23 -> test Nov 2026",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.318,
+   "angle": 18.0,
+   "dip": 0.19,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    333,
+    408
+   ],
+   "Nov 2026": [
+    152,
+    180
+   ]
+  }
+ },
+ {
+  "dip": 0.19,
+  "mode": "round",
+  "split": "train Nov 2026 -> test E3 2020-23",
+  "conv": {
+   "lat": 25.12,
+   "lon": 55.311,
+   "angle": 18.0,
+   "dip": 0.19,
+   "mode": "round",
+   "offsets": {
+    "fajr": -1,
+    "shuruq": -3,
+    "dhuhr": 3,
+    "asr": 1,
+    "maghrib": 3,
+    "isha": 1
+   }
+  },
+  "res": {
+   "train": [
+    155,
+    180
+   ],
+   "E3 2020-23": [
+    326,
+    408
+   ]
+  }
+ }
+]

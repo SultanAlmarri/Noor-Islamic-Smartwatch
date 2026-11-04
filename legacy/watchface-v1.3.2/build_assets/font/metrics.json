@@ -1,0 +1,414 @@
+{
+ "clock": [
+  {
+   "id": "c01",
+   "label": "Readex Thin",
+   "source": "readexpro/ReadexPro[HEXP,wght].ttf",
+   "axes": {
+    "wght": 200,
+    "HEXP": 0
+   },
+   "upem": 1000,
+   "tab": 0.62,
+   "digit_h": 0.72,
+   "asc": 1.0,
+   "desc": 0.25,
+   "bytes": 10260
+  },
+  {
+   "id": "c02",
+   "label": "Readex Bold",
+   "source": "readexpro/ReadexPro[HEXP,wght].ttf",
+   "axes": {
+    "wght": 600,
+    "HEXP": 0
+   },
+   "upem": 1000,
+   "tab": 0.657,
+   "digit_h": 0.72,
+   "asc": 1.0,
+   "desc": 0.25,
+   "bytes": 10240
+  },
+  {
+   "id": "c03",
+   "label": "Alexandria Light",
+   "source": "alexandria/Alexandria[wght].ttf",
+   "axes": {
+    "wght": 300
+   },
+   "upem": 1000,
+   "tab": 0.744,
+   "digit_h": 0.707,
+   "asc": 0.968,
+   "desc": 0.251,
+   "bytes": 16292
+  },
+  {
+   "id": "c04",
+   "label": "Alexandria Black",
+   "source": "alexandria/Alexandria[wght].ttf",
+   "axes": {
+    "wght": 800
+   },
+   "upem": 1000,
+   "tab": 0.814,
+   "digit_h": 0.714,
+   "asc": 0.968,
+   "desc": 0.251,
+   "bytes": 16264
+  },
+  {
+   "id": "c05",
+   "label": "Cairo ExtraLight",
+   "source": "cairo/Cairo[slnt,wght].ttf",
+   "axes": {
+    "wght": 200,
+    "slnt": 0
+   },
+   "upem": 1000,
+   "tab": 0.666,
+   "digit_h": 0.679,
+   "asc": 1.303,
+   "desc": 0.571,
+   "bytes": 10840
+  },
+  {
+   "id": "c06",
+   "label": "Cairo Bold",
+   "source": "cairo/Cairo[slnt,wght].ttf",
+   "axes": {
+    "wght": 700,
+    "slnt": 0
+   },
+   "upem": 1000,
+   "tab": 0.75,
+   "digit_h": 0.682,
+   "asc": 1.303,
+   "desc": 0.571,
+   "bytes": 10828
+  },
+  {
+   "id": "c07",
+   "label": "Tajawal Light",
+   "source": "tajawal/Tajawal-Light.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.55,
+   "digit_h": 0.657,
+   "asc": 0.645,
+   "desc": 0.355,
+   "bytes": 6392
+  },
+  {
+   "id": "c08",
+   "label": "IBM Plex Thin",
+   "source": "ibmplexsansarabic/IBMPlexSansArabic-Thin.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.6,
+   "digit_h": 0.722,
+   "asc": 1.085,
+   "desc": 0.415,
+   "bytes": 13464
+  },
+  {
+   "id": "c09",
+   "label": "Noto Kufi Light",
+   "source": "notokufiarabic/NotoKufiArabic[wght].ttf",
+   "axes": {
+    "wght": 300
+   },
+   "upem": 1000,
+   "tab": 0.571,
+   "digit_h": 0.735,
+   "asc": 1.282,
+   "desc": 0.615,
+   "bytes": 9716
+  },
+  {
+   "id": "c10",
+   "label": "Changa Light",
+   "source": "changa/Changa[wght].ttf",
+   "axes": {
+    "wght": 300
+   },
+   "upem": 1000,
+   "tab": 0.805,
+   "digit_h": 0.655,
+   "asc": 1.227,
+   "desc": 0.613,
+   "bytes": 9892
+  },
+  {
+   "id": "c11",
+   "label": "El Messiri",
+   "source": "elmessiri/ElMessiri[wght].ttf",
+   "axes": {
+    "wght": 500
+   },
+   "upem": 1000,
+   "tab": 0.597,
+   "digit_h": 0.7,
+   "asc": 1.019,
+   "desc": 0.544,
+   "bytes": 9948
+  },
+  {
+   "id": "c12",
+   "label": "Reem Kufi",
+   "source": "reemkufi/ReemKufi[wght].ttf",
+   "axes": {
+    "wght": 400
+   },
+   "upem": 1000,
+   "tab": 0.624,
+   "digit_h": 0.67,
+   "asc": 1.1,
+   "desc": 0.4,
+   "bytes": 9556
+  },
+  {
+   "id": "c13",
+   "label": "Amiri",
+   "source": "amiri/Amiri-Regular.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.585,
+   "digit_h": 0.629,
+   "asc": 1.124,
+   "desc": 0.634,
+   "bytes": 18632
+  },
+  {
+   "id": "c14",
+   "label": "Lalezar",
+   "source": "lalezar/Lalezar-Regular.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.68,
+   "digit_h": 0.59,
+   "asc": 0.979,
+   "desc": 0.588,
+   "bytes": 7644
+  },
+  {
+   "id": "c15",
+   "label": "Vazirmatn Thin",
+   "source": "vazirmatn/Vazirmatn[wght].ttf",
+   "axes": {
+    "wght": 100
+   },
+   "upem": 2048,
+   "tab": 0.62939453125,
+   "digit_h": 0.73095703125,
+   "asc": 1.025390625,
+   "desc": 0.537109375,
+   "bytes": 15440
+  },
+  {
+   "id": "c16",
+   "label": "Lemonada",
+   "source": "lemonada/Lemonada[wght].ttf",
+   "axes": {
+    "wght": 300
+   },
+   "upem": 1000,
+   "tab": 0.731,
+   "digit_h": 0.725,
+   "asc": 1.345,
+   "desc": 0.653,
+   "bytes": 11672
+  },
+  {
+   "id": "c17",
+   "label": "Baloo Bhaijaan",
+   "source": "baloobhaijaan2/BalooBhaijaan2[wght].ttf",
+   "axes": {
+    "wght": 500
+   },
+   "upem": 1000,
+   "tab": 0.642,
+   "digit_h": 0.635,
+   "asc": 1.08,
+   "desc": 0.632,
+   "bytes": 15944
+  },
+  {
+   "id": "c18",
+   "label": "Marhey",
+   "source": "marhey/Marhey[wght].ttf",
+   "axes": {
+    "wght": 400
+   },
+   "upem": 1000,
+   "tab": 0.71,
+   "digit_h": 0.721,
+   "asc": 1.1,
+   "desc": 0.64,
+   "bytes": 16060
+  },
+  {
+   "id": "c19",
+   "label": "Kufam",
+   "source": "kufam/Kufam[wght].ttf",
+   "axes": {
+    "wght": 400
+   },
+   "upem": 1000,
+   "tab": 0.726,
+   "digit_h": 0.744,
+   "asc": 0.9,
+   "desc": 0.4,
+   "bytes": 23960
+  },
+  {
+   "id": "c20",
+   "label": "Almarai Light",
+   "source": "almarai/Almarai-Light.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.738,
+   "digit_h": 0.741,
+   "asc": 0.905,
+   "desc": 0.211,
+   "bytes": 10612
+  }
+ ],
+ "text": [
+  {
+   "id": "t01",
+   "label": "Readex Pro",
+   "source": "readexpro/ReadexPro[HEXP,wght].ttf",
+   "axes": {
+    "wght": 400,
+    "HEXP": 0
+   },
+   "upem": 1000,
+   "tab": 0.63,
+   "digit_h": 0.72,
+   "asc": 1.0,
+   "desc": 0.25,
+   "bytes": 46076
+  },
+  {
+   "id": "t02",
+   "label": "Alexandria",
+   "source": "alexandria/Alexandria[wght].ttf",
+   "axes": {
+    "wght": 400
+   },
+   "upem": 1000,
+   "tab": 0.774,
+   "digit_h": 0.71,
+   "asc": 0.968,
+   "desc": 0.251,
+   "bytes": 65168
+  },
+  {
+   "id": "t03",
+   "label": "Cairo",
+   "source": "cairo/Cairo[slnt,wght].ttf",
+   "axes": {
+    "wght": 500,
+    "slnt": 0
+   },
+   "upem": 1000,
+   "tab": 0.686,
+   "digit_h": 0.681,
+   "asc": 1.303,
+   "desc": 0.571,
+   "bytes": 59424
+  },
+  {
+   "id": "t04",
+   "label": "Tajawal",
+   "source": "tajawal/Tajawal-Medium.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.574,
+   "digit_h": 0.657,
+   "asc": 0.643,
+   "desc": 0.357,
+   "bytes": 38236
+  },
+  {
+   "id": "t05",
+   "label": "IBM Plex Arabic",
+   "source": "ibmplexsansarabic/IBMPlexSansArabic-Regular.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.63,
+   "digit_h": 0.722,
+   "asc": 1.085,
+   "desc": 0.415,
+   "bytes": 109532
+  },
+  {
+   "id": "t06",
+   "label": "Noto Kufi",
+   "source": "notokufiarabic/NotoKufiArabic[wght].ttf",
+   "axes": {
+    "wght": 400
+   },
+   "upem": 1000,
+   "tab": 0.572,
+   "digit_h": 0.735,
+   "asc": 1.282,
+   "desc": 0.615,
+   "bytes": 60468
+  },
+  {
+   "id": "t07",
+   "label": "El Messiri",
+   "source": "elmessiri/ElMessiri[wght].ttf",
+   "axes": {
+    "wght": 500
+   },
+   "upem": 1000,
+   "tab": 0.597,
+   "digit_h": 0.7,
+   "asc": 1.019,
+   "desc": 0.544,
+   "bytes": 52948
+  },
+  {
+   "id": "t08",
+   "label": "Amiri",
+   "source": "amiri/Amiri-Regular.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.585,
+   "digit_h": 0.629,
+   "asc": 1.124,
+   "desc": 0.634,
+   "bytes": 309156
+  },
+  {
+   "id": "t09",
+   "label": "Almarai",
+   "source": "almarai/Almarai-Regular.ttf",
+   "axes": null,
+   "upem": 1000,
+   "tab": 0.748,
+   "digit_h": 0.742,
+   "asc": 0.905,
+   "desc": 0.211,
+   "bytes": 64132
+  },
+  {
+   "id": "t10",
+   "label": "Vazirmatn",
+   "source": "vazirmatn/Vazirmatn[wght].ttf",
+   "axes": {
+    "wght": 400
+   },
+   "upem": 2048,
+   "tab": 0.65869140625,
+   "digit_h": 0.73046875,
+   "asc": 1.025390625,
+   "desc": 0.537109375,
+   "bytes": 73796
+  }
+ ]
+}
