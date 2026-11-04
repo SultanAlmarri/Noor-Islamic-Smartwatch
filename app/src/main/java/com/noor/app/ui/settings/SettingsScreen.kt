@@ -91,7 +91,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         SettingsSection(stringResource(R.string.settings_location)) {
             val modeLabel = if (s.locationMode == LocationMode.AUTO) stringResource(R.string.location_auto)
             else s.manualCityId?.let { Places.byId(it) }?.let { if (ar) it.nameAr else it.nameEn } ?: stringResource(R.string.location_manual)
-            SettingsItem(Icons.Rounded.LocationOn, stringResource(R.string.settings_location_mode), modeLabel) { dialog = Dialog.LOCATION_MODE }
+            SettingsItem(Icons.Rounded.LocationOn, stringResource(R.string.settings_location_mode), modeLabel, onClick = { dialog = Dialog.LOCATION_MODE })
             if (s.locationMode == LocationMode.AUTO) {
                 SettingsDivider()
                 val bgOn = s.backgroundUpdates && vm.hasBackgroundPermission()
@@ -105,31 +105,31 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         }
 
         SettingsSection(stringResource(R.string.settings_calculation)) {
-            SettingsItem(Icons.Rounded.Public, stringResource(R.string.authority), profileName) { dialog = Dialog.AUTHORITY }
+            SettingsItem(Icons.Rounded.Public, stringResource(R.string.authority), profileName, onClick = { dialog = Dialog.AUTHORITY })
             SettingsDivider()
             val asrLabel = when (s.asrSchool) {
                 null -> stringResource(R.string.asr_profile_default)
                 AsrSchool.STANDARD -> stringResource(R.string.asr_standard)
                 AsrSchool.HANAFI -> stringResource(R.string.asr_hanafi)
             }
-            SettingsItem(Icons.Rounded.Schedule, stringResource(R.string.asr_method), asrLabel) { dialog = Dialog.ASR }
+            SettingsItem(Icons.Rounded.Schedule, stringResource(R.string.asr_method), asrLabel, onClick = { dialog = Dialog.ASR })
             SettingsDivider()
-            SettingsItem(Icons.Rounded.Explore, stringResource(R.string.high_latitude), highLatLabel(s.highLatitudeRule)) { dialog = Dialog.HIGH_LAT }
+            SettingsItem(Icons.Rounded.Explore, stringResource(R.string.high_latitude), highLatLabel(s.highLatitudeRule), onClick = { dialog = Dialog.HIGH_LAT })
             SettingsDivider()
             val adj = s.offsets.entries.joinToString("  ") { (p, m) -> "${f.prayerName(p)} ${f.digits(if (m > 0) "+$m" else "$m")}" }
-            SettingsItem(Icons.Rounded.Tune, stringResource(R.string.adjustments), adj.ifEmpty { stringResource(R.string.adjustments_body) }) { dialog = Dialog.OFFSETS }
+            SettingsItem(Icons.Rounded.Tune, stringResource(R.string.adjustments), adj.ifEmpty { stringResource(R.string.adjustments_body) }, onClick = { dialog = Dialog.OFFSETS })
         }
 
         SettingsSection(stringResource(R.string.settings_display)) {
-            SettingsItem(Icons.Rounded.Language, stringResource(R.string.language), languageLabel(s.language)) { dialog = Dialog.LANGUAGE }
+            SettingsItem(Icons.Rounded.Language, stringResource(R.string.language), languageLabel(s.language), onClick = { dialog = Dialog.LANGUAGE })
             SettingsDivider()
             SettingsItem(Icons.Rounded.Numbers, stringResource(R.string.numerals),
-                stringResource(if (s.numerals == Numerals.WESTERN) R.string.numerals_western else R.string.numerals_arabic)) { dialog = Dialog.NUMERALS }
+                stringResource(if (s.numerals == Numerals.WESTERN) R.string.numerals_western else R.string.numerals_arabic), onClick = { dialog = Dialog.NUMERALS })
             SettingsDivider()
             SettingsItem(Icons.Rounded.AccessTime, stringResource(R.string.time_format),
-                stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24)) { dialog = Dialog.TIME }
+                stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24), onClick = { dialog = Dialog.TIME })
             SettingsDivider()
-            SettingsItem(Icons.Rounded.Brightness6, stringResource(R.string.theme), themeLabel(s.theme)) { dialog = Dialog.THEME }
+            SettingsItem(Icons.Rounded.Brightness6, stringResource(R.string.theme), themeLabel(s.theme), onClick = { dialog = Dialog.THEME })
             SettingsDivider()
             SettingsItem(Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust), stringResource(R.string.hijri_adjust_value, f.digits(if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}")), null) {
                 Stepper(f.digits(if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}"), { vm.setHijriAdjust(s.hijriAdjust - 1) }, { vm.setHijriAdjust(s.hijriAdjust + 1) })
