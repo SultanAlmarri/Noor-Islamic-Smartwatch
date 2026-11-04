@@ -1,0 +1,47 @@
+name: Fetch licensed Adhan recordings
+
+# Downloads the Wikimedia Commons recordings listed in tools/sounds/adhan_sources.json,
+# re-checks each file's licence and SHA-1, keeps only the audio (lossless FLAC) and publishes
+# the result, with its attribution data, on the "sound-sources" pre-release.
+# The app's bundled sounds are produced from these files by tools/sounds/process_adhans.py.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - tools/sounds/adhan_sources.json
+      - tools/sounds/fetch_commons.py
+      - .github/workflows/fetch-sounds.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install ffmpeg
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
+      - name: Fetch and verify
+        run: python3 tools/sounds/fetch_commons.py tools/sounds/adhan_sources.json out
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: sound-sources
+          name: Adhan source recordings (Wikimedia Commons)
+          prerelease: true
+          body: |
+            Audio extracted losslessly from freely licensed Wikimedia Commons files, with each file's licence,
+            author and SHA-1 in sources.json. These are the inputs to tools/sounds/process_adhans.py; they are
+            not an app build. Licences: CC0, public domain, CC BY 3.0 and CC BY-SA 4.0 as listed per file.
+          files: |
+            out/*.flac
+            out/*.wav
+            out/*.mp3
+            out/*.ogg
+            out/*.oga
+            out/sources.json
+          fail_on_unmatched_files: false
