@@ -17,6 +17,9 @@ val Plex = FontFamily(
     Font(R.font.plex_arabic_bold, FontWeight.Bold),
 )
 
+/** Tabular figures so times and countdowns do not jiggle as digits change. */
+val Tabular = TextStyle(fontFeatureSettings = "tnum")
+
 /** Reem Kufi for Arabic display names. */
 val Kufi = FontFamily(Font(R.font.reem_kufi, FontWeight.Normal))
 

@@ -5,11 +5,21 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -17,13 +27,23 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.noor.app.data.AppSettings
+import com.noor.app.data.LocationMode
+import com.noor.app.data.Numerals
+import com.noor.app.data.PrayerProvider
 import com.noor.app.data.ThemeMode
+import com.noor.app.data.TimeFormat
 import com.noor.app.ui.components.NoorBackground
-import com.noor.app.ui.prayers.PrayersScreen
 import com.noor.app.ui.settings.AccuracyScreen
 import com.noor.app.ui.settings.SettingsScreen
 import com.noor.app.ui.theme.NoorTheme
+import com.noor.app.ui.today.CalendarPicker
+import com.noor.app.ui.today.DayCache
+import com.noor.app.ui.today.TodayContent
+import com.noor.app.ui.today.TodayUi
 import com.noor.app.ui.watch.WatchScreen
+import com.noor.app.util.Formatter
+import com.noor.prayer.Schedule
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
@@ -33,11 +53,15 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.Locale
 
 /**
- * Renders the real screens with Robolectric's native graphics and saves PNGs to build/screenshots,
- * so every CI build shows what the app looks like. One test method: DataStore is a per-process singleton.
+ * Renders the real screens with Robolectric's native graphics and saves PNGs to build/screenshots, so every build
+ * shows what the app looks like. Software renders on a simulated 412 dp phone, not photos of a device.
+ * One test method: DataStore is a per-process singleton.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -45,7 +69,18 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { PRAYERS, SETTINGS, WATCH, ACCURACY }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY }
+
+    /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
+    private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
+
+    private fun todayUi(s: AppSettings): TodayUi {
+        val place = PrayerProvider.place(s)!!
+        val profile = PrayerProvider.profile(s, place)
+        val cache = DayCache()
+        val state = Schedule.state(now, place.zone) { cache.get(s, place, profile, it) }
+        return TodayUi(s, place, profile, now, state, now.atZone(place.zone).toLocalDate(), refreshing = false, lastRefresh = null)
+    }
 
     @Test fun renderScreens() {
         val app = RuntimeEnvironment.getApplication() as NoorApplication
@@ -53,27 +88,39 @@ class ScreenshotTest {
             app.container.settings.setManualCity("dxb")
             app.container.settings.setOnboardingDone()
         }
-        var screen by mutableStateOf(Screen.PRAYERS)
+        val base = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualCityId = "dxb")
+        var screen by mutableStateOf(Screen.TODAY)
         var theme by mutableStateOf(ThemeMode.DARK)
         var arabic by mutableStateOf(false)
         rule.setContent {
-            val base = LocalContext.current
-            val config = Configuration(base.resources.configuration).apply {
+            val ctxBase = LocalContext.current
+            val config = Configuration(ctxBase.resources.configuration).apply {
                 setLocale(if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH)
                 setLayoutDirection(if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH)
             }
-            val ctx = base.createConfigurationContext(config)
+            val ctx = ctxBase.createConfigurationContext(config)
             CompositionLocalProvider(
                 LocalContext provides ctx,
                 LocalConfiguration provides config,
                 LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
                 LocalActivityResultRegistryOwner provides rule.activity,
             ) {
+                val s = base.copy(theme = theme)
+                val u = todayUi(s)
+                val cache = DayCache()
                 NoorTheme(theme) {
                     NoorBackground {
                         val pad = PaddingValues(top = 28.dp, bottom = 16.dp)
                         when (screen) {
-                            Screen.PRAYERS -> PrayersScreen(pad, {}, {})
+                            Screen.TODAY -> TodayContent(u, pad, { cache.get(s, u.place!!, u.profile!!, it) }, {}, {}, {})
+                            Screen.TODAY_OTHER_DATE -> TodayContent(u, pad, { cache.get(s, u.place!!, u.profile!!, it) }, {}, {}, {},
+                                initialDate = LocalDate.of(2026, 12, 18))
+                            Screen.CALENDAR -> Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.BottomCenter) {
+                                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(NoorTheme.colors.surface)) {
+                                    CalendarPicker(LocalDate.of(2026, 12, 18), u.today!!, s.hijriAdjust,
+                                        Formatter(arabic, Numerals.WESTERN, TimeFormat.H12), {}, Modifier.padding(horizontal = 12.dp, vertical = 16.dp))
+                                }
+                            }
                             Screen.SETTINGS -> SettingsScreen(pad, {}, {})
                             Screen.WATCH -> WatchScreen(pad)
                             Screen.ACCURACY -> AccuracyScreen(pad, {})
@@ -94,11 +141,16 @@ class ScreenshotTest {
             val dir = File("build/screenshots").apply { mkdirs() }
             File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
-        shot("01_prayers_night_en", "Maghrib")
-        screen = Screen.SETTINGS; shot("02_settings_night_en", "Numerals")
-        screen = Screen.WATCH; shot("03_watch_night_en", "Galaxy")
-        screen = Screen.ACCURACY; shot("04_accuracy_night_en", "IACAD")
-        screen = Screen.PRAYERS; arabic = true; shot("05_prayers_night_ar", "المغرب")
-        theme = ThemeMode.LIGHT; arabic = false; shot("06_prayers_day_en", "Maghrib")
+        shot("01_today_night_en", "Maghrib")
+        screen = Screen.TODAY_OTHER_DATE; shot("02_other_date_night_en", "18 December 2026")
+        screen = Screen.CALENDAR; shot("03_calendar_night_en", "December 2026")
+        screen = Screen.TODAY; arabic = true; shot("04_today_night_ar", "المغرب")
+        screen = Screen.CALENDAR; shot("05_calendar_night_ar", "ديسمبر")
+        screen = Screen.TODAY; theme = ThemeMode.LIGHT; arabic = false; shot("06_today_day_en", "Maghrib")
+        screen = Screen.TODAY_OTHER_DATE; shot("07_other_date_day_en", "18 December 2026")
+        theme = ThemeMode.DARK
+        screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
+        screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
+        screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
     }
 }

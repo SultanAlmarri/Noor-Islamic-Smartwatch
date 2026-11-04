@@ -24,9 +24,14 @@ data class PrayerDay(
     /** Final displayed time in minutes after local midnight, or null when the event does not occur. */
     val minutes: Map<Prayer, Int?>,
 ) {
+    /**
+     * The moment of [p]. Minutes count from midnight on the clock in force at local noon (the engine's reference),
+     * so on daylight-saving change days the conversion uses that same offset rather than the one at midnight.
+     */
     fun instant(p: Prayer): Instant? {
         val m = minutes[p] ?: return null
-        return date.atStartOfDay(zone).plusMinutes(m.toLong()).toInstant()
+        val noonOffset = zone.rules.getOffset(date.atTime(12, 0))
+        return Instant.ofEpochSecond(date.atStartOfDay().toEpochSecond(noonOffset) + m * 60L)
     }
 }
 

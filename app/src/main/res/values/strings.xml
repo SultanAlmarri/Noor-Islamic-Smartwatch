@@ -100,4 +100,15 @@
     <string name="watch_on_watch_title">On the watch</string>
     <string name="watch_on_watch_body">The Noor watch app calculates the same times as this phone, with the same location, authority and adjustments, and keeps working without the phone. It adds a “Prayer times” tile and a “Next prayer” complication you can put on any watch face.</string>
     <string name="watch_face_body">Version 1.3.2 stays installed and unchanged. The watch app also carries this face and, on Wear OS 6, adds it to the watch face list from the watch itself. The editor will deliver your designs the same way.</string>
+    <string name="previous">Previous</string>
+    <string name="next_page">Next</string>
+    <string name="previous_day">Previous day</string>
+    <string name="next_day">Next day</string>
+    <string name="open_calendar">Choose a date</string>
+    <string name="go_to_today">Go to today</string>
+    <string name="calendar_range">%1$s – %2$s</string>
+    <string name="at_time">at %1$s</string>
+    <string name="loc_label_auto">Current location</string>
+    <string name="loc_label_manual">Chosen city</string>
+    <string name="tab_today">Today</string>
 </resources>

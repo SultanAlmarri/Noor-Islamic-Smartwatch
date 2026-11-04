@@ -4,8 +4,11 @@ import com.noor.app.data.Numerals
 import com.noor.app.data.TimeFormat
 import com.noor.prayer.HijriDate
 import com.noor.prayer.Prayer
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDate
+import java.time.Month
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -55,6 +58,33 @@ class Formatter(val arabic: Boolean, private val numerals: Numerals, private val
         "${digits(h.day.toString())} ${if (arabic) h.monthNameAr else h.monthNameEn} ${digits(h.year.toString())}" + if (arabic) " هـ" else " AH"
 
     fun prayerName(p: Prayer): String = if (arabic) p.ar else p.en
+
+    /** Dhuhr is shown as Jumu'ah on Fridays. */
+    fun prayerName(p: Prayer, date: LocalDate): String =
+        if (p == Prayer.DHUHR && date.dayOfWeek == DayOfWeek.FRIDAY) (if (arabic) "الجمعة" else "Jumu’ah") else prayerName(p)
+
+    fun prayerNameOther(p: Prayer, date: LocalDate): String =
+        if (p == Prayer.DHUHR && date.dayOfWeek == DayOfWeek.FRIDAY) (if (arabic) "Jumu’ah" else "الجمعة") else (if (arabic) p.en else p.ar)
+
+    val locale: Locale get() = if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH
+
+    fun number(n: Int): String = digits(n.toString())
+
+    fun weekday(date: LocalDate): String = date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
+
+    fun weekdayShort(d: DayOfWeek): String =
+        if (arabic) d.getDisplayName(TextStyle.FULL, locale) else d.getDisplayName(TextStyle.SHORT, locale).take(3)
+
+    fun monthName(m: Month): String = m.getDisplayName(TextStyle.FULL_STANDALONE, locale)
+        .let { if (it.firstOrNull()?.isDigit() == true) m.getDisplayName(TextStyle.FULL, locale) else it }
+
+    fun monthShort(m: Month): String = if (arabic) monthName(m) else m.getDisplayName(TextStyle.SHORT, locale)
+
+    /** "4 November 2026" (numbers in the chosen numerals). */
+    fun gregorianDate(date: LocalDate): String =
+        "${digits(date.dayOfMonth.toString())} ${monthName(date.month)} ${digits(date.year.toString())}"
+
+    fun monthYear(ym: YearMonth): String = "${monthName(ym.month)} ${digits(ym.year.toString())}"
 
     @Suppress("unused")
     private val iso = DateTimeFormatter.ISO_LOCAL_DATE

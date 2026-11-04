@@ -52,7 +52,7 @@ import com.noor.app.data.LocationMode
 import com.noor.app.data.Numerals
 import com.noor.app.data.ThemeMode
 import com.noor.app.data.TimeFormat
-import com.noor.app.ui.prayers.isArabicUi
+import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.theme.NoorTheme
 import com.noor.app.util.Formatter
 import com.noor.prayer.AsrSchool

@@ -24,7 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.noor.app.R
 import com.noor.app.ui.components.GlassCard
-import com.noor.app.ui.prayers.isArabicUi
+import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.theme.NoorTheme
 import com.noor.prayer.Profiles
 

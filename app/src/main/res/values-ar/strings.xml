@@ -100,4 +100,15 @@
     <string name="watch_on_watch_title">على الساعة</string>
     <string name="watch_on_watch_body">يحسب تطبيق نور على الساعة المواقيت نفسها التي يحسبها هذا الهاتف، بالموقع والجهة والتعديلات نفسها، ويواصل العمل دون الهاتف. ويضيف بطاقة «مواقيت الصلاة» وإضافة «الصلاة القادمة» يمكنك وضعها على أي واجهة.</string>
     <string name="watch_face_body">يبقى الإصدار 1.3.2 مثبّتاً دون تغيير. ويحمل تطبيق الساعة هذه الواجهة أيضاً، وعلى Wear OS 6 يضيفها إلى قائمة الواجهات من الساعة نفسها. وسيوصل المحرّر تصاميمك بالطريقة نفسها.</string>
+    <string name="previous">السابق</string>
+    <string name="next_page">التالي</string>
+    <string name="previous_day">اليوم السابق</string>
+    <string name="next_day">اليوم التالي</string>
+    <string name="open_calendar">اختيار تاريخ</string>
+    <string name="go_to_today">العودة إلى اليوم</string>
+    <string name="calendar_range">%1$s – %2$s</string>
+    <string name="at_time">الساعة %1$s</string>
+    <string name="loc_label_auto">الموقع الحالي</string>
+    <string name="loc_label_manual">مدينة مختارة</string>
+    <string name="tab_today">اليوم</string>
 </resources>

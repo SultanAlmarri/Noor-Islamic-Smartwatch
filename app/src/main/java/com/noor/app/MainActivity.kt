@@ -32,7 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import com.noor.app.data.AppSettings
 import com.noor.app.ui.components.NoorBackground
 import com.noor.app.ui.onboarding.OnboardingScreen
-import com.noor.app.ui.prayers.PrayersScreen
+import com.noor.app.ui.today.TodayScreen
 import com.noor.app.ui.settings.AccuracyScreen
 import com.noor.app.ui.settings.CityPickerScreen
 import com.noor.app.ui.settings.SettingsScreen
@@ -87,7 +87,7 @@ private fun NoorRoot(s: AppSettings) {
                     onFinished = { nav.navigate(Routes.PRAYERS) { popUpTo(Routes.ONBOARDING) { inclusive = true } } })
             }
             composable(Routes.PRAYERS) {
-                PrayersScreen(content, onOpenLocation = { nav.navigate(Routes.SETTINGS) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) })
+                TodayScreen(content, onOpenLocation = { nav.navigate(Routes.SETTINGS) }, onOpenSource = { nav.navigate(Routes.ACCURACY) })
             }
             composable(Routes.WATCH) { WatchScreen(content) }
             composable(Routes.SETTINGS) {
@@ -107,7 +107,7 @@ private fun NoorRoot(s: AppSettings) {
 private fun NoorBottomBar(nav: NavHostController, route: String?) {
     val c = NoorTheme.colors
     val colors = NavigationBarItemDefaults.colors(
-        selectedIconColor = c.gold, selectedTextColor = c.gold, indicatorColor = c.gold.copy(alpha = 0.14f),
+        selectedIconColor = c.gold, selectedTextColor = c.gold, indicatorColor = c.gold.copy(alpha = 0.16f),
         unselectedIconColor = c.textMuted, unselectedTextColor = c.textMuted,
     )
     fun go(r: String) = nav.navigate(r) {
@@ -115,10 +115,10 @@ private fun NoorBottomBar(nav: NavHostController, route: String?) {
         launchSingleTop = true
         restoreState = true
     }
-    NavigationBar(containerColor = c.backgroundBottom.copy(alpha = 0.92f), tonalElevation = 0.dp) {
+    NavigationBar(containerColor = c.surface, tonalElevation = 0.dp) {
         NavigationBarItem(route == Routes.PRAYERS, { go(Routes.PRAYERS) },
             icon = { Icon(painterResource(R.drawable.ic_prayer_isha), null, modifier = Modifier.padding(1.dp)) },
-            label = { Text(stringResource(R.string.tab_prayers)) }, colors = colors)
+            label = { Text(stringResource(R.string.tab_today)) }, colors = colors)
         NavigationBarItem(route == Routes.WATCH, { go(Routes.WATCH) },
             icon = { Icon(Icons.Rounded.Watch, null) }, label = { Text(stringResource(R.string.tab_watch)) }, colors = colors)
         NavigationBarItem(route == Routes.SETTINGS, { go(Routes.SETTINGS) },

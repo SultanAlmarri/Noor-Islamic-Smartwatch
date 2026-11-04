@@ -53,3 +53,27 @@ class WatchConfigTest {
         assertTrue(ev.count { it.at > now } >= 12, "at least two full days ahead")
     }
 }
+
+class DaylightSavingTest {
+    private val london = GeoPoint(51.5074, -0.1278, 11.0)
+    private val zone = java.time.ZoneId.of("Europe/London")
+
+    /** On 29 March 2026 the UK clocks go forward: solar noon moves from about 12:04 GMT to about 13:04 BST. */
+    @Test fun clocksGoingForwardShiftLocalTimesByAnHour() {
+        val before = PrayerEngine.compute(LocalDate.of(2026, 3, 28), london, zone, Profiles.MWL)
+        val after = PrayerEngine.compute(LocalDate.of(2026, 3, 29), london, zone, Profiles.MWL)
+        val d = after.minutes[Prayer.DHUHR]!! - before.minutes[Prayer.DHUHR]!!
+        assertTrue(d in 59..60, "Dhuhr moved $d minutes")
+        assertTrue(after.instant(Prayer.DHUHR)!! > before.instant(Prayer.DHUHR)!!.plusSeconds(86_000))
+    }
+
+    /** On 25 October 2026 they go back; the instants stay a solar day apart while the clock times drop an hour. */
+    @Test fun clocksGoingBack() {
+        val before = PrayerEngine.compute(LocalDate.of(2026, 10, 24), london, zone, Profiles.MWL)
+        val after = PrayerEngine.compute(LocalDate.of(2026, 10, 25), london, zone, Profiles.MWL)
+        val d = after.minutes[Prayer.MAGHRIB]!! - before.minutes[Prayer.MAGHRIB]!!
+        assertTrue(d in -63..-60, "Maghrib moved $d minutes")
+        val gap = java.time.Duration.between(before.instant(Prayer.DHUHR), after.instant(Prayer.DHUHR)).toMinutes()
+        assertTrue(gap in 1438..1441, "solar days stay ~24 h apart: $gap")
+    }
+}

@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.noor.app.R
-import com.noor.app.ui.prayers.isArabicUi
+import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.theme.NoorTheme
 import com.noor.prayer.Places
 
