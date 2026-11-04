@@ -50,7 +50,8 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
     val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.setBackgroundUpdates(granted); vm.completeOnboarding(); onFinished()
     }
-    val foreground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    val foreground = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        val granted = result.values.any { it }
         if (granted) { vm.setLocationMode(LocationMode.AUTO); step = 1 } else { vm.completeOnboarding(); onChooseCity() }
     }
     Box(Modifier.fillMaxSize().padding(contentPadding).padding(28.dp), contentAlignment = Alignment.Center) {
@@ -61,7 +62,8 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = {
-                    if (step == 0) foreground.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    // Android shows its precise/approximate choice; Noor works with either.
+                    if (step == 0) foreground.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
                     else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                     else { vm.setBackgroundUpdates(true); vm.completeOnboarding(); onFinished() }
                 },

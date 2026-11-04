@@ -107,7 +107,7 @@ class PrayerTileService : TileService() {
             val zone = config.zone
             return scope(context, device) {
                 primaryLayout(
-                    titleSlot = { text(t.place(config).layoutString, color = colorScheme.onSurfaceVariant) },
+                    titleSlot = { text(t.placeWithFlag(config).layoutString, color = colorScheme.onSurfaceVariant) },
                     mainSlot = {
                         column(
                             text(context.getString(R.string.next).uppercase().layoutString, typography = Typography.LABEL_SMALL, color = colorScheme.onSurfaceVariant),

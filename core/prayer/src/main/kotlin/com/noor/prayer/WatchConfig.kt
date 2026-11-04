@@ -1,5 +1,6 @@
 package com.noor.prayer
 
+import com.noor.prayer.authority.Timetable
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -27,15 +28,20 @@ data class WatchConfig(
     val arabicDigits: Boolean,
     val use24h: Boolean,
     val updatedAtEpochMs: Long,
+    /** ISO country of the place, for the flag (display only). */
+    val countryCode: String? = null,
+    /** The authority's own published times for the coming weeks, when the phone has them; used as published. */
+    val official: Timetable? = null,
 ) {
     val zone: ZoneId get() = ZoneId.of(zoneId)
     val profile: CalculationProfile get() = Profiles.byId(profileId) ?: Profiles.MWL
 
-    fun day(date: LocalDate): PrayerDay = PrayerEngine.compute(
-        date, point, zone, profile,
-        UserAdjustments(asrSchool, highLatitudeRule, offsets),
-        isRamadan = HijriDate.of(date, hijriAdjust).isRamadan,
-    )
+    fun day(date: LocalDate): PrayerDay {
+        val user = UserAdjustments(asrSchool, highLatitudeRule, offsets)
+        return official?.day(date, zone, profileId, user) ?: PrayerEngine.compute(
+            date, point, zone, profile, user, isRamadan = HijriDate.of(date, hijriAdjust).isRamadan,
+        )
+    }
 
     fun state(now: Instant): ScheduleState = Schedule.state(now, zone, ::day)
 
@@ -57,6 +63,8 @@ data class WatchConfig(
         put("offsets", Prayer.entries.joinToString(",") { (offsets[it] ?: 0).toString() })
         put("hijri", hijriAdjust); put("lang", language); put("arabicDigits", arabicDigits); put("h24", use24h)
         put("updated", updatedAtEpochMs)
+        put("cc", countryCode)
+        if (official != null && official.size > 0) put("official", official.id + "|" + official.encode().replace('\n', ';'))
     }
 
     companion object {
@@ -83,6 +91,10 @@ data class WatchConfig(
                 arabicDigits = m["arabicDigits"] == "true",
                 use24h = m["h24"] == "true",
                 updatedAtEpochMs = m["updated"]?.toLongOrNull() ?: 0L,
+                countryCode = m["cc"]?.takeIf { it.length == 2 },
+                official = m["official"]?.let { v ->
+                    val id = v.substringBefore('|'); Timetable.parse(id, v.substringAfter('|').replace(';', '\n')).takeIf { it.size > 0 }
+                },
             )
         }.getOrNull()
     }

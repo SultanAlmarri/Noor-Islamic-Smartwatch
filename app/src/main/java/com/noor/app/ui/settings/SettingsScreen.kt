@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MyLocation
+import androidx.compose.material.icons.rounded.GpsFixed
 import androidx.compose.material.icons.rounded.Numbers
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Schedule
@@ -78,7 +79,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         vm.setBackgroundUpdates(granted)
     }
 
-    val autoName = stringResource(R.string.authority_auto)
+    val currentPlace = remember(s) { com.noor.app.data.PrayerProvider.place(s.copy(profileId = null)) }
+    val autoAuthority = currentPlace?.let { com.noor.app.data.PrayerProvider.authority(s.copy(profileId = null), it) }
+    val autoName = stringResource(R.string.authority_auto) + (autoAuthority?.let { ": " + if (ar) it.nameAr else it.nameEn } ?: "")
+    val context = androidx.compose.ui.platform.LocalContext.current
     val profileName = s.profileId?.let { Profiles.byId(it) }?.let { if (ar) it.nameAr else it.nameEn } ?: autoName
 
     Column(
@@ -90,7 +94,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
 
         SettingsSection(stringResource(R.string.settings_location)) {
             val modeLabel = if (s.locationMode == LocationMode.AUTO) stringResource(R.string.location_auto)
-            else s.manualCityId?.let { Places.byId(it) }?.let { if (ar) it.nameAr else it.nameEn } ?: stringResource(R.string.location_manual)
+            else s.manualPlace?.let { if (ar) it.placeNameAr ?: it.placeName else it.placeName }
+                ?: s.manualCityId?.let { Places.byId(it) }?.let { if (ar) it.nameAr else it.nameEn } ?: stringResource(R.string.location_manual)
             SettingsItem(Icons.Rounded.LocationOn, stringResource(R.string.settings_location_mode), modeLabel, onClick = { dialog = Dialog.LOCATION_MODE })
             if (s.locationMode == LocationMode.AUTO) {
                 SettingsDivider()
@@ -99,6 +104,13 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                     Icons.Rounded.Update, stringResource(R.string.background_updates),
                     stringResource(if (bgOn) R.string.background_updates_on else R.string.background_updates_off), null,
                 ) { NoorSwitch(bgOn) { on -> if (on) dialog = Dialog.BACKGROUND else vm.setBackgroundUpdates(false) } }
+                SettingsDivider()
+                val precise = vm.hasPrecise()
+                SettingsItem(Icons.Rounded.GpsFixed, stringResource(R.string.location_precision),
+                    stringResource(if (precise) R.string.location_precise else R.string.location_approximate), onClick = {
+                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.fromParts("package", context.packageName, null)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    })
                 SettingsDivider()
                 SettingsItem(Icons.Rounded.MyLocation, stringResource(R.string.refresh_location), null, { vm.refreshLocation() })
             }
@@ -159,7 +171,16 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         )
         Dialog.AUTHORITY -> ChoiceDialog(
             stringResource(R.string.authority),
-            listOf<Pair<String?, String>>(null to autoName) + Profiles.ALL.map { it.id to if (ar) it.nameAr else it.nameEn },
+            listOf<Pair<String?, String>>(null to autoName) + Profiles.ALL.map { p ->
+                val auth = com.noor.prayer.authority.Authorities.forProfile(p.id)
+                val kind = when {
+                    auth?.timetableId != null -> R.string.kind_official_and_validated
+                    auth?.kind == com.noor.prayer.authority.SourceKind.VALIDATED_CALCULATION -> R.string.kind_validated
+                    auth?.kind == com.noor.prayer.authority.SourceKind.AUTHORITY_PARAMETERS -> R.string.kind_parameters
+                    else -> R.string.kind_recognised
+                }
+                p.id to (if (ar) p.nameAr else p.nameEn) + "\n" + stringResource(kind)
+            },
             s.profileId, onSelect = { vm.setProfile(it) }, onDismiss = { dialog = Dialog.NONE },
         )
         Dialog.ASR -> ChoiceDialog(

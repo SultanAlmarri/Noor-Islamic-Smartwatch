@@ -5,6 +5,7 @@ import android.util.Log
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import com.noor.prayer.PrayerEngine
 import com.noor.prayer.WatchConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,20 +30,20 @@ data class WatchStatus(
  * Publishes the phone's resolved settings to the Wear OS Data Layer. The system delivers the item to the watch
  * whenever it connects, also when Noor is closed on both devices, and keeps it for watches paired later.
  */
-class WearSync(private val context: Context, private val settings: SettingsRepository) {
+class WearSync(private val context: Context, private val settings: SettingsRepository, private val tables: OfficialTimetables? = null) {
 
     private val _lastSent = MutableStateFlow<Long?>(null)
     val lastSent: StateFlow<Long?> = _lastSent.asStateFlow()
 
     fun start(scope: CoroutineScope) = scope.launch {
         settings.settings
-            .map { configFor(it, System.currentTimeMillis()) }
+            .map { configFor(it, System.currentTimeMillis(), tables) }
             .distinctUntilChanged { a, b -> a?.copy(updatedAtEpochMs = 0) == b?.copy(updatedAtEpochMs = 0) }
             .collect { c -> if (c != null) push(c) }
     }
 
     /** Sends the current settings now (the "Sync now" button). */
-    suspend fun syncNow(): Boolean = configFor(settings.current(), System.currentTimeMillis())?.let { push(it) } ?: false
+    suspend fun syncNow(): Boolean = configFor(settings.current(), System.currentTimeMillis(), tables)?.let { push(it) } ?: false
 
     private suspend fun push(c: WatchConfig): Boolean = runCatching {
         val req = PutDataMapRequest.create(WatchConfig.PATH).apply {
@@ -65,9 +66,13 @@ class WearSync(private val context: Context, private val settings: SettingsRepos
         private const val TAG = "NoorWearSync"
 
         /** Resolves every automatic choice on the phone so the watch calculates exactly the same times. */
-        fun configFor(s: AppSettings, now: Long): WatchConfig? {
+        fun configFor(s: AppSettings, now: Long, tables: OfficialTimetables? = null): WatchConfig? {
             val place = PrayerProvider.place(s) ?: return null
             val profile = PrayerProvider.profile(s, place)
+            // When the authority's own times are available, the watch gets the next eight weeks of them as published.
+            val today = java.time.LocalDate.now(place.zone)
+            val official = PrayerProvider.authority(s, place)?.takeIf { it.profile.id == profile.id && PrayerEngine.referencePointFor(profile, place.point) != null }
+                ?.timetableId?.let { tables?.get(it) }?.window(today.minusDays(1), today.plusDays(56))?.takeIf { it.size > 0 }
             return WatchConfig(
                 point = place.point,
                 zoneId = place.zone.id,
@@ -83,6 +88,8 @@ class WearSync(private val context: Context, private val settings: SettingsRepos
                 arabicDigits = s.numerals == Numerals.ARABIC_INDIC,
                 use24h = s.timeFormat == TimeFormat.H24,
                 updatedAtEpochMs = now,
+                countryCode = place.countryCode,
+                official = official,
             )
         }
     }

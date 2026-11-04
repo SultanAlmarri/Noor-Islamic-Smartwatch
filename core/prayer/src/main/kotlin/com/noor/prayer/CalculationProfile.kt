@@ -23,8 +23,12 @@ data class CalculationProfile(
     val rounding: Rounding = Rounding.NEAREST,
     /** Fixed precaution minutes per event, applied after rounding. */
     val offsets: Map<Prayer, Int> = emptyMap(),
-    /** Official reference point: when set, all users of this profile get the authority's published city times. */
+    /**
+     * Official reference point: users within [referenceRadiusKm] of it get the authority's city times (as the authority
+     * publishes one timetable for the city); users farther away are calculated at their own position.
+     */
     val referencePoint: GeoPoint? = null,
+    val referenceRadiusKm: Double = 60.0,
     /** One-line accuracy status shown to the user. */
     val validationEn: String = "Calculated with the method's published parameters.",
     val validationAr: String = "محسوبة وفق المعايير المنشورة للطريقة.",

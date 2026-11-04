@@ -73,27 +73,9 @@ object Places {
 
     fun nearest(p: GeoPoint): City = ALL.minBy { distanceKm(it.point, p) }
 
-    /**
-     * Default authority for a location. Region and country come from the device geocoder when available
-     * (accurate); otherwise from the nearest bundled place (offline approximation near borders).
-     */
+    /** Delegates to [com.noor.prayer.authority.Authorities], the single place where authorities are chosen. */
     fun defaultProfileFor(point: GeoPoint, countryCode: String? = null, regionCode: String? = null): CalculationProfile {
         val near = nearest(point)
-        val cc = countryCode ?: near.countryCode
-        val region = regionCode ?: near.region
-        return when {
-            cc == "AE" && region == DUBAI -> Profiles.DUBAI_IACAD
-            cc == "AE" -> Profiles.UAE_AWQAF
-            cc == "SA" -> Profiles.UMM_AL_QURA
-            cc == "QA" || cc == "BH" -> Profiles.QATAR
-            cc == "KW" -> Profiles.KUWAIT
-            cc == "EG" || cc == "SD" || cc == "LY" -> Profiles.EGYPT
-            cc in setOf("PK", "IN", "BD", "AF") -> Profiles.KARACHI
-            cc == "TR" -> Profiles.TURKIYE
-            cc == "IR" -> Profiles.TEHRAN
-            cc in setOf("SG", "MY", "ID", "BN") -> Profiles.SINGAPORE
-            cc in setOf("US", "CA") -> Profiles.ISNA
-            else -> Profiles.MWL
-        }
+        return com.noor.prayer.authority.Authorities.forPlace(countryCode ?: near.countryCode, regionCode ?: near.region).profile
     }
 }

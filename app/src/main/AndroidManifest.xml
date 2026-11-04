@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Approximate location is enough for prayer times and uses less battery than precise GPS. -->
+    <!-- Location. Android lets the user choose precise or approximate; Noor works with either. Precise gives the
+         neighbourhood name and the best Qibla bearing; approximate names the town. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Only for official open-data timetables (e.g. MUIS on data.gov.sg); prayer times never need the network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Optional: lets the low-frequency background refresh run when the app is closed (asked separately, with an explanation). -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 

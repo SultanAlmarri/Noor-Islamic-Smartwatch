@@ -166,4 +166,22 @@
     <string name="step_face_button">Use the Noor watch face</string>
     <string name="watch_open_on_watch">Open Noor on the watch</string>
     <string name="step_face_open_first">Open Noor on the watch once to finish setting up.</string>
+    <string name="source_official_badge">Official timetable</string>
+    <string name="source_official">Official timetable: %1$s\'s own times for this date, as published.</string>
+    <string name="source_validated">Calculated with %1$s\'s conventions, checked against its official timetable.</string>
+    <string name="source_parameters">Calculated with the parameters %1$s is documented to use; not yet checked against its own timetable.</string>
+    <string name="source_recognised">Calculated with a widely used method. No official local timetable is implied for this place.</string>
+    <string name="source_manual_method">Calculated with the method you chose in Settings.</string>
+    <string name="source_user_adjusted">Includes your adjustments (minutes): %1$s</string>
+    <string name="search_city_world">Search any city or district</string>
+    <string name="geonames_credit">Place names: GeoNames (geonames.org), CC BY 4.0.</string>
+    <string name="location_precision">Location precision</string>
+    <string name="location_precise">Precise: neighbourhood names, best Qibla bearing</string>
+    <string name="location_approximate">Approximate: town names only. Change in Android settings.</string>
+    <string name="kind_official_and_validated">Official timetable where published; validated calculation otherwise</string>
+    <string name="kind_validated">Checked against the official timetable</string>
+    <string name="kind_parameters">Authority\'s published parameters</string>
+    <string name="kind_recognised">Widely used method</string>
+    <string name="sources_title">Data sources and licences</string>
+    <string name="sources_body">Official timetables: IACAD Dubai (iacad.gov.ae; 2021–2023 pages preserved by the Internet Archive, November 2026 from the IACAD website); MUIS Singapore 2024–2026 (data.gov.sg, Singapore Open Data Licence). Place names: GeoNames (geonames.org), CC BY 4.0. Magnetic declination: World Magnetic Model, via Android. Each authority\'s parameters and their sources are listed in docs/AUTHORITIES.md in the Noor repository.</string>
 </resources>

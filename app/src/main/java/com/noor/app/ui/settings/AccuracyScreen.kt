@@ -57,6 +57,10 @@ fun AccuracyScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
                 Text(if (ar) p.validationAr else p.validationEn, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
             }
         }
+        Text(stringResource(R.string.sources_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.padding(top = 8.dp))
+        GlassCard(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.sources_body), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+        }
         Spacer(Modifier.height(12.dp))
     }
 }

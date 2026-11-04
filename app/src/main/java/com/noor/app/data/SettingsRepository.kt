@@ -27,6 +27,8 @@ class SettingsRepository(private val context: Context) {
         val onboarding = booleanPreferencesKey("onboarding_done")
         val locationMode = stringPreferencesKey("location_mode")
         val manualCity = stringPreferencesKey("manual_city")
+        val manualPlace = stringPreferencesKey("manual_place")
+        val lastFull = stringPreferencesKey("last_location_v2")
         val background = booleanPreferencesKey("background_updates")
         val lat = doublePreferencesKey("last_lat")
         val lon = doublePreferencesKey("last_lon")
@@ -51,7 +53,7 @@ class SettingsRepository(private val context: Context) {
         this[key]?.let { v -> enumValues<T>().firstOrNull { it.name == v } } ?: default
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
-        val last = if (p[K.lat] != null && p[K.lon] != null) KnownLocation(
+        val last = p[K.lastFull]?.let(KnownLocation::decode) ?: if (p[K.lat] != null && p[K.lon] != null) KnownLocation(
             point = GeoPoint(p[K.lat]!!, p[K.lon]!!, p[K.elev] ?: 0.0),
             zoneId = p[K.zone] ?: java.time.ZoneId.systemDefault().id,
             placeName = p[K.place], countryCode = p[K.country], regionCode = p[K.region],
@@ -61,6 +63,7 @@ class SettingsRepository(private val context: Context) {
             onboardingDone = p[K.onboarding] ?: false,
             locationMode = p.enum(K.locationMode, LocationMode.AUTO),
             manualCityId = p[K.manualCity],
+            manualPlace = p[K.manualPlace]?.let(KnownLocation::decode),
             backgroundUpdates = p[K.background] ?: false,
             lastLocation = last,
             profileId = p[K.profile],
@@ -79,7 +82,12 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setOnboardingDone() = context.dataStore.edit { it[K.onboarding] = true }
     suspend fun setLocationMode(mode: LocationMode) = context.dataStore.edit { it[K.locationMode] = mode.name }
-    suspend fun setManualCity(id: String) = context.dataStore.edit { it[K.manualCity] = id; it[K.locationMode] = LocationMode.MANUAL.name }
+    suspend fun setManualCity(id: String) = context.dataStore.edit {
+        it[K.manualCity] = id; it.remove(K.manualPlace); it[K.locationMode] = LocationMode.MANUAL.name
+    }
+    suspend fun setManualPlace(place: KnownLocation) = context.dataStore.edit {
+        it[K.manualPlace] = place.encode(); it[K.locationMode] = LocationMode.MANUAL.name
+    }
     suspend fun setBackgroundUpdates(on: Boolean) = context.dataStore.edit { it[K.background] = on }
     suspend fun setProfile(id: String?) = context.dataStore.edit { if (id == null) it.remove(K.profile) else it[K.profile] = id }
     suspend fun setAsrSchool(s: AsrSchool?) = context.dataStore.edit { if (s == null) it.remove(K.asr) else it[K.asr] = s.name }
@@ -101,5 +109,6 @@ class SettingsRepository(private val context: Context) {
         if (l.placeName != null) it[K.place] = l.placeName else it.remove(K.place)
         if (l.countryCode != null) it[K.country] = l.countryCode else it.remove(K.country)
         if (l.regionCode != null) it[K.region] = l.regionCode else it.remove(K.region)
+        it[K.lastFull] = l.encode()
     }
 }

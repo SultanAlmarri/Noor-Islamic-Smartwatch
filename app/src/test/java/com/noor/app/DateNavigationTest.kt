@@ -57,3 +57,17 @@ class DateNavigationTest {
         assertEquals("الأربعاء", ar.weekday(LocalDate.of(2026, 11, 4)))
     }
 }
+
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [34])
+class BundledDataTest {
+    /** The packaged assets load as the app loads them (catches asset renaming by the build, e.g. ".gz"). */
+    @org.junit.Test fun gazetteerAndTimetablesLoadFromAssets() {
+        val app = org.robolectric.RuntimeEnvironment.getApplication() as NoorApplication
+        val gaz = kotlinx.coroutines.runBlocking { app.container.gazetteer.get() }
+        org.junit.Assert.assertTrue(gaz.places.size > 30_000)
+        org.junit.Assert.assertEquals("Jebel Ali", gaz.nearest(com.noor.prayer.GeoPoint(25.01, 55.11))?.name)
+        org.junit.Assert.assertEquals(1096, app.container.timetables.get("muis_singapore")?.size)
+        org.junit.Assert.assertTrue((app.container.timetables.get("iacad_dubai")?.size ?: 0) >= 90)
+    }
+}

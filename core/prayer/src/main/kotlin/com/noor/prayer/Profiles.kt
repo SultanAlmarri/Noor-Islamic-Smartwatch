@@ -64,14 +64,42 @@ object Profiles {
     val ISNA = method("isna", "North America (ISNA)", "أمريكا الشمالية (ISNA)", 15.0, 15.0, offsets = mapOf(DHUHR to 1))
     val KUWAIT = method("kwt", "Kuwait", "الكويت", 18.0, 17.5)
     val QATAR = method("qat", "Qatar", "قطر", 18.0, null, ishaMin = 90)
-    val SINGAPORE = method("sgp", "Singapore (MUIS)", "سنغافورة", 20.0, 18.0, offsets = mapOf(DHUHR to 1))
+    /**
+     * Singapore - MUIS. Fitted to MUIS's official timetable 2024-2025 (data.gov.sg open data), held out on 2026:
+     * Fajr 20.0, Isha 18.0, sunset/sunrise at the Sun's upper limb with 34' refraction, rounded up, Dhuhr +1.
+     * Exact on about 75% of times, the rest within 1-2 minutes; where MUIS's own table covers a date, the app shows
+     * MUIS's times directly (official timetable source), so this profile is only the fallback for other dates.
+     */
+    val SINGAPORE = CalculationProfile(
+        id = "sgp", nameEn = "Singapore — MUIS", nameAr = "سنغافورة — المجلس الإسلامي (MUIS)",
+        fajrAngle = 20.0, ishaAngle = 18.0, rounding = Rounding.UP, offsets = mapOf(DHUHR to 1),
+        referencePoint = GeoPoint(1.25, 103.80),
+        validationEn = "Official MUIS timetable used where published (2024–2026). Other dates: calculated with conventions fitted to it (about 75% exact, the rest within 1–2 minutes).",
+        validationAr = "يُستخدم جدول المجلس الإسلامي الرسمي حيث نُشر (2024–2026). التواريخ الأخرى: محسوبة بمعايير مطابقة له (نحو 75% تطابقاً تاماً والباقي بفارق دقيقة إلى دقيقتين).",
+    )
+
+    /**
+     * Malaysia - JAKIM. Fajr 18 deg nationwide since 1 Ramadan 1441 (April 2020; Muzakarah decision of Nov 2019),
+     * Isha 18 deg. JAKIM publishes zone timetables (e-Solat); this profile calculates at the user's position and is
+     * not validated against those tables.
+     */
+    val MALAYSIA = method("jakim", "Malaysia — JAKIM", "ماليزيا — دائرة التنمية الإسلامية (JAKIM)", 18.0, 18.0, offsets = mapOf(DHUHR to 1, MAGHRIB to 2)).copy(
+        validationEn = "Calculated with JAKIM's published angles (Fajr 18°, Isha 18°). Not validated against JAKIM's zone timetables yet.",
+        validationAr = "محسوبة بالزوايا المنشورة لدائرة التنمية الإسلامية (الفجر 18°، العشاء 18°). لم تُقارن بجداول المناطق الرسمية بعد.",
+    )
+
+    /** Indonesia - Kementerian Agama: Fajr -20 deg, Isha -18 deg (reaffirmed by Kemenag, December 2020). Not validated against its tables. */
+    val INDONESIA = method("kemenag", "Indonesia — Kemenag", "إندونيسيا — وزارة الشؤون الدينية", 20.0, 18.0, offsets = mapOf(DHUHR to 1)).copy(
+        validationEn = "Calculated with Kemenag's published angles (Fajr 20°, Isha 18°). Not validated against Kemenag's timetables yet.",
+        validationAr = "محسوبة بالزوايا المنشورة لوزارة الشؤون الدينية الإندونيسية (الفجر 20°، العشاء 18°). لم تُقارن بجداولها بعد.",
+    )
     val TURKIYE = method("tur", "Türkiye (Diyanet)", "تركيا (ديانت)", 18.0, 17.0,
         offsets = mapOf(SHURUQ to -7, DHUHR to 5, ASR to 4, MAGHRIB to 7))
     val TEHRAN = method("teh", "Tehran (Institute of Geophysics)", "طهران (معهد الجيوفيزياء)", 17.7, 14.0, maghrib = 4.5)
 
     /** All profiles, in the order shown to the user. */
     val ALL: List<CalculationProfile> = listOf(
-        DUBAI_IACAD, UAE_AWQAF, MWL, UMM_AL_QURA, EGYPT, KARACHI, ISNA, KUWAIT, QATAR, SINGAPORE, TURKIYE, TEHRAN,
+        DUBAI_IACAD, UAE_AWQAF, MWL, UMM_AL_QURA, EGYPT, KARACHI, ISNA, KUWAIT, QATAR, SINGAPORE, MALAYSIA, INDONESIA, TURKIYE, TEHRAN,
     )
 
     fun byId(id: String): CalculationProfile? = ALL.firstOrNull { it.id == id }

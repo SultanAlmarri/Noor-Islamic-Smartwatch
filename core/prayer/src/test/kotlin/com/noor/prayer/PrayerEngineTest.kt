@@ -37,12 +37,24 @@ class PrayerEngineTest {
         assertEquals(1, r.maxAbsMinutes)
     }
 
-    @Test fun dubaiProfileUsesOfficialReferencePointWherever() {
+    @Test fun dubaiProfileUsesTheCityTimetableAcrossTheCityOnly() {
         val zone = ZoneId.of("Asia/Dubai")
         val d = LocalDate.of(2026, 11, 4)
-        val a = PrayerEngine.compute(d, GeoPoint(25.27, 55.30), zone, Profiles.DUBAI_IACAD)
-        val b = PrayerEngine.compute(d, GeoPoint(25.08, 55.14), zone, Profiles.DUBAI_IACAD)
-        assertEquals(a.minutes, b.minutes)
+        val deira = PrayerEngine.compute(d, GeoPoint(25.27, 55.30), zone, Profiles.DUBAI_IACAD)
+        val jebelAli = PrayerEngine.compute(d, GeoPoint(25.00, 55.11), zone, Profiles.DUBAI_IACAD)
+        assertEquals(deira.minutes, jebelAli.minutes, "one city timetable inside the city")
+        // Far from Dubai (London), IACAD's conventions are applied at the user's own position, not Dubai's times.
+        val london = PrayerEngine.compute(d, GeoPoint(51.5074, -0.1278), ZoneId.of("Europe/London"), Profiles.DUBAI_IACAD)
+        assertTrue(london.minutes[Prayer.DHUHR]!! in 11 * 60..12 * 60 + 30)
+    }
+
+    /** Singapore conventions fitted on MUIS 2024-2025 and held out on 2026 (docs/AUTHORITIES.md). */
+    @Test fun muisAgreementIsAsDocumented() {
+        val r = GoldenChecks.muisOfficial()
+        println("MUIS: ${r.exact}/${r.compared} exact, max ${r.maxAbsMinutes} min, per prayer ${r.perPrayer}")
+        assertEquals(6576, r.compared)
+        assertTrue(r.exact >= 4850, "exact ${r.exact}")
+        assertTrue(r.maxAbsMinutes <= 2)
     }
 
     @Test fun highLatitudeRuleProvidesFajrAndIshaInLondonSummer() {

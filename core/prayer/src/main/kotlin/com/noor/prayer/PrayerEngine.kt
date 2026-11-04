@@ -52,7 +52,7 @@ object PrayerEngine {
         user: UserAdjustments = UserAdjustments(),
         isRamadan: Boolean = false,
     ): PrayerDay {
-        val point = profile.referencePoint ?: location
+        val point = referencePointFor(profile, location) ?: location
         val offset: ZoneOffset = zone.rules.getOffset(date.atTime(12, 0))
         val mid = date.atStartOfDay().toEpochSecond(offset).toDouble()
         val dT = SolarPosition.deltaT(date.year)
@@ -65,6 +65,10 @@ object PrayerEngine {
         }
         return PrayerDay(date, zone, profile.id, raw, minutes)
     }
+
+    /** The profile's reference point if [location] is inside its area, else null. */
+    fun referencePointFor(profile: CalculationProfile, location: GeoPoint): GeoPoint? =
+        profile.referencePoint?.takeIf { Places.distanceKm(it, location) <= profile.referenceRadiusKm }
 
     private fun round(sec: Double, mode: Rounding): Int = when (mode) {
         Rounding.UP -> ceil(sec / 60.0 - 1e-9).toInt()

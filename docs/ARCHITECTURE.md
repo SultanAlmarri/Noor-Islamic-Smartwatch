@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 4 November 2026 (version 0.3.0).
+Living document: each development phase adds its section. Last updated 4 November 2026 (version 0.4.0).
 
 ## Modules
 
@@ -80,7 +80,25 @@ Still required for the one-tap Play experience: publishing on Google Play (owner
 - The watch stores it and calculates with the same engine, offline.
 - Both formats are versioned `key=value` text: unknown keys are ignored, missing keys default, values are clamped.
 
-## Known limitations (0.3.0)
+## Worldwide location, authorities and official timetables
+
+Full details and sources: `AUTHORITIES.md`.
+
+- **Precise or approximate**: Android asks the user; Noor works with either. Precise → high-accuracy fix and
+  neighbourhood names; approximate → balanced-power fix and town names.
+- **Names**: Android Geocoder in English and Arabic, cached while the user stays within 300 m (precise) or 3 km
+  (approximate); offline fallback to the bundled GeoNames gazetteer (34,197 places). Manual mode searches the same
+  gazetteer worldwide, offline, and stores the chosen place with its own time zone.
+- **Authority** (`Authorities.forPlace`): one registry, used by phone and watch. Each entry records its coverage,
+  category (official timetable / validated calculation / authority parameters / recognised method) and source URL.
+- **Official timetables** (`authority/Timetable.kt`, `assets/timetables`): IACAD Dubai (carried days) and MUIS Singapore
+  2024–2026 are used exactly as published when the user is in the authority's area; MUIS is refreshed from data.gov.sg
+  (open data) at most weekly when in use. The watch receives the next eight weeks of official times in `WatchConfig`.
+- **Reference points** apply only within 60 km: IACAD's city timetable for Dubai, but IACAD's conventions at the user's
+  own position elsewhere.
+- **Flags** (`geo/Flags.kt`): shared by phone and watch; Israel shows the Palestinian flag (product decision).
+
+## Known limitations (0.4.0)
 
 - Nothing in this version has been tested on a real phone or watch yet; all results above come from unit tests and
   software-rendered screens.

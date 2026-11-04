@@ -89,6 +89,8 @@ import com.noor.prayer.HijriDate
 import com.noor.prayer.Prayer
 import com.noor.prayer.PrayerDay
 import com.noor.prayer.geo.Flags
+import com.noor.prayer.authority.SourceKind
+import com.noor.app.data.ResolvedDay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -99,7 +101,7 @@ import kotlin.math.abs
 @Composable
 fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpenSource: () -> Unit, vm: TodayViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.refreshIfStale() }
+    LaunchedEffect(Unit) { vm.refreshIfStale(); vm.refreshTimetables() }
     val u = ui ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = NoorTheme.colors.gold, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
     }
@@ -112,7 +114,7 @@ fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpe
 fun TodayContent(
     u: TodayUi,
     contentPadding: PaddingValues,
-    dayFor: (LocalDate) -> PrayerDay?,
+    dayFor: (LocalDate) -> ResolvedDay?,
     onRefresh: () -> Unit,
     onOpenLocation: () -> Unit,
     onOpenSource: () -> Unit,
@@ -175,10 +177,11 @@ fun TodayContent(
         HorizontalPager(state = pager, beyondViewportPageCount = 1, pageSpacing = 16.dp, verticalAlignment = Alignment.Top) { page ->
             val date = DateWindow.dateOf(page)
             val day = remember(date, u.settings, u.place, u.profile) { dayFor(date) }
-            if (day != null) DayTimes(day, date, isToday = date == today, u, f)
+            if (day != null) DayTimes(day.day, date, isToday = date == today, u, f, official = day.official)
         }
 
-        SourceCard(u, ar, onOpenSource)
+        val shownDay = remember(shown, u.settings, u.place, u.profile) { dayFor(shown) }
+        SourceCard(u, ar, official = shownDay?.official == true, f = f, onOpenSource = onOpenSource)
         Spacer(Modifier.height(8.dp))
 
         if (calendarOpen) {
@@ -306,8 +309,8 @@ private fun DateBar(
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.previous_day), tint = if (canPrev) c.textPrimary else c.textMuted.copy(alpha = 0.3f), modifier = Modifier.size(30.dp))
         }
         Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable(onClick = onCalendar).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (isToday) stringResource(R.string.today) + " · " + f.weekday(date) else f.weekday(date),
-                style = MaterialTheme.typography.titleMedium, color = if (isToday) c.goldText else c.textPrimary, maxLines = 1)
+            // Today's weekday is shown in gold; other dates in the normal colour with the "Today" pill beside them.
+            Text(f.weekday(date), style = MaterialTheme.typography.titleMedium, color = if (isToday) c.goldText else c.textPrimary, maxLines = 1)
             Text(f.hijri(hijri), style = MaterialTheme.typography.bodySmall, color = c.textSecondary, maxLines = 1, textAlign = TextAlign.Center)
             Text(f.gregorianDate(date), style = MaterialTheme.typography.bodySmall, color = c.textSecondary, maxLines = 1)
         }
@@ -321,10 +324,15 @@ private fun DateBar(
 }
 
 @Composable
-private fun DayTimes(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter) {
+private fun DayTimes(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter, official: Boolean) {
     val c = NoorTheme.colors
     val st = u.state
     GlassCard(Modifier.fillMaxWidth(), padding = 6.dp) {
+        if (official) Row(Modifier.padding(start = 12.dp, top = 8.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Verified, null, tint = c.success, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.source_official_badge), style = MaterialTheme.typography.labelMedium, color = c.success)
+        }
         Prayer.entries.forEachIndexed { i, p ->
             val minutes = day.minutes[p]
             val isCurrent = isToday && st?.current?.let { it.prayer == p && it.date == date } == true
@@ -370,18 +378,34 @@ private fun TimeRow(p: Prayer, name: String, other: String, time: Pair<String, S
 }
 
 @Composable
-private fun SourceCard(u: TodayUi, ar: Boolean, onOpenSource: () -> Unit) {
+private fun SourceCard(u: TodayUi, ar: Boolean, official: Boolean, f: Formatter, onOpenSource: () -> Unit) {
     val c = NoorTheme.colors
     val profile = u.profile ?: return
+    val auth = u.authority
+    val name = auth?.let { if (ar) it.nameAr else it.nameEn } ?: if (ar) profile.nameAr else profile.nameEn
+    val basis = when {
+        official -> stringResource(R.string.source_official, name)
+        auth == null -> stringResource(R.string.source_manual_method)
+        auth.kind == SourceKind.VALIDATED_CALCULATION -> stringResource(R.string.source_validated, name) + " " + (if (ar) profile.validationAr else profile.validationEn)
+        auth.kind == SourceKind.AUTHORITY_PARAMETERS -> stringResource(R.string.source_parameters, name)
+        else -> stringResource(R.string.source_recognised)
+    }
     GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(onClick = onOpenSource), padding = 18.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Verified, null, tint = c.gold, modifier = Modifier.size(20.dp))
+            Icon(Icons.Rounded.Verified, null, tint = if (official) c.success else c.gold, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
-            Text(if (ar) profile.nameAr else profile.nameEn, style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.weight(1f))
+            Text(name, style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.weight(1f))
             Icon(Icons.Rounded.ChevronRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(6.dp))
-        Text(if (ar) profile.validationAr else profile.validationEn, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+        Text(basis, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+        val offsets = u.settings.offsets.filterValues { it != 0 }
+        if (offsets.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Text(stringResource(R.string.source_user_adjusted, Prayer.entries.filter { it in offsets }.joinToString(", ") { p ->
+                val v = offsets.getValue(p); f.prayerName(p) + " " + (if (v > 0) "+" else "−") + f.number(kotlin.math.abs(v))
+            }), style = MaterialTheme.typography.bodySmall, color = c.goldText)
+        }
         Spacer(Modifier.height(4.dp))
         Text(stringResource(R.string.offline_ready), style = MaterialTheme.typography.bodySmall, color = c.textMuted)
     }

@@ -22,6 +22,17 @@ class WatchConfigTest {
         assertEquals(dubai, WatchConfig.decode(dubai.encode()))
     }
 
+    @Test fun officialTimesTravelToTheWatchAndWin() {
+        val table = com.noor.prayer.authority.Timetable.parse("iacad_dubai", "2026-11-04,05:09,06:25,12:05,15:14,17:40,18:55\n2026-11-05,05:10,06:25,12:05,15:14,17:39,18:55")
+        val c = dubai.copy(countryCode = "AE", official = table, offsets = emptyMap())
+        val back = WatchConfig.decode(c.encode())!!
+        assertEquals("AE", back.countryCode)
+        assertEquals(2, back.official!!.size)
+        assertEquals(17 * 60 + 39, back.day(LocalDate.of(2026, 11, 5)).minutes[Prayer.MAGHRIB])
+        // Dates outside the official window are calculated.
+        assertNotNull(back.day(LocalDate.of(2026, 12, 1)).minutes[Prayer.MAGHRIB])
+    }
+
     @Test fun watchCalculatesExactlyWhatThePhoneDoes() {
         val date = LocalDate.of(2026, 11, 4)
         val decoded = WatchConfig.decode(dubai.encode())!!

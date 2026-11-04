@@ -86,12 +86,12 @@ class ScreenshotTest {
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
 
-    private fun todayUi(s: AppSettings): TodayUi {
+    private fun todayUi(s: AppSettings, tables: com.noor.app.data.OfficialTimetables? = null): TodayUi {
         val place = PrayerProvider.place(s)!!
         val profile = PrayerProvider.profile(s, place)
-        val cache = DayCache()
+        val cache = DayCache(tables)
         val state = Schedule.state(now, place.zone) { cache.get(s, place, profile, it) }
-        return TodayUi(s, place, profile, now, state, now.atZone(place.zone).toLocalDate(), refreshing = false, lastRefresh = null)
+        return TodayUi(s, place, profile, PrayerProvider.authority(s, place), now, state, now.atZone(place.zone).toLocalDate(), refreshing = false, lastRefresh = null)
     }
 
     /** A synthetic reading, as CompassSensor would produce it (no sensors under Robolectric). */
@@ -118,6 +118,9 @@ class ScreenshotTest {
         var arabic by mutableStateOf(false)
         var reading by mutableStateOf<CompassReading?>(null)
         var watch by mutableStateOf<WatchScene?>(null)
+        var singapore by mutableStateOf(false)
+        val sgBase = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualPlace = com.noor.app.data.KnownLocation(
+            com.noor.prayer.GeoPoint(1.28967, 103.85007), "Asia/Singapore", "Singapore", "SG", null, 0L, "سنغافورة"))
         rule.setContent {
             val ctxBase = LocalContext.current
             val config = Configuration(ctxBase.resources.configuration).apply {
@@ -131,15 +134,16 @@ class ScreenshotTest {
                 LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
                 LocalActivityResultRegistryOwner provides rule.activity,
             ) {
-                val s = base.copy(theme = theme)
-                val u = todayUi(s)
-                val cache = DayCache()
+                val s = (if (singapore) sgBase else base).copy(theme = theme)
+                val tables = app.container.timetables
+                val u = todayUi(s, tables)
+                val cache = DayCache(tables)
                 NoorTheme(theme) {
                     NoorBackground {
                         val pad = PaddingValues(top = 28.dp, bottom = 16.dp)
                         when (screen) {
-                            Screen.TODAY -> TodayContent(u, pad, { cache.get(s, u.place!!, u.profile!!, it) }, {}, {}, {})
-                            Screen.TODAY_OTHER_DATE -> TodayContent(u, pad, { cache.get(s, u.place!!, u.profile!!, it) }, {}, {}, {},
+                            Screen.TODAY -> TodayContent(u, pad, { cache.resolved(s, u.place!!, u.profile!!, it) }, {}, {}, {})
+                            Screen.TODAY_OTHER_DATE -> TodayContent(u, pad, { cache.resolved(s, u.place!!, u.profile!!, it) }, {}, {}, {},
                                 initialDate = LocalDate.of(2026, 12, 18))
                             Screen.CALENDAR -> Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.BottomCenter) {
                                 Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(NoorTheme.colors.surface)) {
@@ -219,6 +223,9 @@ class ScreenshotTest {
         shot("23_watch_wearos5_night_en", "Needs Wear OS 6")
         arabic = true; watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport)), now = t0); shot("24_watch_done_night_ar", "قيد الاستخدام")
         arabic = false
+        // Singapore: MUIS's own published times for the date (official timetable), not a calculation.
+        singapore = true; screen = Screen.TODAY; shot("25_today_singapore_official_en", "Official timetable")
+        singapore = false
         screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")

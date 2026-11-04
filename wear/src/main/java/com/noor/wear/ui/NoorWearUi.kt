@@ -174,7 +174,7 @@ private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, show
                 item { Hero(c, t, st.next.prayer, st.next.at, untilNext) }
                 item {
                     Text(
-                        t.place(c) + "  ·  " + t.hijri(HijriDate.of(st.today.date, c.hijriAdjust)),
+                        t.placeWithFlag(c) + "  ·  " + t.hijri(HijriDate.of(st.today.date, c.hijriAdjust)),
                         style = MaterialTheme.typography.labelSmall, color = Mist, textAlign = TextAlign.Center, maxLines = 2,
                     )
                 }

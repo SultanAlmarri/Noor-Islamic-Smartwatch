@@ -29,12 +29,24 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun hasBackgroundPermission() = container.location.hasBackgroundPermission()
     fun hasForegroundPermission() = container.location.hasForegroundPermission()
+    fun hasPrecise() = container.location.hasPrecise()
 
     fun setLocationMode(m: LocationMode) = viewModelScope.launch {
         repo.setLocationMode(m)
         if (m == LocationMode.AUTO) container.location.refresh()
     }
     fun chooseCity(id: String) = viewModelScope.launch { repo.setManualCity(id) }
+
+    /** A place from the worldwide list: stored with its coordinates, zone and names, so nothing needs looking up later. */
+    fun choosePlace(g: com.noor.prayer.geo.GazPlace) = viewModelScope.launch {
+        repo.setManualPlace(
+            com.noor.app.data.KnownLocation(
+                point = g.point, zoneId = g.zoneId, placeName = g.name, countryCode = g.countryCode, regionCode = g.region,
+                fixedAtEpochMs = 0L, placeNameAr = g.nameAr, placeContext = g.admin1Name.takeIf { it.isNotBlank() && it != g.name },
+                placeContextAr = null, precise = false,
+            ),
+        )
+    }
     fun refreshLocation() = viewModelScope.launch { container.location.refresh() }
     fun setBackgroundUpdates(on: Boolean) = viewModelScope.launch {
         repo.setBackgroundUpdates(on)

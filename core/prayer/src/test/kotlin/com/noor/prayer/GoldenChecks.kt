@@ -82,6 +82,25 @@ object GoldenChecks {
         return compareDubai(resource("dulook_dxb_recording_2026.csv").drop(1).map { it.split(',') }.filter { it[0] !in feedDates })
     }
 
+    fun muisOfficial(): OfficialResult {
+        val rows = resource("muis_singapore_2024_2026.csv").filter { it.isNotBlank() && it[0].isDigit() }.map { it.split(',') }
+        val zone = ZoneId.of("Asia/Singapore")
+        var n = 0; var exact = 0; var maxAbs = 0
+        val per = order.associateWith { 0 }.toMutableMap()
+        val misses = mutableListOf<String>()
+        for (c in rows) {
+            val day = PrayerEngine.compute(LocalDate.parse(c[0]), GeoPoint(1.3521, 103.8198), zone, Profiles.SINGAPORE)
+            for ((i, p) in order.withIndex()) {
+                val hm = c[i + 1].split(':'); val official = hm[0].toInt() * 60 + hm[1].toInt()
+                val got = day.minutes[p]!!
+                n++
+                if (got == official) { exact++; per[p] = per.getValue(p) + 1 } else if (misses.size < 20) misses += "${c[0]} $p ${official - got}"
+                maxAbs = maxOf(maxAbs, abs(got - official))
+            }
+        }
+        return OfficialResult(n, exact, per, maxAbs, misses)
+    }
+
     private fun compareDubai(rows: List<List<String>>): OfficialResult {
         val zone = ZoneId.of("Asia/Dubai")
         var n = 0; var exact = 0; var maxAbs = 0

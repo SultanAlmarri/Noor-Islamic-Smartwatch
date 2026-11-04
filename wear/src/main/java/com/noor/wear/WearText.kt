@@ -27,6 +27,9 @@ class WearText(private val config: WatchConfig?, deviceLocale: Locale = Locale.g
 
     fun place(c: WatchConfig): String = if (arabic) c.placeAr ?: c.placeEn else c.placeEn
 
+    /** Place with its country flag (shared mapping with the phone: com.noor.prayer.geo.Flags). */
+    fun placeWithFlag(c: WatchConfig): String = (com.noor.prayer.geo.Flags.emoji(c.countryCode)?.let { "$it " } ?: "") + place(c)
+
     /** "3:14 PM", "15:14", "٣:١٤ م". */
     fun time(at: Instant, zone: ZoneId): String {
         val t = at.atZone(zone)

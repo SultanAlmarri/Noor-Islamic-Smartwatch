@@ -11,20 +11,41 @@ enum class Numerals { WESTERN, ARABIC_INDIC }
 enum class TimeFormat { H12, H24 }
 enum class ThemeMode { SYSTEM, DARK, LIGHT }
 
-/** The last position the app knows about. Kept so the app works offline and after restarts. */
+/** The last position the app knows about (or the city chosen by hand). Kept so the app works offline and after restarts. */
 data class KnownLocation(
     val point: GeoPoint,
     val zoneId: String,
+    /** Most specific reliable name: neighbourhood/district with precise location, town/city with approximate. */
     val placeName: String?,
     val countryCode: String?,
     val regionCode: String?,
     val fixedAtEpochMs: Long,
-)
+    val placeNameAr: String? = null,
+    /** Where the place is: city or province ("Dubai" for Za'abeel). */
+    val placeContext: String? = null,
+    val placeContextAr: String? = null,
+    /** True when the fix came from precise (fine) location. */
+    val precise: Boolean = false,
+) {
+    /** Compact one-line encoding for storage (tab-separated; tabs never occur in place names from our sources). */
+    fun encode(): String = listOf(point.latitude, point.longitude, point.elevationM, zoneId, placeName ?: "", countryCode ?: "",
+        regionCode ?: "", fixedAtEpochMs, placeNameAr ?: "", placeContext ?: "", placeContextAr ?: "", precise).joinToString("\t")
+
+    companion object {
+        fun decode(s: String): KnownLocation? = runCatching {
+            val f = s.split('\t')
+            KnownLocation(GeoPoint(f[0].toDouble(), f[1].toDouble(), f[2].toDouble()), f[3], f[4].ifEmpty { null }, f[5].ifEmpty { null },
+                f[6].ifEmpty { null }, f[7].toLong(), f[8].ifEmpty { null }, f[9].ifEmpty { null }, f[10].ifEmpty { null }, f[11] == "true")
+        }.getOrNull()
+    }
+}
 
 data class AppSettings(
     val onboardingDone: Boolean = false,
     val locationMode: LocationMode = LocationMode.AUTO,
     val manualCityId: String? = null,
+    /** City chosen by hand from the worldwide list (supersedes [manualCityId]). */
+    val manualPlace: KnownLocation? = null,
     val backgroundUpdates: Boolean = false,
     val lastLocation: KnownLocation? = null,
     /** null = choose the authority automatically from the location. */

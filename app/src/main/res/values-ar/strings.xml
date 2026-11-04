@@ -166,4 +166,22 @@
     <string name="step_face_button">استخدام واجهة نور</string>
     <string name="watch_open_on_watch">فتح نور على الساعة</string>
     <string name="step_face_open_first">افتح نور على الساعة مرة واحدة لإكمال الإعداد.</string>
+    <string name="source_official_badge">جدول رسمي</string>
+    <string name="source_official">جدول رسمي: أوقات %1$s لهذا التاريخ كما نُشرت.</string>
+    <string name="source_validated">محسوبة بمعايير %1$s، وقد قورنت بجدولها الرسمي.</string>
+    <string name="source_parameters">محسوبة بالمعايير الموثّقة لـ %1$s؛ لم تُقارن بجدولها الرسمي بعد.</string>
+    <string name="source_recognised">محسوبة بطريقة شائعة الاستخدام. لا يُقصد بها جدول محلي رسمي لهذا المكان.</string>
+    <string name="source_manual_method">محسوبة بالطريقة التي اخترتها في الإعدادات.</string>
+    <string name="source_user_adjusted">تشمل تعديلاتك (بالدقائق): %1$s</string>
+    <string name="search_city_world">ابحث عن أي مدينة أو حي</string>
+    <string name="geonames_credit">أسماء الأماكن: GeoNames ‏(geonames.org)، برخصة CC BY 4.0.</string>
+    <string name="location_precision">دقة الموقع</string>
+    <string name="location_precise">دقيق: أسماء الأحياء وأدق اتجاه للقبلة</string>
+    <string name="location_approximate">تقريبي: أسماء المدن فقط. غيّرها من إعدادات أندرويد.</string>
+    <string name="kind_official_and_validated">جدول رسمي حيث نُشر، وحساب مُتحقق منه فيما عداه</string>
+    <string name="kind_validated">مقارنة بالجدول الرسمي</string>
+    <string name="kind_parameters">المعايير المنشورة للجهة</string>
+    <string name="kind_recognised">طريقة شائعة الاستخدام</string>
+    <string name="sources_title">مصادر البيانات وتراخيصها</string>
+    <string name="sources_body">الجداول الرسمية: دائرة الشؤون الإسلامية بدبي (iacad.gov.ae؛ صفحات 2021–2023 محفوظة في أرشيف الإنترنت، ونوفمبر 2026 من موقع الدائرة)؛ المجلس الإسلامي في سنغافورة 2024–2026 (data.gov.sg، رخصة البيانات المفتوحة لسنغافورة). أسماء الأماكن: GeoNames ‏(geonames.org)، برخصة CC BY 4.0. الانحراف المغناطيسي: النموذج المغناطيسي العالمي عبر أندرويد. معايير كل جهة ومصادرها مدرجة في ملف docs/AUTHORITIES.md في مستودع نور.</string>
 </resources>

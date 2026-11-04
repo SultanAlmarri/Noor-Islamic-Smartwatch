@@ -1,7 +1,10 @@
 package com.noor.app
 
 import android.app.Application
+import com.noor.app.data.GazetteerStore
 import com.noor.app.data.LocationRepository
+import com.noor.app.data.OfficialTimetables
+import com.noor.app.data.TimetableUpdater
 import com.noor.app.data.LocationWorker
 import com.noor.app.data.SettingsRepository
 import com.noor.app.data.WatchSetup
@@ -14,9 +17,12 @@ import kotlinx.coroutines.launch
 /** Simple manual dependency container; the app is small enough not to need a DI framework. */
 class AppContainer(app: Application) {
     val settings = SettingsRepository(app)
-    val location = LocationRepository(app, settings)
+    val gazetteer = GazetteerStore(app)
+    val location = LocationRepository(app, settings, gazetteer)
+    val timetables = OfficialTimetables(app)
+    val timetableUpdater = TimetableUpdater(app, timetables)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val wear = WearSync(app, settings)
+    val wear = WearSync(app, settings, timetables)
     val watchSetup = WatchSetup(app)
 }
 
