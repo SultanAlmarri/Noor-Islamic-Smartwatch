@@ -8,7 +8,9 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -93,8 +96,7 @@ fun AdhanScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.adhan_title), style = MaterialTheme.typography.headlineMedium, color = NoorTheme.colors.textPrimary)
+        com.noor.app.ui.components.ScreenTitle(stringResource(R.string.adhan_title))
 
         SettingsSection(stringResource(R.string.adhan_master)) {
             val status = when {
@@ -177,7 +179,7 @@ fun AdhanScreen(
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelMedium, color = NoorTheme.colors.gold, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+    Text(text.uppercase(), style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp), color = NoorTheme.colors.textMuted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
 }
 
 @Composable
@@ -223,10 +225,12 @@ private fun WatchStatusRow(w: WatchAlertState, f: Formatter, onOpen: () -> Unit)
 private fun PrayerAlertRow(p: Prayer, alert: PrayerAlert, summary: String, f: Formatter, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
     val c = NoorTheme.colors
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(RoundedCornerShape(20.dp)).clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(RoundedCornerShape(20.dp)).clickable(onClick = onOpen).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PrayerIcon(p, 22.dp, if (alert.enabled) c.gold else c.textMuted)
+        val tint = if (alert.enabled) c.gold else c.textMuted
+        androidx.compose.foundation.layout.Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(tint.copy(alpha = if (c.isDark) 0.15f else 0.13f)),
+            contentAlignment = Alignment.Center) { PrayerIcon(p, 19.dp, tint) }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f).alpha(if (alert.enabled) 1f else 0.7f)) {
             Text(f.prayerName(p), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)

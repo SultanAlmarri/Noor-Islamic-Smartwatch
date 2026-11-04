@@ -1,5 +1,20 @@
 package com.noor.app.ui.watch
 
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.material.icons.rounded.ViewCarousel
+import androidx.compose.material.icons.rounded.NotificationsActive
+import com.noor.app.ui.components.ScreenTitle
+import com.noor.app.ui.settings.SettingsDivider
+import com.noor.app.ui.settings.SettingsItem
+import com.noor.app.ui.settings.SettingsSection
+import com.noor.app.ui.theme.Sky
+import com.noor.app.data.WearSync
+import com.noor.prayer.Prayer
+import com.noor.prayer.astro.SunPath
+import kotlinx.coroutines.delay
+import java.time.Duration
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -69,6 +84,11 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel())
     val syncFailed by vm.syncFailed.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val s = settings ?: AppSettings()
+    val f = Formatter(isArabicUi(), s.numerals, s.timeFormat)
+    val clock by produceState(System.currentTimeMillis()) {
+        while (true) { delay(1000 - System.currentTimeMillis() % 1000); value = System.currentTimeMillis() }
+    }
+    val preview = remember(s, clock / 1000, f.arabic) { watchPreview(s, Instant.ofEpochMilli(clock), f) }
     WatchContent(
         contentPadding, state, vm.configAvailable(settings), lastSent, installs, faces, syncing, syncFailed, vm.setup.installedFromPlay,
         Formatter(isArabicUi(), s.numerals, s.timeFormat),
@@ -77,6 +97,20 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel())
             openGuide = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(INSTALL_GUIDE)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
         ),
         now = System.currentTimeMillis(),
+        preview = preview,
+    )
+}
+
+/** What the Noor watch app shows at [now], from the exact configuration the phone sends to the watch. */
+fun watchPreview(s: AppSettings, now: Instant, f: Formatter): WatchPreviewState? {
+    val config = WearSync.configFor(s, now.toEpochMilli()) ?: return null
+    val st = runCatching { config.state(now) }.getOrNull() ?: return null
+    val zone = config.zone
+    val dhuhr = st.today.instant(Prayer.DHUHR)
+    val glow = androidx.compose.ui.graphics.Color(com.noor.prayer.sky.SkyPalette.glow(SunPath.elevation(now, config.point), evening = dhuhr != null && now.isAfter(dhuhr)))
+    return WatchPreviewState(
+        prayer = f.prayerName(st.next.prayer, st.next.date), prayerOther = f.prayerNameOther(st.next.prayer, st.next.date),
+        countdown = f.countdown(Duration.between(now, st.next.at)), time = f.timeAt(st.next.at, zone), progress = st.progress, glow = glow, arabic = f.arabic,
     )
 }
 
@@ -101,14 +135,17 @@ fun WatchContent(
     f: Formatter,
     actions: WatchActions,
     now: Long,
+    preview: WatchPreviewState? = null,
 ) {
     val c = NoorTheme.colors
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = Noor.ScreenPadding),
         verticalArrangement = Arrangement.spacedBy(Noor.Gap),
     ) {
-        Spacer(Modifier.height(2.dp))
-        Text(stringResource(R.string.watch_title), style = MaterialTheme.typography.headlineMedium, color = c.textPrimary)
+        ScreenTitle(stringResource(R.string.watch_title))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            WatchPreview(preview, description = stringResource(R.string.watch_preview_desc))
+        }
 
         when {
             state == null -> GlassCard(Modifier.fillMaxWidth()) {
@@ -128,15 +165,19 @@ fun WatchContent(
             }
         }
 
-        GlassCard(Modifier.fillMaxWidth()) {
-            Header(Icons.Rounded.Widgets, stringResource(R.string.watch_on_watch_title), null)
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.watch_on_watch_body), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
-        }
-        GlassCard(Modifier.fillMaxWidth()) {
-            Header(Icons.Rounded.Palette, stringResource(R.string.watch_editor_title), stringResource(R.string.in_development))
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.watch_editor_body), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
+        // What Noor puts on the watch; everything there calculates on the watch itself, offline.
+        SettingsSection(stringResource(R.string.watch_on_watch_title), footer = stringResource(R.string.offline_watch_footer)) {
+            SettingsItem(Icons.Rounded.Watch, stringResource(R.string.watch_feature_app), stringResource(R.string.watch_feature_app_desc), null)
+            SettingsDivider()
+            SettingsItem(Icons.Rounded.ViewCarousel, stringResource(R.string.watch_feature_tile), stringResource(R.string.watch_feature_tile_desc), null)
+            SettingsDivider()
+            SettingsItem(Icons.Rounded.Widgets, stringResource(R.string.watch_feature_complication), stringResource(R.string.watch_feature_complication_desc), null)
+            SettingsDivider()
+            SettingsItem(Icons.Rounded.NotificationsActive, stringResource(R.string.watch_feature_alerts), stringResource(R.string.watch_feature_alerts_desc), null)
+            SettingsDivider()
+            SettingsItem(Icons.Rounded.Palette, stringResource(R.string.watch_feature_editor), stringResource(R.string.watch_feature_editor_desc), null) {
+                Pill(stringResource(R.string.in_development), filled = false)
+            }
         }
         Spacer(Modifier.height(12.dp))
     }

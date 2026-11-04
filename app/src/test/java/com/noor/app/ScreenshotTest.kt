@@ -81,12 +81,12 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
 
-    private fun todayUi(s: AppSettings, tables: com.noor.app.data.OfficialTimetables? = null): TodayUi {
+    private fun todayUi(s: AppSettings, tables: com.noor.app.data.OfficialTimetables? = null, now: java.time.Instant = this.now): TodayUi {
         val place = PrayerProvider.place(s)!!
         val profile = PrayerProvider.profile(s, place)
         val cache = DayCache(tables)
@@ -119,6 +119,7 @@ class ScreenshotTest {
         var reading by mutableStateOf<CompassReading?>(null)
         var watch by mutableStateOf<WatchScene?>(null)
         var singapore by mutableStateOf(false)
+        var clock by mutableStateOf(now)
         val sgBase = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualPlace = com.noor.app.data.KnownLocation(
             com.noor.prayer.GeoPoint(1.28967, 103.85007), "Asia/Singapore", "Singapore", "SG", null, 0L, "سنغافورة"))
         rule.setContent {
@@ -129,6 +130,7 @@ class ScreenshotTest {
             }
             val ctx = ctxBase.createConfigurationContext(config)
             CompositionLocalProvider(
+                com.noor.app.ui.components.LocalAmbientMotion provides false,
                 LocalContext provides ctx,
                 LocalConfiguration provides config,
                 LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
@@ -136,7 +138,7 @@ class ScreenshotTest {
             ) {
                 val s = (if (singapore) sgBase else base).copy(theme = theme)
                 val tables = app.container.timetables
-                val u = todayUi(s, tables)
+                val u = todayUi(s, tables, clock)
                 val cache = DayCache(tables)
                 NoorTheme(theme) {
                     NoorBackground {
@@ -162,7 +164,8 @@ class ScreenshotTest {
                             }
                             Screen.WATCH_STATE -> watch?.let { w ->
                                 WatchContent(pad, w.state, true, w.lastSent, w.installs, w.faces, false, false, w.fromPlay,
-                                    Formatter(arabic, Numerals.WESTERN, TimeFormat.H12), WatchActions({}, {}, {}, {}, {}), now = w.now)
+                                    Formatter(arabic, Numerals.WESTERN, TimeFormat.H12), WatchActions({}, {}, {}, {}, {}), now = w.now,
+                                    preview = com.noor.app.ui.watch.watchPreview(s, clock, Formatter(arabic, Numerals.WESTERN, TimeFormat.H12)))
                             }
                             Screen.SETTINGS -> SettingsScreen(pad, {}, {})
                             Screen.WATCH -> WatchScreen(pad)
@@ -172,6 +175,7 @@ class ScreenshotTest {
                             Screen.ADHAN_SHURUQ -> com.noor.app.ui.adhan.PrayerAlertScreen(pad, com.noor.prayer.Prayer.SHURUQ, {}, {})
                             Screen.ADHAN_LIBRARY -> com.noor.app.ui.adhan.SoundLibraryScreen(pad, {})
                             Screen.ADHAN_SOUNDS -> com.noor.app.ui.adhan.MySoundsScreen(pad, {})
+                            Screen.ONBOARDING -> com.noor.app.ui.onboarding.OnboardingScreen(pad, {}, {})
                         }
                     }
                 }
@@ -234,6 +238,16 @@ class ScreenshotTest {
         screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
+        // The sky through the day (Dubai, 4 November 2026): dawn, morning, sunset glow, night with the moon.
+        theme = ThemeMode.DARK; arabic = false; screen = Screen.TODAY
+        fun at(h: Int, m: Int) = ZonedDateTime.of(2026, 11, 4, h, m, 0, 0, ZoneId.of("Asia/Dubai")).toInstant()
+        clock = at(5, 52); shot("36_sky_dawn_en", "Shuruq")
+        clock = at(10, 30); shot("37_sky_morning_en", "Dhuhr")
+        clock = at(17, 46); shot("38_sky_sunset_en", "Isha")
+        clock = at(21, 30); shot("39_sky_night_en", "Fajr")
+        arabic = true; clock = at(17, 20); shot("40_sky_golden_ar", "المغرب")
+        arabic = false; theme = ThemeMode.LIGHT; clock = at(12, 40); shot("41_sky_noon_day_en", "Asr")
+        theme = ThemeMode.DARK; clock = now
         // Adhan & alerts: off (first run), then on for phone and watch, the Fajr editor, sunrise, library and imports.
         screen = Screen.ADHAN; shot("26_adhan_off_night_en", "Turn on to hear the Adhan")
         runBlocking { app.container.settings.updateAlerts { it.copy(enabled = true, device = com.noor.prayer.alerts.AlertDevice.BOTH) } }
@@ -249,5 +263,9 @@ class ScreenshotTest {
         screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "مالمو")
         arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Gradual volume")
         screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Malmö")
+        theme = ThemeMode.DARK
+        screen = Screen.ONBOARDING; shot("42_onboarding_en", "Use my location")
+        arabic = true; shot("43_onboarding_ar", "نور")
+        arabic = false
     }
 }

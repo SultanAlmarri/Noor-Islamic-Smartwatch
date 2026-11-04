@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -223,7 +224,7 @@ fun PrayerAlertScreen(contentPadding: PaddingValues, prayer: Prayer, onBack: () 
 
 @Composable
 private fun Label(text: String) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelMedium, color = NoorTheme.colors.gold, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+    Text(text.uppercase(), style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp), color = NoorTheme.colors.textMuted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
 }
 
 @Composable

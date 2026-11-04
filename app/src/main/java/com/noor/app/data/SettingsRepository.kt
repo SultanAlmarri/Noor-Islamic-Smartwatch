@@ -75,7 +75,7 @@ class SettingsRepository(private val context: Context) {
             language = p.enum(K.language, Language.SYSTEM),
             numerals = p.enum(K.numerals, Numerals.WESTERN),
             timeFormat = p.enum(K.timeFormat, TimeFormat.H12),
-            theme = p.enum(K.theme, ThemeMode.DARK),
+            theme = p.enum(K.theme, ThemeMode.SUN),
             hijriAdjust = p[K.hijri] ?: 0,
             alerts = AlertSettings.decode(p[K.alerts]),
         )

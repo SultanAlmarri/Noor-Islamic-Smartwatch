@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,11 +16,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -42,10 +45,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.noor.alerts.CustomSound
@@ -79,12 +84,12 @@ fun SoundLibraryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
         listOf(R.string.adhan_cat_renowned to renowned, R.string.adhan_cat_fajr to fajr, R.string.adhan_cat_regional to regional).forEach { (label, items) ->
             if (items.isEmpty()) return@forEach
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(stringResource(label).uppercase(), style = MaterialTheme.typography.labelMedium, color = NoorTheme.colors.gold, modifier = Modifier.padding(start = 8.dp))
+                Text(stringResource(label).uppercase(), style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp), color = NoorTheme.colors.textMuted, modifier = Modifier.padding(start = 16.dp))
                 items.forEach { e -> AdhanCard(e, f, ar, preview, vm) }
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.adhan_cat_sounds).uppercase(), style = MaterialTheme.typography.labelMedium, color = NoorTheme.colors.gold, modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.adhan_cat_sounds).uppercase(), style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp), color = NoorTheme.colors.textMuted, modifier = Modifier.padding(start = 16.dp))
             GlassCard(Modifier.fillMaxWidth(), padding = 4.dp) {
                 lib.sounds.forEachIndexed { i, e ->
                     if (i > 0) SettingsDivider()
@@ -170,12 +175,26 @@ fun MySoundsScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: AdhanV
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             BackHeader(stringResource(R.string.adhan_my_sounds), onBack)
-            Button(onClick = { replaceTarget = null; picker.launch(CustomSounds.PICKER_TYPES) },
-                colors = ButtonDefaults.buttonColors(containerColor = c.gold, contentColor = c.onGold)) {
-                Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.adhan_import))
+            if (custom.isEmpty()) {
+                // Empty state: what this is for, and the one thing to do.
+                Column(Modifier.fillMaxWidth().padding(top = 36.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(84.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.gold.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.GraphicEq, null, tint = c.gold, modifier = Modifier.size(38.dp))
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    Text(stringResource(R.string.adhan_custom_empty_title), style = MaterialTheme.typography.titleLarge, color = c.textPrimary)
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.adhan_custom_empty), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 12.dp))
+                }
             }
-            if (custom.isEmpty()) Footnote(stringResource(R.string.adhan_custom_empty))
-            else GlassCard(Modifier.fillMaxWidth(), padding = 4.dp) {
+            Button(onClick = { replaceTarget = null; picker.launch(CustomSounds.PICKER_TYPES) },
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                modifier = if (custom.isEmpty()) Modifier.fillMaxWidth().height(52.dp) else Modifier,
+                colors = ButtonDefaults.buttonColors(containerColor = c.gold, contentColor = c.onGold)) {
+                Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.adhan_import), style = MaterialTheme.typography.titleSmall)
+            }
+            if (custom.isNotEmpty()) GlassCard(Modifier.fillMaxWidth(), padding = 4.dp) {
                 custom.forEachIndexed { i, cs ->
                     if (i > 0) SettingsDivider()
                     Row(verticalAlignment = Alignment.CenterVertically) {

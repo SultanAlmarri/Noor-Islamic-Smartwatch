@@ -1,6 +1,8 @@
 package com.noor.app.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,16 +36,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import com.noor.app.R
 import com.noor.app.ui.components.GlassCard
 import com.noor.app.ui.theme.NoorTheme
 
+/** A titled group of rows. Section titles are quiet; gold is kept for what the user can act on or has chosen. */
 @Composable
-fun SettingsSection(title: String, content: @Composable () -> Unit) {
+fun SettingsSection(title: String, footer: String? = null, content: @Composable () -> Unit) {
     val c = NoorTheme.colors
     Column {
-        Text(title.uppercase(), style = MaterialTheme.typography.labelMedium, color = c.gold, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
-        GlassCard(Modifier.fillMaxWidth(), padding = 4.dp, corner = 24.dp) { content() }
+        if (title.isNotEmpty()) Text(title.uppercase(), style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp), color = c.textMuted,
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp).semantics { heading() })
+        GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 20.dp) { content() }
+        if (footer != null) Text(footer, style = MaterialTheme.typography.bodySmall, color = c.textMuted, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp))
+    }
+}
+
+/** The icon tile at the start of a row: a soft gold square with the glyph in gold. */
+@Composable
+fun IconTile(icon: ImageVector, tint: androidx.compose.ui.graphics.Color = NoorTheme.colors.gold) {
+    Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(tint.copy(alpha = if (NoorTheme.colors.isDark) 0.15f else 0.13f)), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
     }
 }
 
@@ -53,18 +69,19 @@ fun SettingsItem(icon: ImageVector, title: String, value: String?, onClick: (() 
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 60.dp)
+            .heightIn(min = 58.dp)
             .clip(RoundedCornerShape(20.dp))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(22.dp))
+        IconTile(icon)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
             if (value != null) Text(value, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
         }
+        Spacer(Modifier.width(8.dp))
         when {
             trailing != null -> trailing()
             onClick != null -> Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted)
@@ -72,15 +89,19 @@ fun SettingsItem(icon: ImageVector, title: String, value: String?, onClick: (() 
     }
 }
 
+/** Divider aligned with the row text (after the icon tile), as in a grouped list. */
 @Composable
-fun SettingsDivider() = HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = NoorTheme.colors.outline.copy(alpha = 0.35f))
+fun SettingsDivider() = HorizontalDivider(Modifier.padding(start = 62.dp), thickness = 0.5.dp, color = NoorTheme.colors.separator)
 
 @Composable
 fun NoorSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
     val c = NoorTheme.colors
     Switch(
         checked = checked, onCheckedChange = onChange,
-        colors = SwitchDefaults.colors(checkedThumbColor = c.backgroundBottom, checkedTrackColor = c.gold, uncheckedTrackColor = c.surface),
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = androidx.compose.ui.graphics.Color.White, checkedTrackColor = c.gold, checkedBorderColor = c.gold,
+            uncheckedThumbColor = c.textMuted, uncheckedTrackColor = c.surfaceRaised, uncheckedBorderColor = c.outline,
+        ),
     )
 }
 

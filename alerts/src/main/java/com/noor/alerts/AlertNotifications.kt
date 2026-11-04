@@ -28,6 +28,8 @@ object AlertNotifications {
     const val CHANNEL_SILENT = "noor_prayer_silent"
 
     const val ID_PLAYING = 4100
+    /** Noor's gold, readable on light and dark notification shades. */
+    private const val NOOR_GOLD = 0xFFB4883A.toInt()
     private const val ID_PRAYER_BASE = 4200
 
     fun ensureChannels(context: Context) {
@@ -69,6 +71,7 @@ object AlertNotifications {
     private fun base(context: Context, channel: String, title: String, body: String, at: Instant): NotificationCompat.Builder =
         NotificationCompat.Builder(context, channel)
             .setSmallIcon(context.alertHost?.notificationIcon ?: android.R.drawable.ic_lock_idle_alarm)
+            .setColor(NOOR_GOLD)
             .setContentTitle(title)
             .setContentText(body)
             .setWhen(at.toEpochMilli()).setShowWhen(true)

@@ -64,8 +64,8 @@
     <string name="theme_system">System</string>
     <string name="theme_dark">Night</string>
     <string name="theme_light">Day</string>
-    <string name="hijri_adjust">Hijri date adjustment</string>
-    <string name="hijri_adjust_value">%1$s days</string>
+    <string name="hijri_adjust">Hijri date</string>
+    <string name="hijri_adjust_value">Adjustment: %1$s days</string>
     <string name="settings_about">About</string>
     <string name="about_accuracy">Prayer-time accuracy</string>
     <string name="about_version">App version %1$s</string>
@@ -290,4 +290,26 @@
     <string name="adhan_changes_generic">Edited for Noor: trimmed to the Adhan, short fades, loudness evened out, converted to mono.</string>
     <string name="adhan_sa_note">This edited recording is shared under the same licence.</string>
     <string name="adhan_sounds_credit">Original sounds made for Noor, free for anyone to use (CC0).</string>
+    <string name="theme_sun">Follow the sun: light from sunrise, dark from Maghrib</string>
+    <string name="today_in">in %1$s</string>
+    <string name="sky_desc_up">The sun is %1$s° above the horizon. Next prayer at the gold ring.</string>
+    <string name="sky_desc_down">The sun is %1$s° below the horizon. Next prayer at the gold ring.</string>
+    <string name="today_set_location_title">Prayer times begin with where you are</string>
+    <string name="today_set_location_body">Choose your location to see today’s times, the sky above you and the Qibla.</string>
+    <string name="today_until">until %1$s</string>
+    <string name="watch_preview_desc">Preview of the Noor watch app</string>
+    <string name="watch_feature_app">Noor app</string>
+    <string name="watch_feature_app_desc">Next prayer, countdown and today’s times</string>
+    <string name="watch_feature_tile">Prayer times tile</string>
+    <string name="watch_feature_tile_desc">Swipe from the watch face</string>
+    <string name="watch_feature_complication">Next prayer complication</string>
+    <string name="watch_feature_complication_desc">On any watch face</string>
+    <string name="watch_feature_alerts">Prayer alerts</string>
+    <string name="watch_feature_alerts_desc">Choose Watch or Both in the Adhan tab</string>
+    <string name="watch_feature_editor">Watch face editor</string>
+    <string name="watch_feature_editor_desc">Colours, fonts and layout, with a live preview</string>
+    <string name="offline_watch_footer">The watch uses the same place, authority and adjustments as this phone and keeps working without it.</string>
+    <string name="onboarding_tagline">Prayer times from the sky above you, the Qibla and the Adhan, on your phone and your watch.</string>
+    <string name="onboarding_private">Your location stays on this phone.</string>
+    <string name="adhan_custom_empty_title">Your own sounds</string>
 </resources>

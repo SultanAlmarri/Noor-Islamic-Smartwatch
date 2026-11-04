@@ -1,6 +1,5 @@
 package com.noor.app.ui.adhan
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.noor.app.ui.theme.NoorTheme
 
 /** Screen title row with a back arrow (mirrored in Arabic). */
@@ -54,15 +53,15 @@ fun BackHeader(title: String, onBack: () -> Unit) {
 @Composable
 fun WarningRow(text: String, action: String?, onAction: (() -> Unit)?, icon: ImageVector = Icons.Rounded.WarningAmber) {
     val c = NoorTheme.colors
-    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = c.warning, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.bodySmall, color = c.textPrimary, modifier = Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (icon == Icons.Rounded.WarningAmber) c.warning else c.textSecondary, modifier = Modifier.size(20.dp)) }
+        Spacer(Modifier.width(14.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall.copy(lineHeight = 17.sp), color = c.textSecondary, modifier = Modifier.weight(1f))
         if (action != null && onAction != null) {
-            Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = onAction, border = BorderStroke(1.dp, c.gold.copy(alpha = 0.6f))) {
-                Text(action, color = c.goldText, style = MaterialTheme.typography.labelLarge)
-            }
+            Spacer(Modifier.width(10.dp))
+            Text(action, color = c.goldText, style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(c.gold.copy(alpha = 0.14f)).clickable(role = Role.Button, onClick = onAction)
+                    .padding(horizontal = 14.dp, vertical = 7.dp))
         }
     }
 }
@@ -148,5 +147,5 @@ fun SoundRow(
 /** Small explanatory paragraph under a section. */
 @Composable
 fun Footnote(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = NoorTheme.colors.textSecondary, modifier = modifier.padding(horizontal = 8.dp))
+    Text(text, style = MaterialTheme.typography.bodySmall, color = NoorTheme.colors.textMuted, modifier = modifier.padding(horizontal = 16.dp))
 }

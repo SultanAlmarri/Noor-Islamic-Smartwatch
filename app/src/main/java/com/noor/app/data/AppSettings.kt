@@ -10,7 +10,8 @@ enum class LocationMode { AUTO, MANUAL }
 enum class Language(val tag: String) { SYSTEM(""), ENGLISH("en"), ARABIC("ar") }
 enum class Numerals { WESTERN, ARABIC_INDIC }
 enum class TimeFormat { H12, H24 }
-enum class ThemeMode { SYSTEM, DARK, LIGHT }
+/** SUN: light from sunrise until Maghrib, dark through the night, following the prayer times of the current place. */
+enum class ThemeMode { SUN, SYSTEM, DARK, LIGHT }
 
 /** The last position the app knows about (or the city chosen by hand). Kept so the app works offline and after restarts. */
 data class KnownLocation(
@@ -57,7 +58,7 @@ data class AppSettings(
     val language: Language = Language.SYSTEM,
     val numerals: Numerals = Numerals.WESTERN,
     val timeFormat: TimeFormat = TimeFormat.H12,
-    val theme: ThemeMode = ThemeMode.DARK,
+    val theme: ThemeMode = ThemeMode.SUN,
     val hijriAdjust: Int = 0,
     /** Adhan and prayer notifications (shared with the watch through the watch config). */
     val alerts: AlertSettings = AlertSettings(),

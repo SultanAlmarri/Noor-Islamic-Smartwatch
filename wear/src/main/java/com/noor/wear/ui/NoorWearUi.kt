@@ -5,6 +5,10 @@ import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import com.noor.prayer.astro.SunPath
+import com.noor.prayer.sky.SkyPalette
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,6 +80,14 @@ internal val Ink = Color(0xFFF7F2E7)
 internal val Mist = Color(0xFFB7C0D2)
 internal val Night = Color(0xFF16233A)
 internal val Kufi = FontFamily(Font(R.font.reem_kufi))
+/** IBM Plex Sans Arabic, the phone app's typeface, so both read as one product. */
+internal val Plex = FontFamily(
+    Font(R.font.plex_arabic_light, FontWeight.Light),
+    Font(R.font.plex_arabic_regular, FontWeight.Normal),
+    Font(R.font.plex_arabic_medium, FontWeight.Medium),
+    Font(R.font.plex_arabic_medium, FontWeight.SemiBold),
+)
+private val NoorWearTypography = androidx.wear.compose.material3.Typography(defaultFontFamily = Plex)
 
 internal val NoorWearColors = ColorScheme(
     primary = Gold,
@@ -109,7 +121,7 @@ fun NoorWearContent(config: WatchConfig?, clock: () -> Instant = Instant::now, s
     val ctx = remember(base, config?.language) { base.localizedFor(config) }
     // Keep the activity's result registry reachable after LocalContext is swapped for the localized one.
     val registry = LocalActivityResultRegistryOwner.current
-    MaterialTheme(colorScheme = NoorWearColors) {
+    MaterialTheme(colorScheme = NoorWearColors, typography = NoorWearTypography) {
         CompositionLocalProvider(
             *listOfNotNull(registry?.let { LocalActivityResultRegistryOwner provides it }).toTypedArray(),
             LocalContext provides ctx,
@@ -160,8 +172,15 @@ private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, show
     } ?: 0f
     val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
 
+    // The light of the moment: the same sky colour the phone shows, as a soft glow behind the countdown.
+    val glow = remember(c, minuteKey) {
+        val dhuhr = st.today.instant(Prayer.DHUHR)
+        Color(SkyPalette.glow(SunPath.elevation(now, c.point), evening = dhuhr != null && now.isAfter(dhuhr)))
+    }
     ScreenScaffold(scrollState = listState) { padding ->
         Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(glow.copy(alpha = 0.42f), Color.Transparent), radius = 380f,
+                center = androidx.compose.ui.geometry.Offset.Unspecified)))
             // The interval to the next prayer, drawn around the edge of the screen (gap at the top for the clock).
             CircularProgressIndicator(
                 progress = { progress },
@@ -202,37 +221,41 @@ private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, show
 
 @Composable
 private fun Hero(c: WatchConfig, t: WearText, next: Prayer, at: Instant, until: Duration) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp)) {
-        Text(stringResource(R.string.next).uppercase(), style = MaterialTheme.typography.labelSmall, color = Mist)
+    // Same order as the phone: the prayer, the countdown, the time.
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(ComplicationBuilder.iconRes(next)), null, Modifier.size(22.dp), tint = Gold)
+            Icon(painterResource(ComplicationBuilder.iconRes(next)), null, Modifier.size(20.dp), tint = GoldSoft)
             Spacer(Modifier.width(6.dp))
             Text(
                 t.name(next),
-                style = if (t.arabic) TextStyle(fontFamily = Kufi, fontSize = 26.sp) else MaterialTheme.typography.titleLarge.copy(fontSize = 24.sp),
-                color = Gold,
+                style = if (t.arabic) TextStyle(fontFamily = Kufi, fontSize = 24.sp) else MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium),
+                color = GoldSoft,
             )
         }
-        Text(t.time(at, c.zone), style = MaterialTheme.typography.titleMedium, color = Ink)
-        Text(
-            t.countdown(until),
-            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Light, fontSize = 30.sp),
-            color = Ink,
-        )
-        Text(stringResource(R.string.remaining), style = MaterialTheme.typography.labelSmall, color = Mist)
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Text(
+                t.countdown(until),
+                style = MaterialTheme.typography.displaySmall.copy(fontFamily = Plex, fontWeight = FontWeight.Light, fontSize = 38.sp, letterSpacing = (-1).sp,
+                    fontFeatureSettings = "tnum"),
+                color = Ink,
+            )
+        }
+        Text(stringResource(R.string.at_time_watch, t.time(at, c.zone)), style = MaterialTheme.typography.labelMedium, color = Mist)
     }
 }
 
 @Composable
 private fun PrayerRow(p: Prayer, time: String, t: WearText, isCurrent: Boolean, isNext: Boolean) {
     val bg = when {
-        isCurrent -> Night
+        isCurrent -> Gold.copy(alpha = 0.14f)
         else -> Color.Transparent
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().background(bg, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 7.dp),
+        modifier = Modifier.fillMaxWidth().background(bg, RoundedCornerShape(50))
+            .then(if (isNext) Modifier.border(1.dp, Gold.copy(alpha = 0.55f), RoundedCornerShape(50)) else Modifier)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
     ) {
         Icon(painterResource(ComplicationBuilder.iconRes(p)), null, Modifier.size(18.dp),
             tint = if (isCurrent || isNext) Gold else Mist.copy(alpha = if (p.isPrayer) 1f else 0.7f))

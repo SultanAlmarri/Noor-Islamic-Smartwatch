@@ -64,8 +64,8 @@
     <string name="theme_system">حسب النظام</string>
     <string name="theme_dark">ليلي</string>
     <string name="theme_light">نهاري</string>
-    <string name="hijri_adjust">تعديل التاريخ الهجري</string>
-    <string name="hijri_adjust_value">%1$s أيام</string>
+    <string name="hijri_adjust">التاريخ الهجري</string>
+    <string name="hijri_adjust_value">التعديل: %1$s أيام</string>
     <string name="settings_about">حول التطبيق</string>
     <string name="about_accuracy">دقة مواقيت الصلاة</string>
     <string name="about_version">إصدار التطبيق %1$s</string>
@@ -290,4 +290,26 @@
     <string name="adhan_changes_generic">عُدّل لتطبيق نور: قُصّ ليقتصر على الأذان، مع تلاشٍ قصير وتوحيد لمستوى الصوت وتحويل إلى قناة واحدة.</string>
     <string name="adhan_sa_note">يُشارك هذا التسجيل المعدّل بالترخيص نفسه.</string>
     <string name="adhan_sounds_credit">أصوات أصلية صُنعت لتطبيق نور، حرّة الاستخدام للجميع (CC0).</string>
+    <string name="theme_sun">مع الشمس: فاتح من الشروق، داكن من المغرب</string>
+    <string name="today_in">بعد %1$s</string>
+    <string name="sky_desc_up">الشمس فوق الأفق بـ%1$s°. الصلاة القادمة عند الحلقة الذهبية.</string>
+    <string name="sky_desc_down">الشمس تحت الأفق بـ%1$s°. الصلاة القادمة عند الحلقة الذهبية.</string>
+    <string name="today_set_location_title">أوقات الصلاة تبدأ من مكانك</string>
+    <string name="today_set_location_body">اختر موقعك لترى أوقات اليوم والسماء فوقك واتجاه القبلة.</string>
+    <string name="today_until">حتى %1$s</string>
+    <string name="watch_preview_desc">معاينة تطبيق نور على الساعة</string>
+    <string name="watch_feature_app">تطبيق نور</string>
+    <string name="watch_feature_app_desc">الصلاة القادمة والعدّ التنازلي وأوقات اليوم</string>
+    <string name="watch_feature_tile">بطاقة أوقات الصلاة</string>
+    <string name="watch_feature_tile_desc">اسحب من واجهة الساعة</string>
+    <string name="watch_feature_complication">إضافة الصلاة القادمة</string>
+    <string name="watch_feature_complication_desc">على أي واجهة ساعة</string>
+    <string name="watch_feature_alerts">تنبيهات الصلاة</string>
+    <string name="watch_feature_alerts_desc">اختر «الساعة» أو «كلاهما» من تبويب الأذان</string>
+    <string name="watch_feature_editor">محرّر الواجهة</string>
+    <string name="watch_feature_editor_desc">الألوان والخطوط والتخطيط، مع معاينة مباشرة</string>
+    <string name="offline_watch_footer">تستخدم الساعة الموقع والجهة والتعديلات نفسها التي في هذا الهاتف، وتعمل من دونه.</string>
+    <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك، واتجاه القبلة، والأذان، على هاتفك وساعتك.</string>
+    <string name="onboarding_private">يبقى موقعك على هذا الهاتف.</string>
+    <string name="adhan_custom_empty_title">أصواتك الخاصة</string>
 </resources>

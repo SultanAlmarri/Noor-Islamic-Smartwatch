@@ -75,6 +75,7 @@ import com.noor.app.ui.components.GlassCard
 import com.noor.app.ui.components.Hairline
 import com.noor.app.ui.components.Noor
 import com.noor.app.ui.components.isArabicUi
+import com.noor.app.ui.components.ScreenTitle
 import com.noor.app.ui.theme.NoorTheme
 import com.noor.app.ui.theme.Tabular
 import com.noor.app.util.Formatter
@@ -127,25 +128,20 @@ fun QiblaContent(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = Noor.ScreenPadding),
         verticalArrangement = Arrangement.spacedBy(Noor.Gap),
     ) {
-        Spacer(Modifier.height(2.dp))
-        Text(stringResource(R.string.qibla_title), style = MaterialTheme.typography.headlineMedium, color = c.textPrimary)
-
         val place = p.place
+        ScreenTitle(stringResource(R.string.qibla_title),
+            subtitle = if (place != null && q != null) (if (ar) place.nameAr ?: place.nameEn else place.nameEn) + "  ·  " + stringResource(R.string.qibla_distance, f.kilometres(q.distanceKm)) else null,
+            leading = place?.countryCode?.let { cc -> Flags.emoji(cc)?.let { e -> { Text(e, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp)) } } })
         if (place == null || q == null) {
             GlassCard(Modifier.fillMaxWidth().clickable(onClick = onOpenLocation)) {
                 Text(stringResource(R.string.qibla_needs_location), style = MaterialTheme.typography.bodyLarge, color = c.textSecondary)
             }
             return@Column
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Flags.emoji(place.countryCode)?.let { Text(it, fontSize = 20.sp, modifier = Modifier.padding(end = 8.dp)) }
-            Text((if (ar) place.nameAr ?: place.nameEn else place.nameEn) + "  ·  " + stringResource(R.string.qibla_distance, f.kilometres(q.distanceKm)),
-                style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
-        }
-
         // Dial
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-            CompassDial(heading = reading?.trueHeadingDeg, qibla = q.bearingDeg, aligned = aligned, f = f, modifier = Modifier.fillMaxSize())
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
+            CompassDial(heading = reading?.trueHeadingDeg, qibla = q.bearingDeg, aligned = aligned, f = f, modifier = Modifier.fillMaxSize(),
+                uncertaintyDeg = reading?.headingAccuracyDeg)
             val notFlat = reading != null && CompassIssue.NOT_FLAT in reading.assessment.issues
             if (notFlat) FlatWarning()
         }
@@ -167,14 +163,15 @@ fun QiblaContent(
             Text(status, style = MaterialTheme.typography.titleMedium, color = statusColor, textAlign = TextAlign.Center)
         }
 
-        // Readings
+        // Readings, side by side: where the Qibla is, where the phone points, and the difference (two decimals each).
         GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
-            Readout(stringResource(R.string.qibla_bearing), f.degrees(q.bearingDeg), c.goldText)
-            Hairline(inset = 18.dp)
-            Readout(stringResource(R.string.qibla_heading), reading?.let { f.degrees(it.trueHeadingDeg) } ?: "—", c.textPrimary)
-            Hairline(inset = 18.dp)
-            Readout(stringResource(R.string.qibla_difference), turn?.let { f.signedDegrees(it) } ?: "—",
-                if (aligned) c.success else c.textPrimary)
+            Row(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+                Readout(stringResource(R.string.qibla_bearing), f.degrees(q.bearingDeg), c.goldText, Modifier.weight(1f))
+                VerticalHairline()
+                Readout(stringResource(R.string.qibla_heading), reading?.let { f.degrees(it.trueHeadingDeg) } ?: "—", c.textPrimary, Modifier.weight(1f))
+                VerticalHairline()
+                Readout(stringResource(R.string.qibla_difference), turn?.let { f.signedDegrees(it) } ?: "—", if (aligned) c.success else c.textPrimary, Modifier.weight(1f))
+            }
         }
 
         // Accuracy
@@ -197,13 +194,17 @@ fun QiblaContent(
 }
 
 @Composable
-private fun Readout(label: String, value: String, color: Color) {
+private fun Readout(label: String, value: String, color: Color, modifier: Modifier) {
     val c = NoorTheme.colors
-    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = c.textSecondary, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.titleLarge.merge(Tabular), color = color, fontWeight = FontWeight.Medium)
+    Column(modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = c.textMuted, maxLines = 1, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(4.dp))
+        Text(value, style = MaterialTheme.typography.titleLarge.merge(Tabular).copy(fontSize = 19.sp), color = color, fontWeight = FontWeight.Medium, maxLines = 1)
     }
 }
+
+@Composable
+private fun VerticalHairline() = Box(Modifier.width(0.5.dp).height(40.dp).background(NoorTheme.colors.separator))
 
 @Composable
 private fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: () -> Unit) {
@@ -250,58 +251,85 @@ private fun FlatWarning() {
 }
 
 /**
- * The dial turns with the phone so north stays north; the Kaaba marker sits on the dial at the Qibla bearing.
- * The fixed notch at the top is where the phone points.
+ * The dial turns with the phone so north stays north; the Kaaba sits on the rim at the Qibla bearing, and a beam of light
+ * runs to it from the centre. The beam is as wide as the compass is uncertain (the sensor's own estimate), so a wide beam
+ * honestly says "somewhere in here". The fixed mark at the top is where the phone points.
  */
 @Composable
-fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter, modifier: Modifier = Modifier) {
+fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter, modifier: Modifier = Modifier, uncertaintyDeg: Double? = null) {
     val c = NoorTheme.colors
     val kaaba = painterResource(R.drawable.ic_kaaba)
     val density = LocalDensity.current
     val labels = if (f.arabic) listOf("ش", "ق", "ج", "غ") else listOf("N", "E", "S", "W")
-    val accent = if (aligned) c.success else c.gold
+    val accent by animateColorAsState(if (aligned) c.success else c.gold, tween(400), label = "dialAccent")
+    val glow by androidx.compose.animation.core.animateFloatAsState(if (aligned) 1f else 0f, tween(500), label = "alignedGlow")
+    val halfBeam = (uncertaintyDeg ?: 8.0).coerceIn(3.0, 30.0)
     Canvas(modifier.semantics { contentDescription = "Qibla ${f.degrees(qibla)}" }) {
         val h = heading ?: 0.0
         val cx = size.width / 2; val cy = size.height / 2
-        val r = size.minDimension / 2 * 0.86f
+        val r = size.minDimension / 2 * 0.80f
+        val centre = Offset(cx, cy)
         fun pos(bearing: Double, radius: Float): Offset {
             val a = Math.toRadians(bearing - h)
             return Offset(cx + (radius * sin(a)).toFloat(), cy - (radius * cos(a)).toFloat())
         }
-        // Face
-        drawCircle(c.surface, r * 1.08f, Offset(cx, cy))
-        drawCircle(c.separator, r * 1.08f, Offset(cx, cy), style = Stroke(1.dp.toPx()))
-        // Ticks every 5°, longer every 30°
-        for (deg in 0 until 360 step 5) {
-            val long = deg % 30 == 0
-            val outer = pos(deg.toDouble(), r); val inner = pos(deg.toDouble(), r - if (long) 14.dp.toPx() else 7.dp.toPx())
-            drawLine(if (deg == 0) c.danger else if (long) c.textSecondary else c.textMuted.copy(alpha = 0.6f), inner, outer,
-                strokeWidth = if (long) 2.dp.toPx() else 1.dp.toPx(), cap = StrokeCap.Round)
+        // Face: a soft disc with a faint inner ring; glows gently when aligned.
+        if (glow > 0f) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(c.success.copy(alpha = 0.22f * glow), Color.Transparent), centre, r * 1.35f), r * 1.35f, centre)
+        drawCircle(c.surface, r * 1.12f, centre)
+        drawCircle(c.separator, r * 1.12f, centre, style = Stroke(1.dp.toPx()))
+        drawCircle(c.separator, r * 0.62f, centre, style = Stroke(0.5.dp.toPx()))
+
+        // The beam to the Kaaba.
+        val beamStart = Math.toRadians(qibla - h - halfBeam - 90).toFloat()
+        drawArc(
+            androidx.compose.ui.graphics.Brush.radialGradient(listOf(accent.copy(alpha = 0.55f), accent.copy(alpha = 0.06f)), centre, r),
+            startAngle = Math.toDegrees(beamStart.toDouble()).toFloat(), sweepAngle = (2 * halfBeam).toFloat(), useCenter = true,
+            topLeft = Offset(cx - r, cy - r), size = androidx.compose.ui.geometry.Size(2 * r, 2 * r),
+        )
+        drawLine(accent, centre, pos(qibla, r - 30.dp.toPx()), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+
+        // Ticks: every 2°, longer every 10°, longest at the cardinals.
+        for (deg in 0 until 360 step 2) {
+            val cardinal = deg % 90 == 0; val ten = deg % 10 == 0
+            val len = when { cardinal -> 14.dp.toPx(); ten -> 9.dp.toPx(); else -> 5.dp.toPx() }
+            val outer = pos(deg.toDouble(), r * 1.08f); val inner = pos(deg.toDouble(), r * 1.08f - len)
+            drawLine(
+                when { deg == 0 -> c.danger; cardinal -> c.textPrimary; ten -> c.textSecondary; else -> c.textMuted.copy(alpha = 0.45f) },
+                inner, outer, strokeWidth = if (cardinal) 2.dp.toPx() else if (ten) 1.2.dp.toPx() else 0.8.dp.toPx(), cap = StrokeCap.Round,
+            )
         }
-        // Cardinal letters (upright)
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            textAlign = android.graphics.Paint.Align.CENTER; textSize = with(density) { 17.sp.toPx() }; isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER; textSize = with(density) { 18.sp.toPx() }; isFakeBoldText = true
         }
         labels.forEachIndexed { i, l ->
-            val pt = pos(i * 90.0, r - 32.dp.toPx())
+            val pt = pos(i * 90.0, r * 1.08f - 30.dp.toPx())
             paint.color = (if (i == 0) c.danger else c.textPrimary).toArgb()
             drawContext.canvas.nativeCanvas.drawText(l, pt.x, pt.y + paint.textSize / 3, paint)
         }
-        // Direction to the Kaaba
-        val kaabaPos = pos(qibla, r - 2.dp.toPx())
-        drawLine(accent.copy(alpha = 0.85f), Offset(cx, cy), pos(qibla, r - 34.dp.toPx()), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+        // Degree numbers every 30° between the cardinals.
+        val small = android.graphics.Paint(paint).apply { textSize = with(density) { 11.sp.toPx() }; isFakeBoldText = false; color = c.textMuted.toArgb() }
+        for (deg in 30 until 360 step 30) if (deg % 90 != 0) {
+            val pt = pos(deg.toDouble(), r * 1.08f - 24.dp.toPx())
+            drawContext.canvas.nativeCanvas.drawText(f.number(deg), pt.x, pt.y + small.textSize / 3, small)
+        }
+
+        // The Kaaba on the rim.
+        val kaabaPos = pos(qibla, r * 1.08f + 2.dp.toPx())
+        drawCircle(c.background, 24.dp.toPx(), kaabaPos)
         drawCircle(accent, 21.dp.toPx(), kaabaPos)
-        val iconSize = 24.dp.toPx()
+        val iconSize = 22.dp.toPx()
         translate(kaabaPos.x - iconSize / 2, kaabaPos.y - iconSize / 2) {
             with(kaaba) { draw(androidx.compose.ui.geometry.Size(iconSize, iconSize), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(c.onGold)) }
         }
-        // Centre hub
-        drawCircle(accent, 6.dp.toPx(), Offset(cx, cy))
-        // Fixed notch: where the phone points
+        // Centre hub.
+        drawCircle(c.background, 9.dp.toPx(), centre)
+        drawCircle(accent, 6.dp.toPx(), centre)
+        // Fixed mark: where the phone points.
+        val top = cy - r * 1.12f
         val notch = Path().apply {
-            moveTo(cx, cy - r * 1.08f - 2.dp.toPx())
-            lineTo(cx - 10.dp.toPx(), cy - r * 1.08f - 20.dp.toPx())
-            lineTo(cx + 10.dp.toPx(), cy - r * 1.08f - 20.dp.toPx())
+            moveTo(cx, top + 6.dp.toPx())
+            lineTo(cx - 9.dp.toPx(), top - 12.dp.toPx())
+            lineTo(cx + 9.dp.toPx(), top - 12.dp.toPx())
             close()
         }
         drawPath(notch, if (aligned) c.success else c.textPrimary)

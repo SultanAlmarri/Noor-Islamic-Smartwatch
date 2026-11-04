@@ -14,8 +14,10 @@ object NoorTheme {
 }
 
 @Composable
-fun NoorTheme(mode: ThemeMode, content: @Composable () -> Unit) {
+/** [daylight]: whether the sun is up at the user's place now (for [ThemeMode.SUN]); null when unknown (no location yet). */
+fun NoorTheme(mode: ThemeMode, daylight: Boolean? = null, content: @Composable () -> Unit) {
     val dark = when (mode) {
+        ThemeMode.SUN -> daylight?.not() ?: isSystemInDarkTheme()
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false

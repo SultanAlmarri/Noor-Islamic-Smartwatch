@@ -89,8 +89,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.tab_settings), style = MaterialTheme.typography.headlineMedium, color = c.textPrimary)
+        com.noor.app.ui.components.ScreenTitle(stringResource(R.string.tab_settings))
 
         SettingsSection(stringResource(R.string.settings_location)) {
             val modeLabel = if (s.locationMode == LocationMode.AUTO) stringResource(R.string.location_auto)
@@ -261,5 +260,5 @@ private fun highLatLabelStatic(r: HighLatitudeRule): Int = when (r) {
 )
 
 @Composable private fun themeLabel(t: ThemeMode) = stringResource(
-    when (t) { ThemeMode.SYSTEM -> R.string.theme_system; ThemeMode.DARK -> R.string.theme_dark; ThemeMode.LIGHT -> R.string.theme_light },
+    when (t) { ThemeMode.SUN -> R.string.theme_sun; ThemeMode.SYSTEM -> R.string.theme_system; ThemeMode.DARK -> R.string.theme_dark; ThemeMode.LIGHT -> R.string.theme_light },
 )

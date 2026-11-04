@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import com.noor.app.ui.theme.NoorTheme
 import kotlin.math.cos
 import kotlin.math.sin
@@ -59,6 +61,25 @@ fun GlassCard(
             .padding(padding),
         content = content,
     )
+}
+
+/** The large title at the top of each tab, with an optional quiet line under it. */
+@Composable
+fun ScreenTitle(title: String, subtitle: String? = null, leading: (@Composable () -> Unit)? = null) {
+    val c = NoorTheme.colors
+    Column(Modifier.padding(start = 4.dp, top = 10.dp, bottom = 2.dp)) {
+        androidx.compose.material3.Text(title, style = androidx.compose.material3.MaterialTheme.typography.headlineLarge.copy(
+            fontSize = androidx.compose.ui.unit.TextUnit(32f, androidx.compose.ui.unit.TextUnitType.Sp),
+            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+            letterSpacing = androidx.compose.ui.unit.TextUnit(-0.4f, androidx.compose.ui.unit.TextUnitType.Sp)),
+            color = c.textPrimary, modifier = Modifier.semantics { heading() })
+        if (subtitle != null || leading != null) androidx.compose.foundation.layout.Row(
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp),
+        ) {
+            leading?.invoke()
+            if (subtitle != null) androidx.compose.material3.Text(subtitle, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = c.textSecondary)
+        }
+    }
 }
 
 /** Thin separator between rows of a grouped list. */

@@ -33,4 +33,5 @@
     <string name="alerts_allow">Allow</string>
     <string name="alerts_next">Next: %1$s %2$s</string>
     <string name="alerts_none">No prayer alerts on the watch.</string>
+    <string name="at_time_watch">at %1$s</string>
 </resources>

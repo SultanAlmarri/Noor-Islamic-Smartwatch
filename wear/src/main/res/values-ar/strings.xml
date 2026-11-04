@@ -33,4 +33,5 @@
     <string name="alerts_allow">السماح</string>
     <string name="alerts_next">التالي: %1$s %2$s</string>
     <string name="alerts_none">لا توجد تنبيهات صلاة على الساعة.</string>
+    <string name="at_time_watch">الساعة %1$s</string>
 </resources>
