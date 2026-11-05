@@ -76,6 +76,8 @@ data class WatchConfig(
         const val PATH = "/noor/config"
         const val CAPABILITY_WATCH = "noor_watch_app"
         const val CAPABILITY_PHONE = "noor_phone_app"
+        /** Message the watch sends to ask the phone to publish its settings again ("Sync now" on the watch). */
+        const val PATH_SYNC_REQUEST = "/noor/sync-request"
 
         fun decode(text: String): WatchConfig? = runCatching {
             val m = text.lineSequence().mapNotNull { l -> l.indexOf('=').takeIf { it > 0 }?.let { l.substring(0, it) to l.substring(it + 1) } }.toMap()

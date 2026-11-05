@@ -1,5 +1,6 @@
 package com.noor.app.data
 
+import com.noor.shared.geo.OfficialTimetables
 import android.content.Context
 import android.util.Log
 import com.noor.prayer.authority.Authority

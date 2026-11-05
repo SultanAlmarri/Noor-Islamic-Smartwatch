@@ -1,13 +1,6 @@
 package com.noor.wear.ui
 
-import android.content.pm.PackageManager
-import androidx.activity.compose.LocalActivityResultRegistryOwner
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import com.noor.prayer.astro.SunPath
-import com.noor.prayer.sky.SkyPalette
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,25 +16,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -49,11 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.AppScaffold
-import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
-import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
@@ -62,103 +46,38 @@ import androidx.wear.compose.material3.Text
 import com.noor.prayer.HijriDate
 import com.noor.prayer.Prayer
 import com.noor.prayer.WatchConfig
+import com.noor.prayer.astro.SunPath
+import com.noor.prayer.calendar.IslamicCalendar
+import com.noor.prayer.qibla.Qibla
+import com.noor.prayer.sky.SkyPalette
 import com.noor.wear.R
 import com.noor.wear.WearText
-import com.noor.wear.localizedFor
 import com.noor.wear.complication.ComplicationBuilder
-import com.noor.wear.data.ConfigRepository
-import com.noor.wear.facepush.FacePush
-import com.noor.wear.facepush.FaceState
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 
-internal val Gold = Color(0xFFE3C27E)
-internal val GoldSoft = Color(0xFFF4E2B8)
-internal val Ink = Color(0xFFF7F2E7)
-internal val Mist = Color(0xFFB7C0D2)
-internal val Night = Color(0xFF16233A)
-internal val Kufi = FontFamily(Font(R.font.reem_kufi))
-/** IBM Plex Sans Arabic, the phone app's typeface, so both read as one product. */
-internal val Plex = FontFamily(
-    Font(R.font.plex_arabic_light, FontWeight.Light),
-    Font(R.font.plex_arabic_regular, FontWeight.Normal),
-    Font(R.font.plex_arabic_medium, FontWeight.Medium),
-    Font(R.font.plex_arabic_medium, FontWeight.SemiBold),
-)
-private val NoorWearTypography = androidx.wear.compose.material3.Typography(defaultFontFamily = Plex)
-
-internal val NoorWearColors = ColorScheme(
-    primary = Gold,
-    primaryDim = Color(0xFFB98F45),
-    primaryContainer = Color(0xFF3A2E17),
-    onPrimary = Color(0xFF241A08),
-    onPrimaryContainer = GoldSoft,
-    secondary = Mist,
-    surfaceContainerLow = Color(0xFF0D1626),
-    surfaceContainer = Night,
-    surfaceContainerHigh = Color(0xFF213150),
-    onSurface = Ink,
-    onSurfaceVariant = Mist,
-    outline = Color(0x66E3C27E),
-    outlineVariant = Color(0x33E3C27E),
-    background = Color.Black,
-    onBackground = Ink,
+/** What the home screen shows besides the times; all of it is optional so the screen also renders in tests. */
+data class HomeExtras(
+    val tasbihToday: Int = 0,
+    val onOpen: (String) -> Unit = {},
 )
 
+/**
+ * The watch app for a configuration, without navigation: the home screen, or the welcome screen when nothing is set
+ * up yet. [clock] is replaceable so previews and tests are deterministic.
+ */
 @Composable
-fun NoorWearUi(repo: ConfigRepository, faceSetup: Boolean) {
-    val config by repo.config.collectAsState(initial = null)
-    NoorWearContent(config, faceSetup = faceSetup)
-}
-
-/** The whole watch UI for a given configuration; [clock] is replaceable so previews and tests are deterministic. */
-@Composable
-fun NoorWearContent(config: WatchConfig?, clock: () -> Instant = Instant::now, showFaceSection: Boolean = true, faceSetup: Boolean = false) {
-    val t = remember(config) { WearText(config) }
-    val base = LocalContext.current
-    val ctx = remember(base, config?.language) { base.localizedFor(config) }
-    // Keep the activity's result registry reachable after LocalContext is swapped for the localized one.
-    val registry = LocalActivityResultRegistryOwner.current
-    MaterialTheme(colorScheme = NoorWearColors, typography = NoorWearTypography) {
-        CompositionLocalProvider(
-            *listOfNotNull(registry?.let { LocalActivityResultRegistryOwner provides it }).toTypedArray(),
-            LocalContext provides ctx,
-            LocalConfiguration provides ctx.resources.configuration,
-            LocalLayoutDirection provides if (t.arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
-        ) {
-            AppScaffold {
-                when {
-                    faceSetup -> FaceSetupScreen()
-                    config == null -> SetupScreen()
-                    else -> PrayerScreen(config, t, clock, showFaceSection)
-                }
-            }
+fun NoorWearContent(config: WatchConfig?, clock: () -> Instant = Instant::now, extras: HomeExtras = HomeExtras(), welcome: WelcomeActions = WelcomeActions()) {
+    NoorWearTheme(config) { t ->
+        androidx.wear.compose.material3.AppScaffold {
+            if (config == null) WelcomeScreen(welcome) else HomeScreen(config, t, clock, extras)
         }
     }
 }
 
 @Composable
-private fun SetupScreen() {
-    val listState = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = listState) { padding ->
-        ScalingLazyColumn(state = listState, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
-            item { Icon(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(56.dp), tint = Color.Unspecified) }
-            item {
-                Text(stringResource(R.string.setup_title), style = MaterialTheme.typography.titleMedium, color = Gold, textAlign = TextAlign.Center)
-            }
-            item {
-                Text(stringResource(R.string.setup_body), style = MaterialTheme.typography.bodySmall, color = Mist, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 8.dp))
-            }
-            item { Text(stringResource(R.string.setup_waiting), style = MaterialTheme.typography.labelSmall, color = Mist.copy(alpha = 0.7f)) }
-        }
-    }
-}
-
-@Composable
-private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, showFaceSection: Boolean) {
+internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extras: HomeExtras) {
     val now by produceState(clock()) {
         while (true) { value = clock(); delay(1000L - System.currentTimeMillis() % 1000L) }
     }
@@ -177,10 +96,12 @@ private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, show
         val dhuhr = st.today.instant(Prayer.DHUHR)
         Color(SkyPalette.glow(SunPath.elevation(now, c.point), evening = dhuhr != null && now.isAfter(dhuhr)))
     }
+    val qibla = remember(c.point) { Qibla.from(c.point) }
+    val nextEvent = remember(c, st.today.date) { IslamicCalendar.upcoming(st.today.date, c.hijriAdjust, limit = 1).firstOrNull() }
+
     ScreenScaffold(scrollState = listState) { padding ->
         Box(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(glow.copy(alpha = 0.42f), Color.Transparent), radius = 380f,
-                center = androidx.compose.ui.geometry.Offset.Unspecified)))
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(glow.copy(alpha = 0.42f), Color.Transparent), radius = 380f, center = Offset.Unspecified)))
             // The interval to the next prayer, drawn around the edge of the screen (gap at the top for the clock).
             CircularProgressIndicator(
                 progress = { progress },
@@ -205,15 +126,21 @@ private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, show
                             isNext = st.next.prayer == p && st.next.date == st.today.date)
                     }
                 }
-                item {
-                    Text(
-                        (if (t.arabic) c.profile.nameAr else c.profile.nameEn) + "\n" + stringResource(R.string.offline_note),
-                        style = MaterialTheme.typography.labelSmall, color = Mist.copy(alpha = 0.75f), textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
                 item { AlertSection(c, t) }
-                if (showFaceSection) item { FaceSection(autoStart = false) }
+                item { Spacer(Modifier.height(4.dp)) }
+                item {
+                    NoorChip(stringResource(R.string.qibla), R.drawable.ic_qibla, { extras.onOpen(Dest.QIBLA) },
+                        secondary = stringResource(R.string.qibla_from_north, t.degrees(qibla.bearingDeg)))
+                }
+                item {
+                    NoorChip(stringResource(R.string.tasbih), R.drawable.ic_tasbih, { extras.onOpen(Dest.TASBIH) },
+                        secondary = if (extras.tasbihToday > 0) stringResource(R.string.tasbih_today, t.digits(extras.tasbihToday.toString())) else stringResource(R.string.tasbih_start))
+                }
+                item {
+                    NoorChip(stringResource(R.string.calendar), R.drawable.ic_calendar, { extras.onOpen(Dest.CALENDAR) },
+                        secondary = nextEvent?.let { e -> t.eventName(e.event) + " · " + daysUntilText(e.daysUntil, t) })
+                }
+                item { NoorChip(stringResource(R.string.settings), R.drawable.ic_settings, { extras.onOpen(Dest.SETTINGS) }, iconTint = Mist) }
             }
         }
     }
@@ -222,7 +149,8 @@ private fun PrayerScreen(c: WatchConfig, t: WearText, clock: () -> Instant, show
 @Composable
 private fun Hero(c: WatchConfig, t: WearText, next: Prayer, at: Instant, until: Duration) {
     // Same order as the phone: the prayer, the countdown, the time.
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp)) {
+    val spoken = stringResource(R.string.a11y_next_prayer, t.name(next), t.remaining(until), t.time(at, c.zone))
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp).semantics(mergeDescendants = true) { contentDescription = spoken }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(ComplicationBuilder.iconRes(next)), null, Modifier.size(20.dp), tint = GoldSoft)
             Spacer(Modifier.width(6.dp))
@@ -235,7 +163,7 @@ private fun Hero(c: WatchConfig, t: WearText, next: Prayer, at: Instant, until: 
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Text(
                 t.countdown(until),
-                style = MaterialTheme.typography.displaySmall.copy(fontFamily = Plex, fontWeight = FontWeight.Light, fontSize = 38.sp, letterSpacing = (-1).sp,
+                style = MaterialTheme.typography.displaySmall.copy(fontFamily = Plex, fontWeight = FontWeight.Light, fontSize = Screen.sp(34f, 40f), letterSpacing = (-1).sp,
                     fontFeatureSettings = "tnum"),
                 color = Ink,
             )
@@ -246,10 +174,7 @@ private fun Hero(c: WatchConfig, t: WearText, next: Prayer, at: Instant, until: 
 
 @Composable
 private fun PrayerRow(p: Prayer, time: String, t: WearText, isCurrent: Boolean, isNext: Boolean) {
-    val bg = when {
-        isCurrent -> Gold.copy(alpha = 0.14f)
-        else -> Color.Transparent
-    }
+    val bg = if (isCurrent) Gold.copy(alpha = 0.14f) else Color.Transparent
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

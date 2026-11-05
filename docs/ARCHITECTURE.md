@@ -1,15 +1,16 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 5 November 2026 (version 0.6.0).
+Living document: each development phase adds its section. Last updated 5 November 2026 (version 0.7.0).
 
 ## Modules
 
 | Module | What it holds | Android? |
 | --- | --- | --- |
-| `core/prayer` | Prayer engine, calculation profiles, Hijri date, schedule, phone↔watch formats (`WatchConfig`, `WatchReport`), Qibla geodesy, compass maths, country flags | No (pure Kotlin, tested on the JVM) |
-| `app` | Phone app: Today, Qibla, Watch, Settings; location, Data Layer sync, watch setup, compass sensors | Yes |
+| `core/prayer` | Prayer engine, calculation profiles, Hijri date, schedule, phone↔watch formats (`WatchConfig`, `WatchReport`), the watch's own set-up (`LocalSetup`), Qibla geodesy, compass maths, country flags, tasbih counter, Islamic calendar events | No (pure Kotlin, tested on the JVM) |
+| `app` | Phone app: Today, Qibla, Adhan, Watch, Settings; location, Data Layer sync (and the watch's sync requests), watch setup | Yes |
+| `shared` | Compass sensor, offline gazetteer, official timetables: code and bundled data used by both apps | Yes (Android library) |
 | `alerts` | Prayer alerts shared by phone and watch: alarm scheduling, Adhan player service, notifications, sound library, imported sounds | Yes (Android library) |
-| `wear` | Watch app: app screen, tile, complication, Watch Face Push, settings receiver, status reporter, prayer alerts | Yes (Wear OS 4+) |
+| `wear` | Watch app: home, Qibla, tasbih, Hijri calendar, settings, on-watch set-up; two tiles, four complications, Ongoing Activity, Watch Face Push, settings receiver, status reporter, prayer alerts ([WATCH.md](WATCH.md)) | Yes (Wear OS 4+) |
 | `legacy/watchface-v1.3.2` | The original watch face, frozen | Resources only |
 
 Anything that must give the same answer on phone and watch lives in `core/prayer`, so both run the same code.
@@ -80,6 +81,9 @@ Still required for the one-tap Play experience: publishing on Google Play (owner
   language, numerals and clock format into `WatchConfig` and publishes it (`/noor/config`) whenever it changes.
 - The watch stores it and calculates with the same engine, offline.
 - Both formats are versioned `key=value` text: unknown keys are ignored, missing keys default, values are clamped.
+- The watch can also be set up on its own (`LocalSetup` → the same `WatchConfig`); the phone's settings win unless the
+  user chose the watch's own on the watch. "Sync with phone" sends `/noor/sync-request`; the phone's
+  `WatchRequestService` republishes. See [WATCH.md](WATCH.md).
 
 ## Worldwide location, authorities and official timetables
 
@@ -122,7 +126,7 @@ Full description: `DESIGN.md`.
   ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## Known limitations (0.6.0)
+## Known limitations (0.7.0)
 
 - Nothing in this version has been tested on a real phone or watch yet; all results above come from unit tests and
   software-rendered screens. Alerts in particular (alarm timing, playback, lock screen, Do Not Disturb, watch transfer)
@@ -131,3 +135,5 @@ Full description: `DESIGN.md`.
   page, and alerts there may be a few minutes late until it is allowed.
 - The Play Store install path cannot be exercised until Noor is published on Google Play.
 - The Hijri date follows Umm al-Qura; months decided by local moon sighting can differ by a day (user adjustment ±2).
+- The watch's compass, bezel counting, haptics, own location, tiles and complications are tested only in software;
+  the list of what needs a real watch is in [WATCH.md](WATCH.md#needs-a-real-watch).

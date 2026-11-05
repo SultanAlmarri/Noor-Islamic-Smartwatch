@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature android:name="android.hardware.type.watch" />
+    <!-- GPS helps set the place on the watch itself, but Noor also works without it (the phone's position or a city). -->
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
+    <!-- Optional, asked only when the user taps "Use my location" on the watch: prayer times and the Qibla for here.
+         The position never leaves the watch. Approximate location is enough. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- Installs and updates the Noor watch face on the watch (Wear OS 6 Watch Face Push). -->
     <uses-permission android:name="com.google.wear.permission.PUSH_WATCH_FACES" />
@@ -16,8 +23,9 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
 
-        <!-- Settings come from the Noor phone app; times are then calculated on the watch, offline. -->
-        <meta-data android:name="com.google.android.wearable.standalone" android:value="false" />
+        <!-- Fully usable without a phone: the watch can be set up on its own (its location or a city) and calculates
+             offline. With the Noor phone app, the phone's settings are used. -->
+        <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
 
         <!-- The Noor watch face (assets/default_watchface.apk, built by tools/watchface/build_pushed_face.py) is added to
              the watch face picker when this app is installed; it does not replace the face in use. -->
@@ -77,6 +85,63 @@
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="21600" />
+        </service>
+
+        <!-- Today's Hijri date. -->
+        <service
+            android:name=".complication.HijriComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_calendar"
+            android:label="@string/hijri_date"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,LONG_TEXT" />
+            <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="21600" />
+        </service>
+
+        <!-- Today's dhikr count; opens the tasbih. -->
+        <service
+            android:name=".complication.TasbihComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_tasbih"
+            android:label="@string/tasbih"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT" />
+            <!-- Pushed by the app when the count changes; no periodic polling. -->
+            <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="0" />
+        </service>
+
+        <!-- The Qibla bearing; opens the compass. -->
+        <service
+            android:name=".complication.QiblaComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_qibla"
+            android:label="@string/qibla"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+            <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,MONOCHROMATIC_IMAGE" />
+            <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="0" />
+        </service>
+
+        <!-- "Noor" tile: Hijri date and shortcuts. -->
+        <service
+            android:name=".tile.ToolsTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tasbih"
+            android:label="@string/tile_tools_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_tools_preview" />
+            <meta-data android:name="com.google.android.wearable.tile.PREVIEW" android:resource="@drawable/tile_tools_preview" />
         </service>
 
         <!-- "Prayer times" tile. -->

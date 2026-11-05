@@ -1,5 +1,6 @@
 package com.noor.app.data
 
+import com.noor.shared.geo.OfficialTimetables
 import com.noor.prayer.CalculationProfile
 import com.noor.prayer.authority.Authorities
 import com.noor.prayer.authority.Authority

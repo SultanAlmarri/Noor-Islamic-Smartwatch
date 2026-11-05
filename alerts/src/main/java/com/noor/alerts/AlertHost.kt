@@ -2,6 +2,7 @@ package com.noor.alerts
 
 import android.content.Context
 import android.content.Intent
+import androidx.core.app.NotificationCompat
 import com.noor.prayer.WatchConfig
 import com.noor.prayer.alerts.AlertDevice
 
@@ -24,6 +25,12 @@ interface AlertHost {
 
     /** Opens the app; used when the notification is tapped. */
     fun launchIntent(context: Context): Intent
+
+    /**
+     * Last chance to add to the notification shown while a sound plays, before it is posted. The watch uses this to
+     * make it an Ongoing Activity (an icon on the watch face and in Recents that leads back to the Stop button).
+     */
+    fun decoratePlaying(context: Context, notificationId: Int, builder: NotificationCompat.Builder, title: String) {}
 }
 
 internal val Context.alertHost: AlertHost? get() = applicationContext as? AlertHost

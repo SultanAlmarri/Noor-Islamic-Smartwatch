@@ -49,7 +49,7 @@ import com.noor.app.ui.watch.Pending
 import com.noor.app.data.WatchNode
 import com.noor.app.data.WatchSetupState
 import com.noor.prayer.WatchReport
-import com.noor.app.data.compass.CompassReading
+import com.noor.shared.compass.CompassReading
 import com.noor.app.ui.qibla.CalibrationGuide
 import com.noor.app.ui.qibla.QiblaContent
 import com.noor.app.ui.qibla.QiblaPlace
@@ -87,7 +87,7 @@ class ScreenshotTest {
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
 
-    private fun todayUi(s: AppSettings, tables: com.noor.app.data.OfficialTimetables? = null, now: java.time.Instant = this.now): TodayUi {
+    private fun todayUi(s: AppSettings, tables: com.noor.shared.geo.OfficialTimetables? = null, now: java.time.Instant = this.now): TodayUi {
         val place = PrayerProvider.place(s)!!
         val profile = PrayerProvider.profile(s, place)
         val cache = DayCache(tables)

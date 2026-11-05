@@ -28,6 +28,8 @@ data class WatchReport(
     val alertsArmed: Int? = null,
     /** Sounds the phone sent to the watch (full Adhans, imported sounds), by id. */
     val sounds: Set<String> = emptySet(),
+    /** The user chose the watch's own settings on the watch, so it does not follow the phone's (null = not reported). */
+    val usingWatchSettings: Boolean? = null,
 ) {
     fun encode(): String = buildString {
         fun put(k: String, v: Any?) { if (v != null) append(k).append('=').append(v).append('\n') }
@@ -36,6 +38,7 @@ data class WatchReport(
         put("faceActive", faceActive); put("configAt", configReceivedAtMs); put("updated", updatedAtMs)
         put("notif", notificationsAllowed); put("exact", exactAlarms); put("armed", alertsArmed)
         if (sounds.isNotEmpty()) put("sounds", sounds.sorted().joinToString(","))
+        put("own", usingWatchSettings)
     }
 
     companion object {
@@ -61,6 +64,7 @@ data class WatchReport(
                 exactAlarms = m["exact"]?.let { it == "true" },
                 alertsArmed = m["armed"]?.toIntOrNull(),
                 sounds = m["sounds"]?.split(',')?.filter { com.noor.prayer.alerts.SoundIds.isValid(it) }?.toSet().orEmpty(),
+                usingWatchSettings = m["own"]?.let { it == "true" },
             )
         }.getOrNull()
     }

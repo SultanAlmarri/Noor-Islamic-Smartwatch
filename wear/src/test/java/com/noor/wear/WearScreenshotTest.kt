@@ -106,7 +106,7 @@ class WearScreenshotTest {
 
     @Test fun appTileAndComplication() {
         var config by mutableStateOf<WatchConfig?>(TestConfigs.dubai("en"))
-        rule.setContent { NoorWearContent(config, clock = { TestConfigs.afternoon }, showFaceSection = false) }
+        rule.setContent { NoorWearContent(config, clock = { TestConfigs.afternoon }) }
 
         rule.waitUntil(10_000) { rule.onAllNodesWithText("Asr").fetchSemanticsNodes().isNotEmpty() }
         rule.mainClock.advanceTimeBy(1500); rule.waitForIdle()
@@ -118,8 +118,9 @@ class WearScreenshotTest {
         save(drawView(rule.activity.window.decorView), "w02_app_ar")
 
         config = null
+        rule.waitUntil(10_000) { rule.onAllNodesWithText("Use my location").fetchSemanticsNodes().isNotEmpty() }
         rule.mainClock.advanceTimeBy(1500); rule.waitForIdle()
-        save(drawView(rule.activity.window.decorView), "w03_app_setup")
+        save(drawView(rule.activity.window.decorView), "w03_app_welcome")
 
         // Tile, rendered by the same renderer library the watch uses.
         val ctx = RuntimeEnvironment.getApplication()

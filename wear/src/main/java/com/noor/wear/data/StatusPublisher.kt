@@ -11,10 +11,16 @@ import com.noor.wear.facepush.FacePush
 import com.noor.wear.facepush.FaceState
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Tells the phone what is on this watch (app version, Wear OS level, Noor face), through the Data Layer. */
 object StatusPublisher {
     suspend fun publish(context: Context) {
+        // Never hold up the caller (alarms, set-up) on the phone connection: give up after a few seconds.
+        withTimeoutOrNull(8_000) { send(context) }
+    }
+
+    private suspend fun send(context: Context) {
         runCatching {
             val app = context.applicationContext as NoorWearApp
             val face = FacePush(context).state()
@@ -35,6 +41,7 @@ object StatusPublisher {
                     c.alerts?.let { com.noor.prayer.alerts.AlertPlanner.plan(c, it, com.noor.prayer.alerts.AlertDevice.WATCH, java.time.Instant.now()).size }
                 },
                 sounds = ReceivedSounds.ids(context),
+                usingWatchSettings = app.config.state.first().source == ConfigSource.WATCH,
             )
             val req = PutDataMapRequest.create(WatchReport.PATH).apply { dataMap.putString(WatchReport.KEY, report.encode()) }
                 .asPutDataRequest().setUrgent()

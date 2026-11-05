@@ -72,7 +72,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.noor.app.data.AppSettings
-import com.noor.app.data.OfficialTimetables
+import com.noor.shared.geo.OfficialTimetables
 import com.noor.app.data.PrayerProvider
 import com.noor.app.ui.adhan.AdhanScreen
 import com.noor.app.ui.adhan.MySoundsScreen

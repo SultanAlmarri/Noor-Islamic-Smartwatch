@@ -7,10 +7,10 @@ import com.noor.alerts.AlertHost
 import com.noor.alerts.AlertNotifications
 import com.noor.alerts.AlertScheduler
 import com.noor.alerts.CustomSounds
-import com.noor.app.data.GazetteerStore
+import com.noor.shared.geo.GazetteerStore
 import com.noor.app.data.LocationRepository
 import com.noor.app.data.LocationWorker
-import com.noor.app.data.OfficialTimetables
+import com.noor.shared.geo.OfficialTimetables
 import com.noor.app.data.SettingsRepository
 import com.noor.app.data.TimetableUpdater
 import com.noor.app.data.WatchSetup

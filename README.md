@@ -6,13 +6,13 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 **Install:** [latest development build](https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/tag/dev-latest)
 · [step-by-step guide](docs/INSTALL.md)
 
-## Status (4 November 2026)
+## Status (5 November 2026, version 0.7.0)
 
 | Part | State |
 |---|---|
 | Prayer-time engine (`core/prayer`) | Built and tested: NREL SPA port, 12 calculation profiles, high-latitude rules, Hijri date. Dubai profile matches 527 of 588 official IACAD times exactly, the rest by 1 minute |
 | Phone app (`app`) | Builds and passes its tests on every push: dashboard, settings, city picker, onboarding, location, watch sync |
-| Watch app (`wear`) | Builds and passes its tests: receives settings from the phone, calculates offline, app screen, "Prayer times" tile, "Next prayer" complication (short, long, ranged) |
+| Watch app (`wear`) | Builds and passes its tests: works on its own or with the phone; home with live countdown, Qibla compass, tasbih counter (tap or bezel), Hijri calendar with upcoming days, on-watch set-up (own location or city search), settings and sync; two tiles and four complications; Ongoing Activity during the Adhan ([WATCH.md](docs/WATCH.md)) |
 | Watch face via the watch app | v1.3.2 face packaged for Watch Face Push (Wear OS 6); passes all 10 checks of Google's official validator at every build |
 | Watch face v1.3.2 (`com.noorface.prayer`) | Preserved unchanged in `legacy/`; still installed separately |
 | Blind accuracy test | Predictions for Dec 2026 – Jun 2027 frozen; scored monthly against IACAD (`accuracy/blind/`) |
@@ -25,16 +25,17 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 
 | Path | What it is |
 |---|---|
-| `core/prayer` | Pure Kotlin prayer engine and the phone↔watch settings format (`WatchConfig`), shared by both apps |
+| `core/prayer` | Pure Kotlin prayer engine, the phone↔watch settings format (`WatchConfig`), the watch's own set-up (`LocalSetup`), tasbih and Islamic calendar logic, shared by both apps |
 | `app` | Phone app: Jetpack Compose, Material 3, DataStore, WorkManager, fused location, Wear OS Data Layer |
 | `alerts` | Prayer alerts shared by both apps: AlarmManager scheduling, Adhan player service, notifications, sound library |
-| `wear` | Watch app: Compose for Wear OS (Material 3), tile (ProtoLayout Material 3), complication data source, Watch Face Push |
+| `shared` | Android pieces for both apps: compass sensor, offline gazetteer and official timetables (code and data) |
+| `wear` | Watch app: Compose for Wear OS (Material 3) with navigation, tiles (ProtoLayout Material 3), complication data sources, Ongoing Activity, Watch Face Push |
 | `legacy/` | Frozen copy of the working watch face v1.3.2 and its APK |
 | `tools/watchface/` | Packages the watch face for Watch Face Push and validates it with Google's validator |
 | `tools/sounds/` | Generates the alert sounds, fetches and verifies the licensed Adhan recordings, builds the sound library |
 | `accuracy/` | Official IACAD datasets, research tools, blind test |
 | `signing/` | Public development keys (see its README); no release key is stored here |
-| `docs/` | `ARCHITECTURE.md` (how each part works), `DESIGN.md`, `ALERTS.md`, `SOUNDS.md`, `INSTALL.md`, `PRAYER_ACCURACY.md` |
+| `docs/` | `ARCHITECTURE.md` (how each part works), `WATCH.md`, `DESIGN.md`, `ALERTS.md`, `SOUNDS.md`, `INSTALL.md`, `PRAYER_ACCURACY.md` |
 
 ## How phone and watch work together
 
@@ -45,6 +46,9 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
   minute and it keeps working with the phone off, out of range or without internet.
 - The complication sends two days of entries at once; the watch face switches to the next prayer on time and draws the
   countdown itself, so the watch app does not need to wake up every minute.
+- Without the phone app, the watch can be set up on the wrist (its own location or a city) and builds the same kind of
+  configuration itself, with the same authority rules and bundled official timetables. "Sync with phone" on the watch
+  asks the phone to send its settings again. Details: [WATCH.md](docs/WATCH.md).
 
 ## Build
 

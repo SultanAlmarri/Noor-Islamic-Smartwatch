@@ -1,5 +1,6 @@
 package com.noor.app.data
 
+import com.noor.shared.geo.GazetteerStore
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context

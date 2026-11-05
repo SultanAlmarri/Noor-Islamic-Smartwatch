@@ -1,4 +1,4 @@
-package com.noor.app.data.compass
+package com.noor.shared.compass
 
 import android.content.Context
 import android.hardware.GeomagneticField
@@ -22,11 +22,11 @@ import kotlinx.coroutines.flow.conflate
 
 /** One compass reading, already corrected to true north. */
 data class CompassReading(
-    /** Heading of the phone's top edge, degrees clockwise from true north, smoothed. */
+    /** Heading of the screen's top edge (the phone's top, the watch's 12 o'clock), degrees clockwise from true north, smoothed. */
     val trueHeadingDeg: Double,
     /** Magnetic declination applied (east positive), from the World Magnetic Model for this place and date. */
     val declinationDeg: Double,
-    /** The sensor's own estimate of heading accuracy, when the phone reports one (rotation-vector sensor). */
+    /** The sensor's own estimate of heading accuracy, when the device reports one (rotation-vector sensor). */
     val headingAccuracyDeg: Double?,
     val magnetometerStatus: Int?,
     val fieldMicroTesla: Double?,
@@ -41,15 +41,16 @@ data class CompassReading(
 
 sealed interface CompassAvailability {
     data object Available : CompassAvailability
-    /** No magnetometer: the phone cannot measure direction at all. */
+    /** No magnetometer: the device cannot measure direction at all. */
     data object NoSensor : CompassAvailability
 }
 
 /**
  * Wraps Android's motion sensors. Sensors are registered only while the flow is collected (the Qibla screen is on
- * screen), so the compass costs no battery otherwise.
+ * screen), so the compass costs no battery otherwise. [samplingUs] is the rotation-vector rate (the watch asks for a
+ * slower one than the phone).
  */
-class CompassSensor(private val context: Context) {
+class CompassSensor(private val context: Context, private val samplingUs: Int = SensorManager.SENSOR_DELAY_GAME) {
     private val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val rotation: Sensor? = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     private val magnetic: Sensor? = sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
@@ -121,9 +122,9 @@ class CompassSensor(private val context: Context) {
             }
         }
 
-        rotation?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME) }
+        rotation?.let { sm.registerListener(listener, it, samplingUs) }
         magnetic?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI) }
-        if (rotation == null) accel?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME) }
+        if (rotation == null) accel?.let { sm.registerListener(listener, it, samplingUs) }
         awaitClose { sm.unregisterListener(listener) }
     }.conflate()
 }

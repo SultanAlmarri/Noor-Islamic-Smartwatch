@@ -92,6 +92,7 @@ object AlertNotifications {
             .apply { if (detail != null) setStyle(NotificationCompat.BigTextStyle().bigText("$body\n$detail")) }
             .addAction(0, stopLabel, stop)
             .setDeleteIntent(stop)
+            .also { b -> runCatching { context.alertHost?.decoratePlaying(context, ID_PLAYING, b, title) } }
             .build()
     }
 

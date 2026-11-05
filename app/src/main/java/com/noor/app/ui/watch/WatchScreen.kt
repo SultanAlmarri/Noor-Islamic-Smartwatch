@@ -3,6 +3,7 @@ package com.noor.app.ui.watch
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.material.icons.rounded.ViewCarousel
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.NotificationsActive
 import com.noor.app.ui.components.ScreenTitle
 import com.noor.app.ui.settings.SettingsDivider
@@ -175,6 +176,8 @@ fun WatchContent(
             SettingsDivider()
             SettingsItem(Icons.Rounded.NotificationsActive, stringResource(R.string.watch_feature_alerts), stringResource(R.string.watch_feature_alerts_desc), null)
             SettingsDivider()
+            SettingsItem(Icons.Rounded.CloudOff, stringResource(R.string.watch_feature_standalone), stringResource(R.string.watch_feature_standalone_desc), null)
+            SettingsDivider()
             SettingsItem(Icons.Rounded.Palette, stringResource(R.string.watch_feature_editor), stringResource(R.string.watch_feature_editor_desc), null) {
                 Pill(stringResource(R.string.in_development), filled = false)
             }
@@ -241,6 +244,7 @@ private fun WatchCard(
                 !configAvailable -> stringResource(R.string.watch_needs_location)
                 !hasNoor -> stringResource(R.string.step_after_install)
                 syncFailed -> stringResource(R.string.watch_sync_failed)
+                report?.usingWatchSettings == true -> stringResource(R.string.step_sync_own)
                 received != null -> stringResource(R.string.step_sync_done, clock(received))
                 lastSent != null -> stringResource(R.string.step_sync_sent, clock(lastSent))
                 else -> stringResource(R.string.watch_not_sent)

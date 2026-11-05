@@ -1,4 +1,4 @@
-package com.noor.app.data
+package com.noor.shared.geo
 
 import android.content.Context
 import android.util.Log

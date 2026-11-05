@@ -20,6 +20,10 @@ import androidx.wear.protolayout.material3.textEdgeButton
 import androidx.wear.protolayout.modifiers.clickable
 import androidx.wear.protolayout.types.argb
 import androidx.wear.protolayout.types.layoutString
+import androidx.wear.protolayout.types.LayoutString
+import androidx.wear.protolayout.TypeBuilders.StringLayoutConstraint
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
 import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
@@ -35,7 +39,10 @@ import com.noor.wear.localizedFor
 import com.noor.wear.ui.MainActivity
 import java.time.Instant
 
-/** "Prayer times" tile: the next prayer in gold and the two after it. Switches at each prayer by itself. */
+/**
+ * "Prayer times" tile: the next prayer in gold with a live countdown, and the two after it. Switches at each prayer by
+ * itself (one timeline entry per interval, two days ahead).
+ */
 class PrayerTileService : TileService() {
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> =
@@ -113,7 +120,8 @@ class PrayerTileService : TileService() {
                             text(context.getString(R.string.next).uppercase().layoutString, typography = Typography.LABEL_SMALL, color = colorScheme.onSurfaceVariant),
                             text(t.name(iv.next.prayer).layoutString, typography = Typography.DISPLAY_SMALL, color = colorScheme.primary),
                             text(t.time(iv.end, zone).layoutString, typography = Typography.TITLE_LARGE, color = colorScheme.onSurface),
-                            spacer(height = dp(6f)),
+                            text(countdown(context, t, config, iv), typography = Typography.LABEL_MEDIUM, color = colorScheme.primary),
+                            spacer(height = dp(4f)),
                             text(
                                 following.joinToString("   ") { t.name(it.next.prayer) + " " + t.timeShort(it.end, zone) }.layoutString,
                                 typography = Typography.BODY_SMALL, color = colorScheme.onSurfaceVariant, maxLines = 2,
@@ -125,6 +133,26 @@ class PrayerTileService : TileService() {
                     },
                 )
             }
+        }
+
+        /**
+         * "in 1 h 23 min", kept current by the watch itself every minute (a dynamic expression), so the tile never
+         * shows a stale countdown. Rounded up like the app. With Arabic-Indic digits chosen, the watch's renderer
+         * would format numbers its own way, so the line then says only "Next" in the chosen language.
+         */
+        internal fun countdown(context: Context, t: WearText, config: WatchConfig, iv: Interval): LayoutString {
+            val fallback = context.getString(R.string.next)
+            if (config.arabicDigits) return LayoutString(fallback)
+            val until = DynamicInstant.platformTimeWithSecondsPrecision().durationUntil(DynamicInstant.withSecondsPrecision(iv.end))
+            val minutes = until.toIntSeconds().plus(59).div(60)
+            val h = minutes.div(60); val m = minutes.rem(60)
+            val (hu, mu, pre) = if (t.arabic) Triple(" س ", " د", "بعد ") else Triple(" h ", " min", "in ")
+            val withHours = DynamicString.constant(pre).concat(h.format()).concat(DynamicString.constant(hu)).concat(m.format()).concat(DynamicString.constant(mu))
+            val onlyMinutes = DynamicString.constant(pre).concat(m.format()).concat(DynamicString.constant(mu))
+            // Past the time (the tile not yet switched to the next entry): "Now", never a negative countdown.
+            val dynamic = DynamicString.onCondition(minutes.lt(1)).use(DynamicString.constant(context.getString(R.string.now)))
+                .elseUse(DynamicString.onCondition(h.gt(0)).use(withHours).elseUse(onlyMinutes))
+            return LayoutString(fallback, dynamic, StringLayoutConstraint.Builder(pre + "88" + hu + "88" + mu).build())
         }
 
         fun setupLayout(context: Context, device: DeviceParameters): LayoutElement = scope(context, device) {

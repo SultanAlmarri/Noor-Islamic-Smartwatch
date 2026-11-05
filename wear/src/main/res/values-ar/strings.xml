@@ -8,7 +8,7 @@
     <string name="remaining">متبقٍ</string>
     <string name="today">اليوم</string>
     <string name="open">فتح</string>
-    <string name="setup_title">افتح نور على هاتفك</string>
+    <string name="setup_title">افتح نور لضبطه</string>
     <string name="setup_body">يأتي موقعك وطريقة الحساب من تطبيق نور على الهاتف. بعد أول مزامنة تحسب الساعة المواقيت بنفسها دون اتصال.</string>
     <string name="setup_waiting">بانتظار الهاتف…</string>
     <string name="synced_from_phone">من الهاتف · %1$s</string>
@@ -34,4 +34,106 @@
     <string name="alerts_next">التالي: %1$s %2$s</string>
     <string name="alerts_none">لا توجد تنبيهات صلاة على الساعة.</string>
     <string name="at_time_watch">الساعة %1$s</string>
+
+    <string name="tomorrow">غدًا</string>
+    <plurals name="in_days">
+        <item quantity="zero">بعد %1$s يوم</item>
+        <item quantity="one">بعد يوم</item>
+        <item quantity="two">بعد يومين</item>
+        <item quantity="few">بعد %1$s أيام</item>
+        <item quantity="many">بعد %1$s يومًا</item>
+        <item quantity="other">بعد %1$s يوم</item>
+    </plurals>
+    <string name="a11y_next_prayer">الصلاة القادمة %1$s، بعد %2$s، الساعة %3$s</string>
+    <string name="settings">الإعدادات</string>
+    <string name="version">الإصدار %1$s</string>
+
+    <string name="qibla">القبلة</string>
+    <string name="qibla_from_north">%1$s من الشمال</string>
+    <string name="qibla_true_north">من الشمال الحقيقي</string>
+    <string name="qibla_summary">%1$s من الشمال · %2$s كم</string>
+    <string name="qibla_facing">أنت باتجاه القبلة</string>
+    <string name="qibla_turn_right">استدر يمينًا</string>
+    <string name="qibla_turn_left">استدر يسارًا</string>
+    <string name="qibla_starting">جارٍ تشغيل البوصلة…</string>
+    <string name="qibla_hold_level">اجعل معصمك مستويًا</string>
+    <string name="qibla_calibrate">حرّك معصمك على شكل الرقم ٨ للمعايرة</string>
+    <string name="qibla_no_compass">لا تحتوي هذه الساعة على بوصلة. استعن بالاتجاه مع معلم قريب أو الشمس.</string>
+    <string name="qibla_in_makkah">أنت في مكة: استقبل الكعبة.</string>
+
+    <string name="tasbih">التسبيح</string>
+    <string name="tasbih_today">اليوم %1$s</string>
+    <string name="tasbih_start">المس للعدّ</string>
+    <string name="tasbih_count_action">عُدّ</string>
+    <string name="tasbih_of">%1$s من %2$s</string>
+    <string name="tasbih_target">من %1$s</string>
+    <string name="tasbih_target_step">من %1$s · %2$s/%3$s</string>
+    <string name="tasbih_free">عدّ حرّ</string>
+    <string name="tasbih_free_title">عدّ حرّ</string>
+    <string name="tasbih_undo">تراجع عن واحدة</string>
+    <string name="tasbih_options">الأذكار والخيارات</string>
+    <string name="tasbih_round_done">تمّ</string>
+    <string name="tasbih_round_done_body">تقبّل الله منك</string>
+    <string name="tasbih_after_prayer">أذكار بعد الصلاة</string>
+    <string name="tasbih_no_target">بلا عدد محدد، تنبيه كل ٣٣</string>
+    <string name="tasbih_times">%1$s مرة</string>
+    <string name="tasbih_reset">البدء من جديد</string>
+    <string name="tasbih_vibrate">اهتزاز مع كل عدّة</string>
+    <string name="tasbih_totals">اليوم %1$s · الإجمالي %2$s</string>
+    <string name="tasbih_private">يبقى العدّ على هذه الساعة فقط.</string>
+
+    <string name="calendar">التقويم الهجري</string>
+    <string name="hijri_date">التاريخ الهجري</string>
+    <string name="calendar_day_of_month">اليوم %1$s من %2$s</string>
+    <string name="calendar_ahead">القادم</string>
+    <string name="calendar_under_way">الآن</string>
+    <string name="calendar_note">التواريخ حسب تقويم أم القرى مع تعديل التاريخ الهجري الذي اخترته. قد يختلف اليوم الفعلي بحسب إعلان رؤية الهلال في بلدك.</string>
+
+    <string name="source_phone">من هاتفك</string>
+    <string name="source_watch">مضبوطة على هذه الساعة</string>
+    <string name="sync_now">المزامنة مع الهاتف</string>
+    <string name="sync_working">جارٍ سؤال الهاتف…</string>
+    <string name="sync_done">محدّثة</string>
+    <string name="sync_failed">تعذّر الوصول إلى الهاتف</string>
+    <string name="sync_failed_body">افتح نور على الهاتف أو تحقّق من اتصال البلوتوث. تستمر الساعة في العمل في الأثناء.</string>
+    <string name="use_watch_settings">استخدام إعدادات الساعة</string>
+    <string name="use_watch_settings_body">بدلًا من إعدادات الهاتف</string>
+    <string name="updated_now">حُدّثت الآن</string>
+    <string name="updated_min">حُدّثت قبل %1$s د</string>
+    <string name="updated_hours">حُدّثت قبل %1$s س</string>
+    <string name="updated_days">حُدّثت قبل %1$s يوم</string>
+    <string name="location">الموقع</string>
+    <string name="location_change">موقعك أو مدينة</string>
+    <string name="asr">العصر</string>
+    <string name="asr_default">كما تحسبه الجهة الرسمية</string>
+    <string name="asr_standard">الجمهور (الشافعي والمالكي والحنبلي)</string>
+    <string name="asr_hanafi">الحنفي (يبدأ لاحقًا)</string>
+    <string name="alerts_on_watch">تنبيهات الصلاة</string>
+    <string name="alert_sound">الصوت</string>
+    <string name="alert_style_adhan">مطلع الأذان</string>
+    <string name="alert_style_chime">رنين هادئ</string>
+    <string name="alert_style_notification">إشعار</string>
+    <string name="alert_prayers">الصلوات</string>
+    <string name="alert_prayers_none">لا شيء</string>
+    <string name="get_phone_app">نور على هاتفك</string>
+    <string name="get_phone_app_body">يفتح صفحة التنزيل على الهاتف</string>
+
+    <string name="welcome_title">نور</string>
+    <string name="welcome_body">مواقيت الصلاة والقبلة والأذكار على معصمك، دون الحاجة إلى الهاتف.</string>
+    <string name="use_my_location">استخدام موقعي</string>
+    <string name="use_my_location_body">يبقى على هذه الساعة</string>
+    <string name="locating">جارٍ تحديد موقعك…</string>
+    <string name="locating_body">في الخارج يكون أسرع</string>
+    <string name="location_denied">الموقع غير مسموح لنور. اسمح به أو اختر مدينة.</string>
+    <string name="location_unavailable">لم يُحدَّد الموقع بعد. جرّب في الخارج أو اختر مدينة.</string>
+    <string name="choose_city">اختيار مدينة</string>
+    <string name="welcome_phone">تستخدم نور على هاتفك؟ افتحه مرة وستظهر إعداداته هنا.</string>
+    <string name="welcome_phone_waiting">هاتفك متصل. افتح نور عليه لإرسال إعداداته، أو اضبط الساعة هنا.</string>
+    <string name="search_city">البحث عن مدينة</string>
+    <string name="search_none">لم يُعثر على مكان. جرّب كتابة أخرى.</string>
+    <string name="cities">المدن</string>
+
+    <string name="tile_tools_label">نور</string>
+    <string name="tile_tools_hint">القبلة · التسبيح · التقويم</string>
+    <string name="tile_open_times">المواقيت</string>
 </resources>

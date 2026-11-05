@@ -8,7 +8,7 @@ import com.noor.app.data.AppSettings
 import com.noor.app.data.LocationMode
 import com.noor.app.data.LocationRepository
 import com.noor.app.data.PrayerProvider
-import com.noor.app.data.OfficialTimetables
+import com.noor.shared.geo.OfficialTimetables
 import com.noor.app.data.ResolvedDay
 import com.noor.app.data.ResolvedPlace
 import com.noor.prayer.authority.Authority

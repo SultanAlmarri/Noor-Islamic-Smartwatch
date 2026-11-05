@@ -69,8 +69,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.noor.app.R
-import com.noor.app.data.compass.CompassAvailability
-import com.noor.app.data.compass.CompassReading
+import com.noor.shared.compass.CompassAvailability
+import com.noor.shared.compass.CompassReading
 import com.noor.app.ui.components.GlassCard
 import com.noor.app.ui.components.Hairline
 import com.noor.app.ui.components.Noor

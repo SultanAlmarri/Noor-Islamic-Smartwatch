@@ -71,6 +71,39 @@ class WearText(private val config: WatchConfig?, deviceLocale: Locale = Locale.g
         digits("${h.day} ") + (if (arabic) h.monthNameAr else h.monthNameEn) + digits(" ${h.year}")
 
     fun eventLine(e: TimedEvent, zone: ZoneId): String = name(e.prayer) + "  " + time(e.at, zone)
+
+    fun eventName(e: com.noor.prayer.calendar.IslamicEvent): String = if (arabic) e.ar else e.en
+
+    /** "Thu 8 Feb", "الإثنين ٨ فبراير" (the year only when it is not this year). */
+    fun date(d: java.time.LocalDate, today: java.time.LocalDate): String {
+        val loc = if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH
+        val day = d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, loc)
+        val month = d.month.getDisplayName(java.time.format.TextStyle.SHORT, loc)
+        val year = if (d.year != today.year) " " + d.year else ""
+        return digits("$day ${d.dayOfMonth} $month$year")
+    }
+
+    /** Full Gregorian date for the calendar header: "Thursday 5 November". */
+    fun longDate(d: java.time.LocalDate): String {
+        val loc = if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH
+        return digits(d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, loc) + " " + d.dayOfMonth + " " +
+            d.month.getDisplayName(java.time.format.TextStyle.FULL, loc))
+    }
+
+    /** "258°" kept as one left-to-right run, so Arabic text around it cannot move the degree sign. */
+    fun degrees(value: Double): String = "\u2066" + digits("%.0f".format(value)) + "°\u2069"
+
+    /** "24–26 Nov", or "30 Nov – 2 Dec" across months. */
+    fun dateRange(a: java.time.LocalDate, b: java.time.LocalDate, today: java.time.LocalDate): String {
+        if (a == b) return date(a, today)
+        val loc = if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH
+        val ma = a.month.getDisplayName(java.time.format.TextStyle.SHORT, loc)
+        val mb = b.month.getDisplayName(java.time.format.TextStyle.SHORT, loc)
+        return digits(if (a.month == b.month) "${a.dayOfMonth}–${b.dayOfMonth} $ma" else "${a.dayOfMonth} $ma – ${b.dayOfMonth} $mb")
+    }
+
+    /** "1,234" with the chosen digits. */
+    fun count(n: Long): String = digits("%,d".format(Locale.ENGLISH, n))
 }
 
 /** Resources in the language chosen on the phone (Arabic or English), or the watch's own language when it says "system". */

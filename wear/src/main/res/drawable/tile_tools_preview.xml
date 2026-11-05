@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Picture shown in the tile picker: the Hijri date over three round shortcuts. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="192dp" android:height="192dp"
+    android:viewportWidth="192" android:viewportHeight="192">
+    <path android:fillColor="#FF060B15" android:pathData="M96,0a96,96 0 1,0 0.01,0z"/>
+    <path android:fillColor="#FFE3C27E" android:pathData="M80,30h32a3,3 0 0 1 0,6h-32a3,3 0 0 1 0,-6z"/>
+    <path android:fillColor="#FFF7F2E7" android:pathData="M58,52h76a6,6 0 0 1 0,12h-76a6,6 0 0 1 0,-12z"/>
+    <path android:fillColor="#FF3A2E17" android:pathData="M54,98m-20,0a20,20 0 1,0 40,0a20,20 0 1,0 -40,0M96,98m-20,0a20,20 0 1,0 40,0a20,20 0 1,0 -40,0M138,98m-20,0a20,20 0 1,0 40,0a20,20 0 1,0 -40,0"/>
+    <path android:fillColor="#FFF4E2B8" android:pathData="M46,92l8,-3 8,3 -8,3zM45.5,93l8,3v9l-8,-3zM54.5,96l8,-3v9l-8,3z"/>
+    <path android:fillColor="#FFF4E2B8" android:pathData="M96,98m-7,0a7,7 0 1,0 14,0a7,7 0 1,0 -14,0"/>
+    <path android:fillColor="#FF3A2E17" android:pathData="M96,98m-4,0a4,4 0 1,0 8,0a4,4 0 1,0 -8,0"/>
+    <path android:fillColor="#FFF4E2B8" android:pathData="M141,89a10,10 0 1,0 7,13a8,8 0 1,1 -7,-13z"/>
+    <path android:fillColor="#FFB7C0D2" android:pathData="M70,128h52a4,4 0 0 1 0,8h-52a4,4 0 0 1 0,-8z"/>
+    <path android:fillColor="#FFE3C27E" android:pathData="M62,150h68a16,16 0 0 1 0,32h-68a16,16 0 0 1 0,-32z"/>
+</vector>

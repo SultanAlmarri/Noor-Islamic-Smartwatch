@@ -6,8 +6,8 @@ import com.noor.app.NoorApplication
 import com.noor.app.data.AppSettings
 import com.noor.app.data.PrayerProvider
 import com.noor.app.data.ResolvedPlace
-import com.noor.app.data.compass.CompassReading
-import com.noor.app.data.compass.CompassSensor
+import com.noor.shared.compass.CompassReading
+import com.noor.shared.compass.CompassSensor
 import com.noor.prayer.qibla.Qibla
 import com.noor.prayer.qibla.QiblaResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
