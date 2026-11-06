@@ -39,12 +39,19 @@ data class SoundEntry(
     /** Anything the listener should know about the recording (crowd noise, an excerpt, an early ending). */
     val noteEn: String? = null,
     val noteAr: String? = null,
+    /** For browsing (0.9.5): "haramain", "middle_east", "africa", "asia", "europe", or null for Noor's own sounds. */
+    val region: String? = null,
+    val countryEn: String? = null,
+    val countryAr: String? = null,
+    /** Year of the recording, when known. */
+    val year: Int? = null,
 ) {
     /** False when the original recording does not contain the whole Adhan: only the short version exists. */
     val hasFullRecording: Boolean get() = file != null
     fun note(arabic: Boolean) = if (arabic) noteAr ?: noteEn else noteEn
     fun title(arabic: Boolean) = if (arabic) titleAr else titleEn
     fun place(arabic: Boolean) = if (arabic) placeAr ?: placeEn else placeEn
+    fun country(arabic: Boolean) = if (arabic) countryAr ?: countryEn else countryEn
 }
 
 /** Where to read the audio from. */
@@ -82,8 +89,21 @@ class SoundLibrary(val entries: List<SoundEntry>, private val exists: (String) -
         f.isFile && f.length() > 0 && f.name.startsWith("$id.") && !f.name.endsWith(".part") && f.name.substringBeforeLast('.') == id
     }
 
+    /**
+     * The library Adhan "Random from favourites" plays for [prayer] on [date] ([RandomAdhan]: the same answer on the
+     * phone and the watch), or null when no favourite fits (the default Adhan is used then).
+     */
+    fun randomPick(favourites: List<String>, prayer: Prayer, date: java.time.LocalDate, full: Boolean = false): String? =
+        com.noor.prayer.alerts.RandomAdhan.pick(
+            // For the full Adhan, only favourites that exist in full (decided from the catalogue, so the watch agrees).
+            favourites.filter { id -> byId(id)?.let { it.kind == SoundKind.ADHAN && (!full || it.hasFullRecording) } == true },
+            prayer, date,
+        ) { id -> byId(id)?.fajr == true }
+
     /** Picks the file to play for [alert] at [prayer], falling back openly when the chosen file is unavailable. */
-    fun resolve(prayer: Prayer, alert: PrayerAlert, custom: CustomSounds?): ResolvedSound? {
+    fun resolve(prayer: Prayer, alert0: PrayerAlert, custom: CustomSounds?, favourites: List<String> = emptyList(),
+                date: java.time.LocalDate = java.time.LocalDate.now()): ResolvedSound? {
+        val alert = if (alert0.soundId == SoundIds.RANDOM) alert0.copy(soundId = randomPick(favourites, prayer, date, full = alert0.mode == AlertMode.ADHAN)) else alert0
         fun fallbackSound(sub: Substitution): ResolvedSound? =
             byId(SoundIds.DEFAULT_SOUND)?.let { e -> e.file?.takeIf(exists)?.let { ResolvedSound(SoundSource.Asset(it), e, null, false, sub) } }
 
@@ -175,6 +195,9 @@ class SoundLibrary(val entries: List<SoundEntry>, private val exists: (String) -
                     shortFile = short?.optString("file")?.ifEmpty { null }, shortSeconds = short?.optDouble("seconds"),
                     credit = credit,
                     noteEn = o.optString("note_en").ifEmpty { null }, noteAr = o.optString("note_ar").ifEmpty { null },
+                    region = o.optString("region").ifEmpty { null },
+                    countryEn = o.optString("country_en").ifEmpty { null }, countryAr = o.optString("country_ar").ifEmpty { null },
+                    year = o.optInt("year", 0).takeIf { it > 0 },
                 )
             }
         }

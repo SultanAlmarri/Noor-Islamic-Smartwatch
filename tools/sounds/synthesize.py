@@ -111,9 +111,84 @@ def calm_ambience():
     return s * env(len(t), 4.0, 6.0)
 
 
+# 0.9.5: seven more. Each has its own random generator, so the seven sounds above are generated exactly as before.
+
+def dawn_bells():
+    # Three bells falling through a pentatonic phrase, the last left to ring.
+    b = np.zeros(int(6.0 * SR))
+    for i, f in enumerate([783.99, 659.25, 523.25]):
+        place(b, (0.9 - 0.15 * i) * bell(f, 4.5 - i * 0.4, decay=0.9 + 0.2 * i), 0.05 + i * 0.7)
+    return b
+
+
+def wooden_knock():
+    # A soft mallet on wood: a short, damped resonance with a hollow body, twice.
+    def knock():
+        t = np.arange(int(0.25 * SR)) / SR
+        s = sum(a * np.sin(2 * np.pi * f * t) * np.exp(-t * d) for f, a, d in ((420, 1.0, 38), (1130, 0.45, 60), (2210, 0.2, 90)))
+        return s * env(len(t), 0.0015, 0.02)
+    b = np.zeros(int(0.9 * SR)); place(b, knock(), 0.02); place(b, 0.8 * knock(), 0.30); return b
+
+
+def rising_tones():
+    # Three soft tones rising (G, B, D), each blooming and fading.
+    b = np.zeros(int(3.6 * SR))
+    for i, f in enumerate([392.00, 493.88, 587.33]):
+        t = np.arange(int(1.6 * SR)) / SR
+        tone = (0.75 * np.sin(2 * np.pi * f * t) + 0.25 * np.sin(2 * np.pi * 2 * f * t)) * env(len(t), 0.12, 1.1)
+        place(b, tone, 0.1 + i * 0.75)
+    return b
+
+
+def water_drops():
+    # Drops falling into still water: quick falling resonances, unevenly spaced.
+    r = np.random.default_rng(11)
+    b = np.zeros(int(4.0 * SR)); t0 = 0.1
+    while t0 < 3.4:
+        f = 900 + r.random() * 900
+        t = np.arange(int(0.18 * SR)) / SR
+        drop = np.sin(2 * np.pi * (f * t + 1800 * t * t)) * np.exp(-t * 32) * env(len(t), 0.001, 0.02)
+        place(b, (0.5 + 0.5 * r.random()) * drop, t0)
+        t0 += 0.18 + r.random() * 0.45
+    return b
+
+
+def wind_chimes():
+    # Chimes stirred by a light wind: tubes in a pentatonic scale, struck now and then, ringing over each other.
+    r = np.random.default_rng(23)
+    scale = [1046.50, 1174.66, 1318.51, 1567.98, 1760.00, 2093.00]
+    b = np.zeros(int(12.0 * SR)); t0 = 0.1
+    while t0 < 10.5:
+        f = scale[r.integers(0, len(scale))]
+        place(b, (0.35 + 0.4 * r.random()) * bell(f, 2.6, partials=((1, 1.0, 1.0), (2.76, 0.30, 1.8), (5.40, 0.12, 2.6)), decay=1.1), t0)
+        t0 += 0.15 + r.random() * 0.7
+    return b * env(len(b), 0.5, 1.5)
+
+
+def singing_bowl():
+    # A struck bowl: low, inharmonic partials that beat slowly as they fade.
+    t = np.arange(int(8.0 * SR)) / SR
+    parts = ((220.0, 1.0, 0.35), (221.2, 0.6, 0.38), (603.0, 0.45, 0.6), (1157.0, 0.22, 0.9), (1866.0, 0.10, 1.3))
+    s = sum(a * np.sin(2 * np.pi * f * t) * np.exp(-t * d) for f, a, d in parts)
+    return s * env(len(t), 0.01, 1.0)
+
+
+def soft_pulse():
+    # Two gentle pulses, a pause, two more: noticeable without being sharp.
+    def pulse():
+        t = np.arange(int(0.22 * SR)) / SR
+        return (np.sin(2 * np.pi * 740 * t) + 0.3 * np.sin(2 * np.pi * 1480 * t)) * env(len(t), 0.03, 0.12)
+    b = np.zeros(int(1.9 * SR))
+    for at in (0.05, 0.35, 1.05, 1.35):
+        place(b, pulse(), at)
+    return b
+
+
 SOUNDS = {
     'alt_two_ticks': two_ticks, 'alt_soft_chime': soft_chime, 'alt_subtle_bell': subtle_bell, 'alt_gentle_tone': gentle_tone,
     'alt_melodic_chimes': melodic_chimes, 'alt_morning_birds': morning_birds, 'alt_calm_ambience': calm_ambience,
+    'alt_dawn_bells': dawn_bells, 'alt_wooden_knock': wooden_knock, 'alt_rising_tones': rising_tones, 'alt_water_drops': water_drops,
+    'alt_wind_chimes': wind_chimes, 'alt_singing_bowl': singing_bowl, 'alt_soft_pulse': soft_pulse,
 }
 
 if __name__ == '__main__':

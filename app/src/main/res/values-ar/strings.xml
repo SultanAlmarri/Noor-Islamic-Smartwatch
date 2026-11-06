@@ -232,7 +232,7 @@
     <string name="adhan_dnd_off">متوقف: عندما يكون الهاتف صامتًا أو على الاهتزاز أو في «عدم الإزعاج» يصلك إشعار صامت بدلًا من الأذان.</string>
     <string name="adhan_volume_note">يعمل الأذان بمستوى صوت المنبّه، فيُسمع حتى لو كان صوت الوسائط مكتومًا.</string>
     <string name="adhan_library_section">المكتبة</string>
-    <string name="adhan_library">مكتبة الأصوات والحقوق</string>
+    <string name="adhan_library">مكتبة الأذان</string>
     <string name="adhan_library_desc">أذانات: %1$s · أصوات تنبيه: %2$s، مع مصادرها وتراخيصها</string>
     <string name="adhan_my_sounds">أصواتي</string>
     <string name="adhan_my_sounds_desc_empty">استورد ملفاتك بصيغة MP3 أو M4A أو AAC أو WAV</string>
@@ -243,7 +243,7 @@
     <string name="adhan_fajr_note">أذان الفجر يتضمن «الصلاة خير من النوم».</string>
     <string name="adhan_fajr_warn">هذا التسجيل لا يتضمن «الصلاة خير من النوم». يُستحسن اختيار أذان الفجر لصلاة الفجر.</string>
     <string name="adhan_badge_fajr">الفجر</string>
-    <string name="adhan_opening_only">المطلع فقط</string>
+    <string name="adhan_opening_only">قصير فقط</string>
     <string name="adhan_volume">مستوى الصوت</string>
     <string name="adhan_vibrate">اهتزاز</string>
     <string name="adhan_stop_after">الإيقاف بعد</string>
@@ -392,4 +392,22 @@
     <string name="kw_theme">داكن فاتح ليلي نهاري مظهر مع الشمس</string>
     <string name="kw_watch">ساعة ذكية واجهة بلاطة جالكسي</string>
     <string name="kw_accuracy">مصادر دقة جدول رسمي ترخيص</string>
+    <string name="lib_intro">%1$s تسجيلًا من %2$s دولة. كلها مرخّصة ترخيصًا حرًّا ومنسوبة إلى من سجّلها. اضغط ▶ للاستماع؛ والضغط على غيره ينتقل إليه فورًا لتقارن بين الأصوات.</string>
+    <string name="lib_search">ابحث بالمكان أو الدولة أو المسجد أو المؤذن</string>
+    <string name="lib_filter_all">الكل</string>
+    <string name="lib_filter_favourites">المفضلة</string>
+    <string name="lib_region_haramain">مكة والمدينة</string>
+    <string name="lib_region_middle_east">الشرق الأوسط</string>
+    <string name="lib_region_africa">أفريقيا</string>
+    <string name="lib_region_asia">آسيا</string>
+    <string name="lib_region_europe">أوروبا</string>
+    <string name="lib_nothing">لا يوجد تسجيل مطابق.</string>
+    <string name="lib_no_favourites">لا مفضلة بعد. اضغط ♡ على التسجيلات التي تحبها.</string>
+    <string name="lib_favourites_hint">يمكن أن تتناوب مفضلتك: اختر «عشوائي من المفضلة» لأي صلاة.</string>
+    <string name="lib_favourite">أضف إلى المفضلة</string>
+    <string name="lib_unfavourite">أزل من المفضلة</string>
+    <string name="lib_credit_title">النسبة والترخيص</string>
+    <string name="adhan_random">عشوائي من المفضلة</string>
+    <string name="adhan_random_detail">أذان مختلف من مفضلتك (%1$s) في كل مرة؛ لا يتكرر أحدها حتى تُسمع كلها.</string>
+    <string name="adhan_random_needs">اختر أذانين على الأقل في المفضلة (♡) من مكتبة الأذان.</string>
 </resources>

@@ -14,7 +14,7 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: **0.9.4** for both apps (versionCode 13). Everything is on `main`; there are no other branches.
+Current version: **0.9.5** for both apps (versionCode 14). Everything is on `main`; there are no other branches.
 
 ## The owner
 
@@ -64,7 +64,7 @@ Current version: **0.9.4** for both apps (versionCode 13). Everything is on `mai
 | `tools/` | Watch-face packaging and validation, sound pipeline, gazetteer and SPA table generators, verification |
 | `accuracy/` | Official IACAD datasets, research tools, the blind test (scored monthly by a GitHub workflow) |
 | `docs/` | `HANDOVER.md`, `ARCHITECTURE.md`, `DESIGN.md`, `WATCH.md`, `ALERTS.md`, `SOUNDS.md`, `AUTHORITIES.md`, `PRAYER_ACCURACY.md`, `INSTALL.md` |
-| `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `device-alerts.yml` (the real alarm → Adhan path on Android 14/15 emulators), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` |
+| `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `device-alerts.yml` (the real alarm → Adhan path on Android 14/15 emulators), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` (verified Adhan downloads), `discover-sounds.yml` (Commons research list) |
 
 ## Build and test
 

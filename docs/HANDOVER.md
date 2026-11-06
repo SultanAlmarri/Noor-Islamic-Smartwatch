@@ -204,7 +204,7 @@ questions itself. Each phase ships as its own version, with renders to review, a
 | 3 · Home screen | 0.9.2 | All five prayers visible without scrolling; no "Official timetable" badge or source line (method moves to Settings); fix the midnight star/cloud edge and the sun path cutting through mountains; a truer sky (sun-side glow, Earth's shadow, Belt of Venus, twilight steps); a < 1 s opening time-lapse | Done (renders and tests); motion, smoothness and battery need a phone |
 | 4 · Persistent notification | 0.9.3 | Ongoing notification: next prayer, time, live countdown with seconds (system chronometer, no wake-ups), Hijri date, place; updated at each prayer, midnight and on changes | Done (tests and render); needs a phone to see it in the real shade |
 | 5 · Calendar, Settings, Qibla | 0.9.4 | Gregorian/Hijri switch in the date picker; Settings in clearer groups with search and the method choice; Qibla accuracy box of fixed height with hysteresis, mini meter in the calibration tips (three levels kept: the sensor is too coarse for four) | Done (tests and renders); the compass behaviour itself needs a phone |
-| 6 · Adhan library | | Much larger, diverse collection (countries, regions, mosques, reciters) from verified licensed sources; browse, search, preview, compare, favourites; Random Adhan; more alert sounds | |
+| 6 · Adhan library | 0.9.5 | Much larger, diverse collection (countries, regions, mosques, reciters) from verified licensed sources; browse, search, preview, compare, favourites; Random Adhan; more alert sounds | Done: 18 Adhans from 9 countries (was 7 from 6), 14 alert sounds (was 7), library with search, regions, favourites and previews, Random from favourites. Every recording found on Commons was reviewed; growing further needs the owner (see below) |
 
 Owner decisions: scenery stays artistic and offline (no weather service); build the library from the best available
 licensed sources and explore ways to obtain more (famous reciters need permission from rights holders); Claude Code
@@ -213,4 +213,14 @@ runs every test it can and guides the owner, in simple steps, through tests that
 Open owner action: GitHub's default branch is still the old `phase-1-foundation`, and repository settings cannot be
 changed from a Claude Code cloud session. Until it is set to `main` (github.com → the repository → Settings → General →
 Default branch), the monthly blind test does not run on its schedule.
+
+Growing the Adhan library further (needs the owner):
+
+- **Freesound** holds many more freely licensed Adhan field recordings (CC0 and CC BY: Istanbul, Cairo, Jerusalem,
+  Marrakech and more). Its API needs a free personal key: the owner registers at freesound.org and pastes the key into
+  the secure form Claude Code offers (`request_credential`); it is never put in the repository. Only CC0 and CC BY
+  would be used (no "non-commercial" licences, since a store release is planned).
+- **Famous muezzins** (the Haramain, well-known reciters) are copyrighted by broadcasters or labels. They can only be
+  added with written permission from the rights holder, or by commissioning recordings; both are the owner's business
+  decisions.
 

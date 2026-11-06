@@ -77,12 +77,129 @@ All from Wikimedia Commons, each under a licence that allows redistribution. `to
 - Note: A 50-second excerpt recorded in the street, with the city around it.
 - SHA-1 of the original file: `15ea3b39550146a4b18a8d7debadb99f3ea7b5e2`
 
+### Madinah — The Prophet's Mosque
+
+- Recording: [File:33937 ejaz215 call-to-prayer-from-the-prophet-s-mo.ogg](https://commons.wikimedia.org/wiki/File:33937_ejaz215_call-to-prayer-from-the-prophet-s-mo.ogg)
+- Author: ejaz215
+- Licence: CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+- Provenance: Recording of the call to prayer from the Prophet's Mosque, Madinah, published on Freesound by its recordist (ejaz215) under CC BY 3.0.
+- Changes made by Noor: Audio only (video removed); full version: 0.6–186.4 s of the original; short version: 0.6–34.5 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- SHA-1 of the original file: `4aa432b9e44804e7d72af4429bd743aa5fa9e3a4`
+
+### Iran · Dastgah Mahur — Saeed Hatamzadeh-Varmazyar · 2015
+
+- Recording: [File:AzaanMaahur.ogg](https://commons.wikimedia.org/wiki/File:AzaanMaahur.ogg)
+- Author: Saeed Hatamzadeh-Varmazyar
+- Licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+- Provenance: Adhan in the Persian dastgah Mahur, sung and published by the reciter himself, Saeed Hatamzadeh-Varmazyar.
+- Changes made by Noor: Audio only (video removed); full version: 3.3–166.6 s of the original; short version: 3.3–45.6 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- The edited audio in Noor is shared under the same licence (CC BY-SA 4.0).
+- Note: Sung in the Persian dastgah Mahur. Adhans in Iran usually follow the Shia wording, which adds phrases; listen before choosing it.
+- SHA-1 of the original file: `2f6cd3bc6110a77c4f21abad33f4c0986467aebc`
+
+### Hussein Sobhdel (opening) — Iran
+
+- Recording: [File:اذان حسین صبحدل.webm](https://commons.wikimedia.org/wiki/File:%D8%A7%D8%B0%D8%A7%D9%86_%D8%AD%D8%B3%DB%8C%D9%86_%D8%B5%D8%A8%D8%AD%D8%AF%D9%84.webm)
+- Author: حسین صبحدل
+- Licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+- Provenance: Adhan by Master Hussein Sobhdel (Iran); permission confirmed by Wikimedia's volunteer response team (VRTS).
+- Changes made by Noor: Audio only (video removed); short version: 2.5–43.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- The edited audio in Noor is shared under the same licence (CC BY-SA 4.0).
+- Note: Only the opening takbir is offered: the original continues with a long, ornate Adhan and further recordings.
+- SHA-1 of the original file: `5c7948d6610b01615993ea0ab8814cc86c814303`
+
+### Isfahan (excerpt) — Shah Mosque, Isfahan · 2016
+
+- Recording: [File:Tour guide recite Adhan in the Shah mosque in Isfahan, Iran.webm](https://commons.wikimedia.org/wiki/File:Tour_guide_recite_Adhan_in_the_Shah_mosque_in_Isfahan,_Iran.webm)
+- Author: 10EldarionElessar
+- Licence: CC BY 3.0 (https://creativecommons.org/licenses/by/3.0)
+- Provenance: A guide recites the Adhan under the main dome of the Shah Mosque, Isfahan, 2016; published on YouTube under CC BY, licence reviewed on Commons.
+- Changes made by Noor: Audio only (video removed); short version: 0.0–42.4 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- Note: Recited by a guide under the great dome, whose echo carries the voice.
+- SHA-1 of the original file: `ef849ee7dda5c1a9f4c0dc71dc1146a726b33a27`
+
+### Jaffa (excerpt) — Mahmoudiya Mosque, Jaffa · 2011
+
+- Recording: [File:Jaffa Muezzin P1020417.ogv](https://commons.wikimedia.org/wiki/File:Jaffa_Muezzin_P1020417.ogv)
+- Author: Deror_avi
+- Licence: CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)
+- Provenance: The muezzin of the Mahmoudiya Mosque, Jaffa, recorded in 2011 by the uploader (own work, CC BY-SA 3.0).
+- Changes made by Noor: Audio only (video removed); short version: 0.2–38.5 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- The edited audio in Noor is shared under the same licence (CC BY-SA 3.0).
+- SHA-1 of the original file: `97b90628ed17254e181ec302cb86b8a28399d946`
+
+### Marrakech (excerpt) — Koutoubia Mosque
+
+- Recording: [File:Llamada a oracion desde Kutubiya.ogg](https://commons.wikimedia.org/wiki/File:Llamada_a_oracion_desde_Kutubiya.ogg)
+- Author: No machine-readable author provided. Txo assumed (based on copyright claims).
+- Licence: Public domain
+- Provenance: The call to prayer from the Koutoubia Mosque, Marrakech, recorded and released into the public domain by the uploader (own work).
+- Changes made by Noor: Audio only (video removed); short version: 6.0–26.7 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- SHA-1 of the original file: `d5460160cc3d0277904b06d2439b1c3a51b64e36`
+
+### Ghana — Ramadan 2026
+
+- Recording: [File:Athan during Ramadan 2.wav](https://commons.wikimedia.org/wiki/File:Athan_during_Ramadan_2.wav)
+- Author: daSupremo
+- Licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+- Provenance: Adhan during Ramadan in Ghana, recorded by the uploader (own work) for Wiki Loves Ramadan 2026.
+- Changes made by Noor: Audio only (video removed); full version: 0.5–83.6 s of the original; short version: 0.5–19.2 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- The edited audio in Noor is shared under the same licence (CC BY-SA 4.0).
+- Note: A brisk call, under two minutes.
+- SHA-1 of the original file: `5284f5304d87771628b25ba3ee31b0316cb2cfb5`
+
+### Ghana (opening) — Ramadan 2026
+
+- Recording: [File:Athan in Ramadan.wav](https://commons.wikimedia.org/wiki/File:Athan_in_Ramadan.wav)
+- Author: daSupremo
+- Licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+- Provenance: Adhan in Ramadan in Ghana, recorded by the uploader (own work) for Wiki Loves Ramadan 2026.
+- Changes made by Noor: Audio only (video removed); short version: 0.7–23.5 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- The edited audio in Noor is shared under the same licence (CC BY-SA 4.0).
+- SHA-1 of the original file: `32759bc0b8ff5a58d21b91abfde3ef060b4f390f`
+
+### Nigeria — 2026
+
+- Recording: [File:Call to prayer.ogg](https://commons.wikimedia.org/wiki/File:Call_to_prayer.ogg)
+- Author: Isaacayodele32
+- Licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+- Provenance: Call to prayer in Nigeria, recorded by the uploader (own work) for Wiki Loves Africa 2026.
+- Changes made by Noor: Audio only (video removed); full version: 0.0–64.8 s of the original; short version: 0.0–19.6 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- The edited audio in Noor is shared under the same licence (CC BY-SA 4.0).
+- Note: A brisk call, about a minute.
+- SHA-1 of the original file: `fbfe4a4afd34d1b902b7a5ee2cb7446937b07e34`
+
+### Recording 2022 · A — Place not stated by the recordist
+
+- Recording: [File:Beautiful adhan.ogg](https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg)
+- Author: Adam-synagda
+- Licence: CC0 (http://creativecommons.org/publicdomain/zero/1.0/deed.en)
+- Provenance: An Adhan recorded and dedicated to the public domain (CC0) by the uploader (own work); place not stated.
+- Changes made by Noor: Audio only (video removed); full version: 0.4–152.5 s of the original; short version: 0.4–30.6 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- SHA-1 of the original file: `a1fa4fd942401922c5c3301816384aae86956522`
+
+### Recording 2022 · B — Place not stated by the recordist
+
+- Recording: [File:Azan.ogg](https://commons.wikimedia.org/wiki/File:Azan.ogg)
+- Author: Andrewler
+- Licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+- Provenance: An Adhan recorded and published by the uploader (own work, CC BY-SA 4.0); place not stated.
+- Changes made by Noor: Audio only (video removed); full version: 0.4–181.0 s of the original; short version: 0.4–31.3 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.
+- The edited audio in Noor is shared under the same licence (CC BY-SA 4.0).
+- SHA-1 of the original file: `ada13592b01c12b0128af40035ed7a803e08b563`
+
 ## Considered and not used
 
 - *Islamic call to worship.oga* (CC BY-SA 4.0): analysis shows continuous speech, matching its description (an explanation of the Adhan), not a recitation.
 - *Call to prayer by Sabah Fakhry.mp3*: tagged public domain, but it is a commercial recording by a singer who died in 2021; the claim is not credible.
 - *The Adhan – Muslim Call to Prayer – Aaqib Azeez.mp3*: the uploader's authorship could not be confirmed.
+- *Time of Adhan, Great Mosque of Mecca – Jan 6, 2018*: the recording starts during the first phrase, so the Adhan would begin mid-word.
+- *Adhan from the Ali Matan Mosque, Hargeisa* (ASC Leiden): the recording starts in the middle of the Adhan.
+- *The sound of Syria (2007)*: the Damascus section is an edited excerpt, mostly street sound, starting mid-call.
+- *Hminsec150 Konya*: its licence is still awaiting review on Commons.
+- *Oldest recording of the Quran 1885*: Commons itself disputes its date and whether it is the Adhan.
+- Iqamah recordings, spoken readings of the Adhan, and clips dominated by crowd or protest noise.
 
 ## Alert sounds
 
-Two ticks, gentle tone, soft chime, subtle bell, melodic chimes, morning birds and calm ambience are original sounds generated from code by `tools/sounds/synthesize.py` (no samples). They are released under CC0.
+Two ticks, Gentle tone, Soft chime, Subtle bell, Melodic chimes, Morning birds, Calm ambience, Wooden knock, Soft pulse, Rising tones, Water drops, Dawn bells, Singing bowl, Wind chimes are original sounds generated from code by `tools/sounds/synthesize.py` (no samples). They are released under CC0.

@@ -128,6 +128,17 @@ fun PrayerAlertScreen(contentPadding: PaddingValues, prayer: Prayer, onBack: () 
                         Footnote(stringResource(if (chosen != null && !chosen.fajr) R.string.adhan_fajr_warn else R.string.adhan_fajr_note))
                     }
                     GlassCard(Modifier.fillMaxWidth(), padding = 4.dp) {
+                        // Random from favourites (0.9.5): a different favourite each time, none twice in a row.
+                        val usable = alerts.favourites.mapNotNull { lib.byId(it) }.filter { e -> (short || e.hasFullRecording) && (prayer == Prayer.FAJR || !e.fajr) }
+                        val randomDetail = if (usable.size >= 2) stringResource(R.string.adhan_random_detail, f.number(usable.size))
+                            else stringResource(R.string.adhan_random_needs)
+                        SoundRow(
+                            title = stringResource(R.string.adhan_random), detail = randomDetail,
+                            selected = a.soundId == com.noor.prayer.alerts.SoundIds.RANDOM, playing = false, previewLabel = previewLabel,
+                            onSelect = { if (usable.size >= 2) vm.setPrayer(prayer) { it.copy(soundId = com.noor.prayer.alerts.SoundIds.RANDOM) } },
+                            onPreview = null,
+                        )
+                        SettingsDivider()
                         list.forEachIndexed { i, e ->
                             if (i > 0) SettingsDivider()
                             SoundRow(

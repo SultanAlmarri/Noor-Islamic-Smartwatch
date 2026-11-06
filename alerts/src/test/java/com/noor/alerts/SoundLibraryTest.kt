@@ -134,6 +134,27 @@ class SoundLibraryTest {
         assertNull(CustomSounds.extensionFor("application/pdf", "file.pdf"))
         assertNull(CustomSounds.extensionFor(null, "virus.exe"))
     }
+
+    @Test fun randomFromFavouritesPlaysAFavouriteFittingThePrayer() {
+        val phone = lib(phoneFiles)
+        val favs = listOf("adhan.makkah_maghrib_2012", "adhan.madinah_2018", "adhan.malmo_fajr_2012", "alt.soft_chime")
+        val random = PrayerAlert(true, AlertMode.ADHAN_SHORT, SoundIds.RANDOM)
+        val days = (0L until 12L).map { java.time.LocalDate.of(2026, 11, 7).plusDays(it) }
+        // Other prayers: only non-Fajr Adhans from the favourites (never the Fajr Adhan, never an alert sound).
+        val picked = days.map { d -> phone.resolve(Prayer.ASR, random, null, favs, d)!!.entry!!.id }
+        assertTrue(picked.all { it == "adhan.makkah_maghrib_2012" || it == "adhan.madinah_2018" })
+        assertEquals(setOf("adhan.makkah_maghrib_2012", "adhan.madinah_2018"), picked.toSet())
+        // The full Adhan: a favourite that exists only as an opening is skipped (it would only play its opening).
+        val randomFull = random.copy(mode = AlertMode.ADHAN)
+        assertTrue(days.all { d -> phone.resolve(Prayer.ASR, randomFull, null, favs, d)!!.entry!!.id == "adhan.makkah_maghrib_2012" })
+        // Fajr: its own recording.
+        assertEquals("adhan.malmo_fajr_2012", phone.resolve(Prayer.FAJR, random, null, favs, days[0])!!.entry!!.id)
+        // The same day and prayer resolve to the same recording on phone and watch (the watch plays the short one it has).
+        assertEquals(phone.resolve(Prayer.ISHA, random, null, favs, days[3])!!.entry!!.id,
+            lib(watchFiles).resolve(Prayer.ISHA, random, null, favs, days[3])!!.entry!!.id)
+        // No usable favourites: the default Adhan.
+        assertEquals("adhan.makkah_maghrib_2012", phone.resolve(Prayer.DHUHR, random, null, emptyList(), days[0])!!.entry!!.id)
+    }
 }
 
 private object SoundIdsTestHelper { fun valid(id: String) = SoundIds.isValid(id) && SoundIds.isCustom(id) }

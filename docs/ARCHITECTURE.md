@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.9.4).
+Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.9.5).
 
 ## Modules
 
@@ -159,7 +159,7 @@ Full description: `DESIGN.md`.
   (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## Known limitations (0.9.4)
+## Known limitations (0.9.5)
 
 - The 0.8.0 home screen's motion (drifting clouds, drag-the-sun, haptics, frame rate and battery) is checked only in
   code and in still, software-rendered frames; software rendering cannot show animation, real-device smoothness, or

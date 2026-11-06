@@ -17,6 +17,8 @@ and what has and has not been verified.
 | Play in silent mode and Do Not Disturb | Adhan tab | **On by default since 0.9**: the Adhan plays on the alarm stream like an alarm clock, whether the phone is on vibrate, silent or not; under Do Not Disturb the system's own rule for alarms decides (if that rule blocks alarms, Noor says so instead of "playing" silently). Off: while the device is silent, on vibrate or in Do Not Disturb, the alert becomes a silent notification (vibrate-only when the ringer is on vibrate). Up to 0.8 this was off by default, which silenced the Adhan on every phone kept on vibrate: the main cause of "the notification comes but no Adhan". |
 | Test this alert | Prayer page, Alert history | Arms a real alarm 10 s ahead and runs the whole path (alarm → receiver → player service → notification). This is the way to check alerts on a device. |
 | Alert history | Adhan tab | The last 40 alerts on this phone and what actually happened to each: played (and for how long), stopped by the user, replaced by the default Adhan, played by the backup channel, quiet and why, late. "Share report" sends it with the phone's alert set-up as plain text. |
+| Random from favourites | Prayer page (Adhan or Short Adhan) | Rotates through the Adhans marked ♡ in the library: each plays once before any repeats, never the same twice in a row; Fajr rotates its own (Fajr) recordings; for the full Adhan, favourites that exist only as an opening are skipped. Decided from the date and prayer (`RandomAdhan`), so phone and watch always pick the same; the watch receives every favourite it may need. Alert history names the recording that played. |
+| Adhan library | Adhan tab | 18 recordings from 9 countries: search by place, country, mosque or reciter; filter by region, Fajr or favourites; preview at once (tapping another switches, to compare voices); ♡ favourites; "About this recording" with notes, both versions and the full credit. |
 | My sounds | Adhan tab | Import MP3, M4A, AAC or WAV (also OGG, Opus, FLAC) up to 40 MB; rename, replace (keeps the id, so prayers using it keep working), delete (prayers using it move to the default Adhan). |
 
 ## How it works
@@ -74,8 +76,8 @@ instead). A user who force-stops Noor cancels its alarms until Noor is opened ag
 
 ## Sounds
 
-Seven Adhan recordings from Wikimedia Commons (CC0, public domain, CC BY 3.0, CC BY-SA 4.0) and seven original alert
-sounds. Credits, licences, provenance and the exact edits: [SOUNDS.md](SOUNDS.md). Pipeline: `tools/sounds/README.md`.
+Eighteen Adhan recordings from Wikimedia Commons (CC0, public domain, CC BY 3.0, CC BY-SA 3.0 and 4.0) and fourteen
+original alert sounds. Credits, licences, provenance and the exact edits: [SOUNDS.md](SOUNDS.md). Pipeline: `tools/sounds/README.md`.
 
 ## Verified so far
 

@@ -140,6 +140,13 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun setPlayInSilentMode(on: Boolean) = update { it.copy(quietWhenSilent = !on) }
     fun setPrayer(p: Prayer, change: (PrayerAlert) -> PrayerAlert) = update { s -> s.with(p, change(s.alert(p))) }
 
+    /** Adds or removes a library Adhan from the favourites ("Random from favourites" rotates through them). */
+    fun toggleFavourite(id: String) = update { s ->
+        val favs = if (id in s.favourites) s.favourites - id else s.favourites + id
+        // A prayer set to "Random" keeps working when favourites run out: it falls back to the default Adhan by itself.
+        s.copy(favourites = favs)
+    }
+
     /** Picking a mode keeps a sensible sound for it (a Fajr Adhan for Fajr, the chime for sounds). */
     fun setMode(p: Prayer, mode: AlertMode) = setPrayer(p) { a ->
         val keep = when (mode) {

@@ -30,13 +30,16 @@ class WatchSoundSender(private val context: Context, private val custom: CustomS
     fun needed(alerts: AlertSettings?): Set<String> {
         if (alerts == null || !alerts.enabled || !alerts.device.includes(AlertDevice.WATCH)) return emptySet()
         val lib = SoundLibrary.get(context)
-        return Prayer.entries.filter { alerts.alertsOn(it, AlertDevice.WATCH) }.mapNotNull { p ->
+        return Prayer.entries.filter { alerts.alertsOn(it, AlertDevice.WATCH) }.flatMap { p ->
             val a = alerts.alert(p)
-            when (a.mode) {
-                AlertMode.ADHAN -> (lib.byId(a.soundId) ?: lib.byId(if (p == Prayer.FAJR) SoundIds.DEFAULT_FAJR_ADHAN else SoundIds.DEFAULT_ADHAN))
-                    ?.takeIf { it.hasFullRecording }?.id
-                AlertMode.CUSTOM -> a.soundId?.takeIf { custom.get(it) != null }
-                else -> null
+            when {
+                // Random from favourites: the watch picks the same one as the phone would, so it needs all of them.
+                a.mode == AlertMode.ADHAN && a.soundId == SoundIds.RANDOM ->
+                    alerts.favourites.mapNotNull { lib.byId(it) }.filter { it.hasFullRecording }.map { it.id }
+                a.mode == AlertMode.ADHAN -> listOfNotNull((lib.byId(a.soundId) ?: lib.byId(if (p == Prayer.FAJR) SoundIds.DEFAULT_FAJR_ADHAN else SoundIds.DEFAULT_ADHAN))
+                    ?.takeIf { it.hasFullRecording }?.id)
+                a.mode == AlertMode.CUSTOM -> listOfNotNull(a.soundId?.takeIf { custom.get(it) != null })
+                else -> emptyList()
             }
         }.toSet()
     }

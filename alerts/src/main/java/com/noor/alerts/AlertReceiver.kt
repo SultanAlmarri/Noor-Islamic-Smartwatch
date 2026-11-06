@@ -189,7 +189,7 @@ internal object AlertDispatcher {
 
         val custom = CustomSounds(context)
         val library = SoundLibrary.get(context)
-        val resolved = library.resolve(prayer, alert, custom)
+        val resolved = library.resolve(prayer, alert, custom, alerts.favourites, date)
         val isAdhan = alert.mode == AlertMode.ADHAN || alert.mode == AlertMode.ADHAN_SHORT
         if (resolved == null) {
             // No sound file at all on this device: the backup Adhan (played by Android) is still better than nothing.
@@ -203,7 +203,9 @@ internal object AlertDispatcher {
             return
         }
         val detail = notes(describe(text, resolved), substitutionNote(text, resolved.substitution), testNote)
-        val record = log(AlertOutcome.STARTING)
+        // For "Random from favourites", the history names the recording that actually plays.
+        val record = log(AlertOutcome.STARTING).let { r -> resolved.entry?.id?.takeIf { alert.soundId == com.noor.prayer.alerts.SoundIds.RANDOM }
+            ?.let { picked -> r.copy(sound = picked).also { AlertLog.add(context, it) } } ?: r }
         val req = PlayRequest(id, title, body, at.toEpochMilli(), detail, text.string(R.string.noor_alert_stop), resolved.source,
             alert.volumePercent, alerts.gradualSeconds, alert.maxSeconds, alert.vibrate, keepNotification = true,
             logId = record.id, fallback = library.emergencySource(resolved.source),

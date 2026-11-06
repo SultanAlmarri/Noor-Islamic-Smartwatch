@@ -232,7 +232,7 @@
     <string name="adhan_dnd_off">Off: when the phone is silent, on vibrate or in Do Not Disturb, you get a silent notification instead.</string>
     <string name="adhan_volume_note">The Adhan plays on your alarm volume, so it is heard even when media is muted.</string>
     <string name="adhan_library_section">Library</string>
-    <string name="adhan_library">Sound library &amp; credits</string>
+    <string name="adhan_library">Adhan library</string>
     <string name="adhan_library_desc">%1$s Adhans and %2$s alert sounds, with their sources and licences</string>
     <string name="adhan_my_sounds">My sounds</string>
     <string name="adhan_my_sounds_desc_empty">Import your own MP3, M4A, AAC or WAV files</string>
@@ -243,7 +243,7 @@
     <string name="adhan_fajr_note">Fajr Adhans include “As-salatu khayrun min an-nawm” (prayer is better than sleep).</string>
     <string name="adhan_fajr_warn">This recording does not include “As-salatu khayrun min an-nawm”. A Fajr Adhan is recommended for Fajr.</string>
     <string name="adhan_badge_fajr">Fajr</string>
-    <string name="adhan_opening_only">opening only</string>
+    <string name="adhan_opening_only">short only</string>
     <string name="adhan_volume">Volume</string>
     <string name="adhan_vibrate">Vibrate</string>
     <string name="adhan_stop_after">Stop after</string>
@@ -388,4 +388,22 @@
     <string name="kw_theme">dark light night day theme appearance follow the sun</string>
     <string name="kw_watch">Galaxy Wear OS smartwatch watch face tile complication</string>
     <string name="kw_accuracy">sources accuracy official timetable IACAD licence credits</string>
+    <string name="lib_intro">%1$s recordings from %2$s countries. Each is freely licensed and credited to the person who recorded it. Tap ▶ to listen; tapping another switches at once, so you can compare voices.</string>
+    <string name="lib_search">Search by place, country, mosque or reciter</string>
+    <string name="lib_filter_all">All</string>
+    <string name="lib_filter_favourites">Favourites</string>
+    <string name="lib_region_haramain">Makkah and Madinah</string>
+    <string name="lib_region_middle_east">Middle East</string>
+    <string name="lib_region_africa">Africa</string>
+    <string name="lib_region_asia">Asia</string>
+    <string name="lib_region_europe">Europe</string>
+    <string name="lib_nothing">No recording matches.</string>
+    <string name="lib_no_favourites">No favourites yet. Tap ♡ on the recordings you love.</string>
+    <string name="lib_favourites_hint">Your favourites can take turns: choose “Random from favourites” for any prayer.</string>
+    <string name="lib_favourite">Add to favourites</string>
+    <string name="lib_unfavourite">Remove from favourites</string>
+    <string name="lib_credit_title">Credit and licence</string>
+    <string name="adhan_random">Random from favourites</string>
+    <string name="adhan_random_detail">A different one of your %1$s favourites each time; none repeats until all have played.</string>
+    <string name="adhan_random_needs">Mark at least two Adhans as favourites (♡) in the Adhan library.</string>
 </resources>

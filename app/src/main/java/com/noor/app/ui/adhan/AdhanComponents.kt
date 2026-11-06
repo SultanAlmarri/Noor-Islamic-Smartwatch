@@ -109,7 +109,7 @@ fun SoundRow(
     playing: Boolean,
     previewLabel: String,
     onSelect: (() -> Unit)?,
-    onPreview: () -> Unit,
+    onPreview: (() -> Unit)?,
     badge: String? = null,
 ) {
     val c = NoorTheme.colors
@@ -137,8 +137,10 @@ fun SoundRow(
             }
             if (detail != null) Text(detail, style = MaterialTheme.typography.bodySmall, color = c.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        Spacer(Modifier.width(8.dp))
-        PreviewButton(playing, previewLabel, onPreview)
+        if (onPreview != null) {
+            Spacer(Modifier.width(8.dp))
+            PreviewButton(playing, previewLabel, onPreview)
+        }
     }
 }
 
