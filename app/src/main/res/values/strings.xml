@@ -354,4 +354,10 @@
         <item quantity="other">%1$s min late</item>
     </plurals>
     <string name="adhan_public_domain">Public domain</string>
+    <string name="settings_notification_bar">Notification bar</string>
+    <string name="status_setting">Prayer times in the notification bar</string>
+    <string name="status_setting_desc">The next prayer with a live countdown, the Hijri date and your place, always one swipe away.</string>
+    <string name="status_setting_note">Silent, and it uses almost no battery: Android itself runs the seconds, and Noor updates it only at each prayer and at midnight. On Android %1$s and later you can swipe it away; it comes back at the next prayer.</string>
+    <string name="status_channel">Prayer times (always shown)</string>
+    <string name="status_channel_desc">The next prayer and its countdown, kept in the notification shade. Silent.</string>
 </resources>

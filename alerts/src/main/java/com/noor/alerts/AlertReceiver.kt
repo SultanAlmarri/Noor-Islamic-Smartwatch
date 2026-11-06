@@ -38,6 +38,7 @@ class AlertReceiver : BroadcastReceiver() {
                 runCatching { AlertDispatcher.record(app, intent, firedAt, AlertOutcome.FAILED, detail = "${e.javaClass.simpleName}: ${e.message}") }
             } finally {
                 runCatching { AlertScheduler.reschedule(app) }
+                runCatching { app.alertHost?.onPrayerAlarm(app) }
                 pending.finish()
             }
         }

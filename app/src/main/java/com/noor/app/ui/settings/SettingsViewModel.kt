@@ -61,6 +61,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun setTimeFormat(t: TimeFormat) = viewModelScope.launch { repo.setTimeFormat(t) }
     fun setTheme(t: ThemeMode) = viewModelScope.launch { repo.setTheme(t) }
     fun setHijriAdjust(d: Int) = viewModelScope.launch { repo.setHijriAdjust(d) }
+    fun setStatusNotification(on: Boolean) = viewModelScope.launch { repo.setStatusNotification(on) }
     fun completeOnboarding() = viewModelScope.launch { repo.setOnboardingDone() }
 
     fun setLanguage(l: Language) = viewModelScope.launch {

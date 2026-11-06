@@ -39,6 +39,18 @@
             </intent-filter>
         </receiver>
 
+        <!-- The persistent prayer notification: its own update times, restarts, app updates, clock, zone and language. -->
+        <receiver android:name=".notify.StatusRefreshReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.noor.app.STATUS_REFRESH" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Answers "Sync with phone" on the watch by publishing the settings again. -->
         <service
             android:name=".data.WatchRequestService"

@@ -14,7 +14,7 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: **0.9.2** for both apps (versionCode 11). Everything is on `main`; there are no other branches.
+Current version: **0.9.3** for both apps (versionCode 12). Everything is on `main`; there are no other branches.
 
 ## The owner
 

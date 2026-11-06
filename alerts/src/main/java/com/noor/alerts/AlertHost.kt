@@ -29,6 +29,12 @@ interface AlertHost {
      */
     val alertLanguage: String? get() = null
 
+    /**
+     * Called after a prayer alarm has been handled (the alarm wakes the device at the prayer time). The phone uses it to
+     * bring its persistent notification up to date at that same moment.
+     */
+    fun onPrayerAlarm(context: Context) {}
+
     /** Opens the app; used when the notification is tapped. */
     fun launchIntent(context: Context): Intent
 

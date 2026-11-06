@@ -48,6 +48,7 @@ class SettingsRepository(private val context: Context) {
         val theme = stringPreferencesKey("theme")
         val hijri = intPreferencesKey("hijri_adjust")
         val alerts = stringPreferencesKey("alerts_v1")
+        val status = booleanPreferencesKey("status_notification")
         fun offset(p: Prayer) = intPreferencesKey("offset_${p.name.lowercase()}")
     }
 
@@ -78,6 +79,7 @@ class SettingsRepository(private val context: Context) {
             theme = p.enum(K.theme, ThemeMode.SUN),
             hijriAdjust = p[K.hijri] ?: 0,
             alerts = AlertSettings.decode(p[K.alerts]),
+            statusNotification = p[K.status] ?: false,
         )
     }
 
@@ -101,6 +103,7 @@ class SettingsRepository(private val context: Context) {
     suspend fun setNumerals(n: Numerals) = context.dataStore.edit { it[K.numerals] = n.name }
     suspend fun setTimeFormat(f: TimeFormat) = context.dataStore.edit { it[K.timeFormat] = f.name }
     suspend fun setTheme(t: ThemeMode) = context.dataStore.edit { it[K.theme] = t.name }
+    suspend fun setStatusNotification(on: Boolean) = context.dataStore.edit { it[K.status] = on }
     suspend fun setHijriAdjust(d: Int) = context.dataStore.edit { it[K.hijri] = d.coerceIn(-2, 2) }
 
     /** Read-modify-write in one transaction, so quick successive changes never overwrite each other. */

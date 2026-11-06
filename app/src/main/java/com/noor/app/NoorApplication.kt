@@ -53,6 +53,7 @@ class NoorApplication : Application(), AlertHost {
     override suspend fun alertConfig(): WatchConfig? = container.alertConfig()
     override fun launchIntent(context: Context): Intent = Intent(context, MainActivity::class.java)
     override val alertLanguage: String? get() = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language
+    override fun onPrayerAlarm(context: Context) = com.noor.app.notify.StatusNotification.refreshAsync(context)
 
     @OptIn(FlowPreview::class)
     override fun onCreate() {
@@ -75,6 +76,14 @@ class NoorApplication : Application(), AlertHost {
                     AlertScheduler.reschedule(this@NoorApplication)
                     container.watchSounds.syncIfNeeded(it?.alerts)
                 }
+        }
+        // The persistent notification follows the same things, plus its own switch and the display choices.
+        container.scope.launch {
+            container.settings.settings
+                .map { s -> Triple(s.statusNotification, WearSync.configFor(s, 0L, container.timetables), Triple(s.language, s.numerals, s.timeFormat)) }
+                .distinctUntilChanged()
+                .debounce(300)
+                .collect { com.noor.app.notify.StatusNotification.refresh(this@NoorApplication) }
         }
     }
 }

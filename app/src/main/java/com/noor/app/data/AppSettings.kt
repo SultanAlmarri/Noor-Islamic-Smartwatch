@@ -62,4 +62,6 @@ data class AppSettings(
     val hijriAdjust: Int = 0,
     /** Adhan and prayer notifications (shared with the watch through the watch config). */
     val alerts: AlertSettings = AlertSettings(),
+    /** The persistent notification with the next prayer and a live countdown (phone only). */
+    val statusNotification: Boolean = false,
 )

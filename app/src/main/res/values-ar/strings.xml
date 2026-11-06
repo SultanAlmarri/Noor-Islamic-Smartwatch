@@ -358,4 +358,10 @@
         <item quantity="other">متأخر %1$s دقيقة</item>
     </plurals>
     <string name="adhan_public_domain">ملكية عامة</string>
+    <string name="settings_notification_bar">شريط الإشعارات</string>
+    <string name="status_setting">أوقات الصلاة في شريط الإشعارات</string>
+    <string name="status_setting_desc">الصلاة القادمة مع عدّ تنازلي مباشر، والتاريخ الهجري ومكانك، على بُعد سحبة دائمًا.</string>
+    <string name="status_setting_note">صامت، ولا يكاد يستهلك البطارية: أندرويد نفسه يعدّ الثواني، ونور يحدّثه فقط عند كل صلاة وعند منتصف الليل. في أندرويد %1$s وما بعده يمكنك إزاحته، فيعود عند الصلاة التالية.</string>
+    <string name="status_channel">أوقات الصلاة (ظاهرة دائمًا)</string>
+    <string name="status_channel_desc">الصلاة القادمة وعدّها التنازلي، باقية في شريط الإشعارات. صامتة.</string>
 </resources>

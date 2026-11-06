@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.9.2).
+Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.9.3).
 
 ## Modules
 
@@ -120,6 +120,25 @@ Full details: `ALERTS.md`; sounds and credits: `SOUNDS.md`.
 - Phone/Watch/Both: each device alerts only when chosen; phone notifications are local-only, so nothing is duplicated.
 - Full Adhans and imported sounds for watch alerts travel over a Data Layer channel; the watch reports what it holds.
 
+## Persistent prayer notification (0.9.3)
+
+`app/notify/StatusNotification.kt`, switched on in Settings → Notification bar.
+
+- Shows the next prayer and its time, the place and the Hijri date, and a large countdown with seconds. The seconds are
+  ticked by Android (a `Chronometer` counting down inside the notification's own layout), so Noor does not run between
+  updates: no foreground service, no per-second work.
+- Rebuilt only when its content changes: one second after each prayer, just after midnight (the date line), and on
+  any change of place, times, language, digits or clock format (the app's settings flow), on restart, app update,
+  clock, time-zone and language change (`StatusRefreshReceiver`). Its own updates use non-waking alarms (`RTC`): they
+  run as soon as the phone wakes, the only time the notification can be seen. A prayer alarm, which does wake the
+  phone, also refreshes it (`AlertHost.onPrayerAlarm`), so it is right as the screen lights up for the Adhan.
+- Its own silent, low-importance channel (`noor_status`), `CATEGORY_STATUS`, local only (not mirrored to the watch).
+- Limits: on Android 14+ the user can swipe it away (it returns at the next update); the countdown's digits follow the
+  phone's language, not Noor's digit setting (Android formats them); if exact alarms are not allowed, an update can come
+  a little late and the countdown can briefly show a negative time until it does.
+- Tested by `StatusNotificationTest` (content at fixed moments, Friday, Arabic, channel, ongoing, next update armed,
+  turning off); render `55_status_notification_en.png`.
+
 ## Design system
 
 Full description: `DESIGN.md`.
@@ -132,7 +151,7 @@ Full description: `DESIGN.md`.
   (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## Known limitations (0.9.2)
+## Known limitations (0.9.3)
 
 - The 0.8.0 home screen's motion (drifting clouds, drag-the-sun, haptics, frame rate and battery) is checked only in
   code and in still, software-rendered frames; software rendering cannot show animation, real-device smoothness, or

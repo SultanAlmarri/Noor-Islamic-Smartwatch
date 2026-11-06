@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.GpsFixed
 import androidx.compose.material.icons.rounded.Numbers
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Tune
@@ -78,6 +79,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.setBackgroundUpdates(granted)
     }
+    // The persistent notification needs the notification permission (Android 13+); it turns on only once granted.
+    val statusPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) vm.setStatusNotification(true)
+    }
 
     val currentPlace = remember(s) { com.noor.app.data.PrayerProvider.place(s.copy(profileId = null)) }
     val autoAuthority = currentPlace?.let { com.noor.app.data.PrayerProvider.authority(s.copy(profileId = null), it) }
@@ -129,6 +134,16 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             SettingsDivider()
             val adj = s.offsets.entries.joinToString("  ") { (p, m) -> "${f.prayerName(p)} ${f.digits(if (m > 0) "+$m" else "$m")}" }
             SettingsItem(Icons.Rounded.Tune, stringResource(R.string.adjustments), adj.ifEmpty { stringResource(R.string.adjustments_body) }, onClick = { dialog = Dialog.OFFSETS })
+        }
+
+        SettingsSection(stringResource(R.string.settings_notification_bar), footer = stringResource(R.string.status_setting_note, f.number(14))) {
+            SettingsItem(Icons.Rounded.NotificationsActive, stringResource(R.string.status_setting), stringResource(R.string.status_setting_desc), null) {
+                NoorSwitch(s.statusNotification) { on ->
+                    val needs = on && android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
+                        android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (needs) statusPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) else vm.setStatusNotification(on)
+                }
+            }
         }
 
         SettingsSection(stringResource(R.string.settings_display)) {
