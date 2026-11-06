@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.noor.app.R
+import com.noor.app.ui.components.isArabicUi
 import com.noor.app.data.LocationMode
 import com.noor.app.ui.components.LocalAmbientMotion
 import com.noor.app.ui.components.NoorMotion
@@ -90,11 +91,11 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
             Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 28.dp),
         ) {
             Spacer(Modifier.weight(0.9f))
-            // Wordmark: نور in Kufi, the Latin name beneath, spaced.
+            // Wordmark: نور in Kufi is Noor's logo (shown in both languages, like the icon); the Latin name beneath only in English.
             Column(Modifier.graphicsLayer { alpha = intro.value; translationY = (1f - intro.value) * 24.dp.toPx() }) {
                 Text("نور", style = MaterialTheme.typography.displayLarge.copy(fontFamily = Kufi, fontSize = 96.sp, fontWeight = FontWeight.Normal),
                     color = Sky.GoldOnSky, modifier = Modifier.semantics { heading() })
-                Text("NOOR", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 8.sp, fontSize = 13.sp), color = Sky.OnSkySecondary,
+                if (!isArabicUi()) Text("NOOR", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 8.sp, fontSize = 13.sp), color = Sky.OnSkySecondary,
                     modifier = Modifier.padding(start = 4.dp))
                 Spacer(Modifier.height(18.dp))
                 Text(stringResource(R.string.onboarding_tagline), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal, lineHeight = 24.sp),

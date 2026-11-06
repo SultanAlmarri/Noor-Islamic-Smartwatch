@@ -6,7 +6,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 **Install:** [latest development build](https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/tag/dev-latest)
 · [step-by-step guide](docs/INSTALL.md)
 
-## Status (6 November 2026, version 0.9.0)
+## Status (6 November 2026, version 0.9.1)
 
 | Part | State |
 |---|---|

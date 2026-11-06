@@ -183,7 +183,7 @@
     <string name="kind_parameters">المعايير المنشورة للجهة</string>
     <string name="kind_recognised">طريقة شائعة الاستخدام</string>
     <string name="sources_title">مصادر البيانات وتراخيصها</string>
-    <string name="sources_body">الجداول الرسمية: دائرة الشؤون الإسلامية بدبي (iacad.gov.ae؛ صفحات 2021–2023 محفوظة في أرشيف الإنترنت، ونوفمبر 2026 من موقع الدائرة)؛ المجلس الإسلامي في سنغافورة 2024–2026 (data.gov.sg، رخصة البيانات المفتوحة لسنغافورة). أسماء الأماكن: GeoNames ‏(geonames.org)، برخصة CC BY 4.0. الانحراف المغناطيسي: النموذج المغناطيسي العالمي عبر أندرويد. معايير كل جهة ومصادرها مدرجة في ملف docs/AUTHORITIES.md في مستودع نور.</string>
+    <string name="sources_body">الجداول الرسمية: دائرة الشؤون الإسلامية بدبي (iacad.gov.ae؛ صفحات 2021–2023 محفوظة في أرشيف الإنترنت، ونوفمبر 2026 من موقع الدائرة)؛ المجلس الإسلامي في سنغافورة 2024–2026 (data.gov.sg، رخصة البيانات المفتوحة لسنغافورة). أسماء الأماكن: GeoNames ‏(geonames.org)، برخصة CC BY 4.0. الانحراف المغناطيسي: النموذج المغناطيسي العالمي عبر أندرويد. معايير كل جهة ومصادرها مدرجة في وثائق مستودع نور.</string>
 
     <!-- Adhan & alerts -->
     <string name="tab_adhan">الأذان</string>
@@ -357,4 +357,5 @@
         <item quantity="many">متأخر %1$s دقيقة</item>
         <item quantity="other">متأخر %1$s دقيقة</item>
     </plurals>
+    <string name="adhan_public_domain">ملكية عامة</string>
 </resources>

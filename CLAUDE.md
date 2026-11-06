@@ -14,7 +14,7 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: **0.9.0** for both apps (versionCode 9). Everything is on `main`; there are no other branches.
+Current version: **0.9.1** for both apps (versionCode 10). Everything is on `main`; there are no other branches.
 
 ## The owner
 
@@ -85,7 +85,7 @@ watch-face packaging step). Point Gradle at the SDK with `ANDROID_HOME` or with 
   at a time, and run `./gradlew --stop` if the daemon dies.
 - `app/build.gradle.kts` sets `forkEvery = 1` for unit tests because DataStore allows one instance per process.
   Keep it. For the same reason, each Robolectric render test class uses a single `@Test` method.
-- Rendered screens: `ScreenshotTest` writes 50 PNGs to `app/build/screenshots` (CI publishes them as
+- Rendered screens: `ScreenshotTest` writes 54 PNGs, and fails if any screen shows text in the other language to `app/build/screenshots` (CI publishes them as
   `screenshots.zip`). The home-screen design renders (`app/src/test/.../design/Today*DesignTest`) write to
   `app/build/design`. These are software renders, useful for reviewing layout, not proof of device behaviour.
 - Release builds are signed with the development key, so they install over earlier builds.

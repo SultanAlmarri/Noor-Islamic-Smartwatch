@@ -26,6 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.noor.app.data.AppSettings
@@ -59,6 +62,7 @@ import com.noor.app.util.Formatter
 import com.noor.prayer.Schedule
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -202,6 +206,7 @@ class ScreenshotTest {
             root.draw(Canvas(bmp))
             val dir = File("build/screenshots").apply { mkdirs() }
             File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            checkLanguage(name, arabic)
         }
         shot("01_today_night_en", "Maghrib")
         screen = Screen.TODAY_OTHER_DATE; shot("02_other_date_night_en", "18 December 2026")
@@ -254,6 +259,12 @@ class ScreenshotTest {
         screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
+        // Arabic versions of the text-heavy pages, so the language check covers them (0.9).
+        arabic = true
+        screen = Screen.SETTINGS; shot("51_settings_night_ar", "الإعدادات")
+        screen = Screen.ACCURACY; shot("52_accuracy_night_ar", "دبي")
+        screen = Screen.CITIES; shot("53_cities_night_ar", "الصين")
+        arabic = false
         // The sky through the day (Dubai, 4 November 2026): dawn, morning, sunset glow, night with the moon.
         theme = ThemeMode.DARK; arabic = false; screen = Screen.TODAY
         fun at(h: Int, m: Int) = ZonedDateTime.of(2026, 11, 4, h, m, 0, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -275,6 +286,7 @@ class ScreenshotTest {
         shot("29_adhan_sunrise_night_en", "Morning birds")
         screen = Screen.ADHAN_LIBRARY; shot("30_adhan_library_night_en", "Casablanca")
         screen = Screen.ADHAN_SOUNDS; shot("31_adhan_my_sounds_night_en", "Import a sound")
+        arabic = true; screen = Screen.ADHAN_LIBRARY; shot("54_adhan_library_night_ar", "الدار البيضاء"); arabic = false
         screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "التنبيه على")
         screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "مالمو")
         arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Gradual volume")
@@ -302,5 +314,42 @@ class ScreenshotTest {
         screen = Screen.ONBOARDING; shot("42_onboarding_en", "Use my location")
         arabic = true; shot("43_onboarding_ar", "نور")
         arabic = false
+        assertTrue("Text in the wrong language:\n" + languageProblems.joinToString("\n"), languageProblems.isEmpty())
+    }
+
+    /**
+     * Language separation (0.9): an English screen shows no Arabic letters and an Arabic screen no Latin letters, apart
+     * from what is not language: Noor's Kufi logo, the names of devices and licences, and the people credited.
+     */
+    private val languageProblems = mutableListOf<String>()
+    private val arabicLetters = Regex("[\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF]")
+    private val latinLetters = Regex("[A-Za-z]")
+    private val allowedInEnglish = listOf("نور")
+    private val allowedInArabic = listOf(
+        Regex("(Galaxy|Pixel) Watch\\S*( Pro| Classic)?( \\([0-9A-F]{4}\\))?"), // a device's own name, as Android reports it
+        Regex("Wear OS"), Regex("WGS-84"), Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), // product, standard and format names
+        Regex("CC0|CC BY(-SA)? \\d\\.\\d"), // licence names
+        Regex("\\b[a-z0-9-]+(\\.[a-z0-9-]+)*\\.(ae|sg|org|com|gov)\\b"), Regex("GeoNames"), // web addresses and the gazetteer's name
+    ) + creditedPeople()
+
+    /** The recordists credited in the sound library: their names are written as credited, in every language. */
+    private fun creditedPeople(): List<Regex> = Regex("\"author\":\\s*\"([^\"]+)\"").findAll(File("src/main/assets/sounds/library.json").readText())
+        .map { Regex(Regex.escape(it.groupValues[1])) }.toList()
+
+    private fun checkLanguage(name: String, arabic: Boolean) {
+        val texts = rule.onAllNodes(SemanticsMatcher("any node") { true }, useUnmergedTree = true).fetchSemanticsNodes().flatMap { n ->
+            n.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } +
+                n.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty() +
+                listOfNotNull(n.config.getOrNull(SemanticsProperties.EditableText)?.text)
+        }.distinct()
+        texts.forEach { t ->
+            if (arabic) {
+                val cleaned = allowedInArabic.fold(t) { acc, r -> acc.replace(r, "") }
+                if (latinLetters.containsMatchIn(cleaned)) languageProblems += "$name (Arabic screen): \"$t\""
+            } else {
+                val cleaned = allowedInEnglish.fold(t) { acc, w -> acc.replace(w, "") }
+                if (arabicLetters.containsMatchIn(cleaned)) languageProblems += "$name (English screen): \"$t\""
+            }
+        }
     }
 }

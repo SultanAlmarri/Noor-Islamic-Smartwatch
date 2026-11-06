@@ -361,7 +361,7 @@ private fun SkyHeader(
                     Spacer(Modifier.height(4.dp))
                     AnimatedContent(st.next.prayer to st.next.date, transitionSpec = {
                         (fadeIn(tween(NoorMotion.Standard)) + slideInVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) { it / 3 }) togetherWith fadeOut(tween(NoorMotion.Quick))
-                    }, label = "nextName") { (p, d) -> PrayerTitle(f.prayerName(p, d), f.prayerNameOther(p, d), f.arabic) }
+                    }, label = "nextName") { (p, d) -> PrayerTitle(f.prayerName(p, d), f.arabic) }
                     Countdown(f.countdown(until), hero.countdownMax)
                     Text(stringResource(R.string.at_time, f.timeAt(st.next.at, place.zone)), style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, shadow = SkyText.Shadow),
                         color = Sky.OnSkySecondary)
@@ -379,15 +379,12 @@ private fun SkyHeader(
     }
 }
 
-/** The next prayer's name, with its name in the other language beside it in gold. */
+/** The next prayer's name, in the user's language only (Kufi in Arabic). */
 @Composable
-private fun PrayerTitle(name: String, other: String, arabic: Boolean) {
+private fun PrayerTitle(name: String, arabic: Boolean) {
     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.semantics(mergeDescendants = true) { heading() }) {
         Text(name, style = (if (arabic) MaterialTheme.typography.headlineMedium.copy(fontFamily = Kufi, fontSize = 32.sp)
             else MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp)).copy(shadow = SkyText.Shadow), color = Sky.OnSky)
-        Spacer(Modifier.width(12.dp))
-        Text(other, style = (if (arabic) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge.copy(fontFamily = Kufi, fontWeight = FontWeight.Normal)).copy(shadow = SkyText.Shadow),
-            color = Sky.GoldOnSky, modifier = Modifier.padding(bottom = 3.dp))
     }
 }
 
@@ -408,7 +405,7 @@ private fun ScrubReadout(
         )
         Spacer(Modifier.height(4.dp))
         Box(Modifier.height(40.dp), contentAlignment = Alignment.BottomCenter) {
-            if (prayer != null) PrayerTitle(f.prayerName(prayer, date), f.prayerNameOther(prayer, date), f.arabic)
+            if (prayer != null) PrayerTitle(f.prayerName(prayer, date), f.arabic)
         }
         val size = (countdownMax * 0.86f).sp
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -595,7 +592,7 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
             val fillBelow = if (isCurrent && list.getOrNull(i + 1) == next) (fill * 2f).coerceIn(0f, 1f) else 0f
             val fillAbove = if (isNext && list.getOrNull(i - 1) == current) (fill * 2f - 1f).coerceIn(0f, 1f) else 0f
             TimelineRow(
-                p, f.prayerName(p, date), f.prayerNameOther(p, date), day.minutes[p]?.let { f.time(it) },
+                p, f.prayerName(p, date), day.minutes[p]?.let { f.time(it) },
                 status = listOfNotNull(
                     when {
                         isCurrent -> stringResource(R.string.now)
@@ -620,7 +617,7 @@ private fun durationText(d: Duration, f: Formatter): String {
 
 @Composable
 private fun TimelineRow(
-    p: Prayer, name: String, other: String, time: Pair<String, String?>?, status: String?,
+    p: Prayer, name: String, time: Pair<String, String?>?, status: String?,
     isCurrent: Boolean, isNext: Boolean, passed: Boolean, first: Boolean, last: Boolean,
     lineAboveDone: Boolean, lineBelowDone: Boolean, fillAbove: Float, fillBelow: Float, f: Formatter,
 ) {
@@ -658,11 +655,8 @@ private fun TimelineRow(
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(buildAnnotatedString {
-                withStyle(SpanStyle(fontWeight = if (isCurrent || isNext) FontWeight.SemiBold else FontWeight.Medium)) { append(name) }
-                append("  ")
-                withStyle(SpanStyle(fontFamily = if (f.arabic) MaterialTheme.typography.bodySmall.fontFamily else Kufi, fontSize = 14.sp, color = c.textMuted, fontWeight = FontWeight.Normal)) { append(other) }
-            }, style = MaterialTheme.typography.titleMedium, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name, style = MaterialTheme.typography.titleMedium.copy(fontWeight = if (isCurrent || isNext) FontWeight.SemiBold else FontWeight.Medium),
+                color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (status != null) Text(status, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.2.sp), color = if (isCurrent) c.textSecondary else c.goldText)
         }
         if (time == null) Text("—", color = c.textMuted)

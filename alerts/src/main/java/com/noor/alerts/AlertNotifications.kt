@@ -40,7 +40,11 @@ object AlertNotifications {
 
     fun ensureChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
-        val t = context.applicationContext
+        // Category names follow the language chosen in the app (renaming a channel is allowed; its sound is not touched).
+        val t = context.alertHost?.alertLanguage?.takeIf { it == "ar" || it == "en" }?.let { lang ->
+            context.applicationContext.createConfigurationContext(
+                android.content.res.Configuration(context.resources.configuration).also { it.setLocale(java.util.Locale(lang)) })
+        } ?: context.applicationContext
         nm.createNotificationChannel(NotificationChannel(CHANNEL_ADHAN, t.getString(R.string.noor_channel_adhan), NotificationManager.IMPORTANCE_HIGH).apply {
             description = t.getString(R.string.noor_channel_adhan_desc)
             setSound(null, null); enableVibration(false)

@@ -353,4 +353,5 @@
         <item quantity="one">%1$s min late</item>
         <item quantity="other">%1$s min late</item>
     </plurals>
+    <string name="adhan_public_domain">Public domain</string>
 </resources>

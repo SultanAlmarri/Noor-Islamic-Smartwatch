@@ -61,7 +61,7 @@ object Profiles {
     val UMM_AL_QURA = method("uqu", "Umm al-Qura (Makkah)", "أم القرى (مكة)", 18.5, null, ishaMin = 90, ishaMinRamadan = 120)
     val EGYPT = method("egy", "Egyptian General Authority of Survey", "الهيئة المصرية العامة للمساحة", 19.5, 17.5, offsets = mapOf(DHUHR to 1))
     val KARACHI = method("kar", "University of Islamic Sciences, Karachi", "جامعة العلوم الإسلامية بكراتشي", 18.0, 18.0, offsets = mapOf(DHUHR to 1))
-    val ISNA = method("isna", "North America (ISNA)", "أمريكا الشمالية (ISNA)", 15.0, 15.0, offsets = mapOf(DHUHR to 1))
+    val ISNA = method("isna", "North America (ISNA)", "أمريكا الشمالية — الجمعية الإسلامية لأمريكا الشمالية", 15.0, 15.0, offsets = mapOf(DHUHR to 1))
     val KUWAIT = method("kwt", "Kuwait", "الكويت", 18.0, 17.5)
     val QATAR = method("qat", "Qatar", "قطر", 18.0, null, ishaMin = 90)
     /**
@@ -71,7 +71,7 @@ object Profiles {
      * MUIS's times directly (official timetable source), so this profile is only the fallback for other dates.
      */
     val SINGAPORE = CalculationProfile(
-        id = "sgp", nameEn = "Singapore — MUIS", nameAr = "سنغافورة — المجلس الإسلامي (MUIS)",
+        id = "sgp", nameEn = "Singapore — MUIS", nameAr = "سنغافورة — المجلس الإسلامي",
         fajrAngle = 20.0, ishaAngle = 18.0, rounding = Rounding.UP, offsets = mapOf(DHUHR to 1),
         referencePoint = GeoPoint(1.25, 103.80),
         validationEn = "Official MUIS timetable used where published (2024–2026). Other dates: calculated with conventions fitted to it (about 75% exact, the rest within 1–2 minutes).",
@@ -83,7 +83,7 @@ object Profiles {
      * Isha 18 deg. JAKIM publishes zone timetables (e-Solat); this profile calculates at the user's position and is
      * not validated against those tables.
      */
-    val MALAYSIA = method("jakim", "Malaysia — JAKIM", "ماليزيا — دائرة التنمية الإسلامية (JAKIM)", 18.0, 18.0, offsets = mapOf(DHUHR to 1, MAGHRIB to 2)).copy(
+    val MALAYSIA = method("jakim", "Malaysia — JAKIM", "ماليزيا — دائرة التنمية الإسلامية", 18.0, 18.0, offsets = mapOf(DHUHR to 1, MAGHRIB to 2)).copy(
         validationEn = "Calculated with JAKIM's published angles (Fajr 18°, Isha 18°). Not validated against JAKIM's zone timetables yet.",
         validationAr = "محسوبة بالزوايا المنشورة لدائرة التنمية الإسلامية (الفجر 18°، العشاء 18°). لم تُقارن بجداول المناطق الرسمية بعد.",
     )

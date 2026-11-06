@@ -104,7 +104,9 @@ fun CityPickerScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Sett
                     Text(Flags.emoji(place.countryCode) ?: "", fontSize = 22.sp, modifier = Modifier.width(36.dp))
                     Column(Modifier.weight(1f)) {
                         Text(if (ar) place.nameAr ?: place.name else place.name, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
-                        Text(listOf(place.admin1Name.takeIf { it.isNotBlank() && it != place.name }, country).filterNotNull().joinToString(", "),
+                        // The gazetteer has region names only in Latin script: in Arabic, the country alone.
+                        val region = place.admin1Name.takeIf { !ar && it.isNotBlank() && it != place.name }
+                        Text(listOf(region, country).filterNotNull().joinToString(if (ar) "، " else ", "),
                             style = MaterialTheme.typography.bodySmall, color = c.textMuted)
                     }
                     if (selected) Icon(Icons.Rounded.Check, null, tint = c.gold, modifier = Modifier.size(20.dp))

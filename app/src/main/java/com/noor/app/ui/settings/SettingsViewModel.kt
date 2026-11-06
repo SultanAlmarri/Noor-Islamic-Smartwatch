@@ -68,5 +68,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         AppCompatDelegate.setApplicationLocales(
             if (l == Language.SYSTEM) LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(l.tag),
         )
+        // Rename Noor's notification categories in Android's settings to the new language.
+        com.noor.alerts.AlertNotifications.ensureChannels(getApplication())
     }
 }

@@ -36,15 +36,29 @@ run() {
   say "---- scenario $S ----"
   adb install -r -g "$APK" >/dev/null || { say "install failed"; return 1; }
   adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
-  if [ "$S" = no-exact ]; then adb shell appops set $PKG SCHEDULE_EXACT_ALARM deny; else adb shell appops set $PKG SCHEDULE_EXACT_ALARM allow; fi
+  local want=allow; [ "$S" = no-exact ] && want=deny
+  # Right after an install, Android can take a moment to apply the app-op: wait until it reads back as set.
+  for _ in $(seq 1 20); do
+    adb shell appops set $PKG SCHEDULE_EXACT_ALARM $want
+    adb shell appops get $PKG SCHEDULE_EXACT_ALARM | grep -q "$want" && break
+    sleep 1
+  done
   adb shell cmd media_session volume --stream 4 --set 5 >/dev/null 2>&1 || adb shell media volume --stream 4 --set 5 >/dev/null 2>&1 || true
   adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard 2>/dev/null
   APP_UID=$(adb shell cmd package list packages -U $PKG | tr -d '\r' | sed -n 's/.*uid:\([0-9]*\).*/\1/p')
   VIB=false; [ "$S" = vibrate ] && VIB=true
-  adb logcat -c
-  adb shell am broadcast -a com.noor.smartwatch.debug.SETUP -n "$HOOK" --ei seconds 45 --ei max 30 --ez vibrate $VIB >/dev/null
-  for _ in $(seq 1 30); do adb logcat -d -s NoorE2E:I | grep -q "SETUP done" && break; sleep 1; done
-  say "$(adb logcat -d -s NoorE2E:I | grep 'SETUP done' | sed 's/^.*SETUP/SETUP/')"
+  local expect_exact=true; [ "$S" = no-exact ] && expect_exact=false
+  for attempt in 1 2 3; do
+    adb logcat -c
+    adb shell am broadcast -a com.noor.smartwatch.debug.SETUP -n "$HOOK" --ei seconds 45 --ei max 30 --ez vibrate $VIB >/dev/null
+    for _ in $(seq 1 30); do adb logcat -d -s NoorE2E:I | grep -q "SETUP done" && break; sleep 1; done
+    local line; line="$(adb logcat -d -s NoorE2E:I | grep 'SETUP done' | sed 's/^.*SETUP/SETUP/')"
+    say "$line"
+    # The scenario is only meaningful if the app saw the permission state the scenario is about.
+    echo "$line" | grep -q "exact=$expect_exact" && break
+    say "exact alarms not yet as expected; setting again (attempt $attempt)"
+    adb shell appops set $PKG SCHEDULE_EXACT_ALARM $want; sleep 3
+  done
   # Noor in the background, its process killed, the screen off, the device in Doze: as at a real prayer time at night.
   adb shell input keyevent KEYCODE_HOME; sleep 3
   adb shell am kill $PKG; sleep 2
@@ -57,7 +71,17 @@ run() {
     # Inexact alarms may come late; wait up to 10 minutes for the alarm and the backup notification.
     ok=0
     for _ in $(seq 1 120); do
-      if adb shell dumpsys notification --noredact | grep -q "channel=noor_adhan_backup"; then ok=1; break; fi
+      if adb shell dumpsys notification --noredact | grep -q "channel=noor_adhan_backup"; then
+        ok=1
+        # Informational: Android's own notification player (system uid 1000) sounding on the alarm stream.
+        sleep 2
+        if adb shell dumpsys audio | grep -E "u/pid:1000/" | grep "state:started" | grep -q "USAGE_ALARM"; then
+          say "Android's notification player is sounding the backup Adhan on the alarm stream"
+        else
+          say "note: Android's player was not seen sounding (it may already have finished, or the ringer setting held it back)"
+        fi
+        break
+      fi
       sleep 5
     done
     [ $ok = 1 ] && say "backup notification posted (Android plays its short Adhan)" || say "FAIL: no backup notification"

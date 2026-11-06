@@ -110,7 +110,8 @@ fun watchPreview(s: AppSettings, now: Instant, f: Formatter): WatchPreviewState?
     val dhuhr = st.today.instant(Prayer.DHUHR)
     val glow = androidx.compose.ui.graphics.Color(com.noor.prayer.sky.SkyPalette.glow(SunPath.elevation(now, config.point), evening = dhuhr != null && now.isAfter(dhuhr)))
     return WatchPreviewState(
-        prayer = f.prayerName(st.next.prayer, st.next.date), prayerOther = f.prayerNameOther(st.next.prayer, st.next.date),
+        prayer = f.prayerName(st.next.prayer, st.next.date),
+        caption = (if (f.arabic) config.placeAr ?: config.placeEn else config.placeEn),
         countdown = f.countdown(Duration.between(now, st.next.at)), time = f.timeAt(st.next.at, zone), progress = st.progress, glow = glow, arabic = f.arabic,
     )
 }

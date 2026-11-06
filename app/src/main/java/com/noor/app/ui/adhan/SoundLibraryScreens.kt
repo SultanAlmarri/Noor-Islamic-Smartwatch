@@ -131,7 +131,9 @@ private fun AdhanCard(e: SoundEntry, f: Formatter, ar: Boolean, preview: Preview
         e.note(ar)?.let { Spacer(Modifier.height(10.dp)); Text(it, style = MaterialTheme.typography.bodySmall, color = c.textSecondary) }
         e.credit?.let { cr ->
             Spacer(Modifier.height(10.dp))
-            Text("${cr.author} · ${cr.licence}", style = MaterialTheme.typography.bodySmall, color = c.textPrimary)
+            // The recordist's name stays as credited (the licence requires it); "Public domain" is translated.
+            val licence = if (cr.licence == "Public domain") stringResource(R.string.adhan_public_domain) else cr.licence
+            Text("${cr.author} · $licence", style = MaterialTheme.typography.bodySmall, color = c.textPrimary)
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 cr.sourceUrl?.let { url -> Link(stringResource(R.string.adhan_source)) { context.open(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }
                 cr.licenceUrl?.let { url -> Link(stringResource(R.string.adhan_licence)) { context.open(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }

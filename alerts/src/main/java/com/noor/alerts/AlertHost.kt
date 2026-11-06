@@ -23,6 +23,12 @@ interface AlertHost {
      */
     suspend fun alertConfig(): WatchConfig?
 
+    /**
+     * The language the user chose inside the app ("ar", "en"), or null to follow the device. Notification category
+     * names shown in Android's settings use it, so they match the app's language.
+     */
+    val alertLanguage: String? get() = null
+
     /** Opens the app; used when the notification is tapped. */
     fun launchIntent(context: Context): Intent
 

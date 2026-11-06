@@ -56,9 +56,8 @@ class TestHookReceiver : BroadcastReceiver() {
             a.copy(enabled = true, device = AlertDevice.PHONE, gradualSeconds = 0)
                 .let { s -> s.with(prayer, s.alert(prayer).copy(enabled = true, mode = AlertMode.ADHAN, maxSeconds = max, volumePercent = 100)) }
         }
-        if (intent.getBooleanExtra("vibrate", false)) {
-            app.getSystemService(AudioManager::class.java).ringerMode = AudioManager.RINGER_MODE_VIBRATE
-        }
+        app.getSystemService(AudioManager::class.java).ringerMode =
+            if (intent.getBooleanExtra("vibrate", false)) AudioManager.RINGER_MODE_VIBRATE else AudioManager.RINGER_MODE_NORMAL
         AlertLog.clear(app)
         val ok = AlertScheduler.scheduleTest(app, prayer, seconds)
         Log.i(TAG, "SETUP done prayer=$prayer seconds=$seconds max=$max exact=${AlertScheduler.canScheduleExact(app)} scheduled=$ok " +

@@ -264,7 +264,8 @@ fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter,
     val accent by animateColorAsState(if (aligned) c.success else c.gold, tween(400), label = "dialAccent")
     val glow by androidx.compose.animation.core.animateFloatAsState(if (aligned) 1f else 0f, tween(500), label = "alignedGlow")
     val halfBeam = (uncertaintyDeg ?: 8.0).coerceIn(3.0, 30.0)
-    Canvas(modifier.semantics { contentDescription = "Qibla ${f.degrees(qibla)}" }) {
+    val qiblaLabel = stringResource(R.string.qibla_title) + " " + f.degrees(qibla)
+    Canvas(modifier.semantics { contentDescription = qiblaLabel }) {
         val h = heading ?: 0.0
         val cx = size.width / 2; val cy = size.height / 2
         val r = size.minDimension / 2 * 0.80f

@@ -58,7 +58,7 @@ object Authorities {
         sourceNoteEn = "Provisional: fitted to one month of Awqaf-attributed times (Nov 2026), 91% exact; to be re-checked against Awqaf's own tables.",
     )
     val MUIS = Authority(
-        "muis", "MUIS — Singapore", "المجلس الإسلامي في سنغافورة (MUIS)", setOf("SG"), null,
+        "muis", "MUIS — Singapore", "المجلس الإسلامي في سنغافورة", setOf("SG"), null,
         Profiles.SINGAPORE, SourceKind.VALIDATED_CALCULATION, timetableId = "muis_singapore",
         sourceUrl = "https://data.gov.sg/datasets/d_a6a206cba471fe04b62dd886ef5eaf22/view",
         sourceNoteEn = "Official MUIS timetable 2024–2026 (data.gov.sg, Singapore Open Data Licence) used as published; other dates calculated with conventions fitted to it.",
@@ -70,7 +70,7 @@ object Authorities {
         sourceNoteEn = "Fajr 18.5°, Isha 90 minutes after Maghrib (120 in Ramadan), the Umm al-Qura standard used in the Kingdom.",
     )
     val JAKIM = Authority(
-        "jakim", "JAKIM — Malaysia", "دائرة التنمية الإسلامية الماليزية (JAKIM)", setOf("MY"), null,
+        "jakim", "JAKIM — Malaysia", "دائرة التنمية الإسلامية الماليزية", setOf("MY"), null,
         Profiles.MALAYSIA, SourceKind.AUTHORITY_PARAMETERS,
         sourceUrl = "https://www.e-solat.gov.my",
         sourceNoteEn = "Fajr 18° nationwide since Ramadan 1441 (2020), Isha 18°. JAKIM's official times are zone timetables; these are calculated for your exact position.",

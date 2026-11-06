@@ -60,7 +60,9 @@ sunrise until Maghrib at the user's place, dark through the night.
 
 IBM Plex Sans Arabic for Latin and Arabic text (one voice in both scripts; tabular figures for every time), Reem Kufi
 for Arabic display names and the wordmark. The countdown is Plex Light at 78 sp; it follows the system font size but is
-capped so it always fits on one line. Prayer names show the other language beside them, quietly (Kufi for Arabic).
+capped so it always fits on one line. Each language shows only its own words (0.9): no Arabic beside English names and no English beside Arabic ones; the
+Kufi "نور" logo is the one exception, as artwork. `ScreenshotTest` and the watch screen tests fail if a screen shows
+letters of the other script, apart from names that are not language (devices, licences, web addresses, credited people).
 
 ## Colour
 

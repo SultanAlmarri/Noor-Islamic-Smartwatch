@@ -55,6 +55,7 @@ import com.noor.wear.ui.TasbihOptionsScreen
 import com.noor.wear.ui.TasbihScreen
 import com.noor.wear.ui.WelcomeActions
 import com.noor.wear.ui.WelcomeScreen
+import androidx.compose.ui.semantics.getOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -86,6 +87,12 @@ class WearScreensTest {
         if (waitFor != null) rule.waitUntil(10_000) { rule.onAllNodesWithText(waitFor, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         rule.mainClock.advanceTimeBy(1200); rule.waitForIdle()
         Shots.save(Shots.drawView(rule.activity.window.decorView), name)
+        checkLanguage(name, config?.language == "ar")
+    }
+
+    private fun checkLanguage(name: String, arabic: Boolean) {
+        val wrong = wrongLanguageTexts(rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("any node") { true }, useUnmergedTree = true).fetchSemanticsNodes(), arabic)
+        assertTrue("$name shows text in the wrong language: $wrong", wrong.isEmpty())
     }
 
     private fun has(text: String, substring: Boolean = false) =
@@ -284,6 +291,8 @@ class WearSmallScreenTest {
             rule.waitUntil(10_000) { rule.onAllNodesWithText(wait, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
             rule.mainClock.advanceTimeBy(1200); rule.waitForIdle()
             Shots.save(Shots.drawView(rule.activity.window.decorView), name)
+            val wrong = wrongLanguageTexts(rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("any node") { true }, useUnmergedTree = true).fetchSemanticsNodes(), false)
+            assertTrue("$name shows text in the wrong language: $wrong", wrong.isEmpty())
         }
         screen = { NoorWearTheme(c) { t -> HomeScreen(c, t, { TestConfigs.afternoon }, HomeExtras()) } }
         shot("m01_home_small", "Asr")
@@ -297,3 +306,16 @@ class WearSmallScreenTest {
         shot("m04_calendar_small", "1448")
     }
 }
+
+/**
+ * Language separation (0.9): texts on a watch screen in the wrong language. No Arabic letters on an English screen,
+ * no Latin letters on an Arabic one (Noor's Kufi logo and product names excepted).
+ */
+internal fun wrongLanguageTexts(nodes: List<androidx.compose.ui.semantics.SemanticsNode>, arabic: Boolean): List<String> =
+    nodes.flatMap { n ->
+        n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text).orEmpty().map { it.text } +
+            n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ContentDescription).orEmpty()
+    }.distinct().filter { t ->
+        if (arabic) Regex("[A-Za-z]").containsMatchIn(t.replace(Regex("Wear OS|Noor"), ""))
+        else Regex("[\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF]").containsMatchIn(t.replace("نور", ""))
+    }

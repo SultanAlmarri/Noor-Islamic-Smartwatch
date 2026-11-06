@@ -62,8 +62,6 @@ class Formatter(val arabic: Boolean, private val numerals: Numerals, private val
     fun prayerName(p: Prayer, date: LocalDate): String =
         if (p == Prayer.DHUHR && date.dayOfWeek == DayOfWeek.FRIDAY) (if (arabic) "الجمعة" else "Jumu’ah") else prayerName(p)
 
-    fun prayerNameOther(p: Prayer, date: LocalDate): String =
-        if (p == Prayer.DHUHR && date.dayOfWeek == DayOfWeek.FRIDAY) (if (arabic) "Jumu’ah" else "الجمعة") else (if (arabic) p.en else p.ar)
 
     val locale: Locale get() = if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH
 

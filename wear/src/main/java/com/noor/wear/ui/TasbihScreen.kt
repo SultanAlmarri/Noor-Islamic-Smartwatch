@@ -201,7 +201,10 @@ private fun RoundDone(key: Int, t: WearText) {
     }
 }
 
-/** The phrase being said, in Arabic, with its transliteration for English readers. */
+/**
+ * The phrase being said: in Arabic script when the watch is in Arabic; in English, its transliteration with the meaning
+ * beneath, so an English screen carries no Arabic text.
+ */
 @Composable
 private fun Phrase(step: DhikrStep, t: WearText) {
     val d = step.dhikr
@@ -209,13 +212,14 @@ private fun Phrase(step: DhikrStep, t: WearText) {
         Text(stringResource(R.string.tasbih_free_title), style = MaterialTheme.typography.titleMedium, color = GoldSoft)
         return
     }
-    val long = d.ar.length > 24
+    val main = if (t.arabic) d.ar else d.translit
+    val long = main.length > 24
     Text(
-        d.ar, style = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = if (long) 11.sp else Screen.sp(16f, 19f), lineHeight = if (long) 15.sp else 24.sp),
+        main, style = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = if (long) 11.sp else Screen.sp(16f, 19f), lineHeight = if (long) 15.sp else 24.sp),
         color = GoldSoft, textAlign = TextAlign.Center, maxLines = if (long) 3 else 1, overflow = TextOverflow.Ellipsis,
         modifier = if (long) Modifier.padding(horizontal = 6.dp) else Modifier,
     )
-    if (!t.arabic && !long) Text(d.translit, style = MaterialTheme.typography.labelSmall, color = Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    if (!t.arabic && !long) Text(d.en, style = MaterialTheme.typography.labelSmall, color = Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 private fun phraseLabel(step: DhikrStep, t: WearText): String = step.dhikr?.let { if (t.arabic) it.ar else it.translit } ?: ""

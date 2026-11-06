@@ -44,7 +44,8 @@ class DateNavigationTest {
         assertEquals("الجمعة", ar.prayerName(Prayer.DHUHR, friday))
         assertEquals("Dhuhr", en.prayerName(Prayer.DHUHR, thursday))
         assertEquals("Asr", en.prayerName(Prayer.ASR, friday))
-        assertEquals("الجمعة", en.prayerNameOther(Prayer.DHUHR, friday))
+        // Each language shows only its own names (0.9: the other language's name is no longer shown beside it).
+        assertEquals("الظهر", ar.prayerName(Prayer.DHUHR, thursday))
     }
 
     @Test fun dateTexts() {

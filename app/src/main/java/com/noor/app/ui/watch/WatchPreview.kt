@@ -34,7 +34,8 @@ import com.noor.app.ui.theme.Tabular
 @Immutable
 data class WatchPreviewState(
     val prayer: String,
-    val prayerOther: String,
+    /** The place, as the watch shows it under the countdown, in the user's language. */
+    val caption: String,
     val countdown: String,
     val time: String,
     /** 0..1 from the previous prayer to the next. */
@@ -98,8 +99,8 @@ private fun WatchPreviewBody(state: WatchPreviewState?, modifier: Modifier, diam
                     color = Color.White, textAlign = TextAlign.Center)
             }
             Text(state.time, style = MaterialTheme.typography.labelMedium, color = Sky.GoldOnSky)
-            Text(state.prayerOther, style = MaterialTheme.typography.labelSmall.copy(fontFamily = if (state.arabic) MaterialTheme.typography.labelSmall.fontFamily else Kufi, fontSize = 12.sp),
-                color = Color(0xFFB7C0D2))
+            Text(state.caption, style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                color = Color(0xFFB7C0D2), maxLines = 1)
         }
     }
 }
