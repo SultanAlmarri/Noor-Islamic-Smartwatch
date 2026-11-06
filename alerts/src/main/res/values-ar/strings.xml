@@ -22,4 +22,10 @@
     <string name="noor_channel_notify_desc">الصلوات المضبوطة على «إشعار». يستخدم صوت الإشعارات ويتبع وضع «عدم الإزعاج».</string>
     <string name="noor_channel_silent">إشعارات الصلاة الصامتة</string>
     <string name="noor_channel_silent_desc">الصلوات المضبوطة على «صامت»، والتنبيهات التي أسكتها «عدم الإزعاج»، والوقت بعد انتهاء الصوت.</string>
+    <string name="noor_alert_dnd_blocks_alarms">صامت لأن وضع «عدم الإزعاج» مضبوط على منع المنبّهات. اسمح بالمنبّهات في «عدم الإزعاج» لتسمع الأذان.</string>
+    <string name="noor_alert_backup_played">لم يسمح أندرويد لنور بتشغيل الأذان كاملًا، فشُغّل أذان مختصر بدلًا منه. اسمح بـ«المنبّهات والتذكيرات» لنور من نور › الأذان.</string>
+    <string name="noor_alert_fallback_played">تعذّر تشغيل الصوت المختار، فشُغّل أذان نور الافتراضي بدلًا منه.</string>
+    <string name="noor_alert_failed">تعذّر تشغيل الصوت على هذا الهاتف. افتح نور › الأذان › سجل التنبيهات للتفاصيل.</string>
+    <string name="noor_channel_backup">الأذان (احتياطي)</string>
+    <string name="noor_channel_backup_desc">يُستخدم فقط إذا لم يسمح أندرويد لنور بتشغيل الأذان: عندها يشغّل أندرويد نفسه أذانًا مختصرًا مع هذا الإشعار.</string>
 </resources>

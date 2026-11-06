@@ -191,3 +191,26 @@ yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
 
 Also add the environment variable `ANDROID_HOME=/opt/android-sdk`. If the SDK still cannot be installed, rely on
 GitHub Actions for builds and tests, and say so in reports.
+
+## 10. After the handover: the approved plan (6 November 2026)
+
+The owner approved this plan in full and asked Claude Code to carry it out end to end, deciding technical and design
+questions itself. Each phase ships as its own version, with renders to review, and keeps every other screen unchanged.
+
+| Phase | Version | Content | State |
+|---|---|---|---|
+| 1 · Adhan reliability | 0.9.0 | Adhan plays like an alarm (also on vibrate); never fails silently (default Adhan, then a backup channel whose sound Android plays itself); Alert history with Share report; emulator end-to-end test in CI | Done in code and on emulators; **phone test pending** (`docs/ALERTS.md`, "Testing on a phone") |
+| 2 · Language separation | | English mode entirely English, Arabic entirely Arabic (no second-language names, tasbih transliterated in English), on phone, watch and notifications; automated script-mixing check | |
+| 3 · Home screen | | All five prayers visible without scrolling; no "Official timetable" badge or source line (method moves to Settings); fix the midnight star/cloud edge and the sun path cutting through mountains; a truer sky (sun-side glow, Earth's shadow, Belt of Venus, twilight steps); a < 1 s opening time-lapse | |
+| 4 · Persistent notification | | Ongoing notification: next prayer, time, live countdown with seconds (system chronometer, no wake-ups), Hijri date, place; updated at each prayer, midnight and on changes | |
+| 5 · Calendar, Settings, Qibla | | Gregorian/Hijri switch in the date picker; Settings in clearer groups with search and the method choice; Qibla accuracy box of fixed height with hysteresis, mini meter in the calibration tips (three levels kept: the sensor is too coarse for four) | |
+| 6 · Adhan library | | Much larger, diverse collection (countries, regions, mosques, reciters) from verified licensed sources; browse, search, preview, compare, favourites; Random Adhan; more alert sounds | |
+
+Owner decisions: scenery stays artistic and offline (no weather service); build the library from the best available
+licensed sources and explore ways to obtain more (famous reciters need permission from rights holders); Claude Code
+runs every test it can and guides the owner, in simple steps, through tests that need his phone.
+
+Open owner action: GitHub's default branch is still the old `phase-1-foundation`, and repository settings cannot be
+changed from a Claude Code cloud session. Until it is set to `main` (github.com → the repository → Settings → General →
+Default branch), the monthly blind test does not run on its schedule.
+

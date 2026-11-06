@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only (never in the release APKs given to users): a hook that lets the on-device alert test set Noor up
+     and read its alert history from the command line. Only the shell (adb) holds the DUMP permission that guards it. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name="com.noor.app.debug.TestHookReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.noor.smartwatch.debug.SETUP" />
+                <action android:name="com.noor.smartwatch.debug.DUMP" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

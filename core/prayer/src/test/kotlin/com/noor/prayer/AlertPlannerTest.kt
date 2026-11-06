@@ -13,6 +13,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -28,10 +29,17 @@ class AlertPlannerTest {
         ZonedDateTime.of(y, mo, d, h, mi, 0, 0, ZoneId.of(zone)).toInstant()
 
     @Test fun settingsRoundTripAndTolerateDamage() {
-        val s = AlertSettings(enabled = true, device = AlertDevice.BOTH, gradualSeconds = 20, playInDnd = true)
+        val s = AlertSettings(enabled = true, device = AlertDevice.BOTH, gradualSeconds = 20, quietWhenSilent = true)
             .with(Prayer.ASR, PrayerAlert(true, AlertMode.CUSTOM, "custom.5f0c9a52-1b7e-4b39-9a8e-2b8f2a4d7c11", 55, false, 90))
             .with(Prayer.ISHA, PrayerAlert(false, AlertMode.SOUND, "alt.two_ticks"))
         assertEquals(s, AlertSettings.decode(s.encode()))
+        assertEquals(AlertSettings(enabled = true), AlertSettings.decode(AlertSettings(enabled = true).encode()))
+        // Settings saved by 0.5–0.8 ("dnd=0" was their default) now play like an alarm; only an explicit "quiet=1" stays quiet.
+        assertFalse(AlertSettings.decode("v=1;on=1;dev=PHONE;grad=10;dnd=0").quietWhenSilent)
+        assertTrue(AlertSettings.decode("v=1;on=1;dnd=0;quiet=1").quietWhenSilent)
+        // Watches on 0.5–0.8 read only "dnd": playing like an alarm is written as dnd=1 for them.
+        assertTrue(AlertSettings(enabled = true).encode().contains("dnd=1"))
+        assertTrue(AlertSettings(enabled = true, quietWhenSilent = true).encode().contains("dnd=0"))
         // Unknown keys, a bad mode and a bad id fall back field by field.
         val damaged = AlertSettings.decode("v=9;on=1;future=x;ASR=1,LOUDER,BAD ID!,500,1,0")
         assertTrue(damaged.enabled)

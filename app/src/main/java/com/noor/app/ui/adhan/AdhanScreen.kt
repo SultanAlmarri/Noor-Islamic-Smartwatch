@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -75,6 +76,7 @@ fun AdhanScreen(
     onOpenPrayer: (Prayer) -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenMySounds: () -> Unit,
+    onOpenHistory: () -> Unit = {},
     vm: AdhanViewModel = viewModel(),
 ) {
     val s = vm.settings.collectAsStateWithLifecycle().value ?: return
@@ -84,6 +86,7 @@ fun AdhanScreen(
     val hasLocation by vm.hasLocation.collectAsStateWithLifecycle()
     val watches by vm.watches.collectAsStateWithLifecycle()
     val custom by vm.custom.collectAsStateWithLifecycle()
+    val history by vm.history.collectAsStateWithLifecycle()
     val ar = isArabicUi()
     val f = Formatter(ar, s.numerals, s.timeFormat)
     val context = LocalContext.current
@@ -119,6 +122,13 @@ fun AdhanScreen(
             if (a.enabled && a.device.includes(AlertDevice.WATCH)) {
                 watches.forEach { w -> WatchStatusRow(w, f, onOpen = { vm.openNoorOnWatch(w.node.id) }) }
             }
+            if (a.enabled || history.isNotEmpty()) {
+                SettingsDivider()
+                val last = history.firstOrNull()
+                SettingsItem(Icons.Rounded.History, stringResource(R.string.history_title),
+                    last?.let { r -> (r.prayer?.let { f.prayerName(it) } ?: "") + " · " + outcomeText(r, f) } ?: stringResource(R.string.history_row_empty),
+                    onClick = onOpenHistory)
+            }
         }
 
         if (a.enabled) {
@@ -151,8 +161,8 @@ fun AdhanScreen(
                     onClick = { gradualDialog = true })
                 SettingsDivider()
                 SettingsItem(Icons.Rounded.DoNotDisturbOn, stringResource(R.string.adhan_dnd),
-                    stringResource(if (a.playInDnd) R.string.adhan_dnd_on else R.string.adhan_dnd_off), null) {
-                    NoorSwitch(a.playInDnd, vm::setPlayInDnd)
+                    stringResource(if (!a.quietWhenSilent) R.string.adhan_dnd_on else R.string.adhan_dnd_off), null) {
+                    NoorSwitch(!a.quietWhenSilent, vm::setPlayInSilentMode)
                 }
             }
             Footnote(stringResource(R.string.adhan_volume_note))

@@ -11,7 +11,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.noor.alerts.AlertLog
 import com.noor.alerts.AlertNotifications
+import com.noor.alerts.AlertRecord
 import com.noor.alerts.AlertPlayer
 import com.noor.alerts.AlertScheduler
 import com.noor.alerts.CustomSound
@@ -88,6 +90,10 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     private val _watches = MutableStateFlow<List<WatchAlertState>>(emptyList())
     val watches: StateFlow<List<WatchAlertState>> = _watches.asStateFlow()
 
+    /** What happened at the last alerts on this phone, newest first. */
+    private val _history = MutableStateFlow<List<AlertRecord>>(emptyList())
+    val history: StateFlow<List<AlertRecord>> = _history.asStateFlow()
+
     private val _preview = MutableStateFlow<PreviewKey?>(null)
     val preview: StateFlow<PreviewKey?> = _preview.asStateFlow()
 
@@ -118,6 +124,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             batteryRestricted = ctx.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(ctx.packageName) == false,
         )
         viewModelScope.launch {
+            _history.value = withContext(Dispatchers.IO) { AlertLog.all(ctx) }
             AlertScheduler.reschedule(ctx)
             val snap = container.watchSetup.snapshot()
             _watches.value = snap.connected.filter { it.id in snap.withNoor }.map { WatchAlertState(it, snap.reports[it.id]) }
@@ -129,7 +136,8 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun setEnabled(on: Boolean) = update { it.copy(enabled = on) }
     fun setDevice(d: AlertDevice) = update { it.copy(device = d) }
     fun setGradual(seconds: Int) = update { it.copy(gradualSeconds = seconds) }
-    fun setPlayInDnd(on: Boolean) = update { it.copy(playInDnd = on) }
+    /** The switch reads "Play in silent mode and Do Not Disturb": on = play like an alarm (the default). */
+    fun setPlayInSilentMode(on: Boolean) = update { it.copy(quietWhenSilent = !on) }
     fun setPrayer(p: Prayer, change: (PrayerAlert) -> PrayerAlert) = update { s -> s.with(p, change(s.alert(p))) }
 
     /** Picking a mode keeps a sensible sound for it (a Fajr Adhan for Fajr, the chime for sounds). */
@@ -214,6 +222,47 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         stopPreview()
         _message.value = ctx.getString(
             if (AlertScheduler.scheduleTest(ctx, p, 10)) com.noor.app.R.string.adhan_test_sent else com.noor.app.R.string.adhan_test_failed)
+    }
+
+    /**
+     * A real alert through the whole path in ten seconds, for the next prayer that alerts (its own sound and choices),
+     * so the user can lock the phone and hear exactly what will happen at prayer time.
+     */
+    fun testNext() {
+        val ctx = getApplication<Application>()
+        val p = next.value?.planned?.prayer
+            ?: settings.value?.alerts?.let { a -> Prayer.entries.firstOrNull { a.alert(it).enabled && a.alert(it).mode.playsAudio } }
+            ?: Prayer.DHUHR
+        test(p)
+        viewModelScope.launch { kotlinx.coroutines.delay(25_000); refresh() }
+    }
+
+    /** A plain-text report of this phone's alert set-up and history, to share when an alert did not sound. */
+    fun report(): String {
+        val ctx = getApplication<Application>()
+        val r = _readiness.value
+        val a = settings.value?.alerts
+        val am = ctx.getSystemService(android.media.AudioManager::class.java)
+        val zone = ZoneId.systemDefault()
+        fun t(ms: Long) = java.time.Instant.ofEpochMilli(ms).atZone(zone).toLocalDateTime().withNano(0).toString()
+        return buildString {
+            appendLine("Noor ${com.noor.app.BuildConfigInfo.versionName} alert report, ${t(System.currentTimeMillis())} ($zone)")
+            appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+            appendLine("Notifications allowed: ${r.notificationsAllowed}; Adhan category blocked: ${r.adhanChannelBlocked}")
+            appendLine("Exact alarms: ${r.exactAlarms}; alarm volume: ${Math.round(r.alarmVolume * 100)}%; ringer mode: ${am?.ringerMode}")
+            appendLine("Battery optimisation exempt: ${!r.batteryRestricted}; background restricted: ${
+                runCatching { if (Build.VERSION.SDK_INT >= 28) ctx.getSystemService(android.app.ActivityManager::class.java).isBackgroundRestricted else false }.getOrNull()}")
+            appendLine("Alerts: ${a?.encode()}")
+            appendLine("Next: ${next.value?.let { "${it.planned.prayer} ${it.planned.at}" } ?: "none"}")
+            appendLine()
+            val list = AlertLog.all(ctx)
+            if (list.isEmpty()) appendLine("No alerts recorded yet.")
+            list.forEach { e ->
+                appendLine("${t(e.dueAtMs)} ${e.prayer ?: "?"}${if (e.test) " TEST" else ""}: ${e.outcome}, played ${e.playedMs / 1000} s" +
+                    "${if (e.stoppedByUser) " (stopped by user)" else ""}, ${(e.delayMs / 1000)} s after due, sound ${e.sound}," +
+                    " exact ${e.exactAlarms}, volume ${e.alarmVolumePercent}%, ringer ${e.ringerMode}${e.detail?.let { ", $it" } ?: ""}")
+            }
+        }
     }
 
     fun openNoorOnWatch(nodeId: String) = viewModelScope.launch { container.watchSetup.openNoorOnWatch(nodeId) }

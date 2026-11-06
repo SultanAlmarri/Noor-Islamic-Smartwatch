@@ -14,7 +14,7 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: **0.8.0** for both apps (versionCode 8). Everything is on `main`; there are no other branches.
+Current version: **0.9.0** for both apps (versionCode 9). Everything is on `main`; there are no other branches.
 
 ## The owner
 
@@ -39,8 +39,10 @@ Current version: **0.8.0** for both apps (versionCode 8). Everything is on `main
    purpose: phone and watch must share one signature, and every build must install over the last. Do not replace
    them, or users' installed builds stop updating and phone↔watch pairing breaks.
 4. **Do not remove or weaken tests to make a build pass.** Fix the cause.
-5. **Do not break working features.** Change only what the task needs. In particular, the owner asked that every
-   phone screen other than the home screen stay exactly as it is (see HANDOVER.md, "Design history").
+5. **Do not break working features.** Change only what the task needs. Phone screens outside the approved plan
+   (HANDOVER.md section 10: home, Adhan and alerts, Settings, the date picker, small Qibla fixes, the persistent
+   notification) stay exactly as they are (see HANDOVER.md, "Design history"). The Qibla screen is liked as it is:
+   fix, do not redesign.
 6. **Do not fabricate** test results, data, or certainty. Do not invent missing data.
 7. **No scraping** of websites or apps without authorisation. **No unlicensed copyrighted recordings.** Adhan audio
    comes only from verified licensed sources (`docs/SOUNDS.md`).
@@ -62,7 +64,7 @@ Current version: **0.8.0** for both apps (versionCode 8). Everything is on `main
 | `tools/` | Watch-face packaging and validation, sound pipeline, gazetteer and SPA table generators, verification |
 | `accuracy/` | Official IACAD datasets, research tools, the blind test (scored monthly by a GitHub workflow) |
 | `docs/` | `HANDOVER.md`, `ARCHITECTURE.md`, `DESIGN.md`, `WATCH.md`, `ALERTS.md`, `SOUNDS.md`, `AUTHORITIES.md`, `PRAYER_ACCURACY.md`, `INSTALL.md` |
-| `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` |
+| `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `device-alerts.yml` (the real alarm → Adhan path on Android 14/15 emulators), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` |
 
 ## Build and test
 
@@ -83,7 +85,7 @@ watch-face packaging step). Point Gradle at the SDK with `ANDROID_HOME` or with 
   at a time, and run `./gradlew --stop` if the daemon dies.
 - `app/build.gradle.kts` sets `forkEvery = 1` for unit tests because DataStore allows one instance per process.
   Keep it. For the same reason, each Robolectric render test class uses a single `@Test` method.
-- Rendered screens: `ScreenshotTest` writes 48 PNGs to `app/build/screenshots` (CI publishes them as
+- Rendered screens: `ScreenshotTest` writes 50 PNGs to `app/build/screenshots` (CI publishes them as
   `screenshots.zip`). The home-screen design renders (`app/src/test/.../design/Today*DesignTest`) write to
   `app/build/design`. These are software renders, useful for reviewing layout, not proof of device behaviour.
 - Release builds are signed with the development key, so they install over earlier builds.

@@ -200,7 +200,7 @@
     <string name="adhan_action_open">Open</string>
     <string name="adhan_action_open_watch">Open on watch</string>
     <string name="adhan_warn_channel">The “Adhan” notification category is turned off in system settings, so the Adhan cannot play.</string>
-    <string name="adhan_warn_exact">Exact alarms are off: alerts may come a few minutes late and the Adhan may not be able to start. Allow “Alarms &amp; reminders” for Noor.</string>
+    <string name="adhan_warn_exact">Exact alarms are off: alerts may come a few minutes late, and Android may only let a short Adhan play. Allow “Alarms &amp; reminders” for Noor so the full Adhan plays on time.</string>
     <string name="adhan_warn_volume">Your alarm volume is at zero, so the Adhan will be silent.</string>
     <string name="adhan_warn_battery">Some phones hold back alarms to save battery. If an alert comes late, set Noor’s battery use to “Unrestricted”.</string>
     <string name="adhan_warn_watch_notifications">Notifications are off on %1$s. Open Noor on the watch to allow them.</string>
@@ -323,4 +323,34 @@
     <string name="today_suhoor">Suhoor ends</string>
     <string name="today_iftar">Iftar</string>
     <string name="search_no_results">No place matches “%1$s”. Try the city’s name in English or Arabic.</string>
+    <string name="history_title">Alert history</string>
+    <string name="history_row_empty">Nothing due yet</string>
+    <string name="history_intro">What actually happened at each alert on this phone: whether the Adhan played and for how long, or why it could not.</string>
+    <string name="history_empty">No alert has been due yet. Each one will appear here with what really happened, so you can see that the Adhan played.</string>
+    <string name="history_test">Test the Adhan in %1$s seconds</string>
+    <string name="history_test_hint">After pressing it, lock the phone. The test then runs exactly like a real prayer time, and its result appears below.</string>
+    <string name="history_share">Share report</string>
+    <string name="history_test_tag">Test</string>
+    <string name="history_today">Today</string>
+    <string name="history_on_time">On time</string>
+    <string name="history_exact_off">Exact alarms were off</string>
+    <string name="history_volume_zero">Alarm volume was zero</string>
+    <string name="history_o_starting">Started playing; Android closed Noor before the end could be recorded.</string>
+    <string name="history_o_played">Played for %1$s.</string>
+    <string name="history_o_stopped">Played for %1$s, until you stopped it.</string>
+    <string name="history_o_fallback">The chosen sound could not be played, so Noor’s default Adhan played for %1$s.</string>
+    <string name="history_o_backup">Android did not let Noor start the full Adhan, so a short Adhan played instead.</string>
+    <string name="history_o_failed">No sound could be played. The notification sound was used.</string>
+    <string name="history_o_notification">Notification, as you chose.</string>
+    <string name="history_o_silent">Silent notification, as you chose.</string>
+    <string name="history_o_quiet">Silent, because the phone was on silent, vibrate or Do Not Disturb and you chose to stay quiet then.</string>
+    <string name="history_o_dnd">Silent: Do Not Disturb was blocking alarms.</string>
+    <string name="history_o_call">Silent: a call was in progress.</string>
+    <string name="history_o_no_notifications">Nothing could be shown or played: notifications are off for Noor.</string>
+    <string name="history_o_late">The phone was off or asleep, so the alarm came more than ten minutes late. A quiet notice was shown instead of the Adhan.</string>
+    <string name="history_o_no_settings">Noor had no location or settings yet, so it could not tell which prayer was due.</string>
+    <plurals name="history_late">
+        <item quantity="one">%1$s min late</item>
+        <item quantity="other">%1$s min late</item>
+    </plurals>
 </resources>

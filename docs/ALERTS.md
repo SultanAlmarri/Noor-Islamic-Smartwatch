@@ -1,6 +1,6 @@
 # Adhan and prayer alerts
 
-Version 0.5.0. How Noor alerts at prayer times on the phone and the watch, which Android permissions it uses and why,
+Version 0.9.0. How Noor alerts at prayer times on the phone and the watch, which Android permissions it uses and why,
 and what has and has not been verified.
 
 ## What the user can choose
@@ -14,8 +14,9 @@ and what has and has not been verified.
 | Per prayer: sound | Prayer page | Fajr lists Fajr Adhans first; a Fajr Adhan is never offered for other prayers. Choosing a non-Fajr Adhan for Fajr shows a note. |
 | Per prayer: volume, vibration, stop after | Prayer page | Volume is a percentage of the alarm volume on a perceptual curve. Stop after 30 s, 1, 2 or 3 min, or play to the end (with a short fade). |
 | Gradual volume | Adhan tab | Off, 5, 10 (default), 20, 30 or 60 seconds. |
-| Play in silent mode and Do Not Disturb | Adhan tab | Off by default: while the device is silent, on vibrate or in Do Not Disturb, the alert becomes a silent notification (vibrate-only when the ringer is on vibrate). On: plays on the alarm stream like an alarm clock; the system's Do Not Disturb rule for alarms still decides. |
-| Test this alert | Prayer page | Arms a real alarm 10 s ahead and runs the whole path (alarm → receiver → player service → notification). This is the way to check alerts on a device. |
+| Play in silent mode and Do Not Disturb | Adhan tab | **On by default since 0.9**: the Adhan plays on the alarm stream like an alarm clock, whether the phone is on vibrate, silent or not; under Do Not Disturb the system's own rule for alarms decides (if that rule blocks alarms, Noor says so instead of "playing" silently). Off: while the device is silent, on vibrate or in Do Not Disturb, the alert becomes a silent notification (vibrate-only when the ringer is on vibrate). Up to 0.8 this was off by default, which silenced the Adhan on every phone kept on vibrate: the main cause of "the notification comes but no Adhan". |
+| Test this alert | Prayer page, Alert history | Arms a real alarm 10 s ahead and runs the whole path (alarm → receiver → player service → notification). This is the way to check alerts on a device. |
+| Alert history | Adhan tab | The last 40 alerts on this phone and what actually happened to each: played (and for how long), stopped by the user, replaced by the default Adhan, played by the backup channel, quiet and why, late. "Share report" sends it with the phone's alert set-up as plain text. |
 | My sounds | Adhan tab | Import MP3, M4A, AAC or WAV (also OGG, Opus, FLAC) up to 40 MB; rename, replace (keeps the id, so prayers using it keep working), delete (prayers using it move to the default Adhan). |
 
 ## How it works
@@ -37,6 +38,14 @@ wear          AlertSection (permissions on the watch), ReceivedSounds
 - **Firing.** The receiver re-checks the alarm against current times and choices: on time → alert; more than 10 minutes
   late (device off or in deep sleep) → a quiet "the time began at …" notification instead of a late Adhan; moved,
   turned off or moved to the other device → nothing.
+- **Never silently failing (0.9).** Every alert ends in one recorded outcome (`AlertLog`, shown as Alert history). If
+  the chosen sound cannot be played, Noor's default short Adhan plays instead and the notification says so. If Android
+  refuses to let Noor start its player at all (Android 12+ forbids starting it from the background without the
+  "Alarms & reminders" permission), the **backup channel** `noor_adhan_backup` is used: its own sound is the short
+  Makkah Adhan (`alerts/res/raw/noor_backup_adhan.ogg`, byte-identical to the credited library file, checked by
+  `BackupSoundTest`), which Android's notification system plays itself on the alarm stream, so no permission is needed.
+  The player no longer gives up when another app keeps audio focus, and a player that is not ready within 8 s counts
+  as a failure rather than hanging in silence.
 - **Playing.** A foreground service (`mediaPlayback`) plays on the alarm stream with audio focus (music pauses; a call
   stops the Adhan), a wake lock while playing, the gradual rise, the optional limit with fade, and a notification with
   **Stop** (dismissing it stops too). Nothing ever plays without a visible Stop: if notifications are not allowed,
@@ -77,7 +86,27 @@ sounds. Credits, licences, provenance and the exact edits: [SOUNDS.md](SOUNDS.md
 | Sound library: every file present, credited, allowed licence; defaults exist; Fajr rules | `app` `BundledDataTest`, `alerts` `SoundLibraryTest` | Pass |
 | Imported sounds: import, reject non-audio, rename, replace, delete, survive restart | `alerts` `SoundLibraryTest` (audio check replaced by a test probe) | Pass |
 | Screens | Software-rendered screenshots (phone 26–35, watch w05–w06) | Rendered |
-| Real playback, alarms at prayer time, lock screen, Do Not Disturb, watch transfer | Needs a real phone and watch | **Not yet tested** |
+| Fallback chain, backup channel, history, vibrate no longer silencing the Adhan | `alerts` `AlertReliabilityTest`, `AlertSchedulerTest` (Robolectric) | Pass |
+| Alarm → Adhan on a real Android system, with Noor's process killed, the screen off and the device in Doze: normal, on vibrate, and without exact alarms (backup channel) | `tools/devicetest/alert_e2e.sh` on Android 14 and 15 emulators (`.github/workflows/device-alerts.yml`); passes only if Android itself reports Noor playing on the alarm stream for at least 25 s | See the workflow's latest run |
+| Real playback heard on a phone, a phone maker's battery manager, lock screen, watch transfer | Needs a real phone and watch | **Not yet tested** (see "Testing on a phone") |
 
 The audio decoding check for imported files (`MediaMetadataRetriever`) cannot run under Robolectric, so it is only
 exercised on a device.
+
+## Testing on a phone
+
+Emulators prove the Android side; only a phone proves that a person hears the Adhan, and that the phone maker's battery
+manager (Samsung's "sleeping apps", for example) lets the alarm through. The steps, for anyone:
+
+1. Install the latest `Noor-phone.apk`, open Noor, go to **Adhan**, turn **Prayer alerts** on and press every **Allow**
+   the screen shows (notifications, "Alarms & reminders").
+2. Open **Alert history** and press **Test the Adhan in 10 seconds**, then lock the phone straight away.
+3. The Adhan should start within about 10 seconds, with the screen off. Let it play a little, then press **Stop**.
+4. Repeat with the phone on **vibrate**: the Adhan must still play (unless "Play in silent mode and Do Not Disturb" was
+   turned off on purpose).
+5. Leave the phone alone until the next real prayer time. Afterwards, Alert history shows what happened, on time or late.
+6. If anything did not sound, press **Share report** and send the report: it lists each alert, what Android allowed and
+   what Noor did, which is enough to find the cause without developer tools.
+
+With a computer and `adb`, `tools/devicetest/alert_e2e.sh` (debug build) runs the same scenarios as on the emulators.
+

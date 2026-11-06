@@ -57,8 +57,12 @@ data class AlertSettings(
     val perPrayer: Map<Prayer, PrayerAlert> = DEFAULTS,
     /** Seconds to rise from quiet to the chosen volume. 0 = start at full volume. */
     val gradualSeconds: Int = 10,
-    /** When false, the Adhan stays silent while Do Not Disturb is on or the ringer is silent (a silent notification is shown). */
-    val playInDnd: Boolean = false,
+    /**
+     * False (the default): the Adhan plays like an alarm clock. The phone being on vibrate or silent does not stop it;
+     * under Do Not Disturb the system's own rule for alarms decides. True: while the device is on vibrate, silent or in
+     * Do Not Disturb, the alert becomes a silent notification instead.
+     */
+    val quietWhenSilent: Boolean = false,
 ) {
     fun alert(p: Prayer): PrayerAlert = (perPrayer[p] ?: DEFAULTS.getValue(p)).normalized(p)
 
@@ -70,7 +74,8 @@ data class AlertSettings(
     /** Compact single-line form, used in DataStore and inside the watch config. */
     fun encode(): String = buildList {
         add("v=$VERSION"); add("on=${if (enabled) 1 else 0}"); add("dev=${device.name}")
-        add("grad=$gradualSeconds"); add("dnd=${if (playInDnd) 1 else 0}")
+        // "dnd" is the 0.5–0.8 field ("play in Do Not Disturb"), still written so watches on those versions behave the same.
+        add("grad=$gradualSeconds"); add("dnd=${if (quietWhenSilent) 0 else 1}"); add("quiet=${if (quietWhenSilent) 1 else 0}")
         Prayer.entries.forEach { p ->
             val a = alert(p)
             add("${p.name}=${if (a.enabled) 1 else 0},${a.mode.name},${a.soundId ?: ""},${a.volumePercent},${if (a.vibrate) 1 else 0},${a.maxSeconds}")
@@ -109,7 +114,9 @@ data class AlertSettings(
                 device = m["dev"]?.let { n -> AlertDevice.entries.firstOrNull { it.name == n } } ?: AlertDevice.PHONE,
                 perPrayer = per,
                 gradualSeconds = (m["grad"]?.toIntOrNull() ?: 10).coerceIn(0, 60),
-                playInDnd = m["dnd"] == "1",
+                // Versions before 0.9 had only "dnd", off by default, which silenced the Adhan on vibrate: that default was
+                // the main reason Adhans did not sound, so it is not carried over. Only an explicit "quiet" choice is kept.
+                quietWhenSilent = m["quiet"] == "1",
             )
         }
     }

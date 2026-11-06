@@ -88,22 +88,37 @@ class AlertSchedulerTest {
         val nm = app.getSystemService(NotificationManager::class.java)
         val am = app.getSystemService(AudioManager::class.java)
         AlertNotifications.ensureChannels(app)
-        val respect = AlertSettings(enabled = true, playInDnd = false)
-        val override = AlertSettings(enabled = true, playInDnd = true)
-        assertNull(AlertDispatcher.quietReason(app, respect))
+        val quiet = AlertSettings(enabled = true, quietWhenSilent = true) // "stay quiet when my phone is silent"
+        val alarm = AlertSettings(enabled = true) // the default: the Adhan plays like an alarm clock
+        assertNull(AlertDispatcher.quietReason(app, quiet))
+        assertNull(AlertDispatcher.quietReason(app, alarm))
         shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        // Do Not Disturb that lets alarms through (Android's default rule).
+        nm.notificationPolicy = NotificationManager.Policy(NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS, 0, 0)
         nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
-        assertEquals(AlertDispatcher.Quiet.DND, AlertDispatcher.quietReason(app, respect))
-        assertNull(AlertDispatcher.quietReason(app, override))
+        assertEquals(AlertDispatcher.Quiet.DND, AlertDispatcher.quietReason(app, quiet))
+        assertNull(AlertDispatcher.quietReason(app, alarm))
+        // Do Not Disturb that blocks alarms too: the system would mute the Adhan, so Noor says so instead of "playing" silently.
+        nm.notificationPolicy = NotificationManager.Policy(0, 0, 0)
+        assertEquals(AlertDispatcher.Quiet.DND_BLOCKS_ALARMS, AlertDispatcher.quietReason(app, alarm))
+        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+        assertEquals(AlertDispatcher.Quiet.DND_BLOCKS_ALARMS, AlertDispatcher.quietReason(app, alarm))
+        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALARMS)
+        assertNull(AlertDispatcher.quietReason(app, alarm))
         nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+        // Vibrate and silent: quiet only for those who chose it. This default was why Adhans stayed silent before 0.9.
         am.ringerMode = AudioManager.RINGER_MODE_VIBRATE
-        assertEquals(AlertDispatcher.Quiet.RINGER_SILENT, AlertDispatcher.quietReason(app, respect))
+        assertEquals(AlertDispatcher.Quiet.RINGER_SILENT, AlertDispatcher.quietReason(app, quiet))
+        assertNull(AlertDispatcher.quietReason(app, alarm))
+        am.ringerMode = AudioManager.RINGER_MODE_SILENT
+        assertEquals(AlertDispatcher.Quiet.RINGER_SILENT, AlertDispatcher.quietReason(app, quiet))
+        assertNull(AlertDispatcher.quietReason(app, alarm))
         am.ringerMode = AudioManager.RINGER_MODE_NORMAL
         am.mode = AudioManager.MODE_IN_CALL
-        assertEquals(AlertDispatcher.Quiet.IN_CALL, AlertDispatcher.quietReason(app, override)) // calls always win
+        assertEquals(AlertDispatcher.Quiet.IN_CALL, AlertDispatcher.quietReason(app, alarm)) // calls always win
         am.mode = AudioManager.MODE_NORMAL
         shadowOf(nm).setNotificationsEnabled(false)
-        assertEquals(AlertDispatcher.Quiet.NO_NOTIFICATIONS, AlertDispatcher.quietReason(app, override)) // never play without a Stop button
+        assertEquals(AlertDispatcher.Quiet.NO_NOTIFICATIONS, AlertDispatcher.quietReason(app, alarm)) // never play without a Stop button
     }
 
     @Test fun notificationOnlyAndSilentPostOnTheirChannels() {

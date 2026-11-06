@@ -31,6 +31,12 @@ internal data class PlayRequest(
     val vibrate: Boolean,
     /** Post a regular prayer notification when the sound ends, so the time stays visible. */
     val keepNotification: Boolean,
+    /** The alert-history entry to complete when the sound ends (0 = previews and tests outside the history). */
+    val logId: Long = 0,
+    /** Played if [source] cannot be played (Noor's default short Adhan or chime). */
+    val fallback: SoundSource? = null,
+    val fallbackNote: String? = null,
+    val failedNote: String? = null,
 ) {
     fun toIntent(context: Context): Intent = Intent(context, AdhanService::class.java).setAction(AdhanService.ACTION_PLAY)
         .putExtra("id", notificationId).putExtra("title", title).putExtra("body", body).putExtra("at", atMs)
@@ -38,6 +44,9 @@ internal data class PlayRequest(
         .putExtra("asset", (source as? SoundSource.Asset)?.path).putExtra("file", (source as? SoundSource.LocalFile)?.file?.absolutePath)
         .putExtra("volume", volumePercent).putExtra("gradual", gradualSeconds).putExtra("max", maxSeconds)
         .putExtra("vibrate", vibrate).putExtra("keep", keepNotification)
+        .putExtra("log", logId)
+        .putExtra("fbAsset", (fallback as? SoundSource.Asset)?.path).putExtra("fbFile", (fallback as? SoundSource.LocalFile)?.file?.absolutePath)
+        .putExtra("fbNote", fallbackNote).putExtra("failNote", failedNote)
 
     companion object {
         fun from(i: Intent): PlayRequest? {
@@ -46,7 +55,10 @@ internal data class PlayRequest(
             return PlayRequest(i.getIntExtra("id", AlertNotifications.ID_PLAYING), i.getStringExtra("title") ?: return null,
                 i.getStringExtra("body") ?: "", i.getLongExtra("at", System.currentTimeMillis()), i.getStringExtra("detail"),
                 i.getStringExtra("stop") ?: "Stop", source, i.getIntExtra("volume", 80), i.getIntExtra("gradual", 0),
-                i.getIntExtra("max", 0), i.getBooleanExtra("vibrate", false), i.getBooleanExtra("keep", true))
+                i.getIntExtra("max", 0), i.getBooleanExtra("vibrate", false), i.getBooleanExtra("keep", true),
+                logId = i.getLongExtra("log", 0L),
+                fallback = i.getStringExtra("fbAsset")?.let { SoundSource.Asset(it) } ?: i.getStringExtra("fbFile")?.let { SoundSource.LocalFile(File(it)) },
+                fallbackNote = i.getStringExtra("fbNote"), failedNote = i.getStringExtra("failNote"))
         }
     }
 }
@@ -75,10 +87,10 @@ class AdhanService : Service() {
                 val n = AlertNotifications.playing(this, req.title, req.body, Instant.ofEpochMilli(req.atMs), req.detail, req.stopLabel)
                 ServiceCompat.startForeground(this, AlertNotifications.ID_PLAYING, n,
                     if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0)
-                current?.let { finishNotification(it) }
+                current?.let { finishNotification(it, null) }
                 current = req
                 if (req.vibrate) vibrate(this)
-                player.play(req.source, req.volumePercent, req.gradualSeconds, req.maxSeconds) { done(req) }
+                start(req, req.source, usingFallback = false)
             }
             ACTION_STOP -> {
                 if (player.isPlaying) player.stop() else { stopVibration(this); shutdown() }
@@ -88,17 +100,56 @@ class AdhanService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun done(req: PlayRequest) {
+    private fun start(req: PlayRequest, source: SoundSource, usingFallback: Boolean) {
+        player.play(source, req.volumePercent, req.gradualSeconds, req.maxSeconds) { result -> ended(req, result, usingFallback) }
+    }
+
+    /** One play ended: record it, or, if nothing was heard, try the next way of making the prayer heard. */
+    private fun ended(req: PlayRequest, result: PlayResult, usingFallback: Boolean) {
+        if (current !== req) return
+        if (result.played) {
+            log(req) { it.copy(outcome = if (usingFallback) AlertOutcome.PLAYED_FALLBACK else AlertOutcome.PLAYED,
+                playedMs = result.playedMs, stoppedByUser = result.stoppedByUser, detail = it.detail) }
+            done(req, note = if (usingFallback) req.fallbackNote else null)
+            return
+        }
+        val fb = req.fallback
+        if (!usingFallback && fb != null && !result.stoppedByUser) {
+            log(req) { it.copy(detail = "chosen sound: ${result.error}") }
+            val n = AlertNotifications.playing(this, req.title, req.body, Instant.ofEpochMilli(req.atMs),
+                listOfNotNull(req.detail, req.fallbackNote).joinToString("\n"), req.stopLabel)
+            runCatching { androidx.core.app.NotificationManagerCompat.from(this).notify(AlertNotifications.ID_PLAYING, n) }
+            start(req, fb, usingFallback = true)
+            return
+        }
+        if (result.stoppedByUser) {
+            log(req) { it.copy(outcome = AlertOutcome.PLAYED, playedMs = 0, stoppedByUser = true) }
+            done(req, note = null); return
+        }
+        // Noor's own player could not play anything on this device: Android's notification system plays the backup Adhan.
+        log(req) { it.copy(outcome = AlertOutcome.BACKUP_SOUND, detail = listOfNotNull(it.detail, "player: ${result.error}").joinToString("; ")) }
+        stopVibration(this)
+        current = null
+        AlertNotifications.postBackup(this, req.notificationId, req.title, req.body, Instant.ofEpochMilli(req.atMs),
+            listOfNotNull(req.detail, req.failedNote).joinToString("\n").ifEmpty { null })
+        shutdown()
+    }
+
+    private fun log(req: PlayRequest, change: (AlertRecord) -> AlertRecord) {
+        if (req.logId != 0L) runCatching { AlertLog.update(this, req.logId, change) }
+    }
+
+    private fun done(req: PlayRequest, note: String?) {
         if (current !== req) return
         stopVibration(this)
-        finishNotification(req)
+        finishNotification(req, note)
         current = null
         shutdown()
     }
 
-    private fun finishNotification(req: PlayRequest) {
+    private fun finishNotification(req: PlayRequest, note: String?) {
         if (req.keepNotification) AlertNotifications.post(this, req.notificationId, AlertNotifications.CHANNEL_SILENT, req.title, req.body,
-            Instant.ofEpochMilli(req.atMs), req.detail)
+            Instant.ofEpochMilli(req.atMs), listOfNotNull(req.detail, note).joinToString("\n").ifEmpty { null })
     }
 
     private fun shutdown() {

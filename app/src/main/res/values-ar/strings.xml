@@ -200,7 +200,7 @@
     <string name="adhan_action_open">فتح</string>
     <string name="adhan_action_open_watch">فتح على الساعة</string>
     <string name="adhan_warn_channel">فئة إشعارات «الأذان» متوقفة في إعدادات النظام، فلا يمكن تشغيل الأذان.</string>
-    <string name="adhan_warn_exact">المنبّهات الدقيقة متوقفة: قد تتأخر التنبيهات بضع دقائق وقد يتعذّر تشغيل الأذان. اسمح بـ«المنبّهات والتذكيرات» لتطبيق نور.</string>
+    <string name="adhan_warn_exact">المنبّهات الدقيقة متوقفة: قد تتأخر التنبيهات بضع دقائق، وقد لا يسمح أندرويد إلا بأذان مختصر. اسمح بـ«المنبّهات والتذكيرات» لتطبيق نور ليُشغَّل الأذان كاملًا في وقته.</string>
     <string name="adhan_warn_volume">مستوى صوت المنبّه صفر، فلن يُسمع الأذان.</string>
     <string name="adhan_warn_battery">بعض الهواتف تؤخّر المنبّهات لتوفير البطارية. إن تأخر تنبيه، اجعل استخدام البطارية لتطبيق نور «غير مقيّد».</string>
     <string name="adhan_warn_watch_notifications">الإشعارات متوقفة على %1$s. افتح نور على الساعة للسماح بها.</string>
@@ -323,4 +323,38 @@
     <string name="today_suhoor">نهاية السحور</string>
     <string name="today_iftar">الإفطار</string>
     <string name="search_no_results">لا يوجد مكان يطابق «%1$s». جرّب اسم المدينة بالعربية أو الإنجليزية.</string>
+    <string name="history_title">سجل التنبيهات</string>
+    <string name="history_row_empty">لم يحن أي تنبيه بعد</string>
+    <string name="history_intro">ما حدث فعلًا عند كل تنبيه على هذا الهاتف: هل شُغّل الأذان وكم استمر، أو لماذا تعذّر تشغيله.</string>
+    <string name="history_empty">لم يحن أي تنبيه بعد. سيظهر كل تنبيه هنا مع ما حدث فعلًا، لتتأكد أن الأذان شُغّل.</string>
+    <string name="history_test">جرّب الأذان بعد %1$s ثوانٍ</string>
+    <string name="history_test_hint">بعد الضغط، اقفل الهاتف. تجري التجربة تمامًا كما في وقت الصلاة الحقيقي، وتظهر نتيجتها أدناه.</string>
+    <string name="history_share">مشاركة التقرير</string>
+    <string name="history_test_tag">تجربة</string>
+    <string name="history_today">اليوم</string>
+    <string name="history_on_time">في الوقت</string>
+    <string name="history_exact_off">كانت المنبّهات الدقيقة متوقفة</string>
+    <string name="history_volume_zero">كان صوت المنبّه صفرًا</string>
+    <string name="history_o_starting">بدأ التشغيل، ثم أغلق أندرويد نور قبل تسجيل النهاية.</string>
+    <string name="history_o_played">شُغّل لمدة %1$s.</string>
+    <string name="history_o_stopped">شُغّل لمدة %1$s حتى أوقفته.</string>
+    <string name="history_o_fallback">تعذّر تشغيل الصوت المختار، فشُغّل أذان نور الافتراضي لمدة %1$s.</string>
+    <string name="history_o_backup">لم يسمح أندرويد لنور بتشغيل الأذان كاملًا، فشُغّل أذان مختصر بدلًا منه.</string>
+    <string name="history_o_failed">تعذّر تشغيل أي صوت، فاستُخدم صوت الإشعارات.</string>
+    <string name="history_o_notification">إشعار، كما اخترت.</string>
+    <string name="history_o_silent">إشعار صامت، كما اخترت.</string>
+    <string name="history_o_quiet">صامت، لأن الهاتف كان على الوضع الصامت أو الاهتزاز أو «عدم الإزعاج» واخترت الصمت عندها.</string>
+    <string name="history_o_dnd">صامت: كان وضع «عدم الإزعاج» يمنع المنبّهات.</string>
+    <string name="history_o_call">صامت: كانت هناك مكالمة جارية.</string>
+    <string name="history_o_no_notifications">تعذّر عرض أي شيء أو تشغيله: الإشعارات متوقفة لتطبيق نور.</string>
+    <string name="history_o_late">كان الهاتف مغلقًا أو في سكون، فوصل المنبّه بعد أكثر من عشر دقائق، وظهر تنبيه هادئ بدل الأذان.</string>
+    <string name="history_o_no_settings">لم يكن لدى نور موقع أو إعدادات بعد، فتعذّر معرفة الصلاة التي حان وقتها.</string>
+    <plurals name="history_late">
+        <item quantity="zero">متأخر %1$s دقيقة</item>
+        <item quantity="one">متأخر دقيقة واحدة</item>
+        <item quantity="two">متأخر دقيقتين</item>
+        <item quantity="few">متأخر %1$s دقائق</item>
+        <item quantity="many">متأخر %1$s دقيقة</item>
+        <item quantity="other">متأخر %1$s دقيقة</item>
+    </plurals>
 </resources>

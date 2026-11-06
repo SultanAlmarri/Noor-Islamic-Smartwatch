@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.noor.prayer.Prayer
@@ -26,6 +27,11 @@ object AlertNotifications {
     const val CHANNEL_NOTIFY = "noor_prayer"
     /** "Silent": on the lock screen and in the shade, no sound, no vibration. */
     const val CHANNEL_SILENT = "noor_prayer_silent"
+    /**
+     * Backup Adhan: a short Adhan is the channel's own sound, played by Android itself on the alarm stream. Used only
+     * when Android refuses to let Noor start its player (no exact-alarm permission), so the prayer is still heard.
+     */
+    const val CHANNEL_BACKUP = "noor_adhan_backup"
 
     const val ID_PLAYING = 4100
     /** Noor's gold, readable on light and dark notification shades. */
@@ -53,7 +59,17 @@ object AlertNotifications {
             setSound(null, null); enableVibration(false)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         })
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_BACKUP, t.getString(R.string.noor_channel_backup), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = t.getString(R.string.noor_channel_backup_desc)
+            setSound(backupSound(t), AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+            enableVibration(true)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        })
     }
+
+    /** The short Adhan bundled as a resource, so that Android's notification system can play it itself. */
+    fun backupSound(context: Context): Uri = Uri.parse("android.resource://${context.packageName}/${R.raw.noor_backup_adhan}")
 
     /** True when Noor may show notifications on [channel] (app-level permission and the channel itself). */
     fun canPost(context: Context, channel: String): Boolean {
@@ -111,6 +127,20 @@ object AlertNotifications {
     }
 
     internal fun idFor(p: Prayer) = ID_PRAYER_BASE + p.ordinal
+
+    /** The backup alert: Android plays the short Adhan of [CHANNEL_BACKUP] with it. Alarm category, so DND treats it as an alarm. */
+    internal fun postBackup(context: Context, id: Int, title: String, body: String, at: Instant, note: String?) {
+        ensureChannels(context)
+        if (!canPost(context, CHANNEL_BACKUP)) { post(context, id, CHANNEL_NOTIFY, title, body, at, note); return }
+        val n = base(context, CHANNEL_BACKUP, title, body, at)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setTimeoutAfter(90 * 60_000L)
+            .apply { if (note != null) setStyle(NotificationCompat.BigTextStyle().bigText("$body\n$note")) }
+            .build()
+        runCatching { NotificationManagerCompat.from(context).notify(id, n) }
+    }
 
     fun post(context: Context, config: WatchConfig, p: Prayer, date: LocalDate, at: Instant, channel: String, note: String? = null) {
         val text = AlertText(context, config)

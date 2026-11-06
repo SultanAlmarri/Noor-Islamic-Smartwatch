@@ -147,6 +147,7 @@ internal object Routes {
     const val ADHAN_PRAYER = "adhan/prayer/{p}"
     const val ADHAN_LIBRARY = "adhan/library"
     const val ADHAN_SOUNDS = "adhan/sounds"
+    const val ADHAN_HISTORY = "adhan/history"
     fun adhanPrayer(p: Prayer) = "adhan/prayer/${p.name}"
     val tabs = listOf(PRAYERS, QIBLA, ADHAN, WATCH, SETTINGS)
 }
@@ -213,7 +214,8 @@ private fun NoorRoot(s: AppSettings) {
             composable(Routes.QIBLA) { QiblaScreen(content, onOpenLocation = { nav.navigate(Routes.SETTINGS) }) }
             composable(Routes.ADHAN) {
                 AdhanScreen(content, onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) },
-                    onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) })
+                    onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) },
+                    onOpenHistory = { nav.navigate(Routes.ADHAN_HISTORY) })
             }
             composable(Routes.ADHAN_PRAYER) { e ->
                 val p = e.arguments?.getString("p")?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: Prayer.FAJR
@@ -221,6 +223,7 @@ private fun NoorRoot(s: AppSettings) {
             }
             composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(content, onBack = { nav.popBackStack() }) }
+            composable(Routes.ADHAN_HISTORY) { com.noor.app.ui.adhan.AlertHistoryScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.WATCH) { WatchScreen(content) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) })

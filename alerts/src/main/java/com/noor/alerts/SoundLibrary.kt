@@ -124,6 +124,15 @@ class SoundLibrary(val entries: List<SoundEntry>, private val exists: (String) -
         }
     }
 
+    /**
+     * What to play when the chosen sound fails to play: the default Adhan's short version (or the default chime),
+     * unless that is exactly what just failed.
+     */
+    fun emergencySource(failed: SoundSource?): SoundSource? = listOfNotNull(
+        byId(SoundIds.DEFAULT_ADHAN)?.shortFile?.takeIf(exists),
+        byId(SoundIds.DEFAULT_SOUND)?.file?.takeIf(exists),
+    ).map { SoundSource.Asset(it) }.firstOrNull { it != failed }
+
     companion object {
         const val ASSET_PATH = "sounds/library.json"
         @Volatile private var cached: SoundLibrary? = null
@@ -131,6 +140,10 @@ class SoundLibrary(val entries: List<SoundEntry>, private val exists: (String) -
         fun get(context: Context): SoundLibrary = cached ?: synchronized(this) {
             cached ?: load(context).also { cached = it }
         }
+
+        /** Tests of the alerts library (which bundles no sounds itself) install a catalogue here; null restores loading. */
+        @androidx.annotation.VisibleForTesting
+        fun replaceForTests(library: SoundLibrary?) { cached = library }
 
         private fun load(context: Context): SoundLibrary {
             val app = context.applicationContext

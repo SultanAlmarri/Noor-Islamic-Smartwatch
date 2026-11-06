@@ -28,12 +28,14 @@ internal val alertScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 class AlertReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext
+        val firedAt = System.currentTimeMillis()
         val pending = goAsync()
         alertScope.launch {
             try {
-                handle(app, intent)
+                handle(app, intent, firedAt)
             } catch (e: Exception) {
                 Log.e(TAG, "Alert failed", e)
+                runCatching { AlertDispatcher.record(app, intent, firedAt, AlertOutcome.FAILED, detail = "${e.javaClass.simpleName}: ${e.message}") }
             } finally {
                 runCatching { AlertScheduler.reschedule(app) }
                 pending.finish()
@@ -41,20 +43,27 @@ class AlertReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun handle(context: Context, intent: Intent) {
-        val host = context.alertHost ?: return
-        val config = host.alertConfig() ?: return
-        val alerts = config.alerts ?: return
+    private suspend fun handle(context: Context, intent: Intent, firedAt: Long) {
         val prayer = intent.getStringExtra(AlertScheduler.EXTRA_PRAYER)?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: return
         val date = intent.getStringExtra(AlertScheduler.EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return
+        val host = context.alertHost
+        val config = host?.alertConfig()
+        val alerts = config?.alerts
+        if (host == null || config == null || alerts == null) {
+            AlertDispatcher.record(context, intent, firedAt, AlertOutcome.NO_SETTINGS); return
+        }
         if (intent.action == AlertScheduler.ACTION_TEST) {
-            val at = Instant.ofEpochMilli(intent.getLongExtra(AlertScheduler.EXTRA_AT, System.currentTimeMillis()))
-            AlertDispatcher.dispatch(context, config, alerts, prayer, date, at, alerts.alert(prayer).copy(enabled = true), test = true)
+            val at = Instant.ofEpochMilli(intent.getLongExtra(AlertScheduler.EXTRA_AT, firedAt))
+            AlertDispatcher.dispatch(context, config, alerts, prayer, date, at, alerts.alert(prayer).copy(enabled = true), test = true, firedAtMs = firedAt)
             return
         }
-        when (val d = AlertPlanner.onFire(config, alerts, host.alertDevice, prayer, date, Instant.now())) {
-            is FireDecision.Alert -> AlertDispatcher.dispatch(context, config, alerts, d.prayer, d.date, d.at, d.alert, test = false)
-            is FireDecision.Late -> AlertNotifications.postLate(context, config, d.prayer, d.date, d.at)
+        when (val d = AlertPlanner.onFire(config, alerts, host.alertDevice, prayer, date, Instant.ofEpochMilli(firedAt))) {
+            is FireDecision.Alert -> AlertDispatcher.dispatch(context, config, alerts, d.prayer, d.date, d.at, d.alert, test = false, firedAtMs = firedAt)
+            is FireDecision.Late -> {
+                AlertNotifications.postLate(context, config, d.prayer, d.date, d.at)
+                AlertDispatcher.record(context, intent, firedAt, AlertOutcome.LATE, dueAtMs = d.at.toEpochMilli())
+            }
+            // Moved, turned off or moved to the other device since the alarm was armed: nothing is due, nothing to record.
             FireDecision.Skip -> Unit
         }
     }
@@ -76,66 +85,143 @@ class SystemEventsReceiver : BroadcastReceiver() {
 /** Turns one due alert into sound, vibration and notification, respecting the device's state and the user's choices. */
 internal object AlertDispatcher {
 
-    /** Why an audible alert was made quiet; shown in the notification so the user knows what happened. */
-    enum class Quiet { DND, RINGER_SILENT, IN_CALL, NO_NOTIFICATIONS }
+    /** Why an audible alert cannot sound. */
+    enum class Quiet {
+        /** Do Not Disturb is on and the user chose to stay quiet then. */
+        DND,
+        /** The ringer is on silent or vibrate and the user chose to stay quiet then. */
+        RINGER_SILENT,
+        IN_CALL,
+        NO_NOTIFICATIONS,
+        /** Do Not Disturb is set to block alarms as well ("total silence", or alarms not allowed). */
+        DND_BLOCKS_ALARMS,
+    }
 
     fun quietReason(context: Context, alerts: AlertSettings): Quiet? {
         val nm = context.getSystemService(NotificationManager::class.java)
         val am = context.getSystemService(AudioManager::class.java)
         if (am != null && (am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION)) return Quiet.IN_CALL
         if (!AlertNotifications.canPost(context, AlertNotifications.CHANNEL_ADHAN)) return Quiet.NO_NOTIFICATIONS
-        if (!alerts.playInDnd) {
+        if (alerts.quietWhenSilent) {
             if (nm != null && nm.currentInterruptionFilter > NotificationManager.INTERRUPTION_FILTER_ALL) return Quiet.DND
             if (am != null && am.ringerMode != AudioManager.RINGER_MODE_NORMAL) return Quiet.RINGER_SILENT
+        } else if (nm != null && dndBlocksAlarms(nm)) {
+            // The Adhan plays like an alarm, so vibrate and silent do not stop it, but a Do Not Disturb that blocks alarms
+            // mutes the alarm stream: playing would show a "playing" notification with no sound. Say so instead.
+            return Quiet.DND_BLOCKS_ALARMS
         }
         return null
     }
 
+    /** True when Do Not Disturb is on in a mode that does not let alarms through. */
+    fun dndBlocksAlarms(nm: NotificationManager): Boolean = when (nm.currentInterruptionFilter) {
+        NotificationManager.INTERRUPTION_FILTER_NONE -> true
+        NotificationManager.INTERRUPTION_FILTER_PRIORITY -> Build.VERSION.SDK_INT >= 28 && runCatching {
+            nm.notificationPolicy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS == 0
+        }.getOrDefault(false)
+        else -> false
+    }
+
+    /** A history entry with this device's state now (exact alarms, alarm volume, ringer). */
+    fun recordFor(context: Context, prayer: Prayer?, test: Boolean, dueAtMs: Long, firedAtMs: Long, outcome: AlertOutcome,
+                  sound: String? = null, detail: String? = null): AlertRecord {
+        val am = context.getSystemService(AudioManager::class.java)
+        return AlertRecord(
+            id = firedAtMs * 16 + (prayer?.ordinal ?: 15),
+            prayer = prayer, test = test, dueAtMs = dueAtMs, firedAtMs = firedAtMs, outcome = outcome, sound = sound,
+            exactAlarms = AlertScheduler.canScheduleExact(context),
+            alarmVolumePercent = Math.round(AlertPlayer.alarmVolume(context) * 100),
+            ringerMode = am?.ringerMode ?: -1,
+            detail = detail,
+        )
+    }
+
+    /** Records an alert that ended before a prayer could be chosen (no settings, late, crash) straight from the alarm. */
+    fun record(context: Context, intent: Intent, firedAtMs: Long, outcome: AlertOutcome, dueAtMs: Long? = null, detail: String? = null) {
+        val prayer = intent.getStringExtra(AlertScheduler.EXTRA_PRAYER)?.let { n -> Prayer.entries.firstOrNull { it.name == n } }
+        val due = dueAtMs ?: intent.getLongExtra(AlertScheduler.EXTRA_AT, firedAtMs)
+        AlertLog.add(context, recordFor(context, prayer, intent.action == AlertScheduler.ACTION_TEST, due, firedAtMs, outcome, detail = detail))
+    }
+
     fun dispatch(context: Context, config: WatchConfig, alerts: AlertSettings, prayer: Prayer, date: LocalDate, at: Instant,
-                 alert: PrayerAlert, test: Boolean) {
+                 alert: PrayerAlert, test: Boolean, firedAtMs: Long = System.currentTimeMillis()) {
         AlertNotifications.ensureChannels(context)
         val text = AlertText(context, config)
         val title = text.title(prayer, date)
         val body = text.body(prayer, at)
         val id = AlertNotifications.idFor(prayer)
         val testNote = if (test) text.string(R.string.noor_alert_test_note) else null
+        val chosen = alert.soundId ?: alert.mode.name
+        fun log(outcome: AlertOutcome, detail: String? = null): AlertRecord =
+            recordFor(context, prayer, test, at.toEpochMilli(), firedAtMs, outcome, chosen, detail).also { AlertLog.add(context, it) }
+        fun notes(vararg n: String?) = listOfNotNull(*n).joinToString("\n").ifEmpty { null }
 
         when (alert.mode) {
-            AlertMode.NOTIFICATION -> { AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at, testNote); return }
-            AlertMode.SILENT -> { AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, at, testNote); return }
+            AlertMode.NOTIFICATION -> {
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at, testNote); log(AlertOutcome.NOTIFICATION); return
+            }
+            AlertMode.SILENT -> {
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, at, testNote); log(AlertOutcome.SILENT); return
+            }
             else -> Unit
         }
 
         val quiet = quietReason(context, alerts)
         if (quiet != null) {
-            val note = when (quiet) {
-                Quiet.DND -> R.string.noor_alert_quiet_dnd
-                Quiet.RINGER_SILENT -> R.string.noor_alert_quiet_ringer
-                Quiet.IN_CALL -> R.string.noor_alert_quiet_call
-                Quiet.NO_NOTIFICATIONS -> null // Nothing can be shown, so nothing may play either: a sound must always have a Stop button.
-            } ?: return
+            if (quiet == Quiet.NO_NOTIFICATIONS) {
+                // Nothing can be shown, so nothing may play either: a sound must always have a Stop button.
+                log(AlertOutcome.NO_NOTIFICATIONS); return
+            }
+            val (note, outcome) = when (quiet) {
+                Quiet.DND -> R.string.noor_alert_quiet_dnd to AlertOutcome.QUIET_BY_CHOICE
+                Quiet.RINGER_SILENT -> R.string.noor_alert_quiet_ringer to AlertOutcome.QUIET_BY_CHOICE
+                Quiet.IN_CALL -> R.string.noor_alert_quiet_call to AlertOutcome.IN_CALL
+                Quiet.DND_BLOCKS_ALARMS -> R.string.noor_alert_dnd_blocks_alarms to AlertOutcome.DND_BLOCKS_ALARMS
+                Quiet.NO_NOTIFICATIONS -> error("handled above")
+            }
             val am = context.getSystemService(AudioManager::class.java)
             // Silent ringer still means "vibrate" when the user set the phone to vibrate and wants vibration.
             if (quiet == Quiet.RINGER_SILENT && alert.vibrate && am?.ringerMode == AudioManager.RINGER_MODE_VIBRATE) AdhanService.vibrate(context)
-            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, at, listOfNotNull(text.string(note), testNote).joinToString("\n"))
-            return
+            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, at, notes(text.string(note), testNote))
+            log(outcome); return
         }
 
         val custom = CustomSounds(context)
-        val resolved = SoundLibrary.get(context).resolve(prayer, alert, custom)
+        val library = SoundLibrary.get(context)
+        val resolved = library.resolve(prayer, alert, custom)
+        val isAdhan = alert.mode == AlertMode.ADHAN || alert.mode == AlertMode.ADHAN_SHORT
         if (resolved == null) {
-            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at, testNote); return
+            // No sound file at all on this device: the backup Adhan (played by Android) is still better than nothing.
+            if (isAdhan) {
+                AlertNotifications.postBackup(context, id, title, body, at, notes(text.string(R.string.noor_alert_fallback_played), testNote))
+                log(AlertOutcome.BACKUP_SOUND, "no sound file")
+            } else {
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at, notes(text.string(R.string.noor_alert_failed), testNote))
+                log(AlertOutcome.FAILED, "no sound file")
+            }
+            return
         }
-        val detail = listOfNotNull(describe(text, resolved), substitutionNote(text, resolved.substitution), testNote).joinToString("\n").ifEmpty { null }
+        val detail = notes(describe(text, resolved), substitutionNote(text, resolved.substitution), testNote)
+        val record = log(AlertOutcome.STARTING)
         val req = PlayRequest(id, title, body, at.toEpochMilli(), detail, text.string(R.string.noor_alert_stop), resolved.source,
-            alert.volumePercent, alerts.gradualSeconds, alert.maxSeconds, alert.vibrate, keepNotification = true)
+            alert.volumePercent, alerts.gradualSeconds, alert.maxSeconds, alert.vibrate, keepNotification = true,
+            logId = record.id, fallback = library.emergencySource(resolved.source),
+            fallbackNote = text.string(R.string.noor_alert_fallback_played), failedNote = text.string(R.string.noor_alert_failed))
         try {
             AdhanService.start(context, req)
         } catch (e: Exception) {
             // Android 12+ refuses to start playback from the background when the alarm was not exact (no permission).
             val blocked = Build.VERSION.SDK_INT >= 31 && e is ForegroundServiceStartNotAllowedException
-            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at,
-                listOfNotNull(if (blocked) text.string(R.string.noor_alert_blocked_background) else null, testNote).joinToString("\n").ifEmpty { null })
+            val why = "${e.javaClass.simpleName}: ${e.message}"
+            if (isAdhan) {
+                // Android itself plays the short Adhan of the backup channel, which needs no permission to start.
+                AlertNotifications.postBackup(context, id, title, body, at, notes(text.string(R.string.noor_alert_backup_played), testNote))
+                AlertLog.update(context, record.id) { it.copy(outcome = AlertOutcome.BACKUP_SOUND, detail = why) }
+            } else {
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at,
+                    notes(if (blocked) text.string(R.string.noor_alert_blocked_background) else text.string(R.string.noor_alert_failed), testNote))
+                AlertLog.update(context, record.id) { it.copy(outcome = AlertOutcome.FAILED, detail = why) }
+            }
         }
     }
 

@@ -82,7 +82,7 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL, ADHAN_HISTORY }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -179,6 +179,7 @@ class ScreenshotTest {
                             Screen.ADHAN_SHURUQ -> com.noor.app.ui.adhan.PrayerAlertScreen(pad, com.noor.prayer.Prayer.SHURUQ, {}, {})
                             Screen.ADHAN_LIBRARY -> com.noor.app.ui.adhan.SoundLibraryScreen(pad, {})
                             Screen.ADHAN_SOUNDS -> com.noor.app.ui.adhan.MySoundsScreen(pad, {})
+                            Screen.ADHAN_HISTORY -> com.noor.app.ui.adhan.AlertHistoryScreen(pad, {})
                             Screen.ONBOARDING -> com.noor.app.ui.onboarding.OnboardingScreen(pad, {}, {})
                             Screen.CITIES -> com.noor.app.ui.settings.CityPickerScreen(pad, {})
                             Screen.SHELL -> Column(Modifier.fillMaxSize()) {
@@ -279,6 +280,25 @@ class ScreenshotTest {
         arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Gradual volume")
         screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Malmö")
         theme = ThemeMode.DARK
+        // Alert history (0.9): what really happened at each alert, with examples of each kind of outcome.
+        run {
+            val day = java.time.ZonedDateTime.now(ZoneId.systemDefault()).withHour(12).withMinute(0).withSecond(0).withNano(0)
+            fun rec(i: Long, p: com.noor.prayer.Prayer, h: Int, m: Int, o: com.noor.alerts.AlertOutcome, played: Long = 0, delay: Long = 2_000,
+                    test: Boolean = false, stopped: Boolean = false, exact: Boolean = true) {
+                val due = day.withHour(h).withMinute(m).toInstant().toEpochMilli()
+                com.noor.alerts.AlertLog.add(app, com.noor.alerts.AlertRecord(i, p, test, due, due + delay, o, "adhan.makkah_maghrib_2012",
+                    played, stopped, exact, 80, 1))
+            }
+            com.noor.alerts.AlertLog.clear(app)
+            rec(1, com.noor.prayer.Prayer.FAJR, 5, 9, com.noor.alerts.AlertOutcome.BACKUP_SOUND, delay = 180_000, exact = false)
+            rec(2, com.noor.prayer.Prayer.DHUHR, 12, 5, com.noor.alerts.AlertOutcome.PLAYED, played = 176_000)
+            rec(3, com.noor.prayer.Prayer.ASR, 15, 14, com.noor.alerts.AlertOutcome.PLAYED, played = 41_000, stopped = true)
+            rec(4, com.noor.prayer.Prayer.MAGHRIB, 17, 34, com.noor.alerts.AlertOutcome.DND_BLOCKS_ALARMS)
+            rec(5, com.noor.prayer.Prayer.ISHA, 18, 50, com.noor.alerts.AlertOutcome.PLAYED_FALLBACK, played = 32_000, test = true)
+        }
+        screen = Screen.ADHAN_HISTORY; shot("49_adhan_history_night_en", "Alert history")
+        arabic = true; shot("50_adhan_history_night_ar", "سجل التنبيهات")
+        arabic = false
         screen = Screen.ONBOARDING; shot("42_onboarding_en", "Use my location")
         arabic = true; shot("43_onboarding_ar", "نور")
         arabic = false

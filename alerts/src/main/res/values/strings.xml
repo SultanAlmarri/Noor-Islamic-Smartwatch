@@ -22,4 +22,10 @@
     <string name="noor_channel_notify_desc">Prayers set to “Notification”. Uses your notification sound and follows Do Not Disturb.</string>
     <string name="noor_channel_silent">Silent prayer notifications</string>
     <string name="noor_channel_silent_desc">Prayers set to “Silent”, alerts silenced by Do Not Disturb, and the time after a sound has finished.</string>
+    <string name="noor_alert_dnd_blocks_alarms">Silent because Do Not Disturb is set to block alarms. Allow alarms in Do Not Disturb to hear the Adhan.</string>
+    <string name="noor_alert_backup_played">Android did not let Noor start the full Adhan, so a short Adhan played instead. Allow “Alarms &amp; reminders” for Noor in Noor › Adhan.</string>
+    <string name="noor_alert_fallback_played">The chosen sound could not be played, so Noor’s default Adhan played instead.</string>
+    <string name="noor_alert_failed">The sound could not be played on this phone. Open Noor › Adhan › Alert history for details.</string>
+    <string name="noor_channel_backup">Adhan (backup)</string>
+    <string name="noor_channel_backup_desc">Used only when Android does not let Noor start the Adhan: Android itself then plays a short Adhan with this notification.</string>
 </resources>

@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.8.0).
+Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.9.0).
 
 ## Modules
 
@@ -108,6 +108,10 @@ Full details and sources: `AUTHORITIES.md`.
 Full details: `ALERTS.md`; sounds and credits: `SOUNDS.md`.
 
 - Choices live in `AlertSettings` (core), stored on the phone and carried to the watch inside `WatchConfig`.
+- 0.9: the Adhan plays like an alarm by default (vibrate and silent no longer stop it); every alert ends in a recorded
+  outcome (`AlertLog`, the Alert history page); a failing sound falls back to the default Adhan, and when Android forbids
+  Noor's player, a backup notification channel whose own sound is a short Adhan is used (played by Android itself).
+  `tools/devicetest/alert_e2e.sh` runs the real alarm path on emulators in CI (`device-alerts.yml`).
 - `AlertPlanner` (core, pure Kotlin) decides which alarms to arm and whether a firing alarm is still valid; both devices
   use it with the same `WatchConfig`, so alerts happen exactly at the displayed times.
 - The `alerts` library does the Android side: `AlertScheduler` (AlarmManager, exact when allowed), `AlertReceiver`,
@@ -128,7 +132,7 @@ Full description: `DESIGN.md`.
   (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## Known limitations (0.8.0)
+## Known limitations (0.9.0)
 
 - The 0.8.0 home screen's motion (drifting clouds, drag-the-sun, haptics, frame rate and battery) is checked only in
   code and in still, software-rendered frames; software rendering cannot show animation, real-device smoothness, or
