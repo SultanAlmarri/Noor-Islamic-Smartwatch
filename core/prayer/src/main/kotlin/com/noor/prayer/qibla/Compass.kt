@@ -54,6 +54,12 @@ enum class CompassIssue { SENSOR_UNRELIABLE, LOW_SENSOR_ACCURACY, MAGNETIC_INTER
 
 data class CompassAssessment(val quality: CompassQuality, val issues: Set<CompassIssue>)
 
+/** How the compass's own figures are shown (0.9.4), so the text stays steady while readings stream in. */
+object CompassDisplay {
+    /** The sensor's own heading estimate, in steady steps: whole degrees up to 5°, then fives (±7.4° → 5, ±12° → 10). */
+    fun displayedEstimate(deg: Double): Int = if (deg < 5.5) kotlin.math.max(1, Math.round(deg).toInt()) else (Math.round(deg / 5.0) * 5).toInt()
+}
+
 /**
  * Turns what the sensors report into a verdict, without inventing precision:
  * - the rotation-vector sensor's own estimate of heading accuracy (when the phone provides one),

@@ -206,35 +206,80 @@ private fun Readout(label: String, value: String, color: Color, modifier: Modifi
 @Composable
 private fun VerticalHairline() = Box(Modifier.width(0.5.dp).height(40.dp).background(NoorTheme.colors.separator))
 
+/**
+ * How sure the compass is, from what the phone's sensors report (0.9.4: steady). The level shown changes only once
+ * the sensor has held a new one for a moment ([CompassQualityFilter]); the box keeps one height whatever the text
+ * says, and the text cross-fades, so nothing jumps. When the sensor says it is unreliable, the label says to calibrate.
+ */
 @Composable
 private fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: () -> Unit) {
     val c = NoorTheme.colors
-    val q = reading.assessment.quality
-    val color = when (q) { CompassQuality.GOOD -> c.success; CompassQuality.FAIR -> c.warning; CompassQuality.POOR -> c.danger }
-    val label = stringResource(when (q) { CompassQuality.GOOD -> R.string.acc_good; CompassQuality.FAIR -> R.string.acc_fair; CompassQuality.POOR -> R.string.acc_poor })
+    val shown = rememberSteady(reading.assessment)
+    val label = accuracyLabel(shown)
     GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(onClick = onCalibrate), padding = 18.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.acc_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.weight(1f))
-            // Three-segment meter
-            val lit = when (q) { CompassQuality.GOOD -> 3; CompassQuality.FAIR -> 2; CompassQuality.POOR -> 1 }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.semantics { contentDescription = label }) {
-                repeat(3) { i ->
-                    Box(Modifier.width(22.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(if (i < lit) color else c.textMuted.copy(alpha = 0.25f)))
-                }
-            }
+            AccuracyMeter(shown, small = false, modifier = Modifier.semantics { contentDescription = label })
             Spacer(Modifier.width(10.dp))
-            Text(label, style = MaterialTheme.typography.titleSmall, color = color)
+            val color by animateColorAsState(accuracyColor(shown), tween(400), label = "accColor")
+            androidx.compose.animation.Crossfade(label, animationSpec = tween(300), label = "accLabel") { l ->
+                Text(l, style = MaterialTheme.typography.titleSmall, color = color, maxLines = 1)
+            }
             Icon(Icons.Rounded.ChevronRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(6.dp))
         val detail = buildList {
-            reading.headingAccuracyDeg?.let { add(stringResource(R.string.acc_estimate, f.number(Math.round(it).toInt()))) }
-            if (CompassIssue.MAGNETIC_INTERFERENCE in reading.assessment.issues) add(stringResource(R.string.acc_interference))
-            if (CompassIssue.SENSOR_UNRELIABLE in reading.assessment.issues || CompassIssue.LOW_SENSOR_ACCURACY in reading.assessment.issues)
+            reading.headingAccuracyDeg?.let { add(stringResource(R.string.acc_estimate, f.number(com.noor.prayer.qibla.CompassDisplay.displayedEstimate(it)))) }
+            if (CompassIssue.MAGNETIC_INTERFERENCE in shown.issues) add(stringResource(R.string.acc_interference))
+            if (CompassIssue.SENSOR_UNRELIABLE in shown.issues || CompassIssue.LOW_SENSOR_ACCURACY in shown.issues)
                 add(stringResource(R.string.acc_needs_calibration))
             if (isEmpty()) add(stringResource(R.string.acc_status_only))
+        }.joinToString(" ")
+        // Three lines are always reserved, so the card never grows or shrinks as the explanation changes.
+        androidx.compose.animation.Crossfade(detail, animationSpec = tween(300), label = "accDetail") { d ->
+            Text(d, style = MaterialTheme.typography.bodySmall, color = c.textSecondary, minLines = 3, maxLines = 3,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
-        Text(detail.joinToString(" "), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+    }
+}
+
+/**
+ * The assessment to show: a new one replaces the shown one only after it has stayed the same for [holdMs]; any change
+ * in between starts the wait again. So a reading flickering on a boundary never makes the meter jump, and every level
+ * shown is one the sensor actually reported.
+ */
+@Composable
+private fun rememberSteady(a: com.noor.prayer.qibla.CompassAssessment, holdMs: Long = 1_000L): com.noor.prayer.qibla.CompassAssessment {
+    var shown by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(a) }
+    androidx.compose.runtime.LaunchedEffect(a) { if (a != shown) { kotlinx.coroutines.delay(holdMs); shown = a } }
+    return shown
+}
+
+@Composable
+private fun accuracyLabel(a: com.noor.prayer.qibla.CompassAssessment): String = stringResource(when {
+    CompassIssue.SENSOR_UNRELIABLE in a.issues -> R.string.acc_calibrate
+    a.quality == CompassQuality.GOOD -> R.string.acc_good
+    a.quality == CompassQuality.FAIR -> R.string.acc_fair
+    else -> R.string.acc_poor
+})
+
+@Composable
+private fun accuracyColor(a: com.noor.prayer.qibla.CompassAssessment): Color {
+    val c = NoorTheme.colors
+    return when (a.quality) { CompassQuality.GOOD -> c.success; CompassQuality.FAIR -> c.warning; CompassQuality.POOR -> c.danger }
+}
+
+/** The three-segment meter: one, two or three lit, in the level's colour. [small] for the calibration tips. */
+@Composable
+internal fun AccuracyMeter(a: com.noor.prayer.qibla.CompassAssessment, small: Boolean, modifier: Modifier = Modifier) {
+    val c = NoorTheme.colors
+    val color by animateColorAsState(accuracyColor(a), tween(400), label = "meter")
+    val lit = when (a.quality) { CompassQuality.GOOD -> 3; CompassQuality.FAIR -> 2; CompassQuality.POOR -> 1 }
+    Row(horizontalArrangement = Arrangement.spacedBy(if (small) 3.dp else 4.dp), modifier = modifier) {
+        repeat(3) { i ->
+            Box(Modifier.width(if (small) 14.dp else 22.dp).height(if (small) 6.dp else 8.dp).clip(RoundedCornerShape(4.dp))
+                .background(if (i < lit) color else c.textMuted.copy(alpha = 0.25f)))
+        }
     }
 }
 
@@ -352,12 +397,16 @@ internal fun CalibrationGuide(reading: CompassReading?) {
                 Text(stringResource(id), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
             }
         }
-        if (reading != null) Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Info, null, tint = c.textMuted, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.cal_live, stringResource(when (reading.assessment.quality) {
-                CompassQuality.GOOD -> R.string.acc_good; CompassQuality.FAIR -> R.string.acc_fair; CompassQuality.POOR -> R.string.acc_poor })),
-                style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+        // Live, while calibrating: the same meter, small, so the user sees it improve as they move the phone.
+        if (reading != null) {
+            val shown = rememberSteady(reading.assessment, holdMs = 600L)
+            val label = accuracyLabel(shown)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) {}) {
+                Text(stringResource(R.string.cal_live, ""), style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                AccuracyMeter(shown, small = true)
+                Spacer(Modifier.width(8.dp))
+                Text(label, style = MaterialTheme.typography.bodySmall, color = accuracyColor(shown))
+            }
         }
     }
 }

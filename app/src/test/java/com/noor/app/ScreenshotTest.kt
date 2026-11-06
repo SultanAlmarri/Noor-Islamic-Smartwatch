@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.LayoutDirection
@@ -126,6 +128,7 @@ class ScreenshotTest {
         var singapore by mutableStateOf(false)
         var clock by mutableStateOf(now)
         var fontScale by mutableStateOf(1f)
+        var hijriCalendar by mutableStateOf(false)
         val sgBase = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualPlace = com.noor.app.data.KnownLocation(
             com.noor.prayer.GeoPoint(1.28967, 103.85007), "Asia/Singapore", "Singapore", "SG", null, 0L, "سنغافورة"))
         rule.setContent {
@@ -155,12 +158,13 @@ class ScreenshotTest {
                             Screen.TODAY -> TodayContent(u, pad, { cache.resolved(s, u.place!!, u.profile!!, it) }, {}, {}, {})
                             Screen.TODAY_OTHER_DATE -> TodayContent(u, pad, { cache.resolved(s, u.place!!, u.profile!!, it) }, {}, {}, {},
                                 initialDate = LocalDate.of(2026, 12, 18))
-                            Screen.CALENDAR -> Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.BottomCenter) {
+                            Screen.CALENDAR -> androidx.compose.runtime.key(hijriCalendar) { Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.BottomCenter) {
                                 Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(NoorTheme.colors.surface)) {
                                     CalendarPicker(LocalDate.of(2026, 12, 18), u.today!!, s.hijriAdjust,
-                                        Formatter(arabic, Numerals.WESTERN, TimeFormat.H12), {}, Modifier.padding(horizontal = 12.dp, vertical = 16.dp))
+                                        Formatter(arabic, Numerals.WESTERN, TimeFormat.H12), {}, Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
+                                        startHijri = hijriCalendar)
                                 }
-                            }
+                            } }
                             Screen.QIBLA -> {
                                 val place = PrayerProvider.place(s)
                                 QiblaContent(pad, QiblaPlace(s, place, place?.let { Qibla.from(it.point) }), reading, false, {})
@@ -213,6 +217,9 @@ class ScreenshotTest {
         screen = Screen.CALENDAR; shot("03_calendar_night_en", "December 2026")
         screen = Screen.TODAY; arabic = true; shot("04_today_night_ar", "المغرب")
         screen = Screen.CALENDAR; shot("05_calendar_night_ar", "ديسمبر")
+        // Browsing by Hijri month (0.9.4).
+        hijriCalendar = true; shot("57_calendar_hijri_night_ar", "رجب")
+        arabic = false; shot("56_calendar_hijri_night_en", "Rajab"); hijriCalendar = false; arabic = true
         screen = Screen.TODAY; theme = ThemeMode.LIGHT; arabic = false; shot("06_today_day_en", "Maghrib")
         screen = Screen.TODAY_OTHER_DATE; shot("07_other_date_day_en", "18 December 2026")
         theme = ThemeMode.DARK
@@ -257,6 +264,10 @@ class ScreenshotTest {
         singapore = true; screen = Screen.TODAY; shot("25_today_singapore_official_en", "Singapore")
         singapore = false
         screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
+        // Settings search (0.9.4): typing finds the setting, here the calculation method by a word it is known by.
+        rule.onAllNodes(androidx.compose.ui.test.hasSetTextAction())[0].performTextInput("dulook")
+        shot("58_settings_search_en", "Authority")
+        rule.onAllNodes(androidx.compose.ui.test.hasSetTextAction())[0].performTextClearance()
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
         // Arabic versions of the text-heavy pages, so the language check covers them (0.9).

@@ -6,7 +6,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 **Install:** [latest development build](https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/tag/dev-latest)
 · [step-by-step guide](docs/INSTALL.md)
 
-## Status (6 November 2026, version 0.9.3)
+## Status (6 November 2026, version 0.9.4)
 
 | Part | State |
 |---|---|
@@ -20,6 +20,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 | Home screen (0.9.2) | All six times visible without scrolling on small, common and large phones; the sky takes the rest. The sun path stays in the sky and sets behind the land; Fajr and Isha sit on the skyline; stars thin out towards the horizon; moonlit night clouds; Earth's shadow and the Belt of Venus at dawn and dusk; a 0.9 s opening time-lapse. Since 0.8.0: a living natural scene under the real sky: drifting clouds lit by the time of day, dunes or hills by country, mist at dawn, stars, Milky Way and moon at night, birds at dawn and dusk; drag the sun along its path through the day. Every other screen unchanged ([DESIGN.md](docs/DESIGN.md#the-home-screen)) |
 | Design (0.6.0) | Living-sky Today screen (real sky colour and sun path), Follow-the-sun appearance, redesigned Qibla, Adhan, Watch, Settings and onboarding, watch app in the same family; WCAG AA contrast checked by tests ([DESIGN.md](docs/DESIGN.md)) |
 | Persistent notification (0.9.3) | Optional (Settings → Notification bar): next prayer, its time, a live countdown with seconds run by Android itself, the Hijri date and the place; updated only at each prayer and at midnight |
+| Calendar, Settings, Qibla (0.9.4) | Browse dates by Gregorian or Hijri month; Settings in clear groups with search, and the method's basis for today; Qibla accuracy box of fixed size whose level changes only once the sensor holds it, with a live mini meter in the calibration tips |
 | Watch-face editor | Next stage |
 | Device testing | **Not done yet.** Everything above is tested on the computer (unit tests, software-rendered screens), not on a phone or watch |
 

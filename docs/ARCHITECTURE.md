@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.9.3).
+Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.9.4).
 
 ## Modules
 
@@ -27,6 +27,9 @@ Anything that must give the same answer on phone and watch lives in `core/prayer
 - The Hijri date is the Umm al-Qura calendar (`java.time.chrono.HijrahDate`) plus the user's ±2-day adjustment. It
   matched every Hijri date in the official Dulook DXB app recording (17 dates, Apr–Dec 2026).
 - Fridays show Dhuhr as Jumu'ah.
+- The date picker browses by Gregorian or Hijri month (0.9.4): `HijriMonth` (core) maps each Hijri day to the Gregorian
+  date on which the app shows it, with the user's adjustment; `HijriMonthTest` checks every day of 2021–2035 under
+  every adjustment in both directions.
 
 ## Qibla
 
@@ -46,6 +49,11 @@ Anything that must give the same answer on phone and watch lives in `core/prayer
   (Android's high/medium/low/unreliable), and the measured field strength against the strength the World Magnetic
   Model expects at that place (> 15 % off: fair, > 25 %: poor, reported as interference). The worst of these is shown.
 - Degrees are shown with two decimals as requested; the screen states the sensor's estimated accuracy next to them.
+- Steady display (0.9.4): a new accuracy level is shown only once it has stayed the same for 1 s (0.6 s in the
+  calibration tips), so a reading on a boundary cannot make the meter flicker; the estimate is shown in steps (whole
+  degrees to 5°, then fives); the box keeps a fixed height. "Calibrate first" replaces "Poor" when the sensor itself
+  reports it is unreliable. Three levels are kept: phones report heading accuracy too coarsely for a fourth to mean
+  anything, and every level shown is one the sensor reported.
 
 ## Phone → watch installation
 
@@ -151,7 +159,7 @@ Full description: `DESIGN.md`.
   (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## Known limitations (0.9.3)
+## Known limitations (0.9.4)
 
 - The 0.8.0 home screen's motion (drifting clouds, drag-the-sun, haptics, frame rate and battery) is checked only in
   code and in still, software-rendered frames; software rendering cannot show animation, real-device smoothness, or

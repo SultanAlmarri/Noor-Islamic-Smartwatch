@@ -226,7 +226,12 @@ private fun NoorRoot(s: AppSettings) {
             composable(Routes.ADHAN_HISTORY) { com.noor.app.ui.adhan.AlertHistoryScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.WATCH) { WatchScreen(content) }
             composable(Routes.SETTINGS) {
-                SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) })
+                SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) },
+                    onOpenRoute = { r ->
+                        // Another tab opens as a tab (keeping each tab's place); other pages open on top of Settings.
+                        if (r in Routes.tabs) nav.navigate(r) { popUpTo(Routes.PRAYERS) { saveState = true }; launchSingleTop = true; restoreState = true }
+                        else nav.navigate(r)
+                    })
             }
             composable(Routes.CITIES) {
                 CityPickerScreen(content, onDone = {

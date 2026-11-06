@@ -1,6 +1,7 @@
 package com.noor.prayer
 
 import com.noor.prayer.qibla.CompassAssessor
+import com.noor.prayer.qibla.CompassDisplay
 import com.noor.prayer.qibla.CompassIssue
 import com.noor.prayer.qibla.CompassMath
 import com.noor.prayer.qibla.CompassQuality
@@ -55,5 +56,12 @@ class CompassTest {
         assertEquals(CompassQuality.POOR, magnet.quality)
         assertTrue(CompassIssue.MAGNETIC_INTERFERENCE in magnet.issues)
         assertTrue(CompassIssue.NOT_FLAT in CompassAssessor.assess(5.0, 3, 44.0, 44.0, 60.0).issues)
+    }
+
+    @Test fun accuracyEstimateIsShownInSteadySteps() {
+        assertEquals(3, CompassDisplay.displayedEstimate(3.4))
+        assertEquals(5, CompassDisplay.displayedEstimate(7.4))
+        assertEquals(10, CompassDisplay.displayedEstimate(11.9))
+        assertEquals(1, CompassDisplay.displayedEstimate(0.2))
     }
 }

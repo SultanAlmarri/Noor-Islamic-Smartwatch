@@ -27,3 +27,33 @@ data class HijriDate(val day: Int, val month: Int, val year: Int) {
         }
     }
 }
+
+/**
+ * One Hijri month (Umm al-Qura), for browsing the calendar by Hijri month (0.9.4). With the user's day adjustment it
+ * maps each of its days to the Gregorian date on which [HijriDate.of] gives that day, so both directions agree.
+ */
+data class HijriMonth(val year: Int, val month: Int) : Comparable<HijriMonth> {
+    init { require(month in 1..12) }
+
+    val length: Int get() = HijrahDate.of(year, month, 1).lengthOfMonth()
+    val nameEn: String get() = HijriDate.MONTHS_EN[month - 1]
+    val nameAr: String get() = HijriDate.MONTHS_AR[month - 1]
+
+    /** The Gregorian date of [day] in this month, as seen with [adjustDays]. */
+    fun date(day: Int, adjustDays: Int = 0): LocalDate =
+        LocalDate.from(HijrahDate.of(year, month, day.coerceIn(1, length))).minusDays(adjustDays.toLong())
+
+    fun days(adjustDays: Int = 0): List<LocalDate> = (1..length).map { date(it, adjustDays) }
+
+    fun plus(months: Int): HijriMonth {
+        val i = year * 12 + (month - 1) + months
+        return HijriMonth(Math.floorDiv(i, 12), Math.floorMod(i, 12) + 1)
+    }
+
+    override fun compareTo(other: HijriMonth): Int = compareValuesBy(this, other, { it.year }, { it.month })
+
+    companion object {
+        fun of(date: LocalDate, adjustDays: Int = 0): HijriMonth = HijriDate.of(date, adjustDays).let { HijriMonth(it.year, it.month) }
+    }
+}
+
