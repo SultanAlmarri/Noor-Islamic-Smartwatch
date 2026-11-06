@@ -63,6 +63,8 @@ data class AlertSettings(
      * Do Not Disturb, the alert becomes a silent notification instead.
      */
     val quietWhenSilent: Boolean = false,
+    /** Favourite Adhan recordings (library ids), in the order chosen. "Random from favourites" rotates through them. */
+    val favourites: List<String> = emptyList(),
 ) {
     fun alert(p: Prayer): PrayerAlert = (perPrayer[p] ?: DEFAULTS.getValue(p)).normalized(p)
 
@@ -76,6 +78,7 @@ data class AlertSettings(
         add("v=$VERSION"); add("on=${if (enabled) 1 else 0}"); add("dev=${device.name}")
         // "dnd" is the 0.5–0.8 field ("play in Do Not Disturb"), still written so watches on those versions behave the same.
         add("grad=$gradualSeconds"); add("dnd=${if (quietWhenSilent) 0 else 1}"); add("quiet=${if (quietWhenSilent) 1 else 0}")
+        if (favourites.isNotEmpty()) add("fav=" + favourites.joinToString(","))
         Prayer.entries.forEach { p ->
             val a = alert(p)
             add("${p.name}=${if (a.enabled) 1 else 0},${a.mode.name},${a.soundId ?: ""},${a.volumePercent},${if (a.vibrate) 1 else 0},${a.maxSeconds}")
@@ -117,6 +120,7 @@ data class AlertSettings(
                 // Versions before 0.9 had only "dnd", off by default, which silenced the Adhan on vibrate: that default was
                 // the main reason Adhans did not sound, so it is not carried over. Only an explicit "quiet" choice is kept.
                 quietWhenSilent = m["quiet"] == "1",
+                favourites = m["fav"]?.split(',')?.filter { SoundIds.isValid(it) && !SoundIds.isCustom(it) }?.distinct().orEmpty(),
             )
         }
     }
@@ -128,8 +132,47 @@ object SoundIds {
     const val DEFAULT_FAJR_ADHAN = "adhan.malmo_fajr_2012"
     const val DEFAULT_SOUND = "alt.soft_chime"
     const val CUSTOM_PREFIX = "custom."
+    /** Not a recording: "a different favourite each time" (see [RandomAdhan]). */
+    const val RANDOM = "random.favourites"
 
     private val pattern = Regex("^[a-z0-9_]+\\.[a-z0-9_-]{1,64}$")
     fun isValid(id: String): Boolean = pattern.matches(id)
     fun isCustom(id: String?): Boolean = id != null && id.startsWith(CUSTOM_PREFIX)
 }
+
+/**
+ * "Random from favourites" (0.9.5): which favourite Adhan plays for a prayer on a date. Deterministic, so the phone and
+ * the watch (and the alarm and the notification) always agree without talking to each other, and fair: every eligible
+ * favourite plays once before any plays again, and a round never starts with the one that ended the previous round.
+ *
+ * Fajr has its own rotation over the favourites recorded for Fajr (with "As-salatu khayrun min an-nawm"), or over the
+ * others when none of the favourites is a Fajr recording; the other four prayers rotate through the favourites that are
+ * not Fajr recordings (a Fajr Adhan is never played at another prayer).
+ */
+object RandomAdhan {
+    fun pick(favourites: List<String>, prayer: com.noor.prayer.Prayer, date: java.time.LocalDate, isFajrRecording: (String) -> Boolean): String? {
+        val fajr = favourites.filter(isFajrRecording)
+        val general = favourites.filterNot(isFajrRecording)
+        val (pool, n) = when (prayer) {
+            com.noor.prayer.Prayer.FAJR -> (fajr.ifEmpty { general }) to date.toEpochDay()
+            com.noor.prayer.Prayer.SHURUQ -> return null
+            else -> general to date.toEpochDay() * 4 + listOf(com.noor.prayer.Prayer.DHUHR, com.noor.prayer.Prayer.ASR,
+                com.noor.prayer.Prayer.MAGHRIB, com.noor.prayer.Prayer.ISHA).indexOf(prayer)
+        }
+        if (pool.isEmpty()) return null
+        val k = pool.size.toLong()
+        val round = Math.floorDiv(n, k)
+        val pos = Math.floorMod(n, k).toInt()
+        return order(pool, round)[pos]
+    }
+
+    /** The shuffled order of one round; it never begins with the previous round's last pick. */
+    private fun order(pool: List<String>, round: Long): List<String> {
+        val sorted = pool.distinct().sorted()
+        fun shuffled(r: Long) = sorted.shuffled(java.util.Random(r * 0x9E3779B97F4A7C15uL.toLong() + 17))
+        val cur = shuffled(round).toMutableList()
+        if (cur.size > 1 && cur.first() == shuffled(round - 1).last()) { val t = cur[0]; cur[0] = cur[1]; cur[1] = t }
+        return cur
+    }
+}
+

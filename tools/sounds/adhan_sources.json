@@ -1,53 +1,137 @@
 {
-  "_comment": "Adhan recordings Noor may bundle. Every entry is a Wikimedia Commons file whose licence permits redistribution in an app. fetch_commons.py re-checks the live licence against 'licence' and refuses the file if it differs. Do not add recordings whose provenance is doubtful (for example commercial releases re-uploaded as 'public domain').",
-  "files": [
-    {
-      "id": "makkah_2013",
-      "title": "File:Adhan, Great Mosque of Mecca - Jan 21, 2013.webm",
-      "licence": "CC BY 3.0",
-      "provenance": "Recorded at al-Masjid al-Haram and published on YouTube under CC BY by the recordist (Seyfula Islam); licence confirmed by a Commons reviewer on 19 July 2018."
-    },
-    {
-      "id": "makkah_maghrib_2012",
-      "title": "File:Maghrib Adhan at the Masjid al Haram, Mecca - 25 Feb, 2012.webm",
-      "licence": "CC BY 3.0",
-      "provenance": "Recorded at al-Masjid al-Haram before Maghrib and published on YouTube under CC BY by the recordist (3omar Faruq); licence confirmed by YouTubeReviewBot on 14 February 2020."
-    },
-    {
-      "id": "malmo_fajr_2012",
-      "title": "File:Eid al-Fitr Fajr azan at Malmö Mosque - 19 August 2012.webm",
-      "licence": "CC BY 3.0",
-      "provenance": "Fajr adhan published on YouTube under CC BY by the mosque itself (Islamic Center Malmö); licence confirmed by YouTubeReviewBot on 12 February 2020."
-    },
-    {
-      "id": "istanbul_2025",
-      "title": "File:Adhan in Istanbul.webm",
-      "licence": "CC0",
-      "provenance": "Field recording in Istanbul, own work of the uploader (Viceskeeni2), dedicated to the public domain."
-    },
-    {
-      "id": "shalqar_2014",
-      "title": "File:Adhan in Shalqar mosque.webm",
-      "licence": "CC BY-SA 4.0",
-      "provenance": "Field recording at the Matey Qoqanuly mosque, Shalqar, Kazakhstan; own work of the uploader (Esetok)."
-    },
-    {
-      "id": "casablanca_2019",
-      "title": "File:Llamada a oración Mezquita Hassan II.wav",
-      "licence": "CC BY-SA 4.0",
-      "provenance": "Field recording beside the Hassan II Mosque, Casablanca; own work of the uploader (Fraguando)."
-    },
-    {
-      "id": "madinah_2018",
-      "title": "File:Oración Al-Azzan.ogg",
-      "licence": "Public domain",
-      "provenance": "Recording of an evening adhan in Madinah; own work of the uploader (B9.), who released it into the public domain worldwide."
-    },
-    {
-      "id": "call_to_worship_2017",
-      "title": "File:Islamic call to worship.oga",
-      "licence": "CC BY-SA 4.0",
-      "provenance": "Own work of the uploader (Mahfoudou). Content must be checked after download: the description suggests it may be an explanation of the adhan rather than the adhan itself."
-    }
-  ]
+ "_comment": "Adhan recordings Noor may bundle. Every entry is a Wikimedia Commons file whose licence permits redistribution in an app. fetch_commons.py re-checks the live licence against 'licence' and refuses the file if it differs. Do not add recordings whose provenance is doubtful (for example commercial releases re-uploaded as 'public domain').",
+ "files": [
+  {
+   "id": "makkah_2013",
+   "title": "File:Adhan, Great Mosque of Mecca - Jan 21, 2013.webm",
+   "licence": "CC BY 3.0",
+   "provenance": "Recorded at al-Masjid al-Haram and published on YouTube under CC BY by the recordist (Seyfula Islam); licence confirmed by a Commons reviewer on 19 July 2018."
+  },
+  {
+   "id": "makkah_maghrib_2012",
+   "title": "File:Maghrib Adhan at the Masjid al Haram, Mecca - 25 Feb, 2012.webm",
+   "licence": "CC BY 3.0",
+   "provenance": "Recorded at al-Masjid al-Haram before Maghrib and published on YouTube under CC BY by the recordist (3omar Faruq); licence confirmed by YouTubeReviewBot on 14 February 2020."
+  },
+  {
+   "id": "malmo_fajr_2012",
+   "title": "File:Eid al-Fitr Fajr azan at Malmö Mosque - 19 August 2012.webm",
+   "licence": "CC BY 3.0",
+   "provenance": "Fajr adhan published on YouTube under CC BY by the mosque itself (Islamic Center Malmö); licence confirmed by YouTubeReviewBot on 12 February 2020."
+  },
+  {
+   "id": "istanbul_2025",
+   "title": "File:Adhan in Istanbul.webm",
+   "licence": "CC0",
+   "provenance": "Field recording in Istanbul, own work of the uploader (Viceskeeni2), dedicated to the public domain."
+  },
+  {
+   "id": "shalqar_2014",
+   "title": "File:Adhan in Shalqar mosque.webm",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Field recording at the Matey Qoqanuly mosque, Shalqar, Kazakhstan; own work of the uploader (Esetok)."
+  },
+  {
+   "id": "casablanca_2019",
+   "title": "File:Llamada a oración Mezquita Hassan II.wav",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Field recording beside the Hassan II Mosque, Casablanca; own work of the uploader (Fraguando)."
+  },
+  {
+   "id": "madinah_2018",
+   "title": "File:Oración Al-Azzan.ogg",
+   "licence": "Public domain",
+   "provenance": "Recording of an evening adhan in Madinah; own work of the uploader (B9.), who released it into the public domain worldwide."
+  },
+  {
+   "id": "call_to_worship_2017",
+   "title": "File:Islamic call to worship.oga",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Own work of the uploader (Mahfoudou). Content must be checked after download: the description suggests it may be an explanation of the adhan rather than the adhan itself."
+  },
+  {
+   "id": "makkah_2018",
+   "title": "File:Time of Adhan, Great Mosque of Mecca - Jan 6, 2018 .webm",
+   "licence": "CC BY 3.0",
+   "provenance": "Recorded at al-Masjid al-Haram on 6 January 2018 and published on YouTube under CC BY by the recordist (M Sohail Ahmad); licence confirmed by YouTubeReviewBot."
+  },
+  {
+   "id": "madinah_prophets_mosque",
+   "title": "File:33937 ejaz215 call-to-prayer-from-the-prophet-s-mo.ogg",
+   "licence": "CC BY 3.0",
+   "provenance": "Recording of the call to prayer from the Prophet's Mosque, Madinah, published on Freesound by its recordist (ejaz215) under CC BY 3.0."
+  },
+  {
+   "id": "sobhdel_iran",
+   "title": "File:اذان حسین صبحدل.webm",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Adhan by Master Hussein Sobhdel (Iran); permission confirmed by Wikimedia's volunteer response team (VRTS)."
+  },
+  {
+   "id": "mahur_iran",
+   "title": "File:AzaanMaahur.ogg",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Adhan in the Persian dastgah Mahur, sung and published by the reciter himself, Saeed Hatamzadeh-Varmazyar."
+  },
+  {
+   "id": "isfahan_2016",
+   "title": "File:Tour guide recite Adhan in the Shah mosque in Isfahan, Iran.webm",
+   "licence": "CC BY 3.0",
+   "provenance": "A guide recites the Adhan under the main dome of the Shah Mosque, Isfahan, 2016; published on YouTube under CC BY, licence reviewed on Commons."
+  },
+  {
+   "id": "hargeisa_2019",
+   "title": "File:ASC Leiden - van de Bruinhorst Collection - Somaliland 2019 - 4412 - Oriental Hotel. Adhan (call to prayer) from the Ali Matan Mosque, Hargeisa.webm",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Field recording of the Adhan from the Ali Matan Mosque, Hargeisa, 2019, by Gerard van de Bruinhorst for the African Studies Centre Leiden; permission confirmed by VRTS."
+  },
+  {
+   "id": "damascus_2007",
+   "title": "File:The sound of Syria (2007).webm",
+   "licence": "CC BY 3.0",
+   "provenance": "Travel recording through Syria in 2007 by its author (KaeptnDotterbart), published under CC BY; the Damascus section (0:00-1:56) is used; licence reviewed on Commons."
+  },
+  {
+   "id": "marrakech_koutoubia",
+   "title": "File:Llamada a oracion desde Kutubiya.ogg",
+   "licence": "Public domain",
+   "provenance": "The call to prayer from the Koutoubia Mosque, Marrakech, recorded and released into the public domain by the uploader (own work)."
+  },
+  {
+   "id": "jaffa_2011",
+   "title": "File:Jaffa Muezzin P1020417.ogv",
+   "licence": "CC BY-SA 3.0",
+   "provenance": "The muezzin of the Mahmoudiya Mosque, Jaffa, recorded in 2011 by the uploader (own work, CC BY-SA 3.0)."
+  },
+  {
+   "id": "ghana_ramadan_2026",
+   "title": "File:Athan during Ramadan 2.wav",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Adhan during Ramadan in Ghana, recorded by the uploader (own work) for Wiki Loves Ramadan 2026."
+  },
+  {
+   "id": "ghana_ramadan_2026_b",
+   "title": "File:Athan in Ramadan.wav",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Adhan in Ramadan in Ghana, recorded by the uploader (own work) for Wiki Loves Ramadan 2026."
+  },
+  {
+   "id": "nigeria_2026",
+   "title": "File:Call to prayer.ogg",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "Call to prayer in Nigeria, recorded by the uploader (own work) for Wiki Loves Africa 2026."
+  },
+  {
+   "id": "adhan_andrewler_2022",
+   "title": "File:Azan.ogg",
+   "licence": "CC BY-SA 4.0",
+   "provenance": "An Adhan recorded and published by the uploader (own work, CC BY-SA 4.0); place not stated."
+  },
+  {
+   "id": "adhan_beautiful_2022",
+   "title": "File:Beautiful adhan.ogg",
+   "licence": "CC0",
+   "provenance": "An Adhan recorded and dedicated to the public domain (CC0) by the uploader (own work); place not stated."
+  }
+ ]
 }
