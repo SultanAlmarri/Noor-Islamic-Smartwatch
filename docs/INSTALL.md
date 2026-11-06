@@ -33,6 +33,9 @@ adb connect <address:port shown on the Wireless debugging screen>
 adb install Noor-watch.apk
 ```
 
+If `adb` answers `more than one device/emulator` (for example, the phone is also connected), run `adb devices` and name
+the watch: `adb -s <the watch's address:port from that list> install Noor-watch.apk`.
+
 ## Connect them
 
 1. On the phone: Noor → **Watch** tab. Your watch appears with three steps: Noor on the watch, prayer settings,

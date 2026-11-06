@@ -22,6 +22,8 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 | Watch-face editor | Next stage |
 | Device testing | **Not done yet.** Everything above is tested on the computer (unit tests, software-rendered screens), not on a phone or watch |
 
+Working on the project with Claude Code: start with [`CLAUDE.md`](CLAUDE.md) and [`docs/HANDOVER.md`](docs/HANDOVER.md).
+
 ## Layout
 
 | Path | What it is |
@@ -36,7 +38,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 | `tools/sounds/` | Generates the alert sounds, fetches and verifies the licensed Adhan recordings, builds the sound library |
 | `accuracy/` | Official IACAD datasets, research tools, blind test |
 | `signing/` | Public development keys (see its README); no release key is stored here |
-| `docs/` | `ARCHITECTURE.md` (how each part works), `WATCH.md`, `DESIGN.md`, `ALERTS.md`, `SOUNDS.md`, `INSTALL.md`, `PRAYER_ACCURACY.md` |
+| `docs/` | `HANDOVER.md` (history, decisions, current state, open work), `ARCHITECTURE.md` (how each part works), `WATCH.md`, `DESIGN.md`, `ALERTS.md`, `SOUNDS.md`, `INSTALL.md`, `PRAYER_ACCURACY.md` |
 
 ## How phone and watch work together
 
