@@ -16,7 +16,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** The home screen on a small, short phone (360 × 740 dp), where the sky header takes its compact proportions. */
+/** The home screen on a common phone size (360 × 740 dp): all the day's times fit without scrolling. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "w360dp-h740dp-xhdpi")
@@ -38,6 +38,8 @@ class TodaySmallDesignTest {
         }
         h.start()
         h.shot("today_small_en", "Maghrib")
+        h.assertPrayersFit(RenderHarness.PRAYERS_EN)
         h.arabic = true; h.shot("today_small_ar", "المغرب")
+        h.assertPrayersFit(RenderHarness.PRAYERS_AR)
     }
 }

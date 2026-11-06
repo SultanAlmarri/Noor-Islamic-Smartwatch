@@ -254,7 +254,7 @@ class ScreenshotTest {
         arabic = true; shot("48_app_shell_day_ar", "المغرب"); arabic = false; theme = ThemeMode.DARK
         screen = Screen.TODAY; fontScale = 1.3f; shot("45_today_large_text_en", "Maghrib"); fontScale = 1f
         // Singapore: MUIS's own published times for the date (official timetable), not a calculation.
-        singapore = true; screen = Screen.TODAY; shot("25_today_singapore_official_en", "Official timetable")
+        singapore = true; screen = Screen.TODAY; shot("25_today_singapore_official_en", "Singapore")
         singapore = false
         screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")

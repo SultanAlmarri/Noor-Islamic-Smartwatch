@@ -3,6 +3,8 @@ package com.noor.app.ui.today
 import androidx.compose.animation.AnimatedContent
 import java.time.temporal.ChronoUnit
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.layout.heightIn
@@ -88,6 +90,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
@@ -135,24 +138,44 @@ fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpe
     TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource)
 }
 
-/** Heights in the sky header, measured from the bottom of the status bar; a little tighter on short screens. */
-private class Hero(
-    val height: Dp,
-    /** Clouds stay below this line, clear of the countdown. */
-    val cloudTop: Dp,
-    /** The Sun at its highest. */
-    val arcTop: Dp,
-    val horizon: Dp,
-    /** The Sun at its lowest (midnight), under the land. */
-    val ground: Dp,
-    /** Largest size of the countdown, in sp. */
-    val countdownMax: Float,
-    val gap: Dp,
-) {
+/**
+ * How the home screen shares its height (0.9.2): the day's six times always fit above the tab bar without scrolling
+ * (at the default text size), and the sky takes whatever height is left, within limits. Tests render it on small,
+ * common and large phones and fail if any prayer is cut off.
+ */
+internal class HomeLayout(val heroHeight: Dp, val rowHeight: Dp, val shuruqHeight: Dp, val compact: Boolean) {
     companion object {
-        val Regular = Hero(472.dp, 262.dp, 290.dp, 388.dp, 452.dp, 76f, 18.dp)
-        val Compact = Hero(400.dp, 220.dp, 240.dp, 326.dp, 386.dp, 58f, 8.dp)
+        private val GAP = 10.dp
+        fun of(viewport: Dp, top: Dp, bottom: Dp): HomeLayout {
+            if (viewport == Dp.Infinity || viewport <= 0.dp) return HomeLayout(top + 330.dp, 54.dp, 44.dp, false)
+            fun hero(date: Dp, row: Dp, sh: Dp) = viewport - (date + row * 5 + sh + GAP + bottom)
+            val regular = hero(58.dp, 54.dp, 44.dp)
+            if (regular >= top + 252.dp) return HomeLayout(regular.coerceAtMost(top + 430.dp), 54.dp, 44.dp, false)
+            val compact = hero(56.dp, 48.dp, 38.dp)
+            if (compact >= top + 214.dp) return HomeLayout(compact, 48.dp, 38.dp, true)
+            // Very short screens: slimmer rows, and the sky header puts the name and the countdown side by side.
+            return HomeLayout(hero(52.dp, 44.dp, 34.dp).coerceAtLeast(top + 150.dp), 44.dp, 34.dp, true)
+        }
     }
+}
+
+/** Where things sit in the sky header, from its height (including the status bar): text on top, then the arc, then land. */
+private class HeroGeometry(top: Dp, height: Dp) {
+    private val inner = height - top
+    /** Short headers put the prayer's name and the countdown side by side. */
+    val sideBySide: Boolean = inner < 230.dp
+    /** Below this height the place pill shows the place on one line, without "Chosen city" under it. */
+    val slimPlace: Boolean = inner < 300.dp
+    val countdownMax: Float = when { sideBySide -> 40f; inner >= 340.dp -> 72f; inner >= 300.dp -> 60f; else -> 50f }
+    val titleSize: Float = when { sideBySide -> 22f; inner >= 300.dp -> 28f; else -> 25f }
+    private val place: Dp = if (slimPlace) 40.dp else 48.dp
+    /** First estimate of where the text ends; replaced by the measured bottom once laid out. */
+    val textBottom: Dp = top + 6.dp + place + 2.dp + if (sideBySide) 54.dp else (titleSize * 1.4f).dp + (countdownMax * 1.2f).dp
+    val landDepth: Dp = when { sideBySide -> 50.dp; inner >= 300.dp -> 82.dp; else -> 58.dp }
+    val horizon: Dp = height - landDepth
+    val ground: Dp = height - 6.dp
+    /** The noon Sun sits a little below the text, never behind it, while leaving the arc some height. */
+    fun arcTop(textBottom: Dp): Dp = minOf(textBottom + 16.dp, horizon - 28.dp)
 }
 
 /** The whole Today screen for a given state; stateless so previews and tests can render any date. */
@@ -185,9 +208,11 @@ fun TodayContent(
         return
     }
 
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+    val home = HomeLayout.of(maxHeight, top, contentPadding.calculateBottomPadding())
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         val todayDay = remember(today, u.settings, u.place, u.profile) { dayFor(today)?.day }
-        SkyHeader(u, f, todayDay, top, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime)
+        SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime)
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -220,16 +245,13 @@ fun TodayContent(
                 canPrev = shown > DateWindow.FIRST, canNext = shown < DateWindow.LAST,
                 onPrev = { step(-1) }, onNext = { step(+1) }, onToday = { go(today) }, onCalendar = { calendarOpen = true },
             )
-            Spacer(Modifier.height(4.dp))
             HorizontalPager(state = pager, beyondViewportPageCount = 1, pageSpacing = 24.dp, verticalAlignment = Alignment.Top) { page ->
                 val date = DateWindow.dateOf(page)
                 val day = remember(date, u.settings, u.place, u.profile) { dayFor(date) }
-                if (day != null) Timeline(day.day, date, isToday = date == today, u, f, official = day.official)
+                if (day != null) Timeline(day.day, date, isToday = date == today, u, f, home)
             }
-            val shownDay = remember(shown, u.settings, u.place, u.profile) { dayFor(shown) }
-            Spacer(Modifier.height(14.dp))
-            SourceFooter(u, ar, official = shownDay?.official == true, f = f, onOpenSource = onOpenSource)
-            Spacer(Modifier.height(contentPadding.calculateBottomPadding() + 20.dp))
+            // Where the times come from and the method now live in Settings (0.9.2); the home screen is the day itself.
+            Spacer(Modifier.height(contentPadding.calculateBottomPadding() + 10.dp))
 
             if (calendarOpen) {
                 val c = NoorTheme.colors
@@ -252,6 +274,7 @@ fun TodayContent(
             }
         }
     }
+    }
 }
 
 /**
@@ -261,7 +284,7 @@ fun TodayContent(
  */
 @Composable
 private fun SkyHeader(
-    u: TodayUi, f: Formatter, todayDay: PrayerDay?, top: Dp, scroll: ScrollState,
+    u: TodayUi, f: Formatter, todayDay: PrayerDay?, top: Dp, heroHeight: Dp, scroll: ScrollState,
     onOpenLocation: () -> Unit, onRefresh: () -> Unit, previewScrub: Double?, previewSkyTime: Float?,
 ) {
     val st = u.state ?: return
@@ -282,12 +305,15 @@ private fun SkyHeader(
         )
     }
     val current by rememberUpdatedState(scene)
-    val hero = if (LocalConfiguration.current.screenHeightDp < 800) Hero.Compact else Hero.Regular
-    val height = top + hero.height
-    val layout = remember(top, hero) {
-        SceneLayout(cloudTop = (top + hero.cloudTop) / height, arcTop = (top + hero.arcTop) / height, horizon = (top + hero.horizon) / height, ground = (top + hero.ground) / height)
-    }
+    val height = heroHeight
+    val hero = remember(top, height) { HeroGeometry(top, height) }
     val density = LocalDensity.current
+    // The text's real bottom (it depends on the font size and the language), measured once laid out.
+    var textBottom by remember(hero) { mutableStateOf(hero.textBottom) }
+    val layout = remember(hero, height, textBottom) {
+        val arcTop = hero.arcTop(textBottom)
+        SceneLayout(cloudTop = (arcTop - 8.dp) / height, arcTop = arcTop / height, horizon = hero.horizon / height, ground = hero.ground / height)
+    }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val ambient = LocalAmbientMotion.current
     val haptics = LocalHapticFeedback.current
@@ -297,6 +323,19 @@ private fun SkyHeader(
     val shown = remember { Animatable((previewScrub ?: scene.nowFraction).toFloat()) }
     var scrubbing by remember { mutableStateOf(previewScrub != null) }
     var caught by remember { mutableStateOf<Pair<Prayer, java.time.Instant>?>(null) }
+    // Opening (once per launch, under a second): the sky runs through the hours before now and settles on this moment.
+    // Only the scene moves; the prayer, its time and the countdown are the real ones from the first frame.
+    var intro by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (ambient && previewScrub == null && !OpeningSky.played) {
+            OpeningSky.played = true
+            val now = current.nowFraction.toFloat()
+            intro = true
+            shown.snapTo((now - 0.42f).coerceAtLeast(0f))
+            shown.animateTo(now, tween(OpeningSky.DURATION_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            intro = false
+        }
+    }
     LaunchedEffect(scene.nowFraction) { if (!scrubbing && !shown.isRunning) shown.snapTo(scene.nowFraction.toFloat()) }
     LaunchedEffect(previewScrub) {
         if (previewScrub != null) { scrubbing = true; shown.snapTo(previewScrub.toFloat()) }
@@ -338,33 +377,46 @@ private fun SkyHeader(
     ) {
         val display = shown.value.toDouble()
         LivingSky(
-            scene, layout, display = display, scrubbing = scrubbing, page = c.background, description = desc,
+            scene, layout, display = display, scrubbing = scrubbing || intro, page = c.background, description = desc,
             modifier = Modifier.fillMaxSize(), parallax = { scroll.value.toFloat() }, stillTime = previewSkyTime,
         )
 
         Column(
-            Modifier.fillMaxWidth().padding(top = top + 6.dp).padding(horizontal = 20.dp).graphicsLayer {
+            Modifier.fillMaxWidth().padding(top = top + 6.dp).padding(horizontal = 20.dp)
+                .onGloballyPositioned { c -> with(density) { textBottom = c.boundsInParent().bottom.toDp() } }
+                .graphicsLayer {
                 alpha = (1f - scroll.value / (totalPx * 0.5f)).coerceIn(0f, 1f)
                 translationY = scroll.value * 0.3f
             },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            PlaceRow(u, f, onOpenLocation, onRefresh)
-            Spacer(Modifier.height(hero.gap))
+            PlaceRow(u, f, onOpenLocation, onRefresh, slim = hero.slimPlace)
+            Spacer(Modifier.height(2.dp))
             // The next prayer; while the Sun is being drawn along its path, the moment it stands at takes its place.
             val away by animateFloatAsState(if (scrubbing) 1f else 0f, tween(NoorMotion.Standard), label = "scrub")
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(Modifier.fillMaxWidth().graphicsLayer { alpha = 1f - away; translationY = -12.dp.toPx() * away }, horizontalAlignment = Alignment.CenterHorizontally) {
                     val until = Duration.between(u.now, st.next.at)
-                    Text(stringResource(R.string.next_prayer).uppercase(), style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 2.sp, fontWeight = FontWeight.SemiBold, shadow = SkyText.Shadow),
-                        color = Sky.OnSkyMuted)
-                    Spacer(Modifier.height(4.dp))
-                    AnimatedContent(st.next.prayer to st.next.date, transitionSpec = {
-                        (fadeIn(tween(NoorMotion.Standard)) + slideInVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) { it / 3 }) togetherWith fadeOut(tween(NoorMotion.Quick))
-                    }, label = "nextName") { (p, d) -> PrayerTitle(f.prayerName(p, d), f.arabic) }
-                    Countdown(f.countdown(until), hero.countdownMax)
-                    Text(stringResource(R.string.at_time, f.timeAt(st.next.at, place.zone)), style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, shadow = SkyText.Shadow),
-                        color = Sky.OnSkySecondary)
+                    val nextLabel = stringResource(R.string.next_prayer)
+                    val title: @Composable (Boolean) -> Unit = { inline ->
+                        AnimatedContent(st.next.prayer to st.next.date, transitionSpec = {
+                            (fadeIn(tween(NoorMotion.Standard)) + slideInVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) { it / 3 }) togetherWith fadeOut(tween(NoorMotion.Quick))
+                        }, label = "nextName") { (p, d) ->
+                            PrayerTitle(f.prayerName(p, d), f.arabic, hero.titleSize, time = if (inline) f.timeAt(st.next.at, place.zone) else null, spoken = nextLabel)
+                        }
+                    }
+                    if (hero.sideBySide) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(0.85f)) {
+                            title(false)
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                Text(f.timeAt(st.next.at, place.zone), style = MaterialTheme.typography.titleMedium.merge(Tabular).copy(shadow = SkyText.Shadow), color = Sky.OnSkySecondary)
+                            }
+                        }
+                        Box(Modifier.weight(1.15f)) { Countdown(f.countdown(until), hero.countdownMax) }
+                    } else {
+                        title(true)
+                        Countdown(f.countdown(until), hero.countdownMax)
+                    }
                 }
                 if (away > 0f) {
                     val f0 = shown.value.toDouble()
@@ -379,12 +431,25 @@ private fun SkyHeader(
     }
 }
 
-/** The next prayer's name, in the user's language only (Kufi in Arabic). */
+/**
+ * The next prayer's name in the user's language (Kufi in Arabic), with its time beside it on the same line, so the
+ * countdown and the sky get the height. [spoken] (e.g. "Next prayer") is read out first by TalkBack.
+ */
 @Composable
-private fun PrayerTitle(name: String, arabic: Boolean) {
-    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.semantics(mergeDescendants = true) { heading() }) {
-        Text(name, style = (if (arabic) MaterialTheme.typography.headlineMedium.copy(fontFamily = Kufi, fontSize = 32.sp)
-            else MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp)).copy(shadow = SkyText.Shadow), color = Sky.OnSky)
+private fun PrayerTitle(name: String, arabic: Boolean, size: Float, time: String? = null, spoken: String? = null) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) {
+        heading()
+        if (spoken != null) contentDescription = listOfNotNull(spoken, name, time).joinToString(", ")
+    }) {
+        Text(name, style = (if (arabic) MaterialTheme.typography.headlineMedium.copy(fontFamily = Kufi, fontSize = (size + 2).sp)
+            else MaterialTheme.typography.headlineMedium.copy(fontSize = size.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp)).copy(shadow = SkyText.Shadow), color = Sky.OnSky)
+        if (time != null) {
+            Text("  ·  ", style = MaterialTheme.typography.titleMedium.copy(shadow = SkyText.Shadow), color = Sky.OnSkyMuted)
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Text(time, style = MaterialTheme.typography.titleLarge.merge(Tabular).copy(fontSize = (size * 0.68f).sp, fontWeight = FontWeight.Normal, shadow = SkyText.Shadow),
+                    color = Sky.OnSkySecondary, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -405,7 +470,7 @@ private fun ScrubReadout(
         )
         Spacer(Modifier.height(4.dp))
         Box(Modifier.height(40.dp), contentAlignment = Alignment.BottomCenter) {
-            if (prayer != null) PrayerTitle(f.prayerName(prayer, date), f.arabic)
+            if (prayer != null) PrayerTitle(f.prayerName(prayer, date), f.arabic, 28f)
         }
         val size = (countdownMax * 0.86f).sp
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -422,6 +487,12 @@ private fun ScrubReadout(
             style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, shadow = SkyText.Shadow), color = if (prayer != null) Sky.GoldOnSky else Sky.OnSkySecondary,
         )
     }
+}
+
+/** The opening time-lapse plays once per process: not again when the user comes back to the tab. */
+internal object OpeningSky {
+    const val DURATION_MS = 900
+    @Volatile var played = false
 }
 
 /** A soft shadow under text on the sky, so white stays crisp on the palest noon sky. */
@@ -467,16 +538,16 @@ private fun RollingText(text: String, style: androidx.compose.ui.text.TextStyle)
 
 /** Where the times are for: a small glass capsule on the sky (flag, place, a chevron), and refresh for live location. */
 @Composable
-private fun PlaceRow(u: TodayUi, f: Formatter, onOpenLocation: () -> Unit, onRefresh: () -> Unit) {
+private fun PlaceRow(u: TodayUi, f: Formatter, onOpenLocation: () -> Unit, onRefresh: () -> Unit, slim: Boolean = false) {
     val place = u.place ?: return
     val glass = Color.White.copy(alpha = 0.14f)
     val glassEdge = Color.White.copy(alpha = 0.22f)
     val label = stringResource(if (place.fromGps) R.string.loc_label_auto else R.string.loc_label_manual)
-    Box(Modifier.fillMaxWidth().height(48.dp)) {
+    Box(Modifier.fillMaxWidth().height(if (slim) 40.dp else 48.dp)) {
         Row(
             Modifier.align(Alignment.Center).padding(horizontal = 52.dp).clip(RoundedCornerShape(50)).background(glass).border(0.5.dp, glassEdge, RoundedCornerShape(50))
                 .clickable(onClickLabel = stringResource(R.string.change_location), onClick = onOpenLocation)
-                .heightIn(min = 44.dp)
+                .heightIn(min = if (slim) 36.dp else 44.dp)
                 .padding(start = 12.dp, end = 10.dp)
                 .semantics(mergeDescendants = true) {},
             verticalAlignment = Alignment.CenterVertically,
@@ -487,7 +558,7 @@ private fun PlaceRow(u: TodayUi, f: Formatter, onOpenLocation: () -> Unit, onRef
             Column(Modifier.weight(1f, fill = false)) {
                 Text(if (f.arabic) place.nameAr ?: place.nameEn else place.nameEn, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp, lineHeight = 18.sp),
                     color = Sky.OnSky, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(label, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.2.sp, fontWeight = FontWeight.Normal, lineHeight = 14.sp), color = Sky.OnSkyMuted, maxLines = 1)
+                if (!slim) Text(label, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.2.sp, fontWeight = FontWeight.Normal, lineHeight = 14.sp), color = Sky.OnSkyMuted, maxLines = 1)
             }
             Spacer(Modifier.width(4.dp))
             Icon(Icons.Rounded.KeyboardArrowDown, null, tint = Sky.OnSkySecondary, modifier = Modifier.size(18.dp))
@@ -511,19 +582,24 @@ private fun DateBar(
 ) {
     val c = NoorTheme.colors
     val calendarLabel = stringResource(R.string.open_calendar)
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+    // On narrow phones the date takes its short form ("Wed 4 Nov 2026") so it stays on one line.
+    val narrow = maxWidth < 380.dp
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         DayArrow(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.previous_day), canPrev, onPrev)
         // The date itself opens the calendar.
         Column(
-            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = calendarLabel, onClick = onCalendar).padding(vertical = 6.dp),
+            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = calendarLabel, onClick = onCalendar).padding(vertical = 3.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // One text, so that with large fonts the date wraps instead of being cut.
                 Text(buildAnnotatedString {
-                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = c.textPrimary)) { append(f.weekday(date)) }
+                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = c.textPrimary)) { append(if (narrow) f.weekdayShort(date.dayOfWeek) else f.weekday(date)) }
                     append("  ")
-                    withStyle(SpanStyle(color = c.textSecondary, fontWeight = FontWeight.Normal)) { append(f.gregorianDate(date)) }
+                    withStyle(SpanStyle(color = c.textSecondary, fontWeight = FontWeight.Normal)) {
+                        append(if (narrow) "${f.number(date.dayOfMonth)} ${f.monthShort(date.month)} ${f.digits(date.year.toString())}" else f.gregorianDate(date))
+                    }
                 }, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.weight(1f, fill = false))
                 Spacer(Modifier.width(2.dp))
                 Icon(Icons.Rounded.KeyboardArrowDown, null, tint = c.textMuted, modifier = Modifier.size(18.dp))
@@ -531,6 +607,7 @@ private fun DateBar(
             Text(f.hijri(hijri), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, letterSpacing = 0.2.sp), color = c.goldText, maxLines = 1, textAlign = TextAlign.Center)
         }
         DayArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.next_day), canNext, onNext)
+    }
     }
     // "Today" appears only when another date is shown.
     AnimatedVisibility(!isToday, enter = fadeIn(tween(NoorMotion.Quick)) + expandVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
@@ -558,7 +635,7 @@ private fun DayArrow(icon: androidx.compose.ui.graphics.vector.ImageVector, labe
  * from the current moment towards the next. Past moments are quiet; the current one is lit.
  */
 @Composable
-private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter, official: Boolean) {
+private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter, home: HomeLayout) {
     val c = NoorTheme.colors
     val st = u.state
     val current = if (isToday) st?.current?.takeIf { it.date == date }?.prayer else null
@@ -573,15 +650,6 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
     val suhoor = stringResource(R.string.today_suhoor)
     val iftar = stringResource(R.string.today_iftar)
     Column(Modifier.fillMaxWidth()) {
-        if (official) Row(
-            Modifier.padding(start = 8.dp, top = 4.dp, bottom = 6.dp).clip(RoundedCornerShape(50)).background(c.success.copy(alpha = if (c.isDark) 0.12f else 0.10f))
-                .padding(start = 8.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Rounded.Verified, null, tint = c.success, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.source_official_badge), style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.2.sp), color = c.success)
-        }
         val list = Prayer.entries
         list.forEachIndexed { i, p ->
             val at = day.instant(p)
@@ -604,6 +672,8 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
                 isCurrent = isCurrent, isNext = isNext, passed = passed,
                 first = i == 0, last = i == list.size - 1,
                 lineAboveDone = passed || isCurrent, lineBelowDone = passed, fillAbove = fillAbove, fillBelow = fillBelow, f = f,
+                // Shuruq marks the end of Fajr's time; it is not a prayer, so its row is quieter and slimmer.
+                height = if (p == Prayer.SHURUQ) home.shuruqHeight else home.rowHeight, minor = p == Prayer.SHURUQ,
             )
         }
     }
@@ -620,6 +690,7 @@ private fun TimelineRow(
     p: Prayer, name: String, time: Pair<String, String?>?, status: String?,
     isCurrent: Boolean, isNext: Boolean, passed: Boolean, first: Boolean, last: Boolean,
     lineAboveDone: Boolean, lineBelowDone: Boolean, fillAbove: Float, fillBelow: Float, f: Formatter,
+    height: Dp = 54.dp, minor: Boolean = false,
 ) {
     val c = NoorTheme.colors
     val fg = if (passed) c.textMuted else c.textPrimary
@@ -630,7 +701,7 @@ private fun TimelineRow(
         if (rtl) listOf(Color.Transparent, sky.middle.copy(alpha = if (c.isDark) 0.30f else 0.16f)) else listOf(sky.middle.copy(alpha = if (c.isDark) 0.30f else 0.16f), Color.Transparent),
     )
     Row(
-        Modifier.fillMaxWidth().height(68.dp).clip(RoundedCornerShape(22.dp))
+        Modifier.fillMaxWidth().heightIn(min = height).height(androidx.compose.foundation.layout.IntrinsicSize.Min).clip(RoundedCornerShape(20.dp))
             .then(if (isCurrent) Modifier.background(litBg).border(0.75.dp, Brush.horizontalGradient(
                 if (rtl) listOf(Color.Transparent, sky.bottom.copy(alpha = 0.35f)) else listOf(sky.bottom.copy(alpha = 0.35f), Color.Transparent)), RoundedCornerShape(22.dp)) else Modifier)
             .padding(horizontal = 8.dp),
@@ -640,9 +711,9 @@ private fun TimelineRow(
             val track = c.textMuted.copy(alpha = 0.18f)
             val done = c.textMuted.copy(alpha = 0.42f)
             Canvas(Modifier.fillMaxSize()) {
-                val x = size.width / 2; val mid = size.height / 2; val w = 1.5.dp.toPx(); val gap = 21.dp.toPx()
+                val x = size.width / 2; val mid = size.height / 2; val w = 1.5.dp.toPx(); val gap = (if (minor) 14 else 18).dp.toPx()
                 if (!first) {
-                    drawLine(if (lineAboveDone) done else track, Offset(x, -2f), Offset(x, mid - gap), w, StrokeCap.Round)
+                    drawLine(if (lineAboveDone) done else track, Offset(x, -2f), Offset(x, (mid - gap).coerceAtLeast(-2f)), w, StrokeCap.Round)
                     if (fillAbove > 0f) drawLine(c.gold, Offset(x, -2f), Offset(x, -2f + (mid - gap + 2f) * fillAbove), w * 1.4f, StrokeCap.Round)
                 }
                 if (!last) {
@@ -650,62 +721,23 @@ private fun TimelineRow(
                     if (fillBelow > 0f) drawLine(c.gold, Offset(x, mid + gap), Offset(x, mid + gap + (size.height + 2f - mid - gap) * fillBelow), w * 1.4f, StrokeCap.Round)
                 }
             }
-            SkyDisc(p, if (isCurrent) 44.dp else 36.dp, passed = passed, lit = isCurrent)
-            if (isNext) Box(Modifier.size(42.dp).border(1.5.dp, c.gold, CircleShape))
+            SkyDisc(p, when { minor -> 24.dp; isCurrent -> 38.dp; else -> 32.dp }, passed = passed, lit = isCurrent)
+            if (isNext) Box(Modifier.size(if (minor) 30.dp else 38.dp).border(1.5.dp, c.gold, CircleShape))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.titleMedium.copy(fontWeight = if (isCurrent || isNext) FontWeight.SemiBold else FontWeight.Medium),
-                color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name, style = (if (minor) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium).copy(fontWeight = if (isCurrent || isNext) FontWeight.SemiBold else FontWeight.Medium),
+                color = if (minor && !isNext && !isCurrent) c.textSecondary else fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (status != null) Text(status, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.2.sp), color = if (isCurrent) c.textSecondary else c.goldText)
         }
         if (time == null) Text("—", color = c.textMuted)
         else Row(verticalAlignment = Alignment.Bottom) {
-            Text(time.first, style = MaterialTheme.typography.titleLarge.merge(Tabular).copy(fontSize = 23.sp, letterSpacing = (-0.3).sp,
+            Text(time.first, style = MaterialTheme.typography.titleLarge.merge(Tabular).copy(fontSize = if (minor) 18.sp else 22.sp, letterSpacing = (-0.3).sp,
                 fontWeight = if (isNext || isCurrent) FontWeight.Medium else FontWeight.Light),
                 color = if (isNext) c.goldText else fg)
             if (time.second != null) Text(" " + time.second, style = MaterialTheme.typography.labelMedium, color = if (passed) c.textMuted else c.textSecondary, modifier = Modifier.padding(bottom = 3.dp))
         }
         Spacer(Modifier.width(8.dp))
-    }
-}
-
-/** Where the times come from, as a quiet card at the foot of the day. */
-@Composable
-private fun SourceFooter(u: TodayUi, ar: Boolean, official: Boolean, f: Formatter, onOpenSource: () -> Unit) {
-    val c = NoorTheme.colors
-    val profile = u.profile ?: return
-    val auth = u.authority
-    val name = auth?.let { if (ar) it.nameAr else it.nameEn } ?: if (ar) profile.nameAr else profile.nameEn
-    val basis = when {
-        official -> stringResource(R.string.source_official, name)
-        auth == null -> stringResource(R.string.source_manual_method)
-        auth.kind == SourceKind.VALIDATED_CALCULATION -> stringResource(R.string.source_validated, name) + " " + (if (ar) profile.validationAr else profile.validationEn)
-        auth.kind == SourceKind.AUTHORITY_PARAMETERS -> stringResource(R.string.source_parameters, name)
-        else -> stringResource(R.string.source_recognised)
-    }
-    com.noor.app.ui.components.GlassCard(Modifier.fillMaxWidth().padding(horizontal = 4.dp), padding = 0.dp) {
-        Row(Modifier.fillMaxWidth().clickable(onClick = onOpenSource).padding(16.dp), verticalAlignment = Alignment.Top) {
-            Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background((if (official) c.success else c.gold).copy(alpha = if (c.isDark) 0.14f else 0.12f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Verified, null, tint = if (official) c.success else c.gold, modifier = Modifier.size(19.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, letterSpacing = 0.sp), color = c.textPrimary)
-                Spacer(Modifier.height(3.dp))
-                Text(basis, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp), color = c.textSecondary)
-                val offsets = u.settings.offsets.filterValues { it != 0 }
-                if (offsets.isNotEmpty()) {
-                    Spacer(Modifier.height(3.dp))
-                    Text(stringResource(R.string.source_user_adjusted, Prayer.entries.filter { it in offsets }.joinToString(", ") { p ->
-                        val v = offsets.getValue(p); f.prayerName(p) + " " + (if (v > 0) "+" else "−") + f.number(abs(v))
-                    }), style = MaterialTheme.typography.bodySmall, color = c.goldText)
-                }
-                Spacer(Modifier.height(6.dp))
-                Text(stringResource(R.string.offline_ready), style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.2.sp, fontWeight = FontWeight.Normal), color = c.textMuted)
-            }
-            Icon(Icons.Rounded.ChevronRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
-        }
     }
 }
 

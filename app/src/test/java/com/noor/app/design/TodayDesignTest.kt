@@ -57,6 +57,7 @@ class TodayDesignTest {
         val h = harness()
         h.start()
         h.shot("today_asr_dark_en", "Maghrib")
+        h.assertPrayersFit(RenderHarness.PRAYERS_EN)
         h.theme = ThemeMode.LIGHT; h.shot("today_asr_light_en", "Maghrib")
         h.theme = ThemeMode.DARK
         h.clock = RenderHarness.at(5, 52); h.shot("today_dawn_en", "Shuruq")

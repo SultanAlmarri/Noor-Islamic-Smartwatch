@@ -1,6 +1,6 @@
 # Noor design language
 
-Version 0.8.0. How Noor looks and moves, and why.
+Version 0.9.2. How Noor looks and moves, and why.
 
 ## Idea: the sky is the clock
 
@@ -22,34 +22,47 @@ So Noor shows the sky.
 
 ## The home screen
 
-The Today screen is one scene, drawn in code from the sun's real position (`ui/today/LivingSky.kt`), in layers from
-far to near:
+The Today screen is one scene, drawn in code from the sun's real position (`ui/today/LivingSky.kt`), above the day's
+times. Since 0.9.2 the six times always fit above the tab bar without scrolling at the default text size: the date
+bar and the rows take what they need and the sky takes the rest (`HomeLayout`). Tests render the screen on 360 × 640,
+360 × 740 and 412 × 915 dp phones and fail if any prayer is cut off. Shuruq, which ends Fajr's time but is not a
+prayer, has a slimmer, quieter row. How the times are calculated (the authority, the official timetable) is in
+Settings, not on the home screen.
 
-1. **Sky**: the live sky colours; warm air gathering round a low sun; at night stars that twinkle, a faint Milky Way,
-   and now and then a meteor high in a corner of the sky, clear of the countdown.
-2. **Clouds**: a few fair-weather cumulus low over the land and thin high streaks, different each day and place
-   (fewer over the desert). Each is painted as light in vapour, not outlined: white tops and blue-grey bases by day,
-   dusky mauve with peach and gold undersides towards a low sun, thin veils at night. They drift slowly with the wind
-   and never rise into the text.
-3. **Sun**: its halo and long, faint, slowly turning rays (longer and warmer when it is low), the path, and the sun.
-4. **Land**: four ridges fading with distance (atmospheric perspective). Arid countries get dunes (long windward
-   slopes, steeper slip faces, warm sand); elsewhere far mountain ridges soften into rolling hills. The shape is fixed
-   for a place, so home always looks like home. The ground takes the colour of the moment (sand by day, rose at sunset,
-   deep blue at night), crests facing a low sun catch its light, mist lies in the valleys at dawn, and the nearest ridge
-   fades into the page, so the day's times sit on the ground under the sky.
-5. **Over the land**: the night part of the path, the prayers on it, and at dawn and dusk a small flock of birds now and
-   then.
+The header, top to bottom: the place, the next prayer with its time on the same line, the countdown, then the sky.
+The text is measured once laid out, and the noon Sun always sits below it. On short screens the place shows on one
+line, and on very short ones the prayer and the countdown sit side by side, so the arc keeps its room.
 
-**Touch**: drag sideways across the sky to move the sun along its path. The sky, clouds and land relight as it moves,
-it catches on each prayer with a haptic tick, and the header shows that moment instead of the countdown: the sun's
-elevation, the prayer it has caught on, the clock time and how long ago or ahead that is. Let go and it springs back
-to now. The countdown and the timeline are unchanged by it, and nothing is lost without it (TalkBack reads the sky's
-description, which mentions the gesture).
+The scene, far to near:
 
-**Calm and cost**: the scene changes once a minute, not with each tick of the countdown; paths are built once per size;
-the ambient clock ticks about 30 times a second rather than every frame, rests when the sky is scrolled out of sight
-or the app is in the background, and stops entirely (with a still, complete scene) when "Remove animations" is on.
-Short screens (under 800 dp tall) get a more compact sky and countdown so more of the timeline shows.
+1. **Sky**: the live sky colours; warm air round a low Sun; while the Sun is below the horizon, its glow on the
+   horizon shows where it is, cooling through twilight. At dawn and dusk, opposite the Sun, the Earth's own shadow
+   (a blue-grey band on the horizon) with the pink Belt of Venus above it. At night stars over the whole sky, thinning
+   and twinkling more towards the horizon as the air thickens (there is no line where they stop), a faint Milky Way,
+   now and then a meteor. Over the desert at midday a pale warm haze lies along the horizon. A fine grain keeps the
+   slow gradients of the night sky free of steps.
+2. **Clouds**: fair-weather cumulus and high streaks, painted as light in vapour; at night only thin, pale, moonlit
+   veils (never dark shapes). They drift slowly and never rise into the text.
+3. **Sun**: its halo, long faint rays, the path and the Sun. The path is in the sky only and passes **behind** the
+   land, so the Sun rises and sets behind the dunes or hills; it is never drawn across the land.
+4. **Land**: four ridges fading with distance, spread over the depth the header gives them, the nearest fading into
+   the page. Dunes for arid countries, mountains and rolling hills elsewhere; fixed for a place. Mist at dawn, crests lit
+   by a low Sun.
+5. **Over the land**: the prayers. Those that fall while the Sun is up sit on the path; Fajr, Shuruq, Maghrib and Isha,
+   when the Sun is at or below the horizon, sit on the skyline at their moment. The next prayer's ring breathes. Birds
+   at dawn and dusk.
+
+**Opening**: once per launch, in 0.9 s, the sky runs through the hours before now (about ten) and settles on this
+moment, while the path draws itself. The prayer, its time and the countdown are the real ones from the first frame;
+nothing waits for it. It does not replay when the user comes back to the tab, and it is off under "Remove animations".
+`TodayOpeningDesignTest` renders frames at 0, 0.3, 0.6 and 1 s.
+
+**Touch**: drag sideways across the sky to move the Sun along its path; the scene relights, it catches on each prayer
+with a haptic tick, the header shows that moment, and it springs back to now when let go.
+
+**Calm and cost**: the scene changes once a minute; paths are built once per size; the ambient clock ticks about 30
+times a second, rests when the sky is scrolled away or the app is in the background, and stops entirely under
+"Remove animations". The opening redraws the scene every frame for 0.9 s only.
 
 ## Appearance
 

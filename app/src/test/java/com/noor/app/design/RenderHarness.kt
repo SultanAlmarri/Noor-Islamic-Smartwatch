@@ -50,6 +50,8 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
     var tabRoute by mutableStateOf<String?>(null)
     var settings by mutableStateOf(DUBAI)
     var screen by mutableStateOf<(@Composable (PaddingValues) -> Unit)?>(null)
+    /** Ambient motion on (animations as on a phone with "Remove animations" off); off by default for still renders. */
+    var ambient by mutableStateOf(false)
 
     fun start() {
         rule.setContent {
@@ -58,7 +60,7 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
             val config = Configuration(base.resources.configuration).apply { setLocale(locale); this.fontScale = this@RenderHarness.fontScale; setLayoutDirection(locale) }
             val ctx = base.createConfigurationContext(config)
             CompositionLocalProvider(
-                LocalAmbientMotion provides false,
+                LocalAmbientMotion provides ambient,
                 LocalContext provides ctx,
                 LocalConfiguration provides config,
                 LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
@@ -79,6 +81,16 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
         }
     }
 
+    /** Saves the screen as it is now, without letting time pass (for frames of an animation). */
+    fun frame(name: String) {
+        rule.mainClock.advanceTimeByFrame()
+        val root = rule.activity.window.decorView
+        val bmp = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.ARGB_8888)
+        root.draw(Canvas(bmp))
+        val dir = File("build/design").apply { mkdirs() }
+        File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
     fun shot(name: String, waitFor: String? = null) {
         if (waitFor != null) rule.waitUntil(20_000) { rule.onAllNodesWithText(waitFor, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         rule.mainClock.advanceTimeBy(1500)
@@ -90,7 +102,25 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
         File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
+    /**
+     * The owner's rule for the home screen (0.9.2): every prayer of the day is fully visible above the tab bar without
+     * scrolling. Checks the lowest text matching each name (the timeline row, below any name in the sky header).
+     */
+    fun assertPrayersFit(names: List<String>, bottomPadDp: Float = 112f) {
+        val root = rule.activity.window.decorView
+        val limit = root.height - bottomPadDp * root.resources.displayMetrics.density
+        names.forEach { n ->
+            val nodes = rule.onAllNodesWithText(n, useUnmergedTree = true).fetchSemanticsNodes()
+            org.junit.Assert.assertTrue("$n is not on the screen", nodes.isNotEmpty())
+            val lowest = nodes.maxOf { it.boundsInRoot.bottom }
+            org.junit.Assert.assertTrue("$n is cut off: its bottom is at ${lowest.toInt()} px, the tab bar starts at ${limit.toInt()} px", lowest <= limit)
+        }
+    }
+
     companion object {
+        val PRAYERS_EN = listOf("Fajr", "Shuruq", "Dhuhr", "Asr", "Maghrib", "Isha")
+        val PRAYERS_AR = listOf("الفجر", "الشروق", "الظهر", "العصر", "المغرب", "العشاء")
+
         /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
         val DEFAULT_NOW: Instant = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
         val DUBAI = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualCityId = "dxb")
