@@ -1,0 +1,850 @@
+package com.noor.app.ui.today
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import com.noor.app.ui.components.LocalAmbientMotion
+import com.noor.app.ui.components.NoorMotion
+import com.noor.app.ui.theme.Sky
+import com.noor.prayer.Prayer
+import com.noor.prayer.astro.SunPath
+import kotlinx.coroutines.delay
+import java.time.Instant
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sin
+
+/** The land under the sky: the kind of country the user is in, drawn in layers that fade into the distance. */
+enum class Terrain {
+    /** Sand seas: long, smooth crests with a steeper slip face. */
+    DUNES,
+    /** Mountain ridges far away, softening into rolling hills nearby. */
+    HILLS;
+
+    companion object {
+        /** Arid countries of the Arabian Peninsula, the Sahara and its edges, and the Levant's deserts. */
+        private val ARID = setOf(
+            "AE", "SA", "QA", "KW", "BH", "OM", "YE", "IQ", "JO", "EG", "LY", "DZ", "TN", "MA", "EH", "MR", "ML", "NE", "TD", "SD", "DJ",
+        )
+
+        fun of(countryCode: String?): Terrain = if (countryCode?.uppercase() in ARID) DUNES else HILLS
+    }
+}
+
+/** Everything the scene needs for one place and one day. */
+@Immutable
+data class SkyScene(
+    val path: SunPath,
+    /** Today's events in order (Fajr … Isha); missing events (polar days) are simply absent. */
+    val events: List<Pair<Prayer, Instant>>,
+    /** The current minute (the scene does not need seconds). */
+    val now: Instant,
+    val next: Prayer?,
+    /** Day of the Hijri month, for the moon's phase and where it stands. */
+    val hijriDay: Int,
+    val southernHemisphere: Boolean,
+    val terrain: Terrain = Terrain.HILLS,
+    /** Varies the clouds from day to day and place to place. */
+    val seed: Long = 0L,
+    /** The lie of the land: fixed for a place, so home always looks like home. */
+    val landSeed: Long = 0L,
+) {
+    /** (fraction of the day, elevation) pairs, computed once. */
+    val samples: List<Pair<Double, Double>> = path.samples
+    val nowFraction: Double = path.fraction(now)
+    /** Solar noon, as a fraction of the day. */
+    val noonFraction: Double = samples.maxByOrNull { it.second }?.first ?: 0.5
+    val sunElevation: Double = path.elevationAt(now)
+    /** After the highest point of the day the light turns warm. */
+    val evening: Boolean = nowFraction > noonFraction
+
+    fun elevationAt(fraction: Double): Double = interpolate(samples, fraction.coerceIn(0.0, 1.0))
+    /** The clock time at a fraction of the day. */
+    fun instantAt(fraction: Double): Instant =
+        path.start.plusMillis(((path.end.toEpochMilli() - path.start.toEpochMilli()) * fraction.coerceIn(0.0, 1.0)).toLong())
+    fun eveningAt(fraction: Double): Boolean = fraction > noonFraction
+}
+
+/** Heights in the scene, as fractions of its height. */
+@Immutable
+data class SceneLayout(
+    /** The clouds keep below this line, clear of the text written on the sky. */
+    val cloudTop: Float,
+    /** Where the noon Sun is drawn. */
+    val arcTop: Float,
+    /** Elevation zero. */
+    val horizon: Float,
+    /** Where the deepest point of the night part of the path is drawn. */
+    val ground: Float,
+)
+
+/** Positions on the sky: a smooth time axis that gives daylight most of the width, and an elevation scale. */
+internal class SkyGeometry(scene: SkyScene, private val w: Float, val horizonY: Float, val arcTopY: Float, val groundY: Float, private val rtl: Boolean) {
+    private val maxEl = max(scene.path.maxElevation, 12.0)
+    private val minEl = minOf(scene.path.minElevation, -24.0)
+    private val warp: (Double) -> Double = timeWarp(scene)
+
+    fun x(fraction: Double): Float {
+        val u = (-0.04 + 1.08 * warp(fraction.coerceIn(0.0, 1.0))).toFloat() * w
+        return if (rtl) w - u else u
+    }
+
+    fun y(el: Double): Float = if (el >= 0) (horizonY - (el / maxEl) * (horizonY - arcTopY)).toFloat()
+        else (horizonY + (-el / -minEl) * (groundY - horizonY)).toFloat()
+
+    /** The fraction of the day drawn at [px] (inverse of [x]). */
+    fun fractionAt(px: Float): Double {
+        var lo = 0.0; var hi = 1.0
+        val target = if (rtl) w - px else px
+        repeat(40) {
+            val m = (lo + hi) / 2
+            val u = (-0.04 + 1.08 * warp(m)).toFloat() * w
+            if (u < target) lo = m else hi = m
+        }
+        return (lo + hi) / 2
+    }
+
+    companion object {
+        /** Monotone cubic (Fritsch–Carlson) through Fajr−30 min, sunrise, sunset and Isha+30 min. */
+        fun timeWarp(scene: SkyScene): (Double) -> Double {
+            val f = scene.events.associate { (p, t) -> p to scene.path.fraction(t) }
+            val fajr = f[Prayer.FAJR]; val rise = f[Prayer.SHURUQ]; val set = f[Prayer.MAGHRIB]; val isha = f[Prayer.ISHA]
+            if (rise == null || set == null) return { it }
+            val half = 30.0 / (24 * 60)
+            val xs = mutableListOf(0.0); val ys = mutableListOf(0.0)
+            fun add(x: Double, y: Double) { if (x > xs.last() + 1e-4 && x < 1 - 1e-4 && y > ys.last()) { xs += x; ys += y } }
+            fajr?.let { add(it - half, 0.10) }
+            add(rise, 0.18); add(set, 0.82)
+            isha?.let { add(it + half, 0.90) }
+            xs += 1.0; ys += 1.0
+            return monotoneCubic(xs.toDoubleArray(), ys.toDoubleArray())
+        }
+
+        fun monotoneCubic(x: DoubleArray, y: DoubleArray): (Double) -> Double {
+            val n = x.size
+            val d = DoubleArray(n - 1) { (y[it + 1] - y[it]) / (x[it + 1] - x[it]) }
+            val m = DoubleArray(n) { i ->
+                when (i) { 0 -> d[0]; n - 1 -> d[n - 2]; else -> if (d[i - 1] * d[i] <= 0) 0.0 else (d[i - 1] + d[i]) / 2 }
+            }
+            for (i in 0 until n - 1) {
+                if (d[i] == 0.0) { m[i] = 0.0; m[i + 1] = 0.0; continue }
+                val a = m[i] / d[i]; val b = m[i + 1] / d[i]
+                val s = a * a + b * b
+                if (s > 9) { val t = 3 / kotlin.math.sqrt(s); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i] }
+            }
+            return { v ->
+                val i = (x.indexOfLast { it <= v }).coerceIn(0, n - 2)
+                val h = x[i + 1] - x[i]; val t = ((v - x[i]) / h).coerceIn(0.0, 1.0)
+                val t2 = t * t; val t3 = t2 * t
+                (2 * t3 - 3 * t2 + 1) * y[i] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * y[i + 1] + (t3 - t2) * h * m[i + 1]
+            }
+        }
+    }
+}
+
+/**
+ * The light of one moment, from the Sun's height: every colour in the scene is taken from it, so sky, clouds, land and
+ * mist always agree with each other and with the live sky palette the watch also uses.
+ */
+@Immutable
+internal data class Light(
+    val zenith: Color, val mid: Color, val horizon: Color,
+    /** 0 in daylight, 1 in full night: stars, moon, how dark the clouds are. */
+    val night: Float,
+    /** 1 with the Sun low (just above or just below the horizon): warm undersides, rim light, long rays. */
+    val golden: Float,
+    /** 1 in full daylight. */
+    val day: Float,
+    /** Morning mist in the valleys. */
+    val mist: Float,
+    val cloudTop: Color, val cloudBase: Color, val cloudGlow: Color,
+    val sunCore: Color, val sunGlow: Color,
+)
+
+internal fun lightAt(elevation: Double, evening: Boolean): Light {
+    val s = Sky.colors(elevation, evening)
+    val e = elevation.toFloat()
+    val day = smoothstep(-4f, 12f, e)
+    val golden = smoothstep(0f, 1f, 1f - abs(e - 1f) / 10f)
+    val night = s.night
+    val mist = if (!evening) 0.85f * smoothstep(0f, 1f, 1f - abs(e + 1f) / 13f) + 0.18f * night else 0.22f * night + 0.12f * golden
+    val white = Color.White
+    val wN = night.coerceIn(0f, 1f)
+    val wG = (golden * (1f - wN)).coerceIn(0f, 1f)
+    val wD = (1f - wN - wG).coerceAtLeast(0f)
+    fun blend(n: Color, g: Color, d: Color): Color {
+        val t = wN + wG + wD
+        return Color(
+            (n.red * wN + g.red * wG + d.red * wD) / t, (n.green * wN + g.green * wG + d.green * wD) / t,
+            (n.blue * wN + g.blue * wG + d.blue * wD) / t, 1f,
+        )
+    }
+    val warmGlow = Color(0xFFFF9A62)
+    return Light(
+        zenith = s.zenith, mid = s.mid, horizon = s.horizon, night = night, golden = golden, day = day, mist = mist,
+        // Day: white tops, blue-grey bases. Low sun: cool lavender tops, undersides lit coral and gold. Night: dark, faintly lit.
+        // The lit side of each billow: white by day, peach and gold from a low Sun, a faint moonlit grey at night.
+        cloudTop = blend(Sky.mix(s.zenith, white, 0.16f), Color(0xFFFFC9A0), Color(0xFFFFFFFF)),
+        // The shaded body: blue-grey by day, dusky mauve at sunset, a little darker than the sky at night.
+        cloudBase = blend(Sky.mix(s.zenith, Color.Black, 0.12f), Sky.mix(Sky.mix(s.zenith, s.mid, 0.55f), Color(0xFF3A2847), 0.22f), Sky.mix(white, s.mid, 0.46f)),
+        cloudGlow = Sky.mix(Sky.SunGlow, warmGlow, golden * 0.8f),
+        sunCore = Sky.mix(Sky.SunCore, Color(0xFFFFC27A), golden * 0.75f),
+        sunGlow = Sky.mix(Sky.SunGlow, warmGlow, golden * 0.6f),
+    )
+}
+
+private fun smoothstep(a: Float, b: Float, x: Float): Float {
+    val t = ((x - a) / (b - a)).coerceIn(0f, 1f)
+    return t * t * (3 - 2 * t)
+}
+
+/**
+ * The home screen's world: the sky of this moment over a natural landscape, with the day's sun path drawn across it and
+ * the prayers placed on the path. Clouds drift, mist lies in the valleys at dawn, the moon rides the Sun's own arc
+ * (later each day by its age), stars come out after Isha and birds cross at dawn and dusk. Nothing man-made.
+ *
+ * [display] is the moment shown, as a fraction of the day: now, or wherever the user has drawn the Sun to.
+ * [parallax] (the page's scroll, in px) is read while drawing, never in composition, so scrolling does not recompose:
+ * the sky and its clouds lag behind as the page moves, while the land, the path and the Sun stay with the page.
+ * [stillTime] fixes the ambient clock when animations are off (previews and tests), so the scene can be shown at any
+ * moment of its cycle.
+ */
+@Composable
+internal fun LivingSky(
+    scene: SkyScene,
+    layout: SceneLayout,
+    display: Double,
+    scrubbing: Boolean,
+    page: Color,
+    description: String,
+    modifier: Modifier = Modifier,
+    parallax: () -> Float = { 0f },
+    stillTime: Float? = null,
+) {
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val ambient = LocalAmbientMotion.current
+    val light = lightAt(scene.elevationAt(display), scene.eveningAt(display))
+    val spec = if (scrubbing || !ambient) snap<Color>() else tween(1200)
+    val zenith by animateColorAsState(light.zenith, spec, label = "zenith")
+    val mid by animateColorAsState(light.mid, spec, label = "mid")
+    val horizonColor by animateColorAsState(light.horizon, spec, label = "horizon")
+
+    // The day so far draws itself once, from midnight to now, when the screen appears.
+    val reveal = remember { Animatable(if (ambient) 0f else 1f) }
+    LaunchedEffect(Unit) { if (ambient) reveal.animateTo(1f, tween(NoorMotion.Entrance + 700, easing = NoorMotion.Ease)) }
+
+    // One slow cycle (four minutes) drives everything ambient: drifting clouds, twinkling stars, the turning of the
+    // Sun's rays, birds and meteors. It ticks about 30 times a second rather than every frame: the motion is slow, and
+    // the phone has better things to do with its battery. It stops with the screen (the frame clock pauses).
+    val clock = remember { mutableFloatStateOf(stillTime ?: 0.13f) }
+    // Height of the scene, kept outside the snapshot system: it only tells the clock whether the sky is still on screen.
+    val heightPx = remember { floatArrayOf(Float.MAX_VALUE) }
+    if (ambient) LaunchedEffect(Unit) {
+        val origin = withFrameNanos { it }
+        val offset = clock.floatValue
+        while (true) {
+            withFrameNanos { t ->
+                // Scrolled out of sight, the sky rests.
+                if (parallax() < heightPx[0]) clock.floatValue = ((offset + (t - origin) / 1e9 / CYCLE_SECONDS) % 1.0).toFloat()
+            }
+            delay(24)
+        }
+    }
+    val live = ambient || stillTime != null
+    val now: () -> Float = { if (ambient) clock.floatValue else stillTime ?: clock.floatValue }
+    val stars = remember { starField(120) }
+    val dust = remember { dustField(220) }
+    val clouds = remember(scene.seed, scene.terrain) { cloudField(scene.seed, scene.terrain) }
+    val land = remember(scene.landSeed, scene.terrain) { landField(scene.landSeed, scene.terrain) }
+    val soil = soilOf(scene.terrain)
+
+    Box(modifier.clipToBounds().onSizeChanged { heightPx[0] = it.height.toFloat() }.semantics { contentDescription = description }) {
+        // 1 · Sky, warm air round a low Sun, stars, the moon. Farthest away, so it lags most when the page scrolls.
+        Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
+            val w = size.width; val h = size.height
+            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+            // The clock is read only when there is something to move, so a daytime sky is not redrawn for nothing.
+            val time = if (light.night > 0f && live) now() else 0.13f
+            val hy = h * layout.horizon
+            drawRect(Brush.verticalGradient(0f to zenith, layout.horizon * 0.58f to mid, layout.horizon to horizonColor, 1f to horizonColor))
+            val sunX = g.x(display)
+            if (light.golden > 0f) drawRect(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.40f * light.golden), Color.Transparent),
+                center = Offset(sunX, hy), radius = w * 0.85f))
+            if (light.night > 0f) {
+                // Far from city lights the Milky Way shows: a faint river of light with fine dust along it.
+                val dark = smoothstep(0.55f, 1f, light.night)
+                if (dark > 0f) {
+                    val pivot = Offset(w * 0.5f, hy * 0.42f)
+                    withTransform({ rotate(MILKY_WAY_TILT, pivot); scale(3.6f, 1f, pivot) }) {
+                        val r = hy * 0.30f
+                        drawCircle(Brush.radialGradient(0f to Color(0xFFC9D2FF).copy(alpha = 0.14f * dark), 0.5f to Color(0xFFB8C4F0).copy(alpha = 0.07f * dark), 1f to Color.Transparent,
+                            center = pivot, radius = r), r, pivot)
+                    }
+                    val cosT = cos(MILKY_WAY_TILT * PI.toFloat() / 180f); val sinT = sin(MILKY_WAY_TILT * PI.toFloat() / 180f)
+                    dust.forEach { d ->
+                        val along = d.x * w * 0.62f; val across = d.y * hy * 0.10f
+                        val px = pivot.x + along * cosT - across * sinT; val py = pivot.y + along * sinT + across * cosT
+                        if (py < hy * 0.94f && py > 0f) drawCircle(Color.White.copy(alpha = dark * d.brightness * 0.55f), d.r * density * 0.7f, Offset(px, py))
+                    }
+                }
+                stars.forEach { s ->
+                    val y = s.y * hy * 0.92f
+                    val tw = if (live) 0.62f + 0.38f * sin(2 * PI * (time * 70f + s.phase)).toFloat() else 0.85f
+                    drawCircle(Color.White.copy(alpha = light.night * s.brightness * tw), radius = s.r * density, center = Offset(s.x * w, y))
+                }
+                if (live) shootingStar(time, light.night, w, h * layout.cloudTop)
+            }
+            // The moon on the Sun's own path, as far behind it as it is old.
+            val age = (((scene.hijriDay - 1).coerceIn(0, 29) + 0.5) / 29.53)
+            val moonF = ((display - age) % 1.0 + 1.0) % 1.0
+            val moonEl = scene.elevationAt(moonF)
+            if (moonEl > 2.0) {
+                val visibility = (0.35f + 0.65f * light.night).coerceAtMost(1f) * smoothstep(2f, 8f, moonEl.toFloat())
+                moon(scene.hijriDay, Offset(g.x(moonF), g.y(moonEl)), 10.dp.toPx(), visibility, scene.southernHemisphere, light.night)
+            }
+        }
+
+        // 2 · Clouds, drifting with the wind (still when animations are off).
+        Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.4f }) {
+            val w = size.width; val h = size.height
+            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+            drawClouds(clouds, light, w, h * layout.cloudTop, h * layout.horizon, now(), g.x(display), rtl)
+        }
+
+        // 3 · The Sun's rays and halo, the sun path above the horizon, and the Sun. The path is built once per size.
+        Box(Modifier.fillMaxSize().drawWithCache {
+            val w = size.width; val h = size.height
+            val hy = h * layout.horizon
+            val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+            val path = sunPath(scene, g)
+            val stroke = 1.6.dp.toPx()
+            val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
+            onDrawBehind {
+                val shownF = lerp(0.0, display, reveal.value.toDouble())
+                val sunEl = scene.elevationAt(shownF)
+                val sun = Offset(g.x(shownF), g.y(sunEl))
+                val up = sunEl > -1.0
+                if (up) clipRect(0f, 0f, w, hy + 2.dp.toPx()) {
+                    // Long, faint rays, turning slowly; longer and warmer when the Sun is low.
+                    val rays = 14
+                    val len = w * (0.20f + 0.24f * light.golden)
+                    val turn = now() * 2 * PI.toFloat() * 3f
+                    for (i in 0 until rays) {
+                        val a = turn + i * 2 * PI.toFloat() / rays
+                        val l = len * (if (i % 2 == 0) 1f else 0.62f)
+                        val end = Offset(sun.x + l * cos(a), sun.y + l * sin(a))
+                        drawLine(Brush.linearGradient(listOf(light.sunGlow.copy(alpha = 0.13f + 0.10f * light.golden), Color.Transparent), sun, end),
+                            sun, end, strokeWidth = (if (i % 2 == 0) 3.dp else 1.5.dp).toPx(), cap = StrokeCap.Round)
+                    }
+                    val halo = (52 + 18 * light.golden).dp.toPx()
+                    drawCircle(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.62f), light.sunGlow.copy(alpha = 0.14f), Color.Transparent), center = sun, radius = halo), halo, sun)
+                }
+                clipRect(0f, 0f, w, hy) {
+                    drawPath(path, Color.White.copy(alpha = 0.5f), style = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash))
+                    val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
+                    clipRect(left, 0f, right, hy) {
+                        drawPath(path, light.sunGlow.copy(alpha = 0.24f), style = Stroke(stroke * 4f, cap = StrokeCap.Round))
+                        drawPath(path, light.sunCore.copy(alpha = 0.95f), style = Stroke(stroke, cap = StrokeCap.Round))
+                    }
+                }
+                if (sunEl > -18.0) {
+                    drawCircle(if (up) light.sunCore else light.sunCore.copy(alpha = 0.45f), (if (light.golden > 0.5f && up) 8.5.dp else 7.dp).toPx(), sun)
+                    if (up) drawCircle(Color.White.copy(alpha = 0.92f), 3.2.dp.toPx(), sun)
+                }
+            }
+        })
+
+        // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
+        Box(Modifier.fillMaxSize().drawWithCache {
+            val w = size.width; val h = size.height
+            val shapes = land.paths(w, h * layout.horizon, h, density)
+            onDrawBehind {
+                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+                drawLand(shapes, light, horizonColor, mid, zenith, page, soil, g.x(display), w)
+            }
+        })
+
+        // 5 · Over the land: the night part of the path, the prayers on it, and the birds.
+        Box(Modifier.fillMaxSize().drawWithCache {
+            val w = size.width; val h = size.height
+            val hy = h * layout.horizon
+            val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+            val path = sunPath(scene, g)
+            val stroke = 1.6.dp.toPx()
+            val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
+            val marks = scene.events.map { (p, t) -> val f = scene.path.fraction(t); Triple(p, f, Offset(g.x(f), g.y(scene.elevationAt(f)))) }
+            onDrawBehind {
+                val shownF = lerp(0.0, display, reveal.value.toDouble())
+                val sunX = g.x(shownF)
+                val ink = if (page.luminance() < 0.3f) Color.White else Sky.mix(zenith, Color.Black, 0.25f)
+                clipRect(0f, hy, w, h) {
+                    drawPath(path, ink.copy(alpha = 0.34f), style = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash))
+                    val left = if (rtl) sunX else 0f; val right = if (rtl) w else sunX
+                    clipRect(left, hy, right, h) { drawPath(path, ink.copy(alpha = 0.55f), style = Stroke(stroke, cap = StrokeCap.Round)) }
+                }
+                val sunUp = scene.elevationAt(shownF) > -1.0
+                if (!sunUp && scene.elevationAt(shownF) > -18.0) {
+                    // Below the horizon, the Sun is a quiet bead on the night path.
+                    drawCircle(ink.copy(alpha = 0.55f), 4.dp.toPx(), Offset(sunX, g.y(scene.elevationAt(shownF))))
+                }
+                marks.forEach { (p, f, pt) ->
+                    val passed = f <= shownF && reveal.value > 0.98f
+                    val above = pt.y < hy
+                    val dot = if (above) Color.White else ink
+                    when {
+                        p == scene.next -> {
+                            // The next prayer's ring breathes, slowly, while it waits.
+                            val breath = if (ambient) 0.5f + 0.5f * sin(2 * PI * now() * 40).toFloat() else 0.5f
+                            drawCircle(Sky.GoldOnSky.copy(alpha = 0.16f + 0.16f * breath), (9f + 3f * breath).dp.toPx(), pt)
+                            drawCircle(Sky.GoldOnSky, 5.5.dp.toPx(), pt, style = Stroke(1.8.dp.toPx()))
+                        }
+                        passed -> drawCircle(dot.copy(alpha = 0.95f), 3.dp.toPx(), pt)
+                        else -> {
+                            drawCircle(if (above) zenith.copy(alpha = 0.55f) else page, 3.4.dp.toPx(), pt)
+                            drawCircle(dot.copy(alpha = 0.8f), 3.4.dp.toPx(), pt, style = Stroke(1.2.dp.toPx()))
+                        }
+                    }
+                }
+                if (live && birdsFly(scene, display)) birds(now(), scene, display, light, w, h * layout.cloudTop, hy, rtl)
+            }
+        })
+    }
+}
+
+private const val CYCLE_SECONDS = 240.0
+
+private fun lerp(a: Double, b: Double, t: Double) = a + (b - a) * t
+
+internal fun interpolate(samples: List<Pair<Double, Double>>, f: Double): Double {
+    // Samples are in time order: find the last one at or before f.
+    var lo = 0; var hi = samples.size - 1
+    while (lo < hi) { val m = (lo + hi + 1) / 2; if (samples[m].first <= f) lo = m else hi = m - 1 }
+    val i = lo.coerceIn(0, samples.size - 2)
+    val (f0, e0) = samples[i]; val (f1, e1) = samples[i + 1]
+    return if (f1 == f0) e0 else e0 + (e1 - e0) * ((f - f0) / (f1 - f0))
+}
+
+private fun sunPath(scene: SkyScene, g: SkyGeometry): Path = Path().apply {
+    scene.samples.forEachIndexed { i, (f, el) -> if (i == 0) moveTo(g.x(f), g.y(el)) else lineTo(g.x(f), g.y(el)) }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Stars, moon, shooting stars
+
+private class Star(val x: Float, val y: Float, val r: Float, val brightness: Float, val phase: Float)
+
+/** A fixed field, so the sky does not reshuffle between frames or screens. */
+private fun starField(n: Int): List<Star> {
+    val rnd = java.util.Random(1448)
+    return List(n) {
+        val big = rnd.nextFloat() < 0.10f
+        Star(rnd.nextFloat(), rnd.nextFloat() * 0.8f, if (big) 1.3f else 0.5f + rnd.nextFloat() * 0.5f,
+            if (big) 0.95f else 0.3f + rnd.nextFloat() * 0.5f, rnd.nextFloat())
+    }
+}
+
+private const val MILKY_WAY_TILT = -24f
+
+/** Fine stars gathered along the Milky Way: x along the band (−1…1), y across it (roughly −1…1, most near the middle). */
+private fun dustField(n: Int): List<Star> {
+    val rnd = java.util.Random(2718)
+    return List(n) {
+        val across = (rnd.nextGaussian() * 0.45).toFloat().coerceIn(-1.2f, 1.2f)
+        Star(rnd.nextFloat() * 2f - 1f, across, 0.35f + rnd.nextFloat() * 0.4f, 0.25f + rnd.nextFloat() * 0.6f, rnd.nextFloat())
+    }
+}
+
+/** Now and then, on a dark night, a meteor: a short bright streak high in the sky. */
+private fun DrawScope.shootingStar(time: Float, night: Float, w: Float, maxY: Float) {
+    if (night < 0.8f) return
+    // Rare, as they are: one in every other minute of the cycle (about every two minutes), lasting about a second.
+    val period = 1f / 4f
+    val k = (time / period).toInt()
+    if (k % 2 == 1) return
+    val local = (time - k * period) / period
+    if (local > 0.02f) return
+    val rnd = java.util.Random(k * 7919L + 3)
+    val p = local / 0.02f
+    // High up and off to one side, clear of the countdown, falling across the corner of the sky.
+    val start = Offset(w * (0.70f + rnd.nextFloat() * 0.25f), maxY * (0.06f + rnd.nextFloat() * 0.22f))
+    val dir = Offset(-0.85f, 0.52f)
+    val len = w * 0.22f
+    val head = start + dir * (len * p)
+    val tail = start + dir * (len * max(0f, p - 0.35f))
+    val fade = sin(PI * p).toFloat()
+    drawLine(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.85f * fade)), tail, head), tail, head, 1.6.dp.toPx(), StrokeCap.Round)
+}
+
+/**
+ * The moon as it looks on this day of the Hijri month: a thin crescent at the start, full near the 14th, waning after.
+ * Lit on the side towards the Sun (right while waxing, mirrored in the southern hemisphere). Paler by day.
+ */
+private fun DrawScope.moon(hijriDay: Int, c: Offset, r: Float, visibility: Float, south: Boolean, night: Float) {
+    val age = ((hijriDay - 1).coerceIn(0, 29) + 1.0) / 29.53
+    val phase = 2 * PI * age
+    val lit = ((1 - cos(phase)) / 2).toFloat()
+    if (lit < 0.02f || visibility <= 0f) return
+    val waxing = age < 0.5
+    val litOnRight = waxing != south
+    val moonColor = Sky.Moon
+    drawCircle(Brush.radialGradient(listOf(moonColor.copy(alpha = 0.26f * visibility * lit * night), Color.Transparent), center = c, radius = r * 5), r * 5, c)
+    drawCircle(moonColor.copy(alpha = 0.10f * visibility * night), r, c)
+    val k = (1 - 2 * lit)
+    val p = Path()
+    val side = if (litOnRight) 1f else -1f
+    val steps = 48
+    for (i in 0..steps) {
+        val a = -PI / 2 + PI * i / steps
+        val pt = Offset(c.x + side * r * cos(a).toFloat(), c.y + r * sin(a).toFloat())
+        if (i == 0) p.moveTo(pt.x, pt.y) else p.lineTo(pt.x, pt.y)
+    }
+    for (i in steps downTo 0) {
+        val a = -PI / 2 + PI * i / steps
+        p.lineTo(c.x + side * k * r * cos(a).toFloat(), c.y + r * sin(a).toFloat())
+    }
+    p.close()
+    drawPath(p, moonColor.copy(alpha = 0.96f * visibility))
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Clouds
+
+/** One round billow of a cloud, in the cloud's own units: x across its width, y down its height (0 top), r in heights. */
+private class Puff(val x: Float, val y: Float, val r: Float)
+
+private class Cloud(
+    /** Position along a strip 1.6 screens wide (they drift across it and wrap). */
+    val x: Float,
+    /** 0 at the top of the cloud band, 1 at its bottom (the horizon). Where the cloud's base sits. */
+    val y: Float,
+    /** Width as a fraction of the screen. */
+    val width: Float,
+    /** Height in dp. */
+    val height: Float,
+    val streak: Boolean,
+    /** Relative drift speed: high clouds seem to move more slowly. */
+    val speed: Float,
+    val puffs: List<Puff>,
+)
+
+private const val STRIP = 1.6f
+
+/**
+ * The day's clouds: a few fair-weather cumulus low over the land and some high, thin streaks, different each day and
+ * place. Over the desert they are fewer; elsewhere the cumulus are more plentiful.
+ */
+private fun cloudField(seed: Long, terrain: Terrain): List<Cloud> {
+    val rnd = java.util.Random(seed xor 0x5DEECE66DL)
+    val out = ArrayList<Cloud>()
+    val cumulus = if (terrain == Terrain.DUNES) 3 + rnd.nextInt(2) else 4 + rnd.nextInt(3)
+    for (i in 0 until cumulus) {
+        val big = rnd.nextFloat()
+        out += Cloud(
+            x = (i + rnd.nextFloat() * 0.6f) / cumulus * STRIP, y = 0.52f + rnd.nextFloat() * 0.34f,
+            width = 0.20f + 0.18f * big, height = 30f + 24f * big, streak = false, speed = 1f, puffs = cumulusPuffs(rnd),
+        )
+    }
+    val streaks = 2 + rnd.nextInt(2)
+    for (i in 0 until streaks) {
+        out += Cloud(
+            x = (i + rnd.nextFloat()) / streaks * STRIP, y = 0.10f + rnd.nextFloat() * 0.32f,
+            width = 0.34f + rnd.nextFloat() * 0.3f, height = 7f + rnd.nextFloat() * 5f, streak = true, speed = 0.55f,
+            puffs = List(3 + rnd.nextInt(2)) { j -> Puff(0.18f + 0.64f * (j + rnd.nextFloat() * 0.5f) / 3.5f, 0.5f + (rnd.nextFloat() - 0.5f) * 0.3f, 0.6f + rnd.nextFloat() * 0.3f) },
+        )
+    }
+    // High (far) first, so the low clouds pass in front.
+    return out.sortedBy { it.y }
+}
+
+/** A cumulus: a row of billows along a flat base, bigger towards the middle, a second tier above, a crown on top. */
+private fun cumulusPuffs(rnd: java.util.Random): List<Puff> {
+    val out = ArrayList<Puff>()
+    val n = 5 + rnd.nextInt(3)
+    for (i in 0 until n) {
+        val u = (i + 0.5f) / n
+        val bell = sin(PI * u).toFloat()
+        val r = 0.36f + 0.20f * bell + rnd.nextFloat() * 0.08f
+        out += Puff(0.06f + 0.88f * u + (rnd.nextFloat() - 0.5f) * 0.05f, 1f - r * 0.78f, r)
+    }
+    val m = 2 + rnd.nextInt(2)
+    for (j in 0 until m) out += Puff(0.28f + 0.44f * (j + 0.2f + rnd.nextFloat() * 0.6f) / m, 0.52f + rnd.nextFloat() * 0.06f, 0.44f + rnd.nextFloat() * 0.12f)
+    out += Puff(0.36f + rnd.nextFloat() * 0.28f, 0.34f + rnd.nextFloat() * 0.05f, 0.36f + rnd.nextFloat() * 0.10f)
+    return out
+}
+
+private fun DrawScope.drawClouds(clouds: List<Cloud>, light: Light, w: Float, top: Float, bottom: Float, drift: Float, sunX: Float, rtl: Boolean) {
+    val strip = w * STRIP
+    val band = bottom - top
+    clouds.forEach { c ->
+        val cw = c.width * w; val ch = c.height.dp.toPx()
+        // Drift with the wind towards the end of the reading direction, wrapping round the strip.
+        val moved = ((c.x * w + drift * strip * 0.9f * c.speed) % strip + strip) % strip - (strip - w) / 2
+        val x0 = if (rtl) w - moved - cw else moved
+        val y0 = top + c.y * band - ch
+        // Clouds at night are thin veils over the stars; by day and at sunset, full and bright.
+        val alpha = (if (c.streak) 0.55f + 0.3f * light.golden else 0.96f) * (1f - 0.45f * light.night)
+        for (dx in floatArrayOf(0f, strip, -strip)) {
+            val x = x0 + dx
+            if (x - ch > w || x + cw + ch < 0) continue
+            drawCloud(c, x, y0, cw, ch, light, alpha, sunX)
+        }
+    }
+}
+
+/**
+ * One cloud, painted like light in vapour rather than outlined: the soft union of its billows gives the shape; the
+ * light then colours it as a whole — lit from above by day, from below and from the Sun's side when the Sun is low,
+ * faintly by the moon at night — and the base is flat and soft where it meets the air.
+ */
+private fun DrawScope.drawCloud(c: Cloud, x: Float, y: Float, cw: Float, ch: Float, light: Light, alpha: Float, sunX: Float) {
+    val pad = ch * 0.9f
+    val bounds = Rect(x - pad, y - pad, x + cw + pad, y + ch + pad * 0.2f)
+    val canvas = drawContext.canvas
+    canvas.saveLayer(bounds, Paint().apply { this.alpha = alpha })
+    // The shape: soft-edged billows, all one colour, so they merge into one body with no seams.
+    c.puffs.forEach { p ->
+        val center = Offset(x + p.x * cw, y + p.y * ch)
+        val r = p.r * ch
+        if (c.streak) {
+            withTransform({ scale(cw / ch * 0.32f, 1f, center) }) {
+                drawCircle(Brush.radialGradient(0f to Color.White, 0.3f to Color.White.copy(alpha = 0.7f), 1f to Color.Transparent, center = center, radius = r), r, center)
+            }
+        } else {
+            drawCircle(Brush.radialGradient(0f to Color.White, 0.72f to Color.White, 0.9f to Color.White.copy(alpha = 0.45f), 1f to Color.Transparent, center = center, radius = r), r, center)
+        }
+    }
+    // The light, over the whole body.
+    val g = light.golden
+    val lit = light.cloudTop; val shade = light.cloudBase
+    val upper = Sky.mix(lit, shade, 0.8f * g)
+    val lower = Sky.mix(shade, lit, 0.75f * g)
+    val top = if (c.streak) y else y - pad * 0.5f
+    drawRect(Brush.verticalGradient(0f to upper, 0.45f to Sky.mix(upper, lower, 0.35f), 1f to lower, startY = top, endY = y + ch),
+        topLeft = bounds.topLeft, size = bounds.size, blendMode = BlendMode.SrcIn)
+    if (!c.streak) {
+        // A low Sun sets the side and underside facing it alight.
+        if (g > 0.05f) drawRect(
+            Brush.radialGradient(listOf(light.cloudGlow.copy(alpha = 0.85f * g), light.cloudGlow.copy(alpha = 0f)), center = Offset(sunX, y + ch * 1.15f), radius = max(cw * 1.1f, size.width * 0.42f)),
+            topLeft = bounds.topLeft, size = bounds.size, blendMode = BlendMode.SrcAtop,
+        )
+        // The base: flat, and soft where it meets the air.
+        drawRect(Brush.verticalGradient(0f to Color.Black, 0.84f to Color.Black, 1f to Color.Transparent, startY = y - pad, endY = y + ch),
+            topLeft = bounds.topLeft, size = bounds.size, blendMode = BlendMode.DstIn)
+    }
+    canvas.restore()
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Land
+
+/** One layer of land: its top edge as a function of position, in [0, 1] (1 = highest). */
+private class Ridge(val heightDp: Float, val baseDp: Float, val shape: (Float) -> Float)
+
+/** The layers of land for a place, far to near, with crests that differ from place to place. */
+private class LandField(private val ridges: List<Ridge>) {
+    class Shapes(val fills: List<Path>, val edges: List<Path>, val bases: List<Float>)
+
+    fun paths(w: Float, horizonY: Float, h: Float, density: Float): Shapes {
+        val fills = ArrayList<Path>(); val edges = ArrayList<Path>(); val bases = ArrayList<Float>()
+        val step = 3f * density
+        ridges.forEach { r ->
+            val base = horizonY + r.baseDp * density
+            val amp = r.heightDp * density
+            val fill = Path(); val edge = Path()
+            fill.moveTo(0f, h + 2f)
+            var x = 0f
+            var first = true
+            while (x <= w + step) {
+                val y = base - amp * r.shape(x / w)
+                fill.lineTo(x, y)
+                if (first) { edge.moveTo(x, y); first = false } else edge.lineTo(x, y)
+                x += step
+            }
+            fill.lineTo(w + step, h + 2f); fill.close()
+            fills += fill; edges += edge; bases += base
+        }
+        return Shapes(fills, edges, bases)
+    }
+}
+
+private fun landField(seed: Long, terrain: Terrain): LandField {
+    val rnd = java.util.Random(seed * 31 + 17)
+    fun ph() = rnd.nextFloat() * 6.283f
+    return when (terrain) {
+        Terrain.DUNES -> {
+            // A dune: a long gentle windward slope and a steeper slip face; nearer dunes are bigger and wider apart.
+            fun dune(freq: Float, p: Float, p2: Float): (Float) -> Float = { u ->
+                val t = 2 * PI.toFloat() * freq * u + p
+                val v = sin(t) + 0.36f * sin(2 * t + 0.9f) + 0.12f * sin(5.3f * freq * u + p2)
+                ((v + 1.3f) / 2.6f).coerceIn(0f, 1f).pow(1.25f)
+            }
+            LandField(listOf(
+                Ridge(16f, 4f, dune(2.6f, ph(), ph())),
+                Ridge(20f, 20f, dune(1.9f, ph(), ph())),
+                Ridge(24f, 40f, dune(1.35f, ph(), ph())),
+                Ridge(26f, 66f, dune(0.95f, ph(), ph())),
+            ))
+        }
+        Terrain.HILLS -> {
+            // Far: a mountain range with sharp ridgelines. Nearer: rounder and rounder hills.
+            fun ridged(p1: Float, p2: Float, p3: Float): (Float) -> Float = { u ->
+                val a = 1f - abs(sin(2.3f * PI.toFloat() * u + p1))
+                val b = 1f - abs(sin(5.1f * PI.toFloat() * u + p2))
+                val c = 1f - abs(sin(11.7f * PI.toFloat() * u + p3))
+                (0.58f * a * a + 0.30f * b * b + 0.12f * c).coerceIn(0f, 1f)
+            }
+            fun rolling(freq: Float, p1: Float, p2: Float): (Float) -> Float = { u ->
+                val v = 0.62f * sin(2 * PI.toFloat() * freq * u + p1) + 0.38f * sin(2 * PI.toFloat() * freq * 2.3f * u + p2)
+                ((v + 1f) / 2f).coerceIn(0f, 1f)
+            }
+            LandField(listOf(
+                Ridge(34f, 6f, ridged(ph(), ph(), ph())),
+                Ridge(24f, 22f, rolling(1.6f, ph(), ph())),
+                Ridge(22f, 42f, rolling(1.15f, ph(), ph())),
+                Ridge(22f, 68f, rolling(0.8f, ph(), ph())),
+            ))
+        }
+    }
+}
+
+/** The ground's own colour in plain daylight: warm sand, or the sage of grass and scrub seen from afar. */
+private fun soilOf(terrain: Terrain): Color = when (terrain) {
+    Terrain.DUNES -> Color(0xFFD9B07A)
+    Terrain.HILLS -> Color(0xFF7F9A78)
+}
+
+/**
+ * Atmospheric perspective: the farthest land is nearly the colour of the air at the horizon, each nearer layer shows
+ * more of the ground's own colour (as the light of the moment colours it) and is closer to the page colour, and the
+ * nearest fades into the page itself, so the land flows into the day's times beneath it. Mist lies in the valleys at
+ * dawn; the crests facing a low Sun catch its light.
+ */
+private fun DrawScope.drawLand(shapes: LandField.Shapes, light: Light, horizon: Color, mid: Color, zenith: Color, page: Color, soil: Color, sunX: Float, w: Float) {
+    val n = shapes.fills.size
+    val dark = page.luminance() < 0.3f
+    // The ground as the light of this moment shows it.
+    val wN = light.night.coerceIn(0f, 1f)
+    val wG = (light.golden * (1f - wN)).coerceIn(0f, 1f)
+    val wD = (1f - wN - wG).coerceAtLeast(0f)
+    val dayGround = Sky.mix(soil, horizon, 0.12f)
+    val goldGround = Sky.mix(Sky.mix(soil, Color(0xFFE0855A), 0.38f), Color(0xFF2A1830), 0.28f)
+    val nightGround = Sky.mix(Sky.mix(soil, zenith, 0.78f), Color.Black, 0.30f)
+    val t = wN + wG + wD
+    val ground = Color(
+        (nightGround.red * wN + goldGround.red * wG + dayGround.red * wD) / t,
+        (nightGround.green * wN + goldGround.green * wG + dayGround.green * wD) / t,
+        (nightGround.blue * wN + goldGround.blue * wG + dayGround.blue * wD) / t,
+    )
+    val air = Sky.mix(horizon, mid, 0.28f)
+    val haze = floatArrayOf(0.58f, 0.32f, 0.14f, 0.04f)
+    val toPage = if (dark) floatArrayOf(0.02f, 0.24f, 0.52f, 0.8f) else floatArrayOf(0.0f, 0.14f, 0.36f, 0.62f)
+    val mistColor = Sky.mix(horizon, Color.White, 0.5f)
+    shapes.fills.forEachIndexed { i, fill ->
+        val crest = Sky.mix(Sky.mix(ground, air, haze.getOrElse(i) { 0f }), page, toPage.getOrElse(i) { 1f })
+        val nearest = i == n - 1
+        val base = shapes.bases[i]
+        val top = base - 40.dp.toPx()
+        val foot = if (nearest) page else Sky.mix(crest, page, 0.45f)
+        drawPath(fill, Brush.verticalGradient(listOf(crest, foot), startY = top, endY = base + (if (nearest) 14.dp else 56.dp).toPx()))
+        // Light along the crest: warm towards a low Sun, a whisper by day, faint moonlight at night.
+        val rimAlpha = (0.9f * light.golden + 0.14f * light.day + 0.12f * light.night) * (1f - 0.2f * i)
+        if (rimAlpha > 0.02f) {
+            val rimColor = if (light.golden > 0.15f) light.sunGlow else Color.White
+            drawPath(shapes.edges[i], Brush.radialGradient(listOf(rimColor.copy(alpha = rimAlpha), rimColor.copy(alpha = rimAlpha * 0.12f)),
+                center = Offset(sunX, base), radius = w * 0.75f), style = Stroke(1.1.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        // Mist settling in the valley in front of this layer.
+        if (i < n - 1 && light.mist > 0.03f) {
+            val y = shapes.bases[i + 1] - 8.dp.toPx()
+            val a = light.mist * (0.7f - 0.16f * i)
+            val hgt = 34.dp.toPx()
+            drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.7f to mistColor.copy(alpha = a), 1f to Color.Transparent, startY = y - hgt, endY = y + 8.dp.toPx()),
+                topLeft = Offset(0f, y - hgt), size = Size(w, hgt + 8.dp.toPx()))
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Birds
+
+/** Birds are about in the hours after sunrise and in the late afternoon until just after sunset. */
+private fun birdsFly(scene: SkyScene, display: Double): Boolean {
+    val el = scene.elevationAt(display)
+    return if (scene.eveningAt(display)) el in -3.0..24.0 else el in -3.0..18.0
+}
+
+/**
+ * Now and then, a small flock crossing the sky: a few strokes, wings beating, drifting in a loose V. Never at night,
+ * never in the text above.
+ */
+private fun DrawScope.birds(time: Float, scene: SkyScene, display: Double, light: Light, w: Float, top: Float, horizonY: Float, rtl: Boolean) {
+    val period = 1f / 6f // six flights a cycle (about every 40 s), each crossing in a third of it
+    val k = (time / period).toInt()
+    val local = (time - k * period) / period
+    if (local > 0.34f) return
+    val rnd = java.util.Random(k * 104729L + scene.seed)
+    val p = local / 0.34f
+    val y0 = top + (horizonY - top) * (0.25f + rnd.nextFloat() * 0.35f)
+    val dir = if (rtl) -1f else 1f
+    val startX = if (rtl) w * 1.1f else -w * 0.1f
+    val lead = Offset(startX + dir * w * 1.2f * p, y0 - 18.dp.toPx() * p + 4.dp.toPx() * sin(p * 9f))
+    val color = Sky.mix(light.zenith, Color.Black, 0.6f).copy(alpha = 0.42f + 0.2f * light.golden)
+    val count = 3 + rnd.nextInt(3)
+    for (i in 0 until count) {
+        val row = (i + 1) / 2
+        val sideSign = if (i % 2 == 0) 1f else -1f
+        val pos = lead + Offset(-dir * row * 14.dp.toPx(), sideSign * row * 7.dp.toPx() + (if (i == 0) 0f else 0f))
+        val flap = sin((time * 2400f + i * 1.7f).toDouble()).toFloat()
+        val span = (4.2f + rnd.nextFloat() * 1.2f).dp.toPx()
+        val lift = span * (0.25f + 0.35f * flap)
+        val b = Path().apply {
+            moveTo(pos.x - span, pos.y - lift)
+            quadraticTo(pos.x - span * 0.4f, pos.y - lift * 0.2f, pos.x, pos.y)
+            quadraticTo(pos.x + span * 0.4f, pos.y - lift * 0.2f, pos.x + span, pos.y - lift)
+        }
+        drawPath(b, color, style = Stroke(1.1.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
+
+private operator fun Offset.times(f: Float) = Offset(x * f, y * f)

@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 5 November 2026 (version 0.7.0).
+Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.8.0).
 
 ## Modules
 
@@ -122,12 +122,17 @@ Full description: `DESIGN.md`.
 
 - `core/prayer`: `astro/SunPath` (the day's solar elevation curve) and `sky/SkyPalette` (sky colours by elevation, OKLab
   blending) are pure Kotlin, so the phone's sky and the watch's glow are the same colours.
-- `app/ui/components`: `SkyBackdrop` (sky, stars, moon by Hijri day, sun path, prayer markers), `Motion` (timings, the
-  ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
+- `app/ui/today/LivingSky` (0.8.0, home screen only): the layered scene (sky, stars and Milky Way, moon by Hijri day,
+  clouds, sun and sun path, land by terrain, mist, birds), `SkyGeometry` (time warp and elevation scale) and the
+  `Terrain` choice by country; `TodayScreen.SkyHeader` adds the drag-the-sun interaction. `app/ui/components`: `Motion`
+  (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## Known limitations (0.7.0)
+## Known limitations (0.8.0)
 
+- The 0.8.0 home screen's motion (drifting clouds, drag-the-sun, haptics, frame rate and battery) is checked only in
+  code and in still, software-rendered frames; software rendering cannot show animation, real-device smoothness, or
+  the exact look of soft gradients on a phone's GPU.
 - Nothing in this version has been tested on a real phone or watch yet; all results above come from unit tests and
   software-rendered screens. Alerts in particular (alarm timing, playback, lock screen, Do Not Disturb, watch transfer)
   need a device test; "Test this alert" exists for that.

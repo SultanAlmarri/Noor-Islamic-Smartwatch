@@ -12,8 +12,8 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.7.0"
+        versionCode = 8
+        versionName = "0.8.0"
     }
 
     signingConfigs {
@@ -47,7 +47,11 @@ android {
             isReturnDefaultValues = true
             isIncludeAndroidResources = true
             // Optional mirror for Robolectric's Android jars (-Probolectric.repo=<url>) where Maven Central is rate-limited.
-            all { t -> providers.gradleProperty("robolectric.repo").orNull?.let { t.systemProperty("robolectric.dependency.repo.url", it) } }
+            all { t ->
+                providers.gradleProperty("robolectric.repo").orNull?.let { t.systemProperty("robolectric.dependency.repo.url", it) }
+                // Each test class in its own JVM: DataStore keeps one instance per file for the whole process.
+                t.forkEvery = 1
+            }
         }
     }
 }

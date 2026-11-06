@@ -6,7 +6,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 **Install:** [latest development build](https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/tag/dev-latest)
 · [step-by-step guide](docs/INSTALL.md)
 
-## Status (5 November 2026, version 0.7.0)
+## Status (6 November 2026, version 0.8.0)
 
 | Part | State |
 |---|---|
@@ -17,6 +17,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 | Watch face v1.3.2 (`com.noorface.prayer`) | Preserved unchanged in `legacy/`; still installed separately |
 | Blind accuracy test | Predictions for Dec 2026 – Jun 2027 frozen; scored monthly against IACAD (`accuracy/blind/`) |
 | Adhan and prayer alerts (`alerts`) | Built and tested on the computer: per-prayer Adhan/short/sound/imported/notification/silent, phone/watch/both, gradual volume, Do Not Disturb choice, exact alarms, 7 licensed Adhan recordings and 7 original sounds ([ALERTS.md](docs/ALERTS.md), [SOUNDS.md](docs/SOUNDS.md)) |
+| Home screen (0.8.0) | A living natural scene under the real sky: drifting clouds lit by the time of day, dunes or hills by country, mist at dawn, stars, Milky Way and moon at night, birds at dawn and dusk; drag the sun along its path through the day. Every other screen unchanged ([DESIGN.md](docs/DESIGN.md#the-home-screen)) |
 | Design (0.6.0) | Living-sky Today screen (real sky colour and sun path), Follow-the-sun appearance, redesigned Qibla, Adhan, Watch, Settings and onboarding, watch app in the same family; WCAG AA contrast checked by tests ([DESIGN.md](docs/DESIGN.md)) |
 | Watch-face editor | Next stage |
 | Device testing | **Not done yet.** Everything above is tested on the computer (unit tests, software-rendered screens), not on a phone or watch |

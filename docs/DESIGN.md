@@ -1,6 +1,6 @@
 # Noor design language
 
-Version 0.6.0. How Noor looks and moves, and why.
+Version 0.8.0. How Noor looks and moves, and why.
 
 ## Idea: the sky is the clock
 
@@ -10,12 +10,46 @@ So Noor shows the sky.
 
 - **The Today screen opens on the real sky above the user**: its colour comes from the sun's elevation at that place and
   moment (`SkyPalette`, shared by phone and watch), cooler at dawn and warmer at dusk, with stars appearing in twilight
-  and the moon, shaped by the Hijri date, at night.
-- **The sun path** across the bottom of the sky is the day's actual elevation curve, with each prayer placed where it
-  happens on it. The time axis is stretched smoothly so daylight takes most of the width (the vertical positions are
-  the true elevations). The day so far is drawn solid, the rest dotted; the next prayer wears a gold ring.
+  and the moon, shaped by the Hijri date, riding the sun's own arc as far behind it as it is old.
+- **The sun path** across the sky is the day's actual elevation curve, with each prayer placed where it happens on it.
+  The time axis is stretched smoothly so daylight takes most of the width (the vertical positions are the true
+  elevations). The day so far is drawn solid, the rest dotted; the night part runs under the land; the next prayer
+  wears a gold ring that breathes slowly.
+- **Under the sky is a landscape, never a city**: nothing man-made and no people, only land, air and light (see "The
+  home screen" below).
 - **Everything else is calm**: one accent (gold, Noor's light), solid surfaces, quiet section titles. The sky is the
   only place with colour, so it reads as the heart of the app.
+
+## The home screen
+
+The Today screen is one scene, drawn in code from the sun's real position (`ui/today/LivingSky.kt`), in layers from
+far to near:
+
+1. **Sky**: the live sky colours; warm air gathering round a low sun; at night stars that twinkle, a faint Milky Way,
+   and now and then a meteor high in a corner of the sky, clear of the countdown.
+2. **Clouds**: a few fair-weather cumulus low over the land and thin high streaks, different each day and place
+   (fewer over the desert). Each is painted as light in vapour, not outlined: white tops and blue-grey bases by day,
+   dusky mauve with peach and gold undersides towards a low sun, thin veils at night. They drift slowly with the wind
+   and never rise into the text.
+3. **Sun**: its halo and long, faint, slowly turning rays (longer and warmer when it is low), the path, and the sun.
+4. **Land**: four ridges fading with distance (atmospheric perspective). Arid countries get dunes (long windward
+   slopes, steeper slip faces, warm sand); elsewhere far mountain ridges soften into rolling hills. The shape is fixed
+   for a place, so home always looks like home. The ground takes the colour of the moment (sand by day, rose at sunset,
+   deep blue at night), crests facing a low sun catch its light, mist lies in the valleys at dawn, and the nearest ridge
+   fades into the page, so the day's times sit on the ground under the sky.
+5. **Over the land**: the night part of the path, the prayers on it, and at dawn and dusk a small flock of birds now and
+   then.
+
+**Touch**: drag sideways across the sky to move the sun along its path. The sky, clouds and land relight as it moves,
+it catches on each prayer with a haptic tick, and the header shows that moment instead of the countdown: the sun's
+elevation, the prayer it has caught on, the clock time and how long ago or ahead that is. Let go and it springs back
+to now. The countdown and the timeline are unchanged by it, and nothing is lost without it (TalkBack reads the sky's
+description, which mentions the gesture).
+
+**Calm and cost**: the scene changes once a minute, not with each tick of the countdown; paths are built once per size;
+the ambient clock ticks about 30 times a second rather than every frame, rests when the sky is scrolled out of sight
+or the app is in the background, and stops entirely (with a still, complete scene) when "Remove animations" is on.
+Short screens (under 800 dp tall) get a more compact sky and countdown so more of the timeline shows.
 
 ## Appearance
 
@@ -65,8 +99,11 @@ Every animation has one of three jobs: show where something came from, confirm a
   opens on a sunrise (3.2 s).
 - State: countdown digits roll; the next prayer's name slides in when it changes; tabs cross-fade; pages slide in from
   the reading direction; the "Today" pill appears only when another date is shown.
-- Ambient: stars twinkle slowly at night. Ambient motion stops when Android's "Remove animations" is on.
-- Scrolling: the sky moves at about half speed behind the content (parallax) and its text fades away.
+- Ambient (home screen): clouds drift, stars twinkle, the sun's rays turn, the next prayer's ring breathes, birds and
+  meteors pass now and then. All of it stops when Android's "Remove animations" is on.
+- Interaction (home screen): drag the sun through the day; it springs back to now when let go.
+- Scrolling: the sky and clouds move at about half speed behind the land and the content (parallax) and the header
+  text fades away.
 
 ## The watch
 

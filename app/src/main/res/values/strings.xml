@@ -294,6 +294,11 @@
     <string name="today_in">in %1$s</string>
     <string name="sky_desc_up">The sun is %1$s° above the horizon. Next prayer at the gold ring.</string>
     <string name="sky_desc_down">The sun is %1$s° below the horizon. Next prayer at the gold ring.</string>
+    <string name="change_location">Change location</string>
+    <string name="sky_scrub_hint">Drag across the sky to follow the Sun through the day.</string>
+    <string name="sky_sun_above">Sun %1$s° above the horizon</string>
+    <string name="sky_sun_below">Sun %1$s° below the horizon</string>
+    <string name="time_ago">%1$s ago</string>
     <string name="today_set_location_title">Prayer times begin with where you are</string>
     <string name="today_set_location_body">Choose your location to see today’s times, the sky above you and the Qibla.</string>
     <string name="today_until">until %1$s</string>

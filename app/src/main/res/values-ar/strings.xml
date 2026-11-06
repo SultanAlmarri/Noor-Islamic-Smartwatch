@@ -294,6 +294,11 @@
     <string name="today_in">بعد %1$s</string>
     <string name="sky_desc_up">الشمس فوق الأفق بـ%1$s°. الصلاة القادمة عند الحلقة الذهبية.</string>
     <string name="sky_desc_down">الشمس تحت الأفق بـ%1$s°. الصلاة القادمة عند الحلقة الذهبية.</string>
+    <string name="change_location">تغيير الموقع</string>
+    <string name="sky_scrub_hint">اسحب عبر السماء لتتبّع الشمس خلال اليوم.</string>
+    <string name="sky_sun_above">الشمس فوق الأفق بـ%1$s°</string>
+    <string name="sky_sun_below">الشمس تحت الأفق بـ%1$s°</string>
+    <string name="time_ago">قبل %1$s</string>
     <string name="today_set_location_title">أوقات الصلاة تبدأ من مكانك</string>
     <string name="today_set_location_body">اختر موقعك لترى أوقات اليوم والسماء فوقك واتجاه القبلة.</string>
     <string name="today_until">حتى %1$s</string>
