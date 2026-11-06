@@ -1,0 +1,34 @@
+name: Discover Adhan recordings (Wikimedia Commons)
+
+# Lists every Adhan recording on Wikimedia Commons with its licence, author, description and length, for review.
+# Read-only research: nothing is downloaded into the app. Results go to the "sound-research" pre-release.
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ tools/sounds/discover_commons.py, .github/workflows/discover-sounds.yml ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Query the Commons catalogue
+        run: python3 tools/sounds/discover_commons.py out
+      - name: Publish the list
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: sound-research
+          name: Adhan recordings on Wikimedia Commons (research list)
+          prerelease: true
+          body: |
+            Every Adhan recording found on Wikimedia Commons, with licence, author, description and length
+            (tools/sounds/discover_commons.py). A research list for review, not an app build and not a source of audio.
+          files: |
+            out/candidates.json
+            out/candidates.md
