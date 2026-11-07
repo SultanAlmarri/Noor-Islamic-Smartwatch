@@ -68,7 +68,9 @@ every scheduled Adhan as "played 0 s" while tests played. Since 0.9.7:
 - Prayer alarms are **alarm-clock alarms** (`AlarmManager.setAlarmClock`, `AlertHost.alarmClockAlarms`, phone): shown to
   the user as the next alarm, exempt from Doze and from the background-start limits.
 - The Adhan notification has a **full-screen alert** (`AdhanAlertActivity`: over the lock screen, turns the screen on,
-  large Stop) where Android allows it (`USE_FULL_SCREEN_INTENT`; on Android 14+ the user can turn this off).
+  large Stop) where Android allows it (`USE_FULL_SCREEN_INTENT`; on Android 14+ the user can turn this off). The
+  playing notification must not use `setSilent()`: that makes it a "silent" group child, for which Android suppresses
+  heads-up and full-screen alerts (the Adhan channel has no sound of its own; `setOnlyAlertOnce` is used instead).
 - `AdhanService` starts the sound only once Android reports it in the foreground (it waits up to 1 s).
 - `AlertPlayer` no longer stops when audio focus is lost or refused: only a phone call stops the Adhan. If playback ends
   early or the player fails, it resumes where it was (at most three times). The history records why it ended.

@@ -268,8 +268,10 @@ Phone app only (the watch is unchanged). What the owner asked, and what was done
   prayer apps that show elapsed time do; it ends earlier if the next prayer comes first. The home screen and the
   persistent notification use the same function and format (h:mm:ss, or mm:ss under an hour, as Android's own
   Chronometer writes it); a test compares them at every 97 s over two days across midnight.
-- **Notification**: Android counts down with "−" or up with "+" by itself; rebuilt half a second after each change and
-  at midnight. Collapsed (Android allows 48 dp): prayer and time with the large countdown, then the Hijri date and the
+- **Notification**: Android's own Chronometer ticks the seconds, always counting from the prayer's time (it writes
+  "−00:17" before it; "+04:12" after it, with Noor's plus); rebuilt half a second after each change and at midnight. If
+  the rebuild comes late, it passes through "00:00" (an emulator run showed the first design, a count-down with
+  Noor's own minus, reading "−−00:01" for a moment; fixed and tested on the Chronometer's text). Collapsed (Android allows 48 dp): prayer and time with the large countdown, then the Hijri date and the
   place on one line that shrinks to fit (the date first, so only an extremely long place name can be shortened there).
   Expanded: the place and the date each on their own lines, wrapped, never cut. Renders: `55_status_notification_*`.
 - **Qibla flicker**: a reading near a limit crossed it many times a second. Now (phone only, `CompassTracker`) the
@@ -280,7 +282,9 @@ Phone app only (the watch is unchanged). What the owner asked, and what was done
 - **Adhan stopping after 1–2 s** (the owner's report: Samsung Fold, Android 17, every scheduled entry "played 0 s",
   tests fine): Android 17 restricts audio started from the background, and the player stopped on any loss of audio
   focus. Now: prayer alarms are alarm-clock alarms (`setAlarmClock`, which Android treats as user-visible), the Adhan
-  notification has a full-screen alert (`AdhanAlertActivity`, over the lock screen, with Stop), the service waits until
+  notification has a full-screen alert (`AdhanAlertActivity`, over the lock screen, with Stop; the emulator showed it
+  never opened while the notification was marked "silent", which Android never lets interrupt: fixed, and
+  `AdhanFullScreenTest` fails on the old code), the service waits until
   it is really in the foreground before starting the sound, a focus loss no longer stops the Adhan (only a phone call
   does), and an early end or player error resumes where it was (up to 3 times). The alert history now records the
   reason an Adhan ended. Checked on Android 14 and 15 emulators with a real scheduled prayer alarm (clock moved to just
