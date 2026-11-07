@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
  *   the actual scheduled path fire, exactly as at a prayer time.
  * - DUMP: writes the alert history to logcat (tag NoorE2E), one line per alert.
  * - CITY: a chosen city by id (e.g. dxb, ist), onboarding done; used by tools/devicetest/home_sky.sh.
+ * - STATUS: turns the persistent prayer notification on and logs the moments its countdown changes next
+ *   (STATUS done next=<epoch ms> prayer=<P> since=<epoch ms or -1>), for tools/devicetest/phone_097.sh.
  */
 class TestHookReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -41,6 +43,13 @@ class TestHookReceiver : BroadcastReceiver() {
                         // The emulator's software GPU is slow: keep the GPU sky at full quality so it is what gets photographed.
                         app.getSharedPreferences("noor_ui", 0).edit().putBoolean("sky_quality_locked", true).putInt("sky_quality", 0).commit()
                         Log.i(TAG, "CITY done ${intent.getStringExtra("city")}")
+                    }
+                    "com.noor.smartwatch.debug.STATUS" -> {
+                        app.container.settings.setStatusNotification(true)
+                        com.noor.app.notify.StatusNotification.refresh(app)
+                        val cfg = app.container.alertConfig()
+                        val st = cfg?.state(java.time.Instant.now())
+                        Log.i(TAG, "STATUS done next=${st?.next?.at?.toEpochMilli()} prayer=${st?.next?.prayer}")
                     }
                     "com.noor.smartwatch.debug.DUMP" -> AlertLog.all(app).forEach { r ->
                         Log.i(TAG, "RECORD prayer=${r.prayer} test=${r.test} outcome=${r.outcome} playedMs=${r.playedMs} " +

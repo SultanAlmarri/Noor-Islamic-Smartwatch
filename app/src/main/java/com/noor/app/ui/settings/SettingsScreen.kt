@@ -69,7 +69,7 @@ import com.noor.prayer.Places
 import com.noor.prayer.Prayer
 import com.noor.prayer.Profiles
 
-private enum class Dialog { NONE, LOCATION_MODE, AUTHORITY, ASR, HIGH_LAT, OFFSETS, LANGUAGE, NUMERALS, TIME, THEME, HIJRI, BACKGROUND }
+private enum class Dialog { NONE, AUTHORITY, ASR, HIGH_LAT, OFFSETS, LANGUAGE, NUMERALS, TIME, THEME, HIJRI, BACKGROUND }
 
 @Composable
 fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOpenAccuracy: () -> Unit, vm: SettingsViewModel = viewModel(),
@@ -80,9 +80,6 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     val c = NoorTheme.colors
     var dialog by remember { mutableStateOf(Dialog.NONE) }
 
-    val foreground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) vm.setLocationMode(LocationMode.AUTO)
-    }
     val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.setBackgroundUpdates(granted)
     }
@@ -132,7 +129,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     val adj = s.offsets.entries.joinToString("  ") { (p, m) -> "${f.prayerName(p)} ${f.digits(if (m > 0) "+$m" else "$m")}" }
     val hijriValue = f.digits(if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}")
     val rows = buildList {
-        add(Row(R.string.settings_location, Icons.Rounded.LocationOn, stringResource(R.string.settings_location_mode), modeLabel, stringResource(R.string.kw_location), { dialog = Dialog.LOCATION_MODE }))
+        // 0.9.7: one screen for every way of choosing the location (current location, search, map, coordinates, browse).
+        add(Row(R.string.settings_location, Icons.Rounded.LocationOn, stringResource(R.string.settings_location_mode), modeLabel, stringResource(R.string.kw_location), onOpenCities))
         if (s.locationMode == LocationMode.AUTO) {
             add(Row(R.string.settings_location, Icons.Rounded.Update, stringResource(R.string.background_updates),
                 stringResource(if (bgOn) R.string.background_updates_on else R.string.background_updates_off), stringResource(R.string.kw_location), null) {
@@ -214,17 +212,6 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
 
     when (dialog) {
         Dialog.NONE -> Unit
-        Dialog.LOCATION_MODE -> ChoiceDialog(
-            stringResource(R.string.settings_location_mode),
-            listOf(LocationMode.AUTO to stringResource(R.string.location_auto), LocationMode.MANUAL to stringResource(R.string.location_manual)),
-            s.locationMode,
-            onSelect = { m ->
-                if (m == LocationMode.MANUAL) onOpenCities()
-                else if (vm.hasForegroundPermission()) vm.setLocationMode(LocationMode.AUTO)
-                else foreground.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-            },
-            onDismiss = { dialog = Dialog.NONE },
-        )
         Dialog.AUTHORITY -> ChoiceDialog(
             stringResource(R.string.authority),
             listOf<Pair<String?, String>>(null to autoName) + Profiles.ALL.map { p ->

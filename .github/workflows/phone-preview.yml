@@ -1,0 +1,64 @@
+name: Phone screens on real Android (emulator)
+
+# What changed in a phone release, photographed on an Android 15 emulator (see tools/devicetest/phone_097.sh): the
+# countdown before and after a prayer (home screen and notification), choosing a location with the satellite map, the
+# Qibla accuracy box at its limit, the full-screen Adhan. Pictures and recordings are published as a pre-release asset.
+
+on:
+  push:
+    branches: [ 'adhan/**', 'phone/**' ]
+    paths: [ 'app/**', 'core/**', 'shared/**', 'tools/devicetest/phone_097.sh', '.github/workflows/phone-preview.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  phone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable hardware acceleration for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build the debug app
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Countdown, notification, location and map, Qibla, Adhan screen
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
+          script: timeout 3000 bash tools/devicetest/phone_097.sh app/build/outputs/apk/debug/app-debug.apk phone-preview || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phone-preview
+          path: phone-preview
+
+      - name: Publish the pictures as a pre-release asset
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d phone-preview ] || exit 0
+          (cd phone-preview && zip -qr ../phone-preview.zip .)
+          gh release view phone-preview >/dev/null 2>&1 || gh release create phone-preview --prerelease \
+            --title "Phone preview (emulator pictures)" --notes "Pictures and recordings from the phone-preview workflow; replaced on each run." || true
+          gh release upload phone-preview phone-preview.zip --clobber

@@ -86,7 +86,6 @@ import com.noor.app.ui.components.systemAllowsAmbientMotion
 import com.noor.app.ui.onboarding.OnboardingScreen
 import com.noor.app.ui.qibla.QiblaScreen
 import com.noor.app.ui.settings.AccuracyScreen
-import com.noor.app.ui.settings.CityPickerScreen
 import com.noor.app.ui.settings.SettingsScreen
 import com.noor.app.ui.theme.NoorTheme
 import com.noor.app.ui.today.TodayScreen
@@ -234,7 +233,7 @@ private fun NoorRoot(s: AppSettings) {
                     })
             }
             composable(Routes.CITIES) {
-                CityPickerScreen(content, onDone = {
+                com.noor.app.ui.location.LocationScreen(content, onDone = {
                     if (!nav.popBackStack()) nav.navigate(Routes.PRAYERS)
                 })
             }

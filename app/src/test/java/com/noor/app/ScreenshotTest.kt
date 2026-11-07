@@ -190,7 +190,7 @@ class ScreenshotTest {
                             Screen.ADHAN_SOUNDS -> com.noor.app.ui.adhan.MySoundsScreen(pad, {})
                             Screen.ADHAN_HISTORY -> com.noor.app.ui.adhan.AlertHistoryScreen(pad, {})
                             Screen.ONBOARDING -> com.noor.app.ui.onboarding.OnboardingScreen(pad, {}, {})
-                            Screen.CITIES -> com.noor.app.ui.settings.CityPickerScreen(pad, {})
+                            Screen.CITIES -> com.noor.app.ui.location.LocationScreen(pad, {})
                             Screen.SHELL -> Column(Modifier.fillMaxSize()) {
                                 Box(Modifier.weight(1f)) { TodayContent(u, PaddingValues(top = 28.dp), { cache.resolved(s, u.place!!, u.profile!!, it) }, {}, {}, {}) }
                                 NoorTabBar(Routes.PRAYERS) {}
@@ -256,7 +256,7 @@ class ScreenshotTest {
         arabic = true; watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport)), now = t0); shot("24_watch_done_night_ar", "قيد الاستخدام")
         arabic = false
         // (Dialogs open in their own window, which this window capture cannot see; they are checked on a device.)
-        screen = Screen.CITIES; shot("44_cities_night_en", "China")
+        screen = Screen.CITIES; shot("44_cities_night_en", "Browse by country")
         screen = Screen.SHELL; shot("46_app_shell_night_en", "Maghrib")
         theme = ThemeMode.LIGHT; shot("47_app_shell_day_en", "Maghrib")
         arabic = true; shot("48_app_shell_day_ar", "المغرب"); arabic = false; theme = ThemeMode.DARK
@@ -275,7 +275,7 @@ class ScreenshotTest {
         arabic = true
         screen = Screen.SETTINGS; shot("51_settings_night_ar", "الإعدادات")
         screen = Screen.ACCURACY; shot("52_accuracy_night_ar", "دبي")
-        screen = Screen.CITIES; shot("53_cities_night_ar", "الصين")
+        screen = Screen.CITIES; shot("53_cities_night_ar", "التصفح حسب الدولة")
         arabic = false
         // The sky through the day (Dubai, 4 November 2026): dawn, morning, sunset glow, night with the moon.
         theme = ThemeMode.DARK; arabic = false; screen = Screen.TODAY
@@ -342,6 +342,7 @@ class ScreenshotTest {
         Regex("Wear OS"), Regex("WGS-84"), Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), // product, standard and format names
         Regex("CC0|CC BY(-SA)? \\d\\.\\d"), // licence names
         Regex("\\b[a-z0-9-]+(\\.[a-z0-9-]+)*\\.(ae|sg|org|com|gov)\\b"), Regex("GeoNames"), // web addresses and the gazetteer's name
+        Regex("timezone-boundary-builder|OpenStreetMap|ODbL"), // the time-zone map's source and licence (0.9.7)
     ) + creditedPeople()
 
     /** The recordists credited in the sound library: their names are written as credited, in every language. */

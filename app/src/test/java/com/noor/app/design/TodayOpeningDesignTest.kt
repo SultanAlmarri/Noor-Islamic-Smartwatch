@@ -48,10 +48,12 @@ class TodayOpeningDesignTest {
         h.start()
         rule.mainClock.advanceTimeByFrame()
         h.frame("today_opening_0000ms")
-        // The real next prayer and its countdown are there from the first frame.
-        // (The countdown draws each digit on its own so they can roll, so the prayer and its time are checked.)
-        org.junit.Assert.assertTrue(rule.onAllNodesWithText("Maghrib", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
-        org.junit.Assert.assertTrue(rule.onAllNodesWithText("5:40 PM", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        // The real prayer of the countdown and its time are there from the first frame. (0.9.7: at 15:29, 15 minutes after
+        // Asr, the countdown is "+" time since Asr; the countdown draws each digit on its own so they can roll, so the
+        // prayer, its time and the sign are checked.)
+        org.junit.Assert.assertTrue(rule.onAllNodesWithText("Asr", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        org.junit.Assert.assertTrue(rule.onAllNodesWithText("3:14 PM", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        org.junit.Assert.assertTrue(rule.onAllNodesWithText("+", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         rule.mainClock.advanceTimeBy(400); h.frame("today_opening_0400ms")
         rule.mainClock.advanceTimeBy(500); h.frame("today_opening_0900ms")
         rule.mainClock.advanceTimeBy(600); h.frame("today_opening_1500ms")

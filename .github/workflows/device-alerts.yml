@@ -3,7 +3,7 @@ name: Adhan on real Android (emulator)
 # The alert path on a real Android system, not a simulation: a real alarm fires while Noor's process is dead, the
 # screen is off and the device is in Doze; Android must report the Adhan playing on the alarm stream (see
 # tools/devicetest/alert_e2e.sh). Emulators have no speaker and no phone maker's battery manager, so this does not
-# replace a test on a real phone; it proves the Android side works on stock Android 14 and 15.
+# replace a test on a real phone; it proves the Android side works on stock Android 14, 15 and 17.
 
 on:
   push:
@@ -52,6 +52,10 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
+          # Android 17's image does not finish starting with the default 2 GB.
+          ram-size: 4096M
+          disk-size: 8G
+          emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
           script: E2E_LOG=alert-e2e-api${{ matrix.image }}.txt bash tools/devicetest/alert_e2e.sh app/build/outputs/apk/debug/app-debug.apk all
 
