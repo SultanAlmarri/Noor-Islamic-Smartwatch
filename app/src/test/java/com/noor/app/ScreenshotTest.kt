@@ -131,6 +131,7 @@ class ScreenshotTest {
         var hijriCalendar by mutableStateOf(false)
         val sgBase = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualPlace = com.noor.app.data.KnownLocation(
             com.noor.prayer.GeoPoint(1.28967, 103.85007), "Asia/Singapore", "Singapore", "SG", null, 0L, "سنغافورة"))
+        com.noor.app.ui.today.SkyCompute.synchronous = true
         rule.setContent {
             val ctxBase = LocalContext.current
             val config = Configuration(ctxBase.resources.configuration).apply {

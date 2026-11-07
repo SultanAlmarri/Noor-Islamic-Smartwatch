@@ -323,17 +323,32 @@ private fun SkyHeader(
     val shown = remember { Animatable((previewScrub ?: scene.nowFraction).toFloat()) }
     var scrubbing by remember { mutableStateOf(previewScrub != null) }
     var caught by remember { mutableStateOf<Pair<Prayer, java.time.Instant>?>(null) }
-    // Opening (once per launch, under a second): the sky runs through the hours before now and settles on this moment.
-    // Only the scene moves; the prayer, its time and the countdown are the real ones from the first frame.
+    // Opening (0.9.6): the day's sky comes in. The scene fades up from the page while the Sun runs, slow at first and
+    // settling gently, from the start of the current prayer's time to this moment, so the sky passes through the hours
+    // just gone (sunrise into morning, dusk into night); the clouds run fast and slow to their real drift; the land
+    // rises a little; the path and its prayers draw themselves. About two to three seconds, once per launch, and a
+    // brief fade only if the full one was seen in the last half hour. A touch on the sky takes over at once. Only the
+    // scene moves: the prayer, its time and the countdown are the real ones from the first frame.
     var intro by remember { mutableStateOf(false) }
+    val opening = remember { Animatable(1f) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         if (ambient && previewScrub == null && !OpeningSky.played) {
             OpeningSky.played = true
+            val full = OpeningSky.fullDue(context)
             val now = current.nowFraction.toFloat()
+            val start = if (full) OpeningSky.startFraction(current) else now
+            val ms = if (full) OpeningSky.durationMs(start, now) else OpeningSky.BRIEF_MS
             intro = true
-            shown.snapTo((now - 0.42f).coerceAtLeast(0f))
-            shown.animateTo(now, tween(OpeningSky.DURATION_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-            intro = false
+            opening.snapTo(0f)
+            shown.snapTo(start)
+            try {
+                launch { opening.animateTo(1f, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
+                shown.animateTo(now, tween(ms, easing = OpeningSky.Ease))
+                if (full) OpeningSky.markFull(context)
+            } finally {
+                intro = false
+            }
         }
     }
     LaunchedEffect(scene.nowFraction) { if (!scrubbing && !shown.isRunning) shown.snapTo(scene.nowFraction.toFloat()) }
@@ -341,17 +356,21 @@ private fun SkyHeader(
         if (previewScrub != null) { scrubbing = true; shown.snapTo(previewScrub.toFloat()) }
         else if (scrubbing) { scrubbing = false; shown.snapTo(current.nowFraction.toFloat()) }
     }
-    val catchPx = with(density) { 18.dp.toPx() }
+    // Dragging the Sun (0.9.6): it follows the finger on a quick, critically damped spring (no jumps, even when the
+    // finger lands far from it), and each prayer is a soft detent: near a mark the Sun slows and rests exactly on the
+    // prayer's moment, then moves off gently as the finger goes on. Nothing snaps, so the sky never jumps.
+    val catchPx = with(density) { 22.dp.toPx() }
+    val follow = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 3800f)
     fun scrubTo(x: Float, width: Float) {
         val s = current
         val g = SkyGeometry(s, width, 0f, 0f, 0f, rtl)
-        val hit = s.events.minByOrNull { abs(g.x(s.path.fraction(it.second)) - x) }?.takeIf { abs(g.x(s.path.fraction(it.second)) - x) < catchPx }
-        if (hit?.first != caught?.first) {
-            caught = hit
-            if (hit != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        val d = SkyDetent.of(s.events.map { it to g.x(s.path.fraction(it.second)) }, x, catchPx)
+        if (d.caught?.first != caught?.first) {
+            caught = d.caught
+            if (d.caught != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
-        val target = hit?.let { s.path.fraction(it.second) } ?: g.fractionAt(x)
-        scope.launch { shown.snapTo(target.toFloat()) }
+        val target = d.caught?.let { s.path.fraction(it.second) } ?: g.fractionAt(d.x)
+        scope.launch { shown.animateTo(target.toFloat(), follow) }
     }
     fun release() {
         scrubbing = false
@@ -369,7 +388,11 @@ private fun SkyHeader(
     Box(
         Modifier.fillMaxWidth().height(height).pointerInput(rtl) {
             detectHorizontalDragGestures(
-                onDragStart = { o -> scrubbing = true; scrubTo(o.x, size.width.toFloat()) },
+                onDragStart = { o ->
+                    scrubbing = true
+                    if (opening.value < 1f) scope.launch { opening.animateTo(1f, tween(220)) }
+                    scrubTo(o.x, size.width.toFloat())
+                },
                 onDragEnd = { release() },
                 onDragCancel = { release() },
             ) { change, _ -> change.consume(); scrubTo(change.position.x, size.width.toFloat()) }
@@ -379,6 +402,7 @@ private fun SkyHeader(
         LivingSky(
             scene, layout, display = display, scrubbing = scrubbing || intro, page = c.background, description = desc,
             modifier = Modifier.fillMaxSize(), parallax = { scroll.value.toFloat() }, stillTime = previewSkyTime,
+            opening = { opening.value },
         )
 
         Column(
@@ -489,10 +513,61 @@ private fun ScrubReadout(
     }
 }
 
-/** The opening time-lapse plays once per process: not again when the user comes back to the tab. */
+/**
+ * The soft detent round each prayer mark while the Sun is dragged: within [radius] of a mark (less where marks are
+ * close, so neighbouring detents meet without a gap) the finger's position is eased towards the mark; in the inner
+ * part the Sun rests exactly on it (and the prayer is "caught"). The mapping is continuous and never runs backwards.
+ */
+internal class SkyDetent(val x: Float, val caught: Pair<Prayer, java.time.Instant>?) {
+    companion object {
+        private const val REST = 0.4f
+        fun of(marks: List<Pair<Pair<Prayer, java.time.Instant>, Float>>, x: Float, radius: Float): SkyDetent {
+            val sorted = marks.sortedBy { it.second }
+            val i = sorted.indices.minByOrNull { abs(sorted[it].second - x) } ?: return SkyDetent(x, null)
+            val m = sorted[i].second
+            val gapLeft = if (i > 0) abs(m - sorted[i - 1].second) else Float.MAX_VALUE
+            val gapRight = if (i < sorted.size - 1) abs(sorted[i + 1].second - m) else Float.MAX_VALUE
+            val r = minOf(radius, gapLeft / 2f, gapRight / 2f)
+            val d = x - m
+            if (r <= 0f || abs(d) >= r) return SkyDetent(x, null)
+            val t = abs(d) / r
+            if (t <= REST) return SkyDetent(m, sorted[i].first)
+            val u = (t - REST) / (1f - REST)
+            return SkyDetent(m + kotlin.math.sign(d) * r * u * u, null)
+        }
+    }
+}
+
+/** The opening (0.9.6): once per launch; in full when none has been seen for half an hour, otherwise a brief fade. */
 internal object OpeningSky {
-    const val DURATION_MS = 900
     @Volatile var played = false
+    const val BRIEF_MS = 650
+    private const val FULL_AFTER_MS = 30 * 60_000L
+    private const val PREFS = "noor_ui"
+    private const val KEY = "opening_full_at"
+    /** Moves off gently and settles slowly. */
+    val Ease = androidx.compose.animation.core.CubicBezierEasing(0.45f, 0f, 0.15f, 1f)
+
+    /** Longer for a longer run of the sky: from just under two seconds to three. */
+    fun durationMs(start: Float, now: Float): Int = (1900 + 1100 * ((now - start) / 0.2f).coerceIn(0f, 1f)).toInt()
+
+    /** Where the run starts: the beginning of the current prayer's time, but at least 50 minutes and at most 6 hours back. */
+    fun startFraction(scene: SkyScene): Float {
+        val now = scene.nowFraction
+        val prev = scene.events.map { scene.path.fraction(it.second) }.filter { it < now }.maxOrNull() ?: (now - 3.0 / 24)
+        return prev.coerceIn(now - 6.0 / 24, now - 50.0 / 1440).coerceAtLeast(0.0).toFloat()
+    }
+
+    /** Extra seconds of cloud drift during the opening: fast at first, none added by the end (so nothing jumps). */
+    fun cloudLapse(p: Float): Float { val q = 1f - p.coerceIn(0f, 1f); return 45f * (1f - q * q * q) - 45f }
+
+    fun fullDue(context: android.content.Context): Boolean = runCatching {
+        System.currentTimeMillis() - context.getSharedPreferences(PREFS, 0).getLong(KEY, 0L) > FULL_AFTER_MS
+    }.getOrDefault(true)
+
+    fun markFull(context: android.content.Context) {
+        runCatching { context.getSharedPreferences(PREFS, 0).edit().putLong(KEY, System.currentTimeMillis()).apply() }
+    }
 }
 
 /** A soft shadow under text on the sky, so white stays crisp on the palest noon sky. */

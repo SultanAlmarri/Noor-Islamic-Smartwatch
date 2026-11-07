@@ -123,7 +123,8 @@ class CompassSensor(private val context: Context, private val samplingUs: Int = 
         }
 
         rotation?.let { sm.registerListener(listener, it, samplingUs) }
-        magnetic?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI) }
+        // The field strength decides the accuracy shown: read it as often as the heading, so a change shows at once.
+        magnetic?.let { sm.registerListener(listener, it, samplingUs) }
         if (rotation == null) accel?.let { sm.registerListener(listener, it, samplingUs) }
         awaitClose { sm.unregisterListener(listener) }
     }.conflate()

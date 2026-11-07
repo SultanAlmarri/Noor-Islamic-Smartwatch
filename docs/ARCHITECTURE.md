@@ -49,9 +49,11 @@ Anything that must give the same answer on phone and watch lives in `core/prayer
   (Android's high/medium/low/unreliable), and the measured field strength against the strength the World Magnetic
   Model expects at that place (> 15 % off: fair, > 25 %: poor, reported as interference). The worst of these is shown.
 - Degrees are shown with two decimals as requested; the screen states the sensor's estimated accuracy next to them.
-- Steady display (0.9.4): a new accuracy level is shown only once it has stayed the same for 1 s (0.6 s in the
-  calibration tips), so a reading on a boundary cannot make the meter flicker; the estimate is shown in steps (whole
-  degrees to 5°, then fives); the box keeps a fixed height. "Calibrate first" replaces "Poor" when the sensor itself
+- Immediate display (0.9.6): the accuracy level shown is always the one the latest sensor reading gives, with no hold,
+  delay or fade (the 0.9.4 one-second hold was removed at the owner's request): bring the phone near metal and it reads
+  Poor at once, move away and it reads Good at once. The magnetometer is read at the heading's rate (about 50 times a
+  second on the phone) so the field strength is never stale. The estimate is shown in steps (whole degrees to 5°, then
+  fives); the box keeps a fixed height. "Calibrate first" replaces "Poor" when the sensor itself
   reports it is unreliable. Three levels are kept: phones report heading accuracy too coarsely for a fourth to mean
   anything, and every level shown is one the sensor reported.
 

@@ -67,6 +67,11 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
     private val lastRefresh = MutableStateFlow<LocationRepository.Result?>(null)
     private val cache = DayCache(container.timetables)
 
+    init {
+        // The sky model's tables, built off the main thread before the first frame of the home sky needs them.
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) { Atmosphere.warmUp() }
+    }
+
     private val ticker = flow { while (true) { emit(Instant.now()); delay(1000L - System.currentTimeMillis() % 1000L) } }
 
     val ui: StateFlow<TodayUi?> = combine(container.settings.settings, ticker, refreshing, lastRefresh) { s, now, r, lr ->

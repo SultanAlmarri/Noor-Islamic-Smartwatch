@@ -1,0 +1,312 @@
+// Noor home sky: the sky of the moment (from the precomputed atmosphere table), the Sun, the moon, stars and the
+// Milky Way, high cirrus and a field of cumulus seen in perspective. Rendered at reduced resolution into a cached
+// layer (everything here is soft); see SkyRenderer.kt for the uniforms.
+
+uniform float2 uSize;      // layer size, px
+uniform float uDp;         // layer px per dp
+uniform float uHorizon;    // y of the horizon, px
+uniform float uAltTop;     // view altitude at the top edge, degrees
+uniform float uAltPow;     // screen-to-altitude curve
+uniform float uFov;        // horizontal field of view, radians
+uniform float2 uLutSize;   // atmosphere table size (columns, rows)
+uniform float uLutPow;     // the table's altitude curve
+uniform float2 uSunPos;    // where the Sun is drawn, px
+uniform float3 uSunDir;    // direction of the drawn Sun (view space)
+uniform float uSunEl;      // the Sun's true elevation, degrees
+uniform float3 uSunDisc;   // radiance of the disc (exposed, linear)
+uniform float3 uSunCloud;  // sunlight at the cumulus (exposed, linear)
+uniform float3 uSunHigh;   // sunlight at the cirrus
+uniform float3 uAmbTop;    // skylight from above
+uniform float3 uAmbLow;    // skylight from the horizon
+uniform float uNight;      // 0 day … 1 night: stars
+uniform float uTime;       // seconds, ambient clock
+uniform float4 uWeather;   // cumulus cover, cirrus, seed x, seed y
+uniform float uCloudTop;   // clouds keep below this y (the text above), px
+uniform float4 uMoon;      // x, y (px), radius (px), visibility
+uniform float3 uMoonLight; // direction of sunlight on the moon (moon frame)
+uniform float uMilky;      // Milky Way strength
+uniform float uWind;       // drift of the clouds so far, km
+uniform float uTextBottom; // the text written on the sky ends here, px
+
+float altAt(float y) {
+    float t = sat((uHorizon - y) / uHorizon);
+    return uAltTop * pow(t, uAltPow);
+}
+
+float3 viewDir(float2 fc) {
+    float az = (fc.x / uSize.x - 0.5) * uFov;
+    float alt = radians(max(altAt(fc.y), 0.0));
+    return float3(cos(alt) * sin(az), sin(alt), cos(alt) * cos(az));
+}
+
+float3 skyAt(float x, float altDeg) {
+    float v = pow(sat(altDeg / 90.0), 1.0 / uLutPow);
+    float2 p = float2(sat(x / uSize.x) * (uLutSize.x - 1.0) + 0.5, v * (uLutSize.y - 1.0) + 0.5);
+    return lutAt(p).rgb;
+}
+
+// Stars on a jittered grid, two sizes, twinkling; thinning towards the horizon where the air is thick.
+float3 stars(float2 fc, float alt) {
+    float3 acc = float3(0.0);
+    float cell = 6.0 * uDp;
+    for (int k = 0; k < 2; k++) {
+        float sc = k == 0 ? cell : cell * 2.7;
+        float2 g = fc / sc + (k == 0 ? float2(0.0) : float2(31.7, 11.3));
+        float2 id = floor(g);
+        float2 h = hash22(id);
+        float pick = hash12(id + 7.13);
+        float keep = k == 0 ? 0.30 : 0.55;
+        if (pick < keep) {
+            float2 c = (id + 0.15 + 0.7 * h) * sc;
+            float d = length(fc - c) / uDp;
+            float b = pow(hash12(id + 3.7), k == 0 ? 3.0 : 5.0) * (k == 0 ? 0.55 : 1.5);
+            float tw = 0.72 + 0.28 * sin(uTime * (1.5 + 3.0 * h.x) + 6.283 * h.y);
+            float r = k == 0 ? 0.55 : 0.75;
+            float s = exp(-d * d / (r * r)) * b * tw;
+            float3 tint = mix(float3(0.80, 0.86, 1.0), float3(1.0, 0.92, 0.80), hash12(id + 1.9));
+            acc += tint * s;
+        }
+    }
+    return acc * smoothstep(1.0, 16.0, alt);
+}
+
+// The Milky Way: a soft band across the sky with dark dust lanes.
+float3 milkyWay(float2 fc, float alt) {
+    float2 p = fc / uDp;
+    float2 dir = normalize(float2(1.0, -0.42));
+    float2 c = float2(uSize.x * 0.55, uHorizon * 0.40) / uDp;
+    float2 rel = p - c;
+    float along = dot(rel, dir);
+    float across = dot(rel, float2(-dir.y, dir.x));
+    float wob = (vnoise(float2(along * 0.012, 3.0)) - 0.5) * 30.0;
+    float w = 34.0 + 10.0 * vnoise(float2(along * 0.02, 9.0));
+    float band = exp(-pow((across - wob) / w, 2.0));
+    float clumps = fbm4(p * 0.035, float4(1.0, 1.0, 1.0, 0.6));
+    float lanes = smoothstep(0.42, 0.68, fbm4(p * 0.05 + float2(5.2, 1.3), float4(1.0, 1.0, 0.8, 0.0)));
+    float core = exp(-pow((across - wob) / (w * 0.35), 2.0));
+    float glow = band * (0.45 + 0.75 * clumps) * (1.0 - 0.65 * lanes * core);
+    float3 col = mix(float3(0.55, 0.62, 0.85), float3(0.95, 0.88, 0.80), core * 0.6);
+    // A fine dust of faint stars along it.
+    float2 id = floor(p * 0.9);
+    float dust = step(0.82, hash12(id)) * hash12(id + 2.3) * band;
+    return (col * glow * 0.085 + float3(dust * 0.10)) * smoothstep(4.0, 22.0, alt);
+}
+
+// Moonlight scattered round the moon at night.
+float3 moonHalo(float2 fc) {
+    float d = length(fc - uMoon.xy) / uMoon.z;
+    return float3(0.80, 0.85, 1.0) * exp(-max(d - 1.0, 0.0) * 0.9) * 0.07 * uNight * uMoon.w;
+}
+
+// The moon: a lit sphere (its phase follows the Sun), pale by day, with faint maria and earthshine.
+float4 moon(float2 fc) {
+    float r = uMoon.z;
+    float2 d = (fc - uMoon.xy) / r;
+    float dd = dot(d, d);
+    if (dd > 1.0) return float4(0.0);
+    float3 n = float3(d.x, d.y, sqrt(1.0 - dd));
+    float lit = smoothstep(-0.06, 0.10, dot(n, uMoonLight));
+    float maria = 0.80 + 0.20 * smoothstep(0.35, 0.65, fbm4(d * 2.2 + float2(4.0, 1.0), float4(1.0, 1.0, 0.7, 0.0)));
+    float limb = 0.72 + 0.28 * n.z;
+    float3 c = float3(0.98, 0.96, 0.90) * maria * limb * (lit + 0.05 * uNight);
+    float edge = smoothstep(1.0, 1.0 - 2.0 / r, sqrt(dd));
+    return float4(c, edge * uMoon.w);
+}
+
+// High cirrus: thin, wind-combed streaks at 9 km, lit long after the Sun has set below the land.
+float4 cirrus(float3 v, float2 fc) {
+    if (uWeather.y <= 0.001 || v.y < 0.01) return float4(0.0);
+    float t = shellDistance(v.y, CIRRUS_H);
+    float2 p = float2(v.x, v.z) * t;
+    float2 q = float2(p.x * 0.75 + p.y * 0.66, -p.x * 0.66 + p.y * 0.75);
+    q += float2(uWind * 1.6, 0.0);
+    float warp = fbm4(q * 0.04 + uWeather.zw * 1.7, float4(1.0, 1.0, 0.0, 0.0));
+    float fade = sat(1.0 - t / 260.0);
+    float n = fbm4(float2(q.x * 0.010, q.y * 0.11 + warp * 1.6) + uWeather.wz, float4(1.0, 0.9, 0.35 * fade, 0.0));
+    // Fine combing along the streaks.
+    float fib = 0.75 + 0.25 * vnoise(float2(q.x * 0.004, q.y * 1.3 + warp * 6.0));
+    float a = smoothstep(0.48, 0.80, n) * fib * uWeather.y * smoothstep(0.0, 0.10, v.y) * fade;
+    float mu = dot(v, uSunDir);
+    float3 c = uSunHigh * (0.55 + 5.0 * hg(mu, 0.55)) + uAmbTop * 1.2;
+    return float4(c, a * 0.75);
+}
+
+// Distant cloud banks lying along the horizon: one sample of the cloud layer far away, combed flat by perspective;
+// they catch the colours of sunrise and sunset first.
+float4 banks(float3 v) {
+    if (uWeather.x <= 0.001 || v.y > 0.14) return float4(0.0);
+    float t = shellDistance(max(v.y, 0.002), 2.2);
+    float2 p = float2(v.x, v.z) * t + float2(uWind, 0.0);
+    float n = fbm4(p * float2(0.035, 0.11) + uWeather.zw, float4(1.0, 1.0, 0.8, 0.5));
+    float a = smoothstep(0.62 - 0.25 * uWeather.x, 0.86 - 0.2 * uWeather.x, n) * smoothstep(18.0, 45.0, t) * (1.0 - smoothstep(0.05, 0.14, v.y));
+    float mu = dot(v, uSunDir);
+    float3 c = uSunCloud * (0.35 + 3.0 * hg(mu, 0.55)) + uAmbLow * 1.1;
+    return float4(c, a * 0.85);
+}
+
+// Cumulus: a few clouds at different distances. Each is a density field (a heap of billows on a flat base, worn by
+// fractal noise that slowly boils) lit like vapour: light is marched through the field towards the Sun, so the side
+// facing it glows and the body falls into soft shade; thin edges against a Sun behind them are silvered; a low Sun
+// warms them from below. Farther clouds are smaller, lower, slower and paler with the haze. They keep to the band of
+// sky below the text.
+
+float cloudDensity(float2 rel, float W, float H, float fi, float2 seed) {
+    float shape = 0.0;
+    for (int j = 0; j < 8; j++) {
+        float fj = float(j);
+        float hj = hash12(float2(fi * 9.0 + fj, 5.0) + seed);
+        float hk = hash12(float2(fi * 9.0 + fj, 6.0) + seed);
+        float u;
+        float r;
+        float cy;
+        if (j < 5) {
+            u = (fj + 0.5) / 5.0;
+            r = H * (0.40 + 0.36 * sin(PI * u) + 0.16 * hj);
+            cy = -r * (0.55 + 0.15 * hk);
+        } else {
+            u = 0.25 + 0.5 * (fj - 5.0 + 0.5) / 3.0 + (hj - 0.5) * 0.15;
+            r = H * (0.34 + 0.24 * hj);
+            cy = -H * (0.80 + 0.40 * hk) - r * 0.2;
+        }
+        float2 q = (rel - float2((u - 0.5) * W * 0.84, cy)) / r;
+        shape = max(shape, 1.0 - dot(q, q));
+    }
+    // Billows within billows: turbulent noise, finer near the edges.
+    float2 lp = rel / (H * 0.42) + float2(fi * 3.3, 0.0) + seed;
+    float2 drift = float2(uTime * 0.010, -uTime * 0.006);
+    float n = 0.0;
+    float a = 0.5;
+    float2 p = lp + drift;
+    for (int k = 0; k < 4; k++) {
+        n += a * abs(vnoise(p) * 2.0 - 1.0);
+        p = ROT * p * 2.1 + float2(1.7, 9.2);
+        a *= 0.5;
+    }
+    // Worn more at the top than along the base.
+    float top = sat(-rel.y / (H * 1.8));
+    float d = shape * 1.4 - (n - 0.20) * (0.7 + 0.6 * top);
+    // A flat base, softened a little by the noise.
+    float base = 1.0 - smoothstep(-3.0 * uDp, 1.5 * uDp, rel.y + (n - 0.3) * 4.0 * uDp);
+    return max(d, 0.0) * 1.6 * base;
+}
+
+float4 cumulusSprites(float2 fc, float3 v, float3 sunL, float3 sky) {
+    float cover = uWeather.x;
+    if (cover <= 0.001) return float4(0.0);
+    float count = floor(2.0 + cover * 9.0);
+    float band = max(uHorizon - uCloudTop, 40.0 * uDp);
+    float unit = band / 90.0;
+    float strip = uSize.x * 1.7;
+    float mu = dot(v, uSunDir);
+    float silverPhase = hg(mu, 0.75);
+    float lowSun = 1.0 - smoothstep(-0.02, 0.20, sunL.y);
+    float3 col = float3(0.0);
+    float alpha = 0.0;
+    for (int i = 0; i < 8; i++) {
+        float fi = float(i);
+        if (fi < count) {
+            float h1 = hash12(float2(fi, 1.0) + uWeather.zw);
+            float h2 = hash12(float2(fi, 2.0) + uWeather.zw);
+            float h3 = hash12(float2(fi, 3.0) + uWeather.zw);
+            float h4 = hash12(float2(fi, 4.0) + uWeather.zw);
+            float depth = 1.0 - (fi + 0.6 * h1) / max(count, 1.0);
+            float s = mix(1.0, 0.36, depth) * unit;
+            float W = (90.0 + 80.0 * h2) * s * uDp;
+            float H = (26.0 + 20.0 * h3) * s * uDp;
+            float speed = (0.8 + 1.5 * (1.0 - depth)) * uDp;
+            float cx = mod(h4 * strip + uTime * speed, strip) - (strip - uSize.x) * 0.5;
+            float yb = uHorizon - (4.0 + 46.0 * pow(1.0 - depth, 1.3) + 10.0 * h1) * unit * uDp;
+            float2 rel = fc - float2(cx, yb);
+            if (abs(rel.x) < W * 0.64 && rel.y < 4.0 * uDp && rel.y > -H * 2.0) {
+                float d = cloudDensity(rel, W, H, fi, uWeather.zw);
+                if (d > 0.002) {
+                    // March towards the Sun (on screen, biased upwards when it is high) to see how much vapour
+                    // stands in the way.
+                    float2 toSun = uSunPos - fc;
+                    float2 ld = normalize(toSun / max(length(toSun), 1.0) * 0.7 + float2(0.0, -1.0) * sat(sunL.y * 1.5) * 0.6 + float2(0.0, 0.001));
+                    float stepL = H * 0.09;
+                    float tau = 0.0;
+                    for (int k = 1; k <= 5; k++) {
+                        tau += cloudDensity(rel + ld * stepL * float(k) * float(k) * 0.5, W, H, fi, uWeather.zw) * float(k) * 0.5;
+                    }
+                    float light = exp(-tau * 0.55);
+                    float a = 1.0 - exp(-d * 3.5);
+                    float lift = sat(-rel.y / (H * 1.6));
+                    float under = lowSun * (1.0 - lift) * 0.7 * exp(-tau * 0.15);
+                    float thin = exp(-d * 2.5);
+                    float rim = thin * light * silverPhase;
+                    float3 c = uSunCloud * (light * 1.7 + rim * 12.0 + under)
+                        + mix(uAmbLow * 0.85, uAmbTop * 1.5, lift) * (0.55 + 0.45 * light);
+                    float3 cd = mix(tone(c), sky, 0.06 + 0.50 * depth * depth);
+                    // At night a cloud is a faint veil over the stars.
+                    a *= 1.0 - 0.55 * uNight;
+                    col = mix(col, cd, a);
+                    alpha = alpha + a * (1.0 - alpha);
+                }
+            }
+        }
+    }
+    return float4(col, alpha);
+}
+
+float4 render(float2 fc) {
+    float alt = altAt(fc.y);
+    float3 v = viewDir(fc);
+    float3 sky = skyAt(fc.x, max(alt, 0.0));
+    float3 col = sky;
+
+    // Night: the Milky Way, then the stars.
+    if (uNight > 0.0) {
+        col += milkyWay(fc, alt) * uMilky;
+        col += stars(fc, alt) * uNight;
+    }
+
+    // The moon, behind every cloud.
+    if (uMoon.w > 0.0) {
+        col += moonHalo(fc);
+        float4 m = moon(fc);
+        col = mix(col, max(col, m.rgb), m.a);
+    }
+
+    // The Sun's disc, which sinks behind the true horizon.
+    float2 sd = (fc - uSunPos) / uDp;
+    float r = length(sd);
+    float above = smoothstep(uHorizon + 0.5 * uDp, uHorizon - 0.5 * uDp, fc.y);
+    float rd = 7.5;
+    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above;
+    if (disc > 0.0) {
+        float limb = 1.0 - 0.45 * (1.0 - sqrt(sat(1.0 - (r / rd) * (r / rd))));
+        col = mix(col, tone(uSunDisc * limb), disc);
+    }
+
+    // Clouds: cirrus high above, then the cumulus. Both keep clear of the text written on the sky.
+    float clear = smoothstep(uCloudTop - 12.0 * uDp, uCloudTop + 46.0 * uDp, fc.y);
+    float4 ci = cirrus(v, fc);
+    if (ci.a > 0.0) col = mix(col, tone(ci.rgb), ci.a * mix(0.35, 1.0, clear));
+    float sunAzL = (uSunPos.x / uSize.x - 0.5) * uFov;
+    float sunElR = radians(uSunEl);
+    float3 sunL = float3(cos(sunElR) * sin(sunAzL), sin(sunElR), cos(sunElR) * cos(sunAzL));
+    float4 bk = banks(v);
+    if (bk.a > 0.0) col = mix(col, mix(tone(bk.rgb), sky, 0.35), bk.a);
+    float4 cu = cumulusSprites(fc, v, sunL, sky);
+    if (cu.a > 0.0) col = mix(col, cu.rgb / max(cu.a, 1e-3), cu.a * smoothstep(uCloudTop - 34.0 * uDp, uCloudTop + 6.0 * uDp, fc.y));
+
+    // Glare round the Sun: a bright core and a wide soft bloom, in front of the clouds.
+    float sunVis = smoothstep(-5.0, 0.5, uSunEl);
+    if (sunVis > 0.0) {
+        float3 gc = tone(uSunDisc * 0.06);
+        float g = (0.55 * exp(-max(r - rd, 0.0) / 9.0) + 0.22 * exp(-r / 55.0)) * sunVis;
+        col = 1.0 - (1.0 - col) * (1.0 - gc * g);
+    }
+
+    // Text written on the sky stays readable: above its bottom nothing is brighter than the cap (white text ≥ 4.5:1).
+    float tz = 1.0 - smoothstep(uTextBottom - 8.0 * uDp, uTextBottom + 12.0 * uDp, fc.y);
+    if (tz > 0.0) {
+        float3 lin = pow(sat3(col), float3(2.2));
+        float l = luma(lin);
+        if (l > 0.18) col = pow(lin * mix(1.0, 0.18 / l, tz), float3(1.0 / 2.2));
+    }
+    // A whisper of noise against banding in slow gradients.
+    col += (hash12(fc + fract(uTime) * 61.0) - 0.5) / 255.0;
+    return float4(sat3(col), 1.0);
+}

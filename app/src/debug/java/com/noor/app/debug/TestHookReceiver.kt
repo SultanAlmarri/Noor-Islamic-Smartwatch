@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
  * - SETUP: Dubai as a chosen city, alerts on this phone, the Adhan for [prayer] limited to [max] seconds, optionally the
  *   ringer on vibrate, then a real test alarm in [seconds] through the normal path (alarm → receiver → player service).
  * - DUMP: writes the alert history to logcat (tag NoorE2E), one line per alert.
+ * - CITY: a chosen city by id (e.g. dxb, ist), onboarding done; used by tools/devicetest/home_sky.sh.
  */
 class TestHookReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -31,6 +32,11 @@ class TestHookReceiver : BroadcastReceiver() {
             try {
                 when (intent.action) {
                     "com.noor.smartwatch.debug.SETUP" -> setup(app, intent)
+                    "com.noor.smartwatch.debug.CITY" -> {
+                        app.container.settings.setOnboardingDone()
+                        app.container.settings.setManualCity(intent.getStringExtra("city") ?: "dxb")
+                        Log.i(TAG, "CITY done ${intent.getStringExtra("city")}")
+                    }
                     "com.noor.smartwatch.debug.DUMP" -> AlertLog.all(app).forEach { r ->
                         Log.i(TAG, "RECORD prayer=${r.prayer} test=${r.test} outcome=${r.outcome} playedMs=${r.playedMs} " +
                             "delayMs=${r.delayMs} exact=${r.exactAlarms} vol=${r.alarmVolumePercent} ringer=${r.ringerMode} detail=${r.detail}")

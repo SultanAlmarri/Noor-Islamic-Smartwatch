@@ -18,8 +18,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The opening time-lapse (0.9.2): frames at 0, 0.3, 0.6 and 1 s. The sky moves; the countdown and the prayer are the real
- * ones from the very first frame. Software renders of single frames, not a measure of smoothness on a phone.
+ * The opening (0.9.6): frames through its two seconds. The scene fades up from the page while the sky runs from the
+ * start of the current prayer's time to now and the path draws itself; the countdown and the prayer are the real ones
+ * from the very first frame. Software renders of single frames (the Canvas renderer: no GPU here), not a measure of
+ * smoothness on a phone.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -50,9 +52,10 @@ class TodayOpeningDesignTest {
         // (The countdown draws each digit on its own so they can roll, so the prayer and its time are checked.)
         org.junit.Assert.assertTrue(rule.onAllNodesWithText("Maghrib", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         org.junit.Assert.assertTrue(rule.onAllNodesWithText("5:40 PM", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
-        rule.mainClock.advanceTimeBy(300); h.frame("today_opening_0300ms")
-        rule.mainClock.advanceTimeBy(300); h.frame("today_opening_0600ms")
-        rule.mainClock.advanceTimeBy(400); h.frame("today_opening_1000ms")
+        rule.mainClock.advanceTimeBy(400); h.frame("today_opening_0400ms")
+        rule.mainClock.advanceTimeBy(500); h.frame("today_opening_0900ms")
+        rule.mainClock.advanceTimeBy(600); h.frame("today_opening_1500ms")
+        rule.mainClock.advanceTimeBy(800); h.frame("today_opening_2300ms")
         org.junit.Assert.assertTrue(com.noor.app.ui.today.OpeningSky.played)
     }
 }

@@ -207,24 +207,22 @@ private fun Readout(label: String, value: String, color: Color, modifier: Modifi
 private fun VerticalHairline() = Box(Modifier.width(0.5.dp).height(40.dp).background(NoorTheme.colors.separator))
 
 /**
- * How sure the compass is, from what the phone's sensors report (0.9.4: steady). The level shown changes only once
- * the sensor has held a new one for a moment ([CompassQualityFilter]); the box keeps one height whatever the text
- * says, and the text cross-fades, so nothing jumps. When the sensor says it is unreliable, the label says to calibrate.
+ * How sure the compass is, from what the phone's sensors report. 0.9.6: the level shown is always the one the latest
+ * sensor reading gives, at once (no hold, no fade): a phone brought near metal reads Poor the moment the field is off,
+ * and Good again the moment it is not. The box keeps one height whatever the text says, so nothing jumps. When the
+ * sensor says it is unreliable, the label says to calibrate.
  */
 @Composable
-private fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: () -> Unit) {
+internal fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: () -> Unit) {
     val c = NoorTheme.colors
-    val shown = rememberSteady(reading.assessment)
+    val shown = reading.assessment
     val label = accuracyLabel(shown)
     GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(onClick = onCalibrate), padding = 18.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.acc_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.weight(1f))
             AccuracyMeter(shown, small = false, modifier = Modifier.semantics { contentDescription = label })
             Spacer(Modifier.width(10.dp))
-            val color by animateColorAsState(accuracyColor(shown), tween(400), label = "accColor")
-            androidx.compose.animation.Crossfade(label, animationSpec = tween(300), label = "accLabel") { l ->
-                Text(l, style = MaterialTheme.typography.titleSmall, color = color, maxLines = 1)
-            }
+            Text(label, style = MaterialTheme.typography.titleSmall, color = accuracyColor(shown), maxLines = 1)
             Icon(Icons.Rounded.ChevronRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(6.dp))
@@ -236,23 +234,9 @@ private fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: () 
             if (isEmpty()) add(stringResource(R.string.acc_status_only))
         }.joinToString(" ")
         // Three lines are always reserved, so the card never grows or shrinks as the explanation changes.
-        androidx.compose.animation.Crossfade(detail, animationSpec = tween(300), label = "accDetail") { d ->
-            Text(d, style = MaterialTheme.typography.bodySmall, color = c.textSecondary, minLines = 3, maxLines = 3,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-        }
+        Text(detail, style = MaterialTheme.typography.bodySmall, color = c.textSecondary, minLines = 3, maxLines = 3,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
-}
-
-/**
- * The assessment to show: a new one replaces the shown one only after it has stayed the same for [holdMs]; any change
- * in between starts the wait again. So a reading flickering on a boundary never makes the meter jump, and every level
- * shown is one the sensor actually reported.
- */
-@Composable
-private fun rememberSteady(a: com.noor.prayer.qibla.CompassAssessment, holdMs: Long = 1_000L): com.noor.prayer.qibla.CompassAssessment {
-    var shown by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(a) }
-    androidx.compose.runtime.LaunchedEffect(a) { if (a != shown) { kotlinx.coroutines.delay(holdMs); shown = a } }
-    return shown
 }
 
 @Composable
@@ -273,7 +257,7 @@ private fun accuracyColor(a: com.noor.prayer.qibla.CompassAssessment): Color {
 @Composable
 internal fun AccuracyMeter(a: com.noor.prayer.qibla.CompassAssessment, small: Boolean, modifier: Modifier = Modifier) {
     val c = NoorTheme.colors
-    val color by animateColorAsState(accuracyColor(a), tween(400), label = "meter")
+    val color = accuracyColor(a)
     val lit = when (a.quality) { CompassQuality.GOOD -> 3; CompassQuality.FAIR -> 2; CompassQuality.POOR -> 1 }
     Row(horizontalArrangement = Arrangement.spacedBy(if (small) 3.dp else 4.dp), modifier = modifier) {
         repeat(3) { i ->
@@ -399,7 +383,7 @@ internal fun CalibrationGuide(reading: CompassReading?) {
         }
         // Live, while calibrating: the same meter, small, so the user sees it improve as they move the phone.
         if (reading != null) {
-            val shown = rememberSteady(reading.assessment, holdMs = 600L)
+            val shown = reading.assessment
             val label = accuracyLabel(shown)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) {}) {
                 Text(stringResource(R.string.cal_live, ""), style = MaterialTheme.typography.bodySmall, color = c.textMuted)

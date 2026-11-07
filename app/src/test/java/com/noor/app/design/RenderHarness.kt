@@ -54,6 +54,8 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
     var ambient by mutableStateOf(false)
 
     fun start() {
+        // No GPU here: the sky is computed on the spot, so every frame shows the sky of its own moment.
+        com.noor.app.ui.today.SkyCompute.synchronous = true
         rule.setContent {
             val base = LocalContext.current
             val locale = if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH

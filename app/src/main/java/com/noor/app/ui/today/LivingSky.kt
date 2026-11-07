@@ -1,5 +1,21 @@
 package com.noor.app.ui.today
 
+import android.os.Build
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.withContext
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.snap
@@ -150,7 +166,12 @@ internal class SkyGeometry(scene: SkyScene, private val w: Float, val horizonY: 
     }
 
     companion object {
-        /** Monotone cubic (Fritsch–Carlson) through Fajr−30 min, sunrise, sunset and Isha+30 min. */
+        /**
+         * Monotone cubic (Fritsch–Carlson) through Fajr−30 min, sunrise, sunset and Isha+30 min. 0.9.6: twilight gets
+         * more of the width (8–22 % and 78–92 %, was 10–18 % and 82–90 %): the sky changes fastest then, and dragging
+         * the Sun through dawn and dusk changed the colours up to nine times faster per pixel than at midday; now about
+         * a third less, with the four prayers of twilight further apart.
+         */
         fun timeWarp(scene: SkyScene): (Double) -> Double {
             val f = scene.events.associate { (p, t) -> p to scene.path.fraction(t) }
             val fajr = f[Prayer.FAJR]; val rise = f[Prayer.SHURUQ]; val set = f[Prayer.MAGHRIB]; val isha = f[Prayer.ISHA]
@@ -158,9 +179,9 @@ internal class SkyGeometry(scene: SkyScene, private val w: Float, val horizonY: 
             val half = 30.0 / (24 * 60)
             val xs = mutableListOf(0.0); val ys = mutableListOf(0.0)
             fun add(x: Double, y: Double) { if (x > xs.last() + 1e-4 && x < 1 - 1e-4 && y > ys.last()) { xs += x; ys += y } }
-            fajr?.let { add(it - half, 0.10) }
-            add(rise, 0.18); add(set, 0.82)
-            isha?.let { add(it + half, 0.90) }
+            fajr?.let { add(it - half, 0.08) }
+            add(rise, 0.22); add(set, 0.78)
+            isha?.let { add(it + half, 0.92) }
             xs += 1.0; ys += 1.0
             return monotoneCubic(xs.toDoubleArray(), ys.toDoubleArray())
         }
@@ -266,6 +287,9 @@ internal fun LivingSky(
     modifier: Modifier = Modifier,
     parallax: () -> Float = { 0f },
     stillTime: Float? = null,
+    /** The opening's progress, 0 → 1 (1 when there is none): the scene fades in from the page, the land rises a
+     *  little, the clouds run fast and settle to their real drift, and the path and its prayers draw themselves. */
+    opening: () -> Float = { 1f },
 ) {
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val ambient = LocalAmbientMotion.current
@@ -275,9 +299,10 @@ internal fun LivingSky(
     val mid by animateColorAsState(light.mid, spec, label = "mid")
     val horizonColor by animateColorAsState(light.horizon, spec, label = "horizon")
 
-    // The day so far draws itself once, from midnight to now, when the screen appears.
-    val reveal = remember { Animatable(if (ambient) 0f else 1f) }
-    LaunchedEffect(Unit) { if (ambient) reveal.animateTo(1f, tween(OpeningSky.DURATION_MS, easing = NoorMotion.Ease)) }
+    // The path, its prayers and the land come in with the opening.
+    val pathIn: () -> Float = { smoothstep(0f, 0.45f, opening()) }
+    val marksIn: () -> Float = { smoothstep(0.25f, 0.75f, opening()) }
+    val landLift: () -> Float = { val o = 1f - opening(); o * o * 14f * densityOf() }
 
     // One slow cycle (four minutes) drives everything ambient: drifting clouds, twinkling stars, the turning of the
     // Sun's rays, birds and meteors. It ticks about 30 times a second rather than every frame: the motion is slow, and
@@ -297,7 +322,10 @@ internal fun LivingSky(
         }
     }
     val live = ambient || stillTime != null
-    val now: () -> Float = { if (ambient) clock.floatValue else stillTime ?: clock.floatValue }
+    val now: () -> Float = {
+        val t = (if (ambient) clock.floatValue else stillTime ?: clock.floatValue) + OpeningSky.cloudLapse(opening()) / CYCLE_SECONDS.toFloat()
+        (t % 1f + 1f) % 1f
+    }
     val stars = remember { starField(150) }
     val grainBrush = remember { grain() }
     val dust = remember { dustField(220) }
@@ -305,50 +333,60 @@ internal fun LivingSky(
     val land = remember(scene.landSeed, scene.terrain) { landField(scene.landSeed, scene.terrain) }
     val soil = soilOf(scene.terrain)
 
-    Box(modifier.clipToBounds().onSizeChanged { heightPx[0] = it.height.toFloat() }.semantics { contentDescription = description }) {
+    // 0.9.6: the sky is computed (Atmosphere) for this moment and this header, off the main thread; on Android 13 and
+    // later the GPU draws it with clouds and land (ShaderSky); elsewhere the Canvas layers below draw over the same sky.
+    val androidView = LocalView.current
+    val resources = LocalContext.current.resources
+    // Held as Any: the shader class exists only on Android 13 and later.
+    val shaders: Any? = remember { if (Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
+    var sizePx by remember { mutableStateOf(IntSize.Zero) }
+    val densityValue = LocalDensity.current.density
+    densityHolder[0] = densityValue
+    val skyView = remember(scene, layout, sizePx, rtl, densityValue) {
+        if (sizePx.width == 0 || sizePx.height == 0) null else SkyView(scene, sizePx.width.toFloat(), sizePx.height.toFloat(), densityValue, layout, rtl)
+    }
+    val look = skyView?.let { SkyLook.at(scene, it, display) }
+    val capAlt = skyView?.let { it.altitudeAt(it.cloudTopY - 8 * densityValue) } ?: 90.0
+    val skyLight = rememberSkyLight(look, skyView, capAlt)
+    val weather = remember(scene.seed, scene.terrain) { Weather.of(scene.seed, scene.terrain) }
+    val landProfile = remember(scene.landSeed, scene.terrain) { LandProfile.of(scene.landSeed, scene.terrain) }
+    // The GPU layers' own clocks (seconds): the sky's moves about 20 times a second (drifting clouds, twinkling stars),
+    // the land's 4 times (cloud shadows, mist); each layer is redrawn only when its clock moves.
+    val origin = remember(scene.seed) { (((scene.seed % 997) + 997) % 997).toFloat() * 3.7f }
+    val skySeconds = remember { mutableFloatStateOf(origin + (stillTime ?: 0.13f) * CYCLE_SECONDS.toFloat()) }
+    val landSeconds = remember { mutableFloatStateOf(skySeconds.floatValue) }
+    if (shaders != null && ambient) LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        val base = skySeconds.floatValue
+        while (true) {
+            withFrameNanos { t ->
+                if (parallax() < heightPx[0]) {
+                    val sec = base + (t - start) / 1e9f
+                    skySeconds.floatValue = sec
+                    if (sec - landSeconds.floatValue >= 0.25f) landSeconds.floatValue = sec
+                }
+            }
+            delay(40)
+        }
+    }
+    val gpuInputs: () -> GpuSkyInputs? = {
+        if (skyView != null && look != null && skyLight != null) GpuSkyInputs(scene, skyView, look, skyLight, weather, landProfile, page, skyView.cloudTopY - 8 * densityValue) else null
+    }
+    val skyImage = remember(skyLight, skyView) { if (shaders == null && skyLight != null && skyView != null) screenSky(skyLight, skyView) else null }
+
+    Box(modifier.clipToBounds().onSizeChanged { heightPx[0] = it.height.toFloat(); sizePx = it }.semantics { contentDescription = description }
+        .graphicsLayer { alpha = smoothstep(0f, 0.38f, opening()) }) {
+        if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuSkyLayer(shaders as SkyShaders, gpuInputs, { skySeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
         // 1 · Sky, warm air round a low Sun, stars, the moon. Farthest away, so it lags most when the page scrolls.
-        Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
+        if (shaders == null) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
             val w = size.width; val h = size.height
             val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
             // The clock is read only when there is something to move, so a daytime sky is not redrawn for nothing.
             val time = if (light.night > 0f && live) now() else 0.13f
             val hy = h * layout.horizon
-            drawRect(Brush.verticalGradient(0f to zenith, layout.horizon * 0.58f to mid, layout.horizon to horizonColor, 1f to horizonColor))
-            val sunX = g.x(display)
-            val el = scene.elevationAt(display).toFloat()
-            if (light.golden > 0f) drawRect(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.40f * light.golden), Color.Transparent),
-                center = Offset(sunX, hy), radius = w * 0.85f))
-            // Below the horizon the Sun is not drawn: its light on the horizon shows where it is, fading through twilight.
-            if (el < 0f && el > -18f) {
-                val tw = smoothstep(-18f, -2f, el)
-                drawRect(Brush.radialGradient(listOf(Sky.mix(light.sunGlow, Color(0xFF8E7BD6), 1f - tw).copy(alpha = 0.30f * tw), Color.Transparent),
-                    center = Offset(sunX, hy), radius = w * (0.35f + 0.4f * tw)))
-            }
-            // Dawn and dusk, opposite the Sun: the Earth's own shadow, a blue-grey band on the horizon, and above it the
-            // pink Belt of Venus. Strongest with the Sun just below the horizon; gone by day and by night.
-            val belt = smoothstep(-9f, -2.5f, el) * (1f - smoothstep(0.5f, 4f, el))
-            if (belt > 0.01f) {
-                val away = if (sunX < w / 2) Offset(w, 0f) else Offset(0f, 0f)
-                val near = Offset(sunX, 0f)
-                val across = Brush.horizontalGradient(listOf(Color.Transparent, Color.White), startX = near.x, endX = away.x)
-                val shadowTop = hy - hy * 0.13f
-                val beltTop = hy - hy * 0.34f
-                val layer = Rect(0f, beltTop, w, hy)
-                drawContext.canvas.saveLayer(layer, Paint())
-                drawRect(Brush.verticalGradient(0f to Color(0xFFE8A9BC).copy(alpha = 0f), 0.45f to Color(0xFFE8A9BC).copy(alpha = 0.34f * belt),
-                    0.62f to Color(0xFFD39BB4).copy(alpha = 0.22f * belt), 1f to Color(0xFFD39BB4).copy(alpha = 0f), startY = beltTop, endY = shadowTop + hy * 0.03f),
-                    topLeft = Offset(0f, beltTop), size = Size(w, shadowTop + hy * 0.03f - beltTop))
-                drawRect(Brush.verticalGradient(0f to Color(0xFF3B4467).copy(alpha = 0f), 0.5f to Color(0xFF3B4467).copy(alpha = 0.42f * belt), 1f to Color(0xFF2E3655).copy(alpha = 0.55f * belt),
-                    startY = shadowTop, endY = hy), topLeft = Offset(0f, shadowTop), size = Size(w, hy - shadowTop))
-                drawRect(across, topLeft = layer.topLeft, size = layer.size, blendMode = BlendMode.DstIn)
-                drawContext.canvas.restore()
-            }
-            // Midday over the desert: a pale, warm haze lies along the horizon.
-            if (scene.terrain == Terrain.DUNES && light.day > 0.6f) {
-                val a = 0.22f * (light.day - 0.6f) / 0.4f
-                drawRect(Brush.verticalGradient(0f to Color(0xFFF6E6C8).copy(alpha = 0f), 1f to Color(0xFFF6E6C8).copy(alpha = a), startY = hy - 46.dp.toPx(), endY = hy),
-                    topLeft = Offset(0f, hy - 46.dp.toPx()), size = Size(w, 46.dp.toPx()))
-            }
+            // The sky of this moment, as the atmosphere model computed it (the same table the GPU renderer uses).
+            if (skyImage != null) drawImage(skyImage, dstSize = IntSize(w.toInt() + 1, h.toInt() + 1), filterQuality = FilterQuality.Low)
+            else drawRect(Brush.verticalGradient(0f to zenith, layout.horizon * 0.58f to mid, layout.horizon to horizonColor, 1f to horizonColor))
             if (light.night > 0f) {
                 // Far from city lights the Milky Way shows: a faint river of light with fine dust along it.
                 val dark = smoothstep(0.55f, 1f, light.night)
@@ -389,7 +427,7 @@ internal fun LivingSky(
         }
 
         // 2 · Clouds, drifting with the wind (still when animations are off).
-        Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.4f }) {
+        if (shaders == null) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.4f }) {
             val w = size.width; val h = size.height
             val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
             drawClouds(clouds, light, w, h * layout.cloudTop, h * layout.horizon, now(), g.x(display), rtl)
@@ -404,11 +442,14 @@ internal fun LivingSky(
             val stroke = 1.6.dp.toPx()
             val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
             onDrawBehind {
-                val shownF = lerp(0.0, display, reveal.value.toDouble())
+                val shownF = display
                 val sunEl = scene.elevationAt(shownF)
+                val pathAlpha = pathIn()
                 val sun = Offset(g.x(shownF), g.y(sunEl))
-                val up = sunEl > -1.0
-                if (up) clipRect(0f, 0f, w, hy + 2.dp.toPx()) {
+                // The Sun fades as it sinks below the horizon (no sudden switch at sunrise or sunset). On the GPU the
+                // shader draws the Sun itself.
+                val up = if (shaders != null) 0f else smoothstep(-2.5f, 0.5f, sunEl.toFloat())
+                if (up > 0f) clipRect(0f, 0f, w, hy + 2.dp.toPx()) {
                     // Long, faint rays, turning slowly; longer and warmer when the Sun is low.
                     val rays = 14
                     val len = w * (0.20f + 0.24f * light.golden)
@@ -417,29 +458,30 @@ internal fun LivingSky(
                         val a = turn + i * 2 * PI.toFloat() / rays
                         val l = len * (if (i % 2 == 0) 1f else 0.62f)
                         val end = Offset(sun.x + l * cos(a), sun.y + l * sin(a))
-                        drawLine(Brush.linearGradient(listOf(light.sunGlow.copy(alpha = 0.13f + 0.10f * light.golden), Color.Transparent), sun, end),
+                        drawLine(Brush.linearGradient(listOf(light.sunGlow.copy(alpha = (0.13f + 0.10f * light.golden) * up), Color.Transparent), sun, end),
                             sun, end, strokeWidth = (if (i % 2 == 0) 3.dp else 1.5.dp).toPx(), cap = StrokeCap.Round)
                     }
                     val halo = (52 + 18 * light.golden).dp.toPx()
-                    drawCircle(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.62f), light.sunGlow.copy(alpha = 0.14f), Color.Transparent), center = sun, radius = halo), halo, sun)
+                    drawCircle(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.62f * up), light.sunGlow.copy(alpha = 0.14f * up), Color.Transparent), center = sun, radius = halo), halo, sun)
                 }
                 clipRect(0f, 0f, w, hy) {
-                    drawPath(path, Color.White.copy(alpha = 0.5f), style = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash))
+                    drawPath(path, Color.White.copy(alpha = 0.5f * pathAlpha), style = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash))
                     val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
                     clipRect(left, 0f, right, hy) {
                         drawPath(path, light.sunGlow.copy(alpha = 0.24f), style = Stroke(stroke * 4f, cap = StrokeCap.Round))
                         drawPath(path, light.sunCore.copy(alpha = 0.95f), style = Stroke(stroke, cap = StrokeCap.Round))
                     }
                 }
-                if (up) {
-                    drawCircle(light.sunCore, (if (light.golden > 0.5f) 8.5.dp else 7.dp).toPx(), sun)
-                    drawCircle(Color.White.copy(alpha = 0.92f), 3.2.dp.toPx(), sun)
+                if (up > 0f) {
+                    drawCircle(light.sunCore.copy(alpha = up), (7f + 1.5f * light.golden).dp.toPx(), sun)
+                    drawCircle(Color.White.copy(alpha = 0.92f * up), 3.2.dp.toPx(), sun)
                 }
             }
         })
 
         // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
-        Box(Modifier.fillMaxSize().drawWithCache {
+        if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
+        else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
             val shapes = land.paths(w, h * layout.horizon, h, density)
 
@@ -466,21 +508,26 @@ internal fun LivingSky(
                 Triple(p, f, Offset(x, if (el > 0.5 && sky < onLand) sky else onLand))
             }
             onDrawBehind {
-                val shownF = lerp(0.0, display, reveal.value.toDouble())
+                val shownF = display
+                val markAlpha = marksIn()
+                // A mark fills as the Sun passes it, over a few minutes of the day, rather than switching.
+                val soft = 4.0 / (24 * 60)
                 marks.forEach { (p, f, pt) ->
-                    val passed = f <= shownF && reveal.value > 0.98f
+                    val passed = smoothstep(-1f, 1f, ((shownF - f) / soft).toFloat())
                     val dot = Color.White
                     when {
                         p == scene.next -> {
                             // The next prayer's ring breathes, slowly, while it waits.
                             val breath = if (ambient) 0.5f + 0.5f * sin(2 * PI * now() * 40).toFloat() else 0.5f
-                            drawCircle(Sky.GoldOnSky.copy(alpha = 0.16f + 0.16f * breath), (9f + 3f * breath).dp.toPx(), pt)
-                            drawCircle(Sky.GoldOnSky, 5.5.dp.toPx(), pt, style = Stroke(1.8.dp.toPx()))
+                            drawCircle(Sky.GoldOnSky.copy(alpha = (0.16f + 0.16f * breath) * markAlpha), (9f + 3f * breath).dp.toPx(), pt)
+                            drawCircle(Sky.GoldOnSky.copy(alpha = markAlpha), 5.5.dp.toPx(), pt, style = Stroke(1.8.dp.toPx()))
                         }
-                        passed -> drawCircle(dot.copy(alpha = 0.95f), 3.dp.toPx(), pt)
                         else -> {
-                            drawCircle(zenith.copy(alpha = 0.55f), 3.4.dp.toPx(), pt)
-                            drawCircle(dot.copy(alpha = 0.8f), 3.4.dp.toPx(), pt, style = Stroke(1.2.dp.toPx()))
+                            if (passed < 1f) {
+                                drawCircle(zenith.copy(alpha = 0.55f * (1f - passed) * markAlpha), 3.4.dp.toPx(), pt)
+                                drawCircle(dot.copy(alpha = 0.8f * (1f - passed) * markAlpha), 3.4.dp.toPx(), pt, style = Stroke(1.2.dp.toPx()))
+                            }
+                            if (passed > 0f) drawCircle(dot.copy(alpha = 0.95f * passed * markAlpha), (3.4f - 0.4f * passed).dp.toPx(), pt)
                         }
                     }
                 }
@@ -491,6 +538,45 @@ internal fun LivingSky(
 }
 
 private const val CYCLE_SECONDS = 240.0
+
+private val densityHolder = floatArrayOf(2.625f)
+private fun densityOf() = densityHolder[0]
+
+/** Tests render without a GPU and need each frame's sky at once; the app computes it off the main thread. */
+internal object SkyCompute {
+    @Volatile var synchronous = false
+}
+
+/**
+ * The atmosphere table for the moment shown: the first one at once (so the first frame is right), then each new one
+ * computed off the main thread, the latest request winning, while the previous table stays on screen.
+ */
+@Composable
+private fun rememberSkyLight(look: SkyLook?, view: SkyView?, capAlt: Double): SkyLight? {
+    val key = if (look != null && view != null) SkyLight.key(look, view, capAlt) else null
+    if (SkyCompute.synchronous) return remember(key) { key?.let { SkyLight.compute(it) } }
+    val first = remember(key == null) { key?.let { SkyLight.compute(it) } }
+    var latest by remember { mutableStateOf<SkyLight?>(null) }
+    val keyState = rememberUpdatedState(key)
+    LaunchedEffect(Unit) {
+        snapshotFlow { keyState.value }.filterNotNull().distinctUntilChanged().conflate().collect { k ->
+            if (latest?.key != k) latest = withContext(Dispatchers.Default) { SkyLight.compute(k) }
+        }
+    }
+    return latest ?: first
+}
+
+/** The computed sky laid out on the screen (for the Canvas renderer): a small image stretched over the header. */
+private fun screenSky(light: SkyLight, view: SkyView): ImageBitmap {
+    val cols = Atmosphere.NX; val rows = 64
+    val px = IntArray(cols * rows)
+    for (y in 0 until rows) {
+        val alt = view.altitudeAt((y + 0.5f) / rows * view.h)
+        val v = Atmosphere.rowOf(alt)
+        for (x in 0 until cols) px[y * cols + x] = Atmosphere.sample(light.lut, x / (cols - 1.0), v)
+    }
+    return android.graphics.Bitmap.createBitmap(px, cols, rows, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
+}
 
 private fun lerp(a: Double, b: Double, t: Double) = a + (b - a) * t
 
