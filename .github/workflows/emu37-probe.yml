@@ -12,18 +12,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: noanim-ram4g
+          - name: cores4-ram6g
             target: google_apis
-            ram: 4096M
+            ram: 6144M
+            cores: 4
             opts: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
-          - name: playstore-ram4g
+          - name: cores4-ram6g-playstore
             target: google_apis_playstore
-            ram: 4096M
-            opts: -no-window -gpu swiftshader_indirect -no-snapshot -camera-back none
-          - name: anim-ram4g-gpuguest
-            target: google_apis
-            ram: 4096M
-            opts: -no-window -gpu guest -no-snapshot -camera-back none
+            ram: 6144M
+            cores: 4
+            opts: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -46,6 +44,8 @@ jobs:
           target: ${{ matrix.target }}
           arch: x86_64
           ram-size: ${{ matrix.ram }}
+          cores: ${{ matrix.cores }}
+          heap-size: 1024M
           disk-size: 8G
           emulator-boot-timeout: 1200
           disable-animations: true
