@@ -107,12 +107,16 @@ adb shell input keyevent KEYCODE_BACK; sleep 2
 adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; sleep 6
 tap_text "Qibla"; sleep 4
 adb emu sensor set acceleration 0:0:9.81
-# 45 µT is what the World Magnetic Model expects around Dubai; 15 % more is 51.75 µT. Readings around that, ±2 %.
+# The emulator's normal field (2:28:-35) is 44.9 µT. Readings alternate between 12.6 % and 15.8 % stronger (50.5 and
+# 51.9 µT): judged one by one they cross the Good/Fair limit (15 %) every 0.45 s; the label must stay put.
+adb emu sensor set magnetic-field 2:28:-35; sleep 3
+shot qibla_normal_field
 adb shell screenrecord --time-limit 14 --bit-rate 8000000 /sdcard/qibla.mp4 &
 REC=$!; sleep 1
-for i in $(seq 1 24); do
-  case $((i % 4)) in 0) f="3:40:-33";; 1) f="3:41:-33";; 2) f="3:40:-34";; 3) f="3:41:-34";; esac
+for i in $(seq 1 26); do
+  if [ $((i % 2)) = 0 ]; then f="3:39:-32"; else f="3:40:-33"; fi
   adb emu sensor set magnetic-field $f >/dev/null; sleep 0.45
+  [ $i = 13 ] && shot qibla_at_the_limit_mid
 done
 shot qibla_at_the_limit
 wait $REC; sleep 1
