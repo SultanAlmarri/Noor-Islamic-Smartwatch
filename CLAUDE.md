@@ -62,7 +62,7 @@ fully merged and can be deleted (a cloud session is not allowed to delete branch
 | `wear` | Watch app (Compose for Wear OS M3, tiles, complications, Watch Face Push) |
 | `alerts`, `shared` | Android libraries used by both apps |
 | `legacy/` | Frozen watch face v1.3.2: source and APK. **Read-only** |
-| `tools/` | Watch-face packaging and validation, sound pipeline, gazetteer and SPA table generators, verification |
+| `tools/` | Watch-face packaging and validation, sound pipeline, gazetteer, world places and time-zone map builders (`tools/geo`), SPA table generators, device tests, verification |
 | `accuracy/` | Official IACAD datasets, research tools, the blind test (scored monthly by a GitHub workflow) |
 | `docs/` | `HANDOVER.md`, `ARCHITECTURE.md`, `DESIGN.md`, `WATCH.md`, `ALERTS.md`, `SOUNDS.md`, `AUTHORITIES.md`, `PRAYER_ACCURACY.md`, `INSTALL.md` |
 | `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `device-alerts.yml` (the real alarm → Adhan path on Android 14/15 emulators), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` (verified Adhan downloads), `discover-sounds.yml` (Commons research list) |

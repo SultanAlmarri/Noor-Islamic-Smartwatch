@@ -31,6 +31,8 @@ import kotlinx.coroutines.launch
 class AppContainer(private val app: Application) {
     val settings = SettingsRepository(app)
     val gazetteer = GazetteerStore(app)
+    /** 0.9.7: the offline world places and time-zone map, and online place search, for choosing a location by hand. */
+    val world = com.noor.app.data.WorldStore(app)
     val location = LocationRepository(app, settings, gazetteer)
     val timetables = OfficialTimetables(app)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
