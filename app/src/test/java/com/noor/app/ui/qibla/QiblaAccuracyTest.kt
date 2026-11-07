@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * 0.9.6: the accuracy box follows the sensor at once. The compose clock is frozen: if anything held the old level back
+ * 0.9.6: the accuracy box follows the sensor at once (0.9.7: and the meter does not move when the word changes). The compose clock is frozen: if anything held the old level back
  * (a timer, a fade), the new label would not be on screen yet.
  */
 @RunWith(AndroidJUnit4::class)
@@ -38,16 +38,21 @@ class QiblaAccuracyTest {
         rule.setContent { NoorTheme(com.noor.app.data.ThemeMode.DARK) { AccuracyCard(r, Formatter(false, Numerals.WESTERN, TimeFormat.H12)) {} } }
         rule.mainClock.advanceTimeByFrame()
         rule.onNodeWithText("Good").assertExists()
+        val meterAt = { label: String -> rule.onNode(androidx.compose.ui.test.hasContentDescription(label)).fetchSemanticsNode().boundsInRoot.left }
+        val goodX = meterAt("Good")
         // Metal nearby: the field is 40 % off what the World Magnetic Model expects here.
         rule.runOnUiThread { r = reading(63.0) }
         androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
         rule.mainClock.advanceTimeByFrame()
         rule.onNodeWithText("Poor").assertExists()
+        // 0.9.7: the meter stays where it was whatever the word beside it.
+        org.junit.Assert.assertEquals(goodX, meterAt("Poor"), 0.01f)
         // A little off (20 %): Fair.
         rule.runOnUiThread { r = reading(54.0) }
         androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
         rule.mainClock.advanceTimeByFrame()
         rule.onNodeWithText("Fair").assertExists()
+        org.junit.Assert.assertEquals(goodX, meterAt("Fair"), 0.01f)
         // And back.
         rule.runOnUiThread { r = reading(45.5) }
         androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()

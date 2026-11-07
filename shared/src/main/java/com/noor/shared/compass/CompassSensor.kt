@@ -13,6 +13,7 @@ import com.noor.prayer.GeoPoint
 import com.noor.prayer.qibla.CompassAssessment
 import com.noor.prayer.qibla.CompassAssessor
 import com.noor.prayer.qibla.CompassMath
+import com.noor.prayer.qibla.CompassTracker
 import com.noor.prayer.qibla.HeadingFilter
 import com.noor.prayer.qibla.Qibla
 import kotlinx.coroutines.channels.awaitClose
@@ -35,6 +36,8 @@ data class CompassReading(
     val assessment: CompassAssessment,
     /** Which sensors produced the heading. */
     val source: Source,
+    /** The accuracy estimate as shown, in steady steps (0.9.7, phone); null: shown from [headingAccuracyDeg]. */
+    val shownAccuracyDeg: Int? = null,
 ) {
     enum class Source { ROTATION_VECTOR, ACCELEROMETER_MAGNETOMETER }
 }
@@ -48,9 +51,10 @@ sealed interface CompassAvailability {
 /**
  * Wraps Android's motion sensors. Sensors are registered only while the flow is collected (the Qibla screen is on
  * screen), so the compass costs no battery otherwise. [samplingUs] is the rotation-vector rate (the watch asks for a
- * slower one than the phone).
+ * slower one than the phone). [steady] (0.9.7, the phone): the verdict from a [CompassTracker], which does not flicker
+ * when a reading sits near a limit; otherwise each reading is judged on its own, as before (the watch).
  */
-class CompassSensor(private val context: Context, private val samplingUs: Int = SensorManager.SENSOR_DELAY_GAME) {
+class CompassSensor(private val context: Context, private val samplingUs: Int = SensorManager.SENSOR_DELAY_GAME, private val steady: Boolean = false) {
     private val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val rotation: Sensor? = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     private val magnetic: Sensor? = sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
@@ -63,6 +67,7 @@ class CompassSensor(private val context: Context, private val samplingUs: Int = 
         val declination = geo.declination.toDouble()
         val expectedUt = geo.fieldStrength / 1000.0 // nT → µT
         val filter = HeadingFilter()
+        val tracker = CompassTracker()
         val r = FloatArray(9)
         val remapped = FloatArray(9)
         val gravity = FloatArray(3)
@@ -87,8 +92,14 @@ class CompassSensor(private val context: Context, private val samplingUs: Int = 
             val att = CompassMath.attitude(remapped)
             val trueHeading = Qibla.normalize(att.azimuthDeg + declination)
             val smoothed = filter.update(trueHeading, timestamp)
-            val assessment = CompassAssessor.assess(headingAccuracy, magStatus, fieldUt, expectedUt, att.tiltDeg)
-            trySend(CompassReading(smoothed, declination, headingAccuracy, magStatus, fieldUt, expectedUt, att.tiltDeg, assessment, source))
+            if (steady) {
+                val assessment = tracker.assess(headingAccuracy, magStatus, expectedUt, att.tiltDeg, timestamp)
+                trySend(CompassReading(smoothed, declination, headingAccuracy, magStatus, tracker.smoothedField, expectedUt, att.tiltDeg, assessment, source,
+                    tracker.shownEstimate(headingAccuracy)))
+            } else {
+                val assessment = CompassAssessor.assess(headingAccuracy, magStatus, fieldUt, expectedUt, att.tiltDeg)
+                trySend(CompassReading(smoothed, declination, headingAccuracy, magStatus, fieldUt, expectedUt, att.tiltDeg, assessment, source))
+            }
         }
 
         val listener = object : SensorEventListener {
@@ -103,6 +114,7 @@ class CompassSensor(private val context: Context, private val samplingUs: Int = 
                     Sensor.TYPE_MAGNETIC_FIELD -> {
                         System.arraycopy(e.values, 0, geomag, 0, 3); haveGeomag = true
                         fieldUt = CompassAssessor.magnitude(e.values)
+                        tracker.field(fieldUt!!, e.timestamp)
                         magStatus = e.accuracy
                         if (rotation == null && haveGravity && SensorManager.getRotationMatrix(r, null, gravity, geomag)) {
                             emit(e.timestamp, CompassReading.Source.ACCELEROMETER_MAGNETOMETER)

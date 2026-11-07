@@ -21,7 +21,7 @@ data class QiblaPlace(val settings: AppSettings, val place: ResolvedPlace?, val 
 
 class QiblaViewModel(app: Application) : AndroidViewModel(app) {
     private val container = (app as NoorApplication).container
-    val sensor = CompassSensor(app)
+    val sensor = CompassSensor(app, steady = true)
 
     val place: Flow<QiblaPlace> = container.settings.settings.map { s ->
         val p = PrayerProvider.place(s)

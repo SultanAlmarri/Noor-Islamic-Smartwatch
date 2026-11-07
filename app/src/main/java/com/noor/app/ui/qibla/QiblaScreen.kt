@@ -209,7 +209,8 @@ private fun VerticalHairline() = Box(Modifier.width(0.5.dp).height(40.dp).backgr
 /**
  * How sure the compass is, from what the phone's sensors report. 0.9.6: the level shown is always the one the latest
  * sensor reading gives, at once (no hold, no fade): a phone brought near metal reads Poor the moment the field is off,
- * and Good again the moment it is not. The box keeps one height whatever the text says, so nothing jumps. When the
+ * and Good again the moment it is not. 0.9.7: the reading's verdict comes from a CompassTracker, so a measure sitting
+ * near a limit no longer makes the label flicker; the label has a fixed slot, so nothing beside it moves. The box keeps one height whatever the text says, so nothing jumps. When the
  * sensor says it is unreliable, the label says to calibrate.
  */
 @Composable
@@ -222,12 +223,18 @@ internal fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: ()
             Text(stringResource(R.string.acc_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.weight(1f))
             AccuracyMeter(shown, small = false, modifier = Modifier.semantics { contentDescription = label })
             Spacer(Modifier.width(10.dp))
-            Text(label, style = MaterialTheme.typography.titleSmall, color = accuracyColor(shown), maxLines = 1)
+            // 0.9.7: the label sits in a slot as wide as the widest of the four, so the meter never moves sideways
+            // when the word changes.
+            val style = MaterialTheme.typography.titleSmall
+            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+            val labels = listOf(R.string.acc_good, R.string.acc_fair, R.string.acc_poor, R.string.acc_calibrate).map { stringResource(it) }
+            val slot = with(androidx.compose.ui.platform.LocalDensity.current) { labels.maxOf { measurer.measure(it, style, maxLines = 1).size.width }.toDp() }
+            Text(label, style = style, color = accuracyColor(shown), maxLines = 1, modifier = Modifier.width(slot))
             Icon(Icons.Rounded.ChevronRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(6.dp))
         val detail = buildList {
-            reading.headingAccuracyDeg?.let { add(stringResource(R.string.acc_estimate, f.number(com.noor.prayer.qibla.CompassDisplay.displayedEstimate(it)))) }
+            (reading.shownAccuracyDeg ?: reading.headingAccuracyDeg?.let { com.noor.prayer.qibla.CompassDisplay.displayedEstimate(it) })?.let { add(stringResource(R.string.acc_estimate, f.number(it))) }
             if (CompassIssue.MAGNETIC_INTERFERENCE in shown.issues) add(stringResource(R.string.acc_interference))
             if (CompassIssue.SENSOR_UNRELIABLE in shown.issues || CompassIssue.LOW_SENSOR_ACCURACY in shown.issues)
                 add(stringResource(R.string.acc_needs_calibration))

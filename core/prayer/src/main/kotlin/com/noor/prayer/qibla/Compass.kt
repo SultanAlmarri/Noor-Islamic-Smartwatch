@@ -102,8 +102,8 @@ object CompassAssessor {
         if (fieldMicroTesla != null && expectedFieldMicroTesla != null && expectedFieldMicroTesla > 0) {
             val deviation = abs(fieldMicroTesla - expectedFieldMicroTesla) / expectedFieldMicroTesla
             when {
-                deviation > 0.25 -> { worst(CompassQuality.POOR); issues += CompassIssue.MAGNETIC_INTERFERENCE }
-                deviation > 0.15 -> { worst(CompassQuality.FAIR); issues += CompassIssue.MAGNETIC_INTERFERENCE }
+                deviation > CompassTracker.FIELD_POOR -> { worst(CompassQuality.POOR); issues += CompassIssue.MAGNETIC_INTERFERENCE }
+                deviation > CompassTracker.FIELD_FAIR -> { worst(CompassQuality.FAIR); issues += CompassIssue.MAGNETIC_INTERFERENCE }
             }
         }
         if (tiltDeg != null && tiltDeg > FLAT_LIMIT_DEG) issues += CompassIssue.NOT_FLAT
@@ -111,4 +111,108 @@ object CompassAssessor {
     }
 
     fun magnitude(v: FloatArray): Double = sqrt(v.take(3).sumOf { (it * it).toDouble() })
+}
+
+/**
+ * The compass verdict over time (0.9.7), for a screen that shows it live. [CompassAssessor] judges one moment; a reading
+ * that sits near one of its limits (the field 15 % off, the sensor's estimate 10°) crosses it back and forth many times a
+ * second, and the label flickered Good · Fair · Poor although nothing had changed. Here:
+ *
+ * - The field strength, the sensor's own accuracy estimate and the tilt are each averaged over about a tenth of a
+ *   second (an exponential average on the sensor's own clock): their noise is reduced to about a third, and a real
+ *   change still shows within that tenth of a second.
+ * - Each measure gets worse at once, at the same limits as [CompassAssessor]; it gets better only once it is clearly
+ *   on the better side ([FIELD_FAIR_EXIT], [FIELD_POOR_EXIT], [ACCURACY_GOOD_EXIT], [ACCURACY_FAIR_EXIT], [FLAT_EXIT_DEG]).
+ *   There is no timer: a phone taken away from metal reads Good the moment the field is right again.
+ * - The sensor's own accuracy estimate is shown in steady steps with the same kind of margin ([shownEstimate]).
+ */
+class CompassTracker(private val timeConstantMs: Double = 100.0) {
+    private val fieldAvg = Average(timeConstantMs)
+    private val accuracyAvg = Average(timeConstantMs)
+    private val tiltAvg = Average(timeConstantMs)
+    private var fieldLevel = 0
+    private var accuracyLevel = 0
+    private var notFlat = false
+    private var estimate: Int? = null
+
+    /** The field strength now, averaged (µT), or null before the first reading. */
+    val smoothedField: Double? get() = fieldAvg.value
+
+    /** A magnetometer reading: its strength (µT) and the sensor's timestamp. */
+    fun field(microTesla: Double, timestampNs: Long) { fieldAvg.add(microTesla, timestampNs) }
+
+    /** The verdict for a heading reading at [timestampNs] (the sensor's clock), with the latest field strength. */
+    fun assess(headingAccuracyDeg: Double?, magnetometerStatus: Int?, expectedFieldMicroTesla: Double?, tiltDeg: Double?, timestampNs: Long): CompassAssessment {
+        val accuracy = if (headingAccuracyDeg != null && headingAccuracyDeg >= 0) accuracyAvg.add(headingAccuracyDeg, timestampNs) else { accuracyAvg.reset(); null }
+        val tilt = tiltDeg?.let { tiltAvg.add(it, timestampNs) }
+        var q = CompassQuality.GOOD
+        val issues = mutableSetOf<CompassIssue>()
+        fun worst(level: Int) { if (level > q.ordinal) q = CompassQuality.entries[level] }
+
+        if (accuracy != null) {
+            accuracyLevel = band(accuracyLevel, accuracy, CompassAssessor.GOOD_ACCURACY_DEG, CompassAssessor.FAIR_ACCURACY_DEG, ACCURACY_GOOD_EXIT, ACCURACY_FAIR_EXIT)
+            worst(accuracyLevel)
+            if (accuracyLevel > 0) issues += CompassIssue.LOW_SENSOR_ACCURACY
+        } else accuracyLevel = 0
+        when (magnetometerStatus) {
+            CompassAssessor.STATUS_UNRELIABLE -> { worst(2); issues += CompassIssue.SENSOR_UNRELIABLE }
+            CompassAssessor.STATUS_LOW -> { worst(2); issues += CompassIssue.LOW_SENSOR_ACCURACY }
+            CompassAssessor.STATUS_MEDIUM -> worst(1)
+        }
+        val f = fieldAvg.value
+        if (f != null && expectedFieldMicroTesla != null && expectedFieldMicroTesla > 0) {
+            fieldLevel = band(fieldLevel, abs(f - expectedFieldMicroTesla) / expectedFieldMicroTesla, FIELD_FAIR, FIELD_POOR, FIELD_FAIR_EXIT, FIELD_POOR_EXIT)
+            worst(fieldLevel)
+            if (fieldLevel > 0) issues += CompassIssue.MAGNETIC_INTERFERENCE
+        } else fieldLevel = 0
+        if (tilt != null) notFlat = if (notFlat) tilt > FLAT_EXIT_DEG else tilt > CompassAssessor.FLAT_LIMIT_DEG
+        if (notFlat) issues += CompassIssue.NOT_FLAT
+        return CompassAssessment(q, issues)
+    }
+
+    /**
+     * The sensor's accuracy estimate as shown ([CompassDisplay.displayedEstimate]'s steps), changing only once the
+     * estimate is three quarters of a step away from the figure on screen.
+     */
+    fun shownEstimate(headingAccuracyDeg: Double?): Int? {
+        if (headingAccuracyDeg == null || headingAccuracyDeg < 0) { estimate = null; return null }
+        val next = CompassDisplay.displayedEstimate(headingAccuracyDeg)
+        val cur = estimate
+        if (cur == null || next == cur) { estimate = next; return next }
+        val step = if (cur < 5 || next < 5) 1.0 else 5.0
+        if (abs(headingAccuracyDeg - cur) > 0.75 * step) estimate = next
+        return estimate
+    }
+
+    /** An exponential average over time, on the sensor's clock, so it does not depend on the sensor's rate. */
+    private class Average(private val timeConstantMs: Double) {
+        var value: Double? = null; private set
+        private var lastNs = -1L
+        fun add(v: Double, timestampNs: Long): Double {
+            val cur = value
+            val next = if (cur == null || lastNs < 0) v else cur + (1 - exp(-((timestampNs - lastNs).coerceAtLeast(0L)) / 1e6 / timeConstantMs)) * (v - cur)
+            value = next; lastNs = timestampNs
+            return next
+        }
+        fun reset() { value = null; lastNs = -1L }
+    }
+
+    companion object {
+        const val FIELD_FAIR = 0.15
+        const val FIELD_POOR = 0.25
+        /** Back to Good once the field is within 12 % of the expected strength; back to Fair once within 21 %. */
+        const val FIELD_FAIR_EXIT = 0.12
+        const val FIELD_POOR_EXIT = 0.21
+        const val ACCURACY_GOOD_EXIT = 8.5
+        const val ACCURACY_FAIR_EXIT = 21.0
+        const val FLAT_EXIT_DEG = 25.0
+
+        /** 0 good, 1 fair, 2 poor: worse at once past [fair] or [poor]; better only below [fairExit] or [poorExit]. */
+        internal fun band(level: Int, v: Double, fair: Double, poor: Double, fairExit: Double, poorExit: Double): Int {
+            val worse = when { v > poor -> 2; v > fair -> 1; else -> 0 }
+            if (worse >= level) return worse
+            val better = when { v > poorExit -> 2; v > fairExit -> 1; else -> 0 }
+            return minOf(level, better)
+        }
+    }
 }
