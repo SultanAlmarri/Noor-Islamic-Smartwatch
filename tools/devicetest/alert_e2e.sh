@@ -27,6 +27,17 @@ HOOK="$PKG/com.noor.app.debug.TestHookReceiver"
 FAILURES=0
 
 say() { echo "[alert-e2e:$S] $*"; }
+# Ready means more than "booted": Android's package and settings services answer (on a slow emulator they can come up
+# minutes after boot, or restart once after it).
+wait_ready() {
+  adb wait-for-device
+  for _ in $(seq 1 150); do
+    if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ] && adb shell pm path android >/dev/null 2>&1 \
+      && adb shell settings get global auto_time >/dev/null 2>&1; then return 0; fi
+    sleep 2
+  done
+  echo "[alert-e2e] Android did not become ready"; return 1
+}
 records() {
   adb logcat -c
   adb shell am broadcast -a com.noor.smartwatch.debug.DUMP -n "$HOOK" >/dev/null
@@ -38,7 +49,13 @@ alarm_players() { adb shell dumpsys audio | grep -E "u/pid:$APP_UID/" | grep "st
 run() {
   S="$1"
   say "---- scenario $S ----"
-  adb install -r -g "$APK" >/dev/null || { say "install failed"; return 1; }
+  local installed=0
+  for _ in 1 2 3; do
+    if adb install -r -g "$APK" >/dev/null; then installed=1; break; fi
+    say "install failed; waiting for Android to be ready"; wait_ready
+  done
+  # A scenario that could not even install the app has failed: it must never count as passed.
+  [ $installed = 1 ] || { say "FAILED (install)"; FAILURES=$((FAILURES + 1)); return 1; }
   adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
   local want=allow; [ "$S" = no-exact ] && want=deny
   # Right after an install, Android can take a moment to apply the app-op: wait until it reads back as set.
@@ -139,10 +156,9 @@ run() {
   if [ $ok = 1 ]; then say "PASS"; else say "FAILED"; FAILURES=$((FAILURES + 1)); fi
 }
 
-adb wait-for-device
-for _ in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 2; done
+wait_ready || { echo "Scenarios failed: device not ready"; exit 1; }
 # The scheduled scenarios move the device clock, which needs root (emulator images allow it).
-adb root >/dev/null 2>&1; sleep 3; adb wait-for-device
+adb root >/dev/null 2>&1; sleep 3; wait_ready || { echo "Scenarios failed: device not ready after adb root"; exit 1; }
 adb shell settings put global auto_time 0 >/dev/null 2>&1
 SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
 echo "Device: $(adb shell getprop ro.product.model | tr -d '\r'), Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r'))"
