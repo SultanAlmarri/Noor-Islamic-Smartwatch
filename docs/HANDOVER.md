@@ -251,4 +251,9 @@ renderer, a browser bench that compiles the same shader files (WebGL, headless C
 and the `home-sky.yml` workflow on Android 14 and 15 emulators (the GPU shaders compiled and drawn by Android itself,
 photographs through the day, recordings of the opening and of a drag, the Qibla box with injected magnetic fields).
 Emulators draw with a software GPU: the pictures are faithful, but frame rate and battery use on a real phone are not
-measured yet.
+measured yet. The first emulator run found that Android refused the first sky shader ("program is too large": SkSL
+unrolls loops and inlines calls, limit ~100 000 operations); the clouds were rewritten to ~44 000 and guarded by
+`SkyShaderSizeTest`. A slow phone steps the sky down by itself (`SkyQuality`): lower resolution, then the Canvas sky.
+
+Still needs the owner's phone: smoothness of the opening and of dragging, battery use with the home screen open, the
+look on a real OLED screen, and a real compass near metal (the emulator check injected magnetometer readings).

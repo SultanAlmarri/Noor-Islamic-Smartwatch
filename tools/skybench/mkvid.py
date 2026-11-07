@@ -18,8 +18,9 @@ base=dict(date="2026-11-07", density=2.0, skyScale=0.6, wDp=412, hDp=400, horizo
 kind=sys.argv[1]; out=[]
 fps=30
 if kind.startswith("open"):
-    if kind=="open_dxb": place,dunes,seed,now,start,title,cd,pn = dxb,True,3,hm(18,5),hm(17,15),"Isha  ·  6:50 PM","45:00","Dubai"
-    else: place,dunes,seed,now,start,title,cd,pn = ist,False,11,hm(8,30),hm(6,57),"Dhuhr  ·  12:09 PM","3:39:00","Istanbul"
+    # The app's own times for 7 November 2026: Dubai Isha 6:54 PM; Istanbul Shuruq 7:35 AM, Dhuhr 12:53 PM.
+    if kind=="open_dxb": place,dunes,seed,now,start,title,cd,pn = dxb,True,3,hm(18,5),hm(17,15),"Isha  ·  6:54 PM","49:00","Dubai"
+    else: place,dunes,seed,now,start,title,cd,pn = ist,False,11,hm(8,30),hm(7,35),"Dhuhr  ·  12:53 PM","4:23:00","Istanbul"
     D=(1900+1100*min(1,max(0,(now-start)/0.2)))/1000
     n=int((D+1.2)*fps)
     for i in range(n):
