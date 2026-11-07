@@ -10,6 +10,10 @@
 #   vibrate   exact alarms allowed, ringer on vibrate      → the chosen Adhan must still play ≥ 25 s (the 0.9 fix)
 #   no-exact  "Alarms & reminders" denied                  → Android refuses Noor's player; the backup notification
 #                                                            (a short Adhan played by Android) must be posted
+#   scheduled the real prayer alarm, not the test button: the device clock is moved to 45 s before the next prayer
+#             and the scheduled path fires (alarm → planner → receiver → service) → the Adhan must play ≥ 25 s
+#   scheduled-hardened  the same with Android 17's background-audio hardening forced to its strictest level
+#             (cmd audio set-enable-hardening enable; skipped below Android 17)
 #
 # Usage: alert_e2e.sh <app-debug.apk> [normal|vibrate|no-exact|all]
 # What this does not prove: that a person hears it (emulators have no speaker), or how a specific phone maker's battery
@@ -48,9 +52,13 @@ run() {
   APP_UID=$(adb shell cmd package list packages -U $PKG | tr -d '\r' | sed -n 's/.*uid:\([0-9]*\).*/\1/p')
   VIB=false; [ "$S" = vibrate ] && VIB=true
   local expect_exact=true; [ "$S" = no-exact ] && expect_exact=false
+  local SCHED=false; case "$S" in scheduled*) SCHED=true ;; esac
+  if [ "$S" = scheduled-hardened ]; then
+    adb shell cmd audio set-enable-hardening enable && say "background-audio hardening: enable (strictest)"
+  fi
   for attempt in 1 2 3; do
     adb logcat -c
-    adb shell am broadcast -a com.noor.smartwatch.debug.SETUP -n "$HOOK" --ei seconds 45 --ei max 30 --ez vibrate $VIB >/dev/null
+    adb shell am broadcast -a com.noor.smartwatch.debug.SETUP -n "$HOOK" --ei seconds 45 --ei max 30 --ez vibrate $VIB --ez scheduled $SCHED >/dev/null
     for _ in $(seq 1 30); do adb logcat -d -s NoorE2E:I | grep -q "SETUP done" && break; sleep 1; done
     local line; line="$(adb logcat -d -s NoorE2E:I | grep 'SETUP done' | sed 's/^.*SETUP/SETUP/')"
     say "$line"
@@ -59,6 +67,15 @@ run() {
     say "exact alarms not yet as expected; setting again (attempt $attempt)"
     adb shell appops set $PKG SCHEDULE_EXACT_ALARM $want; sleep 3
   done
+  if [ "$SCHED" = true ]; then
+    # Move the clock to 45 s before the next real prayer alarm; Android re-arms Noor's alarms on the time change.
+    local next_ms; next_ms=$(echo "$line" | sed -n 's/.*NEXT at=\([0-9]*\).*/\1/p')
+    [ -z "$next_ms" ] && { say "FAIL: no next prayer alarm armed"; FAILURES=$((FAILURES + 1)); return; }
+    local t=$(( next_ms / 1000 - 45 ))
+    adb shell "date -u $(date -u -d @$t +%m%d%H%M%Y.%S)" >/dev/null
+    say "clock moved to $(date -u -d @$t +%H:%M:%S) UTC, 45 s before the next prayer alarm ($(date -u -d @$((next_ms / 1000)) +%H:%M:%S) UTC)"
+    sleep 4
+  fi
   # Noor in the background, its process killed, the screen off, the device in Doze: as at a real prayer time at night.
   adb shell input keyevent KEYCODE_HOME; sleep 3
   adb shell am kill $PKG; sleep 2
@@ -104,7 +121,12 @@ run() {
   sleep 20 # let a 30 s Adhan finish and the history be written
   local list; list="$(records)"
   echo "$list"
+  adb logcat -d | grep -i "AudioHardening" | grep -i "$PKG" | head -5 | sed 's/^/  [hardening] /'
   case "$S" in
+    scheduled*)
+      echo "$list" | grep -q "test=false outcome=PLAYED " || { say "FAIL: history has no scheduled (non-test) PLAYED entry"; ok=0; }
+      local ms; ms=$(echo "$list" | grep "test=false" | grep -m1 "outcome=PLAYED " | sed -n 's/.*playedMs=\([0-9]*\).*/\1/p')
+      [ "${ms:-0}" -ge 25000 ] && say "scheduled Adhan played ${ms} ms" || { say "FAIL: scheduled Adhan played only ${ms:-0} ms"; ok=0; } ;;
     normal|vibrate)
       echo "$list" | grep -q "outcome=PLAYED " || { say "FAIL: history does not say PLAYED"; ok=0; }
       local ms; ms=$(echo "$list" | grep -m1 "outcome=PLAYED " | sed -n 's/.*playedMs=\([0-9]*\).*/\1/p')
@@ -113,12 +135,20 @@ run() {
       echo "$list" | grep -q "outcome=BACKUP_SOUND" || { say "FAIL: history does not say BACKUP_SOUND"; ok=0; } ;;
   esac
   [ "$S" = vibrate ] && adb shell cmd audio set-ringer-mode NORMAL >/dev/null 2>&1
+  [ "$S" = scheduled-hardened ] && adb shell cmd audio set-enable-hardening disable >/dev/null 2>&1
   if [ $ok = 1 ]; then say "PASS"; else say "FAILED"; FAILURES=$((FAILURES + 1)); fi
 }
 
 adb wait-for-device
 for _ in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 2; done
+# The scheduled scenarios move the device clock, which needs root (emulator images allow it).
+adb root >/dev/null 2>&1; sleep 3; adb wait-for-device
+adb shell settings put global auto_time 0 >/dev/null 2>&1
+SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
 echo "Device: $(adb shell getprop ro.product.model | tr -d '\r'), Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r'))"
-if [ "$WHICH" = all ]; then for s in normal vibrate no-exact; do run "$s"; done; else run "$WHICH"; fi
+if [ "$WHICH" = all ]; then
+  for s in normal vibrate no-exact scheduled; do run "$s"; done
+  [ "${SDK:-0}" -ge 37 ] && run scheduled-hardened
+else run "$WHICH"; fi
 echo "Scenarios failed: $FAILURES"
 exit $FAILURES

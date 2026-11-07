@@ -21,6 +21,9 @@ import kotlinx.coroutines.launch
  *
  * - SETUP: Dubai as a chosen city, alerts on this phone, the Adhan for [prayer] limited to [max] seconds, optionally the
  *   ringer on vibrate, then a real test alarm in [seconds] through the normal path (alarm → receiver → player service).
+ *   With `scheduled`, no test alarm: every prayer's Adhan is on (limited to [max] seconds) and the real prayer alarms
+ *   are armed; the next one is logged (NEXT at=<epoch ms>) so the test can move the clock to just before it and let
+ *   the actual scheduled path fire, exactly as at a prayer time.
  * - DUMP: writes the alert history to logcat (tag NoorE2E), one line per alert.
  * - CITY: a chosen city by id (e.g. dxb, ist), onboarding done; used by tools/devicetest/home_sky.sh.
  */
@@ -57,12 +60,25 @@ class TestHookReceiver : BroadcastReceiver() {
         val prayer = intent.getStringExtra("prayer")?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: Prayer.DHUHR
         val max = intent.getIntExtra("max", 30)
         val seconds = intent.getIntExtra("seconds", 40)
+        val scheduled = intent.getBooleanExtra("scheduled", false)
         repo.setOnboardingDone()
         repo.setManualCity("dxb")
         repo.setLocationMode(LocationMode.MANUAL)
         repo.updateAlerts { a ->
-            a.copy(enabled = true, device = AlertDevice.PHONE, gradualSeconds = 0)
-                .let { s -> s.with(prayer, s.alert(prayer).copy(enabled = true, mode = AlertMode.ADHAN, maxSeconds = max, volumePercent = 100)) }
+            a.copy(enabled = true, device = AlertDevice.PHONE, gradualSeconds = 0).let { s ->
+                val which = if (scheduled) Prayer.entries.filter { it != Prayer.SHURUQ } else listOf(prayer)
+                which.fold(s) { acc, p -> acc.with(p, acc.alert(p).copy(enabled = true, mode = AlertMode.ADHAN, maxSeconds = max, volumePercent = 100)) }
+            }
+        }
+        if (scheduled) {
+            app.getSystemService(AudioManager::class.java).ringerMode =
+                if (intent.getBooleanExtra("vibrate", false)) AudioManager.RINGER_MODE_VIBRATE else AudioManager.RINGER_MODE_NORMAL
+            AlertLog.clear(app)
+            val status = AlertScheduler.reschedule(app)
+            val next = status.next
+            Log.i(TAG, "SETUP done scheduled=true exact=${status.exact} armed=${status.count} " +
+                "NEXT at=${next?.at?.toEpochMilli()} prayer=${next?.prayer}")
+            return
         }
         app.getSystemService(AudioManager::class.java).ringerMode =
             if (intent.getBooleanExtra("vibrate", false)) AudioManager.RINGER_MODE_VIBRATE else AudioManager.RINGER_MODE_NORMAL

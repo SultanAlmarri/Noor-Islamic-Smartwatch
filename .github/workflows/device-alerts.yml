@@ -7,7 +7,7 @@ name: Adhan on real Android (emulator)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'adhan/**' ]
     paths: [ 'alerts/**', 'app/**', 'core/**', 'tools/devicetest/**', '.github/workflows/device-alerts.yml' ]
   workflow_dispatch:
 
@@ -18,7 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [ 34, 35 ]
+        # 37.0 is Android 17, with its background-audio hardening (the scheduled scenarios also run it at its strictest).
+        api: [ 34, 35, 37.0 ]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -36,7 +37,7 @@ jobs:
       - name: Build the debug app (it carries the test hook; release builds do not)
         run: ./gradlew :app:assembleDebug --stacktrace
 
-      - name: Alarm → Adhan with Noor closed, screen off, Doze (normal, vibrate, no exact alarms)
+      - name: Alarm → Adhan with Noor closed, screen off, Doze (normal, vibrate, no exact alarms, real scheduled prayer alarm)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
