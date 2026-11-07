@@ -304,5 +304,12 @@ Evidence: unit and Robolectric tests (counts in the release notes), software ren
 after a prayer, the notification, the location screens with real satellite imagery, the Qibla box held at its limit,
 the full-screen Adhan), published to the `phone-preview` pre-release.
 
+On the emulator, at a prayer's time the notification switched from "−" to "+" 5 to 10 seconds late (showing "00:05"
+meanwhile, never a wrong sign); the device log shows nothing wrong, the emulator was slow (software GPU, constant screen
+captures). On a phone the switch should come within about a second.
+
+Tests at 0.9.7: `core/prayer` 97 (1 skipped by design), `alerts` 14, `app` 46, `wear` 22; all pass.
+
 Still needs the owner's phone: the scheduled Adhan on Android 17 (the decisive check), the full-screen Adhan over the
-lock screen, map gestures and imagery speed, the phone's geocoder results, and the compass near metal.
+lock screen, the notification's switch at a prayer's time, map gestures and imagery speed, the phone's geocoder
+results, and the compass near metal.
