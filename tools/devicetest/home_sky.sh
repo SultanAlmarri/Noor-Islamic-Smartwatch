@@ -20,10 +20,14 @@ PKG=com.noor.smartwatch
 ACT=$PKG/com.noor.app.MainActivity
 HOOK=$PKG/com.noor.app.debug.TestHookReceiver
 mkdir -p "$OUT"
-log() { echo "[home_sky] $*" | tee -a "$OUT/steps.txt"; }
+log() { echo "[home_sky $(date -u +%H:%M:%S)] $*" | tee -a "$OUT/steps.txt"; }
+# Every adb call is bounded, so one stuck command cannot use up the job's time.
+adb() { timeout 60 "$(type -P adb)" "$@"; }
 
+log "start"
 adb wait-for-device
 adb root >/dev/null 2>&1; sleep 3; adb wait-for-device
+log "root"
 adb shell settings put global auto_time 0
 adb shell settings put global auto_time_zone 0
 adb shell settings put system screen_off_timeout 1800000
@@ -31,14 +35,18 @@ adb shell svc power stayon true
 adb shell wm size | tee -a "$OUT/steps.txt"
 adb shell wm density | tee -a "$OUT/steps.txt"
 adb install -r -g "$APK" | tail -1
+log "installed"
 adb logcat -c
+# The whole log, as it happens (crashes included), in case the device stops answering.
+timeout 2600 "$(type -P adb)" logcat -v time > "$OUT/logcat.txt" 2>&1 &
+alive() { [ "$(adb get-state 2>/dev/null)" = "device" ]; }
 
 animations() { for k in animator_duration_scale transition_animation_scale window_animation_scale; do adb shell settings put global $k "$1"; done; }
 city() { adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city "$1" -n $HOOK >/dev/null; sleep 2; }
 # setclock MMDDhhmmYYYY.ss in UTC
 setclock() { adb shell "date -u $1" >/dev/null; }
 launch() { adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; }
-shot() { adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1"; }
+shot() { adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes, $(adb get-state 2>&1))"; }
 
 # Dubai is UTC+4, Istanbul UTC+3. 7 November 2026.
 DXB="0000:night 0115:fajr 0200:dawn 0228:sunrise 0315:morning 0800:noon 1130:asr 1315:golden 1336:sunset 1352:dusk 1420:isha 1800:late"
@@ -53,10 +61,19 @@ run_city() {
     launch
     sleep 5
     shot "home_${id}_${hhmm}_${name}"
+    alive || { log "device gone"; exit 1; }
   done
 }
 
 animations 0
+# First at the real time, no clock change: is the home screen drawn, and does the device stay up?
+shot launcher
+city dxb
+launch
+for t in 4 8 16 30; do sleep 4; done
+shot home_dxb_realtime_30s
+adb shell dumpsys gfxinfo $PKG > "$OUT/gfxinfo_first.txt"
+alive || { log "device gone after the first launch"; exit 1; }
 run_city dxb "$DXB"
 run_city ist "$IST"
 animations 1

@@ -20,6 +20,10 @@ jobs:
       fail-fast: false
       matrix:
         api: [ 34, 35 ]
+        gpu: [ swiftshader_indirect ]
+        include:
+          - api: 34
+            gpu: guest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -45,20 +49,20 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: false
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
-          script: bash tools/devicetest/home_sky.sh app/build/outputs/apk/debug/app-debug.apk home-sky-api${{ matrix.api }}
+          emulator-options: -no-window -gpu ${{ matrix.gpu }} -no-snapshot -no-boot-anim -camera-back none
+          script: timeout 2700 bash tools/devicetest/home_sky.sh app/build/outputs/apk/debug/app-debug.apk home-sky-api${{ matrix.api }}-${{ matrix.gpu }} || true
 
       - name: The GPU shaders must have been built
         run: |
-          cat home-sky-api${{ matrix.api }}/sky_log.txt || true
-          grep -q "GPU sky shaders built" home-sky-api${{ matrix.api }}/sky_log.txt
-          ! grep -q "Sky shaders unavailable" home-sky-api${{ matrix.api }}/sky_log.txt
+          cat home-sky-api${{ matrix.api }}-${{ matrix.gpu }}/sky_log.txt || true
+          grep -q "GPU sky shaders built" home-sky-api${{ matrix.api }}-${{ matrix.gpu }}/sky_log.txt
+          ! grep -q "Sky shaders unavailable" home-sky-api${{ matrix.api }}-${{ matrix.gpu }}/sky_log.txt
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: home-sky-api${{ matrix.api }}
-          path: home-sky-api${{ matrix.api }}
+          name: home-sky-api${{ matrix.api }}-${{ matrix.gpu }}
+          path: home-sky-api${{ matrix.api }}-${{ matrix.gpu }}
 
       # Also as a pre-release asset, so the pictures can be fetched where workflow artifacts cannot (a Claude Code
       # cloud session); replaced on each run.
@@ -67,8 +71,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          [ -d home-sky-api${{ matrix.api }} ] || exit 0
-          (cd home-sky-api${{ matrix.api }} && zip -qr ../home-sky-api${{ matrix.api }}.zip .)
+          [ -d home-sky-api${{ matrix.api }}-${{ matrix.gpu }} ] || exit 0
+          (cd home-sky-api${{ matrix.api }}-${{ matrix.gpu }} && zip -qr ../home-sky-api${{ matrix.api }}-${{ matrix.gpu }}.zip .)
           gh release view home-sky-preview >/dev/null 2>&1 || gh release create home-sky-preview --prerelease \
             --title "Home sky preview (emulator pictures)" --notes "Pictures and recordings from the home-sky workflow; replaced on each run." || true
-          gh release upload home-sky-preview home-sky-api${{ matrix.api }}.zip --clobber
+          gh release upload home-sky-preview home-sky-api${{ matrix.api }}-${{ matrix.gpu }}.zip --clobber
