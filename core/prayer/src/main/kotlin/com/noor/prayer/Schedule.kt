@@ -51,22 +51,25 @@ data class Countdown(
 
 object Countdowns {
     /**
-     * How long the time since a prayer is shown: about the wait between the Adhan and the iqama in most mosques
-     * (around 20 minutes; Fajr longer, Maghrib short), and for Shuruq the quarter of an hour after sunrise before
-     * prayer is again allowed. Ends earlier if the next prayer comes first.
+     * How long the time since a prayer is shown (0.9.8, longer than 0.9.7's): the wait between the Adhan and the iqama
+     * in most mosques (about 20 minutes; Fajr 20 to 25, Maghrib 5 to 10) plus the congregational prayer itself, so the
+     * "+" lasts while people are praying: Fajr, Dhuhr, Asr and Isha 30 minutes, Maghrib 15. Shuruq 20: the time after
+     * sunrise when prayer is avoided, until the Sun is "a spear's length" high, when Duha begins. Ends earlier if the next
+     * prayer comes first.
      */
     fun sinceWindow(p: Prayer): Duration = Duration.ofMinutes(when (p) {
-        Prayer.FAJR -> 25
-        Prayer.SHURUQ -> 15
-        Prayer.DHUHR -> 20
-        Prayer.ASR -> 20
-        Prayer.MAGHRIB -> 10
-        Prayer.ISHA -> 20
+        Prayer.FAJR -> 30
+        Prayer.SHURUQ -> 20
+        Prayer.DHUHR -> 30
+        Prayer.ASR -> 30
+        Prayer.MAGHRIB -> 15
+        Prayer.ISHA -> 30
     })
 
-    fun of(state: ScheduleState, now: Instant): Countdown {
+    /** [showElapsed] false: always the countdown to the next prayer (the user's choice in Settings). */
+    fun of(state: ScheduleState, now: Instant, showElapsed: Boolean = true): Countdown {
         val cur = state.current
-        if (cur != null) {
+        if (cur != null && showElapsed) {
             val end = minOf(cur.at.plus(sinceWindow(cur.prayer)), state.next.at)
             if (now.isBefore(end)) return Countdown(cur, elapsed = true, Duration.between(cur.at, now).coerceAtLeast(Duration.ZERO), end)
         }

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Persistent prayer notification, expanded (0.9.7): the prayer, its time and the large live countdown; what the
-     countdown means (time left, or time since the prayer began); then the place and the Hijri date, each on its own
-     lines and wrapped, so a long neighbourhood name or month name is always read in full. -->
+<!-- Persistent prayer notification, expanded (0.9.7): the prayer, its time and the large live countdown; then the
+     place and the Hijri date, each on its own lines and wrapped, so a long neighbourhood name or month name is always
+     read in full. What the countdown means (time left, or time since the prayer began) is said once, in the
+     notification's header (0.9.8: it was also repeated here). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/status_big_root"
     android:layout_width="match_parent"
@@ -29,13 +30,6 @@
                 android:maxLines="2"
                 android:textAlignment="viewStart" />
 
-            <TextView
-                android:id="@+id/status_caption"
-                style="@style/TextAppearance.Compat.Notification.Line2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:maxLines="2"
-                android:textAlignment="viewStart" />
         </LinearLayout>
 
         <Chronometer
@@ -43,6 +37,20 @@
             style="@style/TextAppearance.Compat.Notification.Title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:fontFeatureSettings="tnum"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textDirection="ltr"
+            android:textSize="32sp" />
+
+        <!-- 0.9.8: the same countdown drawn by Noor, in the digits chosen in Noor, when Android's own digits differ. -->
+        <TextView
+            android:id="@+id/status_countdown_text"
+            style="@style/TextAppearance.Compat.Notification.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
             android:layout_marginStart="12dp"
             android:fontFeatureSettings="tnum"
             android:includeFontPadding="false"

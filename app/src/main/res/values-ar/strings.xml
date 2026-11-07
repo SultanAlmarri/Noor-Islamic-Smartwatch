@@ -466,4 +466,7 @@
     <string name="loc_zoom_in">تكبير</string>
     <string name="loc_zoom_out">تصغير</string>
     <string name="loc_neighbourhood">حي</string>
+    <!-- 0.9.8 -->
+    <string name="elapsed_setting">الوقت منذ دخول الصلاة</string>
+    <string name="elapsed_setting_desc">بعد دخول وقت الصلاة: «+» والوقت منذ دخولها، لمدة ١٥ إلى ٣٠ دقيقة أثناء أداء الصلاة؛ ثم العدّ التنازلي للصلاة التالية. عند الإيقاف: الصلاة التالية مباشرة.</string>
 </resources>

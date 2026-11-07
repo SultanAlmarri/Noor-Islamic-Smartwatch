@@ -422,7 +422,7 @@ private fun SkyHeader(
                 Column(Modifier.fillMaxWidth().graphicsLayer { alpha = 1f - away; translationY = -12.dp.toPx() * away }, horizontalAlignment = Alignment.CenterHorizontally) {
                     // 0.9.7: − time left before a prayer; once it has come, + time since it for a while (Countdowns),
                     // then the next prayer's countdown. The notification shows the same.
-                    val cd = com.noor.prayer.Countdowns.of(st, u.now)
+                    val cd = com.noor.prayer.Countdowns.of(st, u.now, u.settings.elapsedAfterPrayer)
                     val shownAt = cd.event.at
                     val countdownText = countdownText(cd, f)
                     val label = stringResource(when { !cd.elapsed -> R.string.next_prayer; cd.event.prayer == com.noor.prayer.Prayer.SHURUQ -> R.string.since_sunrise; else -> R.string.since_prayer })

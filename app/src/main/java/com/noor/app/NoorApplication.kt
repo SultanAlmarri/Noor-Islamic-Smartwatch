@@ -83,10 +83,21 @@ class NoorApplication : Application(), AlertHost {
                     container.watchSounds.syncIfNeeded(it?.alerts)
                 }
         }
+        // When Noor draws the notification's countdown itself (its digits differ from Android's), it ticks only while the
+        // screen is on: rebuilt when the screen comes on, stopped when it goes off.
+        runCatching {
+            val screen = object : android.content.BroadcastReceiver() {
+                override fun onReceive(c: Context, i: Intent) {
+                    if (i.action == Intent.ACTION_SCREEN_OFF) com.noor.app.notify.StatusTicker.stop()
+                    else com.noor.app.notify.StatusNotification.refreshAsync(c)
+                }
+            }
+            registerReceiver(screen, android.content.IntentFilter().apply { addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF) })
+        }
         // The persistent notification follows the same things, plus its own switch and the display choices.
         container.scope.launch {
             container.settings.settings
-                .map { s -> Triple(s.statusNotification, WearSync.configFor(s, 0L, container.timetables), Triple(s.language, s.numerals, s.timeFormat)) }
+                .map { s -> Triple(s.statusNotification to s.elapsedAfterPrayer, WearSync.configFor(s, 0L, container.timetables), Triple(s.language, s.numerals, s.timeFormat)) }
                 .distinctUntilChanged()
                 .debounce(300)
                 .collect { com.noor.app.notify.StatusNotification.refresh(this@NoorApplication) }

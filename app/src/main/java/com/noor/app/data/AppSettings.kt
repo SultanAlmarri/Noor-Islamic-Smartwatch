@@ -64,4 +64,6 @@ data class AppSettings(
     val alerts: AlertSettings = AlertSettings(),
     /** The persistent notification with the next prayer and a live countdown (phone only). */
     val statusNotification: Boolean = false,
+    /** After a prayer's time: "+" time since it for a while (default), or straight to the next prayer's "−" (0.9.8). */
+    val elapsedAfterPrayer: Boolean = true,
 )

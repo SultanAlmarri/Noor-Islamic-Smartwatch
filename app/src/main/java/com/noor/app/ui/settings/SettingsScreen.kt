@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Numbers
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.Verified
@@ -157,6 +158,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                     android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
                 if (needs) statusPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) else vm.setStatusNotification(on)
             }
+        })
+        // 0.9.8: the "+" after each prayer (home screen and notification) can be turned off.
+        add(Row(R.string.settings_notification_bar, Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc), stringResource(R.string.kw_status), null) {
+            NoorSwitch(s.elapsedAfterPrayer) { on -> vm.setElapsedAfterPrayer(on) }
         })
         add(Row(R.string.settings_calendar, Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust), stringResource(R.string.hijri_adjust_value, hijriValue), stringResource(R.string.kw_hijri), null) {
             Stepper(hijriValue, { vm.setHijriAdjust(s.hijriAdjust - 1) }, { vm.setHijriAdjust(s.hijriAdjust + 1) })

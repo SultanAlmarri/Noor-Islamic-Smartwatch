@@ -76,7 +76,7 @@ object StatusNotification {
     fun content(config: WatchConfig, s: AppSettings, now: Instant, arabic: Boolean): Content {
         val f = Formatter(arabic, s.numerals, s.timeFormat)
         val st = config.state(now)
-        val cd = Countdowns.of(st, now)
+        val cd = Countdowns.of(st, now, s.elapsedAfterPrayer)
         val today = now.atZone(config.zone).toLocalDate()
         val place = (if (arabic) config.placeAr ?: config.placeEn else config.placeEn).ifBlank { null }
         val hijri = f.hijri(HijriDate.of(today, config.hijriAdjust))
@@ -99,6 +99,7 @@ object StatusNotification {
         val config = if (s.statusNotification) WearSync.configFor(s, System.currentTimeMillis(), app.container.timetables) else null
         if (config == null) {
             nm.cancel(ID)
+            StatusTicker.stop()
             cancelRefresh(app)
             return
         }
@@ -107,8 +108,43 @@ object StatusNotification {
         ensureChannel(ctx)
         val now = Instant.now()
         val c = content(config, s, now, arabic)
-        runCatching { nm.notify(ID, build(ctx, app, c, now)) }
-        armRefresh(app, c.refreshAt)
+        val drawn = !systemDigitsMatch(s.numerals)
+        val f = Formatter(arabic, s.numerals, s.timeFormat)
+        runCatching { nm.notify(ID, build(ctx, app, c, now, if (drawn) f else null)) }
+        if (drawn) {
+            // Noor draws the seconds itself: every second while the screen is on, and at least every minute otherwise
+            // (non-waking: an asleep phone is not woken; the update runs when it wakes).
+            armRefresh(app, minOf(c.refreshAt, now.plusSeconds(60)))
+            StatusTicker.start(app, Ticking(ctx, app, c, f))
+        } else {
+            armRefresh(app, c.refreshAt)
+            StatusTicker.stop()
+        }
+    }
+
+    /** What the ticker needs to redraw the notification each second without recomputing the day. */
+    internal class Ticking(val ctx: Context, val app: Context, val content: Content, val f: Formatter)
+
+    /** Redraws the notification with Noor's own digits; false once its content is due for a full rebuild. */
+    internal fun tick(t: Ticking, now: Instant): Boolean {
+        if (!now.isBefore(t.content.refreshAt)) return false
+        runCatching { NotificationManagerCompat.from(t.app).notify(ID, build(t.ctx, t.app, t.content, now, t.f)) }
+        return true
+    }
+
+    /**
+     * The digits Android writes in its own countdown are those of the phone's language (Arabic-Indic for Arabic),
+     * whatever Noor's own setting. When they differ from the digits chosen in Noor, Noor draws the countdown itself.
+     */
+    fun systemDigitsMatch(numerals: com.noor.app.data.Numerals): Boolean {
+        val want = if (numerals == com.noor.app.data.Numerals.ARABIC_INDIC) '\u0660' else '0'
+        return systemZeroDigit() == want
+    }
+
+    /** The zero Android's Chronometer would write (the system locale's); replaceable in tests. */
+    internal var systemZeroDigit: () -> Char = {
+        val locale = android.content.res.Resources.getSystem().configuration.locales[0]
+        String.format(locale, "%d", 0).firstOrNull() ?: '0'
     }
 
     fun refreshAsync(context: Context) {
@@ -116,21 +152,25 @@ object StatusNotification {
         scope.launch { runCatching { refresh(app) } }
     }
 
-    internal fun build(ctx: Context, app: Context, c: Content, now: Instant): android.app.Notification {
+    /**
+     * The notification. [drawn]: Noor writes the countdown itself with these digits (see [systemDigitsMatch]);
+     * null: Android's Chronometer ticks it.
+     */
+    internal fun build(ctx: Context, app: Context, c: Content, now: Instant, drawn: Formatter? = null): android.app.Notification {
         val title = "${c.prayer}  ·  ${c.time}"
+        // Said once, in the header (0.9.8: the expanded view repeated it).
         val caption = ctx.getString(when { !c.elapsed -> R.string.next_prayer; c.sunrise -> R.string.since_sunrise; else -> R.string.since_prayer })
         val small = RemoteViews(app.packageName, R.layout.notification_status)
         small.setTextViewText(R.id.status_prayer, title)
         // The date first: if a place name is too long even for the smallest size, only the place is shortened here.
         small.setTextViewText(R.id.status_line, listOfNotNull(c.hijri, c.place).joinToString("  ·  "))
-        countdown(small, c, now)
+        countdown(small, c, now, drawn)
         val big = RemoteViews(app.packageName, R.layout.notification_status_big)
         big.setTextViewText(R.id.status_prayer, title)
-        big.setTextViewText(R.id.status_caption, caption)
         big.setTextViewText(R.id.status_place, c.place ?: "")
         big.setViewVisibility(R.id.status_place, if (c.place == null) android.view.View.GONE else android.view.View.VISIBLE)
         big.setTextViewText(R.id.status_hijri, c.hijri)
-        countdown(big, c, now)
+        countdown(big, c, now, drawn)
         val open = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return NotificationCompat.Builder(app, CHANNEL)
@@ -163,7 +203,15 @@ object StatusNotification {
      * countdown passes through "00:00" — never a wrong or doubled sign (a count-down with our own "−" would read
      * "−−00:01").
      */
-    private fun countdown(v: RemoteViews, c: Content, now: Instant) {
+    private fun countdown(v: RemoteViews, c: Content, now: Instant, drawn: Formatter?) {
+        if (drawn != null) {
+            v.setViewVisibility(R.id.status_countdown, android.view.View.GONE)
+            v.setViewVisibility(R.id.status_countdown_text, android.view.View.VISIBLE)
+            v.setTextViewText(R.id.status_countdown_text, c.countdown(now, drawn))
+            return
+        }
+        v.setViewVisibility(R.id.status_countdown_text, android.view.View.GONE)
+        v.setViewVisibility(R.id.status_countdown, android.view.View.VISIBLE)
         val base = SystemClock.elapsedRealtime() + Duration.between(now, c.countAt).toMillis()
         v.setChronometer(R.id.status_countdown, base, if (c.elapsed) "+%s" else null, true)
         v.setChronometerCountDown(R.id.status_countdown, false)
@@ -217,4 +265,37 @@ class StatusRefreshReceiver : BroadcastReceiver() {
             try { StatusNotification.refresh(app) } catch (_: Exception) { } finally { pending.finish() }
         }
     }
+}
+
+/**
+ * Ticks the notification each second while the screen is on, when Noor draws the countdown itself (0.9.8). Stops when
+ * the screen goes off, when the notification is turned off, or when Android's own digits match Noor's again. At each
+ * prayer, midnight or the end of a "+" period it asks for a full rebuild.
+ */
+internal object StatusTicker {
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    @Volatile private var current: StatusNotification.Ticking? = null
+    private val tick = object : Runnable {
+        override fun run() {
+            val t = current ?: return
+            val pm = t.app.getSystemService(android.os.PowerManager::class.java)
+            if (pm?.isInteractive == false) { stop(); return }
+            if (!StatusNotification.tick(t, Instant.now())) { current = null; StatusNotification.refreshAsync(t.app); return }
+            // On the next whole second, so the seconds change in step with the clock.
+            handler.postDelayed(this, 1000L - System.currentTimeMillis() % 1000L + 5L)
+        }
+    }
+
+    fun start(app: Context, t: StatusNotification.Ticking) {
+        handler.post {
+            current = t
+            handler.removeCallbacks(tick)
+            val pm = app.getSystemService(android.os.PowerManager::class.java)
+            if (pm?.isInteractive != false) handler.postDelayed(tick, 1000L - System.currentTimeMillis() % 1000L + 5L)
+        }
+    }
+
+    fun stop() { handler.post { current = null; handler.removeCallbacks(tick) } }
+
+    val running: Boolean get() = current != null
 }

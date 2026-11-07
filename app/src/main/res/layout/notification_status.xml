@@ -39,6 +39,20 @@
             android:maxLines="1"
             android:textDirection="ltr"
             android:textSize="25dp" />
+
+        <!-- 0.9.8: the same countdown drawn by Noor, in the digits chosen in Noor, when Android's own digits differ. -->
+        <TextView
+            android:id="@+id/status_countdown_text"
+            style="@style/TextAppearance.Compat.Notification.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:layout_marginStart="12dp"
+            android:fontFeatureSettings="tnum"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textDirection="ltr"
+            android:textSize="25dp" />
     </LinearLayout>
 
     <TextView

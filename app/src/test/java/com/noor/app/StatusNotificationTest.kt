@@ -57,26 +57,28 @@ class StatusNotificationTest {
         assertEquals(c.nextAt, c.countAt)
         // Rebuilt half a second after the prayer's time, when it has become "+ since".
         assertEquals(c.nextAt.plusMillis(500), c.refreshAt)
-        // 0.9.7: once Asr has come (15:14), + time since it for 20 minutes, then − to Maghrib.
+        // 0.9.7: once Asr has come (15:14), + time since it for a while (0.9.8: 30 minutes), then − to Maghrib.
         val asr = day(15, 29, 21)
         val a = StatusNotification.content(config, base, asr, arabic = false)
         assertEquals("Asr", a.prayer)
         assertEquals("3:14 PM", a.time)
         assertTrue(a.elapsed)
         assertEquals("+15:21", a.countdown(asr, f))
-        assertEquals(day(15, 34, 0).plusMillis(500), a.refreshAt)
-        assertEquals("Maghrib", StatusNotification.content(config, base, day(15, 34, 0).plusMillis(500), arabic = false).prayer)
-        // The second before Maghrib, the moment of it, and the end of its 10 minutes.
+        assertEquals(day(15, 44, 0).plusMillis(500), a.refreshAt)
+        assertEquals("Maghrib", StatusNotification.content(config, base, day(15, 44, 0).plusMillis(500), arabic = false).prayer)
+        // The second before Maghrib, the moment of it, and the end of its 15 minutes.
         assertEquals("\u221200:01", StatusNotification.content(config, base, day(17, 39, 59), false).countdown(day(17, 39, 59), f))
         StatusNotification.content(config, base, day(17, 40, 0), false).let {
             assertEquals("Maghrib", it.prayer); assertTrue(it.elapsed); assertEquals("+00:00", it.countdown(day(17, 40, 0), f))
-            assertEquals(day(17, 50, 0).plusMillis(500), it.refreshAt)
+            assertEquals(day(17, 55, 0).plusMillis(500), it.refreshAt)
         }
-        assertEquals("Isha", StatusNotification.content(config, base, day(17, 50, 1), false).prayer)
+        assertEquals("Isha", StatusNotification.content(config, base, day(17, 55, 1), false).prayer)
+        // Turned off in Settings: straight to the next prayer.
+        assertEquals("Isha", StatusNotification.content(config, base.copy(elapsedAfterPrayer = false), day(17, 41, 0), false).prayer)
         // The notification and the home screen say the same thing at every moment of two days, across midnight.
         var t = day(0, 0, 7)
         while (t.isBefore(day(0, 0, 7).plus(java.time.Duration.ofDays(2)))) {
-            val home = com.noor.app.ui.today.countdownText(com.noor.prayer.Countdowns.of(config.state(t), t), f)
+            val home = com.noor.app.ui.today.countdownText(com.noor.prayer.Countdowns.of(config.state(t), t, base.elapsedAfterPrayer), f)
             val n = StatusNotification.content(config, base, t, arabic = false)
             assertEquals(t.toString(), home, n.countdown(t, f))
             assertTrue(t.toString(), n.refreshAt.isAfter(t))
@@ -135,6 +137,34 @@ class StatusNotificationTest {
             val chrono = nn.contentView.apply(app, parent).findViewById<android.widget.Chronometer>(R.id.status_countdown)
             assertEquals(label, cm.countdown(moment, f), chrono.text.toString())
         }
+        // 0.9.8: Noor's digits, whatever the phone's language. A phone in Arabic writes Arabic-Indic digits in its own
+        // countdown; with Western digits chosen in Noor, Noor draws the countdown itself (and the other way round).
+        val original = StatusNotification.systemZeroDigit
+        try {
+            for ((system, numerals, drawn) in listOf(Triple('\u0660', com.noor.app.data.Numerals.WESTERN, true), Triple('0', com.noor.app.data.Numerals.WESTERN, false),
+                    Triple('0', com.noor.app.data.Numerals.ARABIC_INDIC, true), Triple('\u0660', com.noor.app.data.Numerals.ARABIC_INDIC, false))) {
+                StatusNotification.systemZeroDigit = { system }
+                assertEquals("$system $numerals", !drawn, StatusNotification.systemDigitsMatch(numerals))
+                val fd = com.noor.app.util.Formatter(false, numerals, base.timeFormat)
+                val moment = day(16, 0, 0)
+                val cm = StatusNotification.content(config, base.copy(numerals = numerals), moment, arabic = false)
+                val nn = StatusNotification.build(app, app, cm, moment, if (drawn) fd else null)
+                for (view in listOf(nn.contentView, nn.bigContentView)) {
+                    val v = view.apply(app, parent)
+                    val text = v.findViewById<android.widget.TextView>(R.id.status_countdown_text)
+                    val chrono = v.findViewById<android.widget.Chronometer>(R.id.status_countdown)
+                    assertEquals(drawn, text.visibility == android.view.View.VISIBLE)
+                    assertEquals(!drawn, chrono.visibility == android.view.View.VISIBLE)
+                    if (drawn) assertEquals(if (numerals == com.noor.app.data.Numerals.WESTERN) "\u22121:40:00" else "\u2212\u0661:\u0664\u0660:\u0660\u0660", text.text.toString())
+                }
+            }
+        } finally { StatusNotification.systemZeroDigit = original }
+        // The expanded view says what the countdown means once (in the header), not twice.
+        val bigView = posted.bigContentView.apply(app, parent)
+        val texts = ArrayList<String>()
+        fun collect(v: android.view.View) { if (v is android.widget.TextView && v.visibility == android.view.View.VISIBLE) texts += v.text.toString(); if (v is android.view.ViewGroup) for (i in 0 until v.childCount) collect(v.getChildAt(i)) }
+        collect(bigView)
+        assertTrue(texts.toString(), texts.none { it == "Next prayer" || it == "Time since the prayer began" })
         run {
             // Built 2 s before Maghrib, seen 1.2 s after it (the rebuild not yet done): "00:01", not "−−00:01".
             val cm = StatusNotification.content(config, base, day(17, 39, 58), arabic = false)

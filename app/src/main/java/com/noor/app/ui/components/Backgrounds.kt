@@ -69,11 +69,14 @@ fun GlassCard(
 @Composable
 fun ScreenTitle(title: String, subtitle: String? = null, leading: (@Composable () -> Unit)? = null) {
     val c = NoorTheme.colors
+    // Tightened letters suit Latin titles only: Arabic is joined writing, and Android measures spaced Arabic shorter
+    // than it draws it, so "الإعدادات" broke its last letter onto a second line (0.9.8).
+    val arabic = title.any { it in '\u0600'..'\u06FF' }
     Column(Modifier.padding(start = 4.dp, top = 10.dp, bottom = 2.dp)) {
         androidx.compose.material3.Text(title, style = androidx.compose.material3.MaterialTheme.typography.headlineLarge.copy(
             fontSize = androidx.compose.ui.unit.TextUnit(32f, androidx.compose.ui.unit.TextUnitType.Sp),
             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-            letterSpacing = androidx.compose.ui.unit.TextUnit(-0.4f, androidx.compose.ui.unit.TextUnitType.Sp)),
+            letterSpacing = androidx.compose.ui.unit.TextUnit(if (arabic) 0f else -0.4f, androidx.compose.ui.unit.TextUnitType.Sp)),
             color = c.textPrimary, modifier = Modifier.semantics { heading() })
         if (subtitle != null || leading != null) androidx.compose.foundation.layout.Row(
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp),

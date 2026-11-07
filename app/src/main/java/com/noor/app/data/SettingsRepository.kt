@@ -49,6 +49,7 @@ class SettingsRepository(private val context: Context) {
         val hijri = intPreferencesKey("hijri_adjust")
         val alerts = stringPreferencesKey("alerts_v1")
         val status = booleanPreferencesKey("status_notification")
+        val elapsed = booleanPreferencesKey("elapsed_after_prayer")
         fun offset(p: Prayer) = intPreferencesKey("offset_${p.name.lowercase()}")
     }
 
@@ -80,6 +81,7 @@ class SettingsRepository(private val context: Context) {
             hijriAdjust = p[K.hijri] ?: 0,
             alerts = AlertSettings.decode(p[K.alerts]),
             statusNotification = p[K.status] ?: false,
+            elapsedAfterPrayer = p[K.elapsed] ?: true,
         )
     }
 
@@ -104,6 +106,7 @@ class SettingsRepository(private val context: Context) {
     suspend fun setTimeFormat(f: TimeFormat) = context.dataStore.edit { it[K.timeFormat] = f.name }
     suspend fun setTheme(t: ThemeMode) = context.dataStore.edit { it[K.theme] = t.name }
     suspend fun setStatusNotification(on: Boolean) = context.dataStore.edit { it[K.status] = on }
+    suspend fun setElapsedAfterPrayer(on: Boolean) = context.dataStore.edit { it[K.elapsed] = on }
     suspend fun setHijriAdjust(d: Int) = context.dataStore.edit { it[K.hijri] = d.coerceIn(-2, 2) }
 
     /** Read-modify-write in one transaction, so quick successive changes never overwrite each other. */
