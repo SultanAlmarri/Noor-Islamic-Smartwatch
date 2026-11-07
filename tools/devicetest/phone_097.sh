@@ -19,7 +19,7 @@ HOOK=$PKG/com.noor.app.debug.TestHookReceiver
 mkdir -p "$OUT"
 log() { echo "[phone_097 $(date -u +%H:%M:%S)] $*" | tee -a "$OUT/steps.txt"; }
 adb() { timeout 90 "$(type -P adb)" "$@"; }
-shot() { adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes)"; }
+shot() { no_anr; adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes)"; }
 ready() {
   adb wait-for-device
   for _ in $(seq 1 150); do
@@ -28,8 +28,27 @@ ready() {
   done
   return 1
 }
+# The emulator's own launcher sometimes stops answering under the software GPU; its "isn't responding" dialog would
+# cover Noor. Background ANR dialogs are turned off, and any that still shows is closed.
+no_anr() {
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/ui.xml" >/dev/null 2>&1
+  if grep -q "isn't responding" "$OUT/ui.xml" 2>/dev/null; then
+    local xy; xy=$(python3 - "$OUT/ui.xml" <<'PY'
+import re, sys
+x = open(sys.argv[1], encoding='utf-8').read()
+for m in re.finditer(r'<node[^>]*>', x):
+    n = m.group(0)
+    if re.search(r'text="(Wait|Close app)"', n):
+        b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+        x1, y1, x2, y2 = map(int, b.groups()); print((x1 + x2) // 2, (y1 + y2) // 2); break
+PY
+)
+    [ -n "$xy" ] && adb shell input tap $xy && log "closed an 'isn't responding' dialog"; sleep 1
+  fi
+}
 # Taps the centre of the first element whose text or description contains $1 (uiautomator).
 tap_text() {
+  no_anr
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/ui.xml" >/dev/null 2>&1
   local xy; xy=$(python3 - "$OUT/ui.xml" "$1" <<'PY'
 import re, sys
@@ -52,6 +71,8 @@ adb root >/dev/null 2>&1; sleep 3; ready
 adb shell settings put global auto_time 0
 adb shell settings put system screen_off_timeout 1800000
 adb shell svc power stayon true
+adb shell settings put secure anr_show_background 0
+adb shell settings put global anr_show_background 0
 adb install -r -g "$APK" | tail -1
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
 adb shell appops set $PKG SCHEDULE_EXACT_ALARM allow 2>/dev/null

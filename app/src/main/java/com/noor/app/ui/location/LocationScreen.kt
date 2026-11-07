@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -147,6 +148,9 @@ fun LocationScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Locati
         val dir = (if (forward) 1 else -1) * (if (rtl) -1 else 1)
         (slideInHorizontally(tween(260)) { it / 5 * dir } + fadeIn(tween(220))) togetherWith (slideOutHorizontally(tween(220)) { -it / 6 * dir } + fadeOut(tween(160)))
     }, label = "locStep") { step ->
+        // Lists and cards keep a readable width on wide screens (a foldable's inner screen, tablets); the map fills it.
+        if (step is LocStep.MapPick) MapPane(vm, step.start, step.zoom, onBack = { pop() }, onPinned = { p -> vm.pin(p); push(LocStep.Confirm) })
+        else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) { Box(Modifier.widthIn(max = 640.dp).fillMaxSize()) {
         when (step) {
             LocStep.Home -> HomePane(contentPadding, vm, onBack = { pop() }, onCountries = { push(LocStep.Countries) },
                 onMap = { push(LocStep.MapPick(it, if (it == null) 2.5 else 12.0)) }, onCoords = { coordsDialog = true },
@@ -156,10 +160,11 @@ fun LocationScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Locati
                 onCity = { city, areas -> if (areas.isEmpty()) { vm.pick(city); push(LocStep.Confirm) } else push(LocStep.Areas(city, areas)) })
             is LocStep.Areas -> AreasPane(contentPadding, vm, step.city, step.areas, onBack = { pop() },
                 onPick = { vm.pick(it); push(LocStep.Confirm) }, onMap = { push(LocStep.MapPick(step.city.point, 13.5)) })
-            is LocStep.MapPick -> MapPane(vm, step.start, step.zoom, onBack = { pop() }, onPinned = { p -> vm.pin(p); push(LocStep.Confirm) })
+            is LocStep.MapPick -> {}
             LocStep.Confirm -> ConfirmPane(contentPadding, vm, onBack = { pop() },
                 onAdjust = { p -> push(LocStep.MapPick(p, 16.0)) }, onSaved = onDone)
         }
+        } }
     }
     if (coordsDialog) CoordinatesDialog(onDismiss = { coordsDialog = false }, onPoint = { p -> coordsDialog = false; vm.pin(p); push(LocStep.Confirm) })
 }
