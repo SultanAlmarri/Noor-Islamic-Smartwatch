@@ -164,8 +164,11 @@ float4 render(float2 fc) {
                 float3 c = shade(fc, i, topY, slope);
                 if (i == 4) {
                     // The nearest land is the page: it fades into the page colour, exactly so at the bottom edge.
-                    float t = smoothstep(topY + 6.0 * uDp, uSize.y - 2.0 * uDp, fc.y);
-                    c = mix(mix(c, uPage, 0.55), uPage, t);
+                    // Mixed in linear light, so a dark dune meets a light page without a muddy grey band.
+                    float t = smoothstep(topY + 4.0 * uDp, uSize.y - 2.0 * uDp, fc.y);
+                    float3 cl = pow(sat3(c), float3(2.2));
+                    float3 pl = pow(sat3(uPage), float3(2.2));
+                    c = pow(mix(mix(cl, pl, 0.22), pl, t * t * (3.0 - 2.0 * t)), float3(1.0 / 2.2));
                 }
                 acc += float4(c, 1.0) * cov * (1.0 - acc.a);
             }
