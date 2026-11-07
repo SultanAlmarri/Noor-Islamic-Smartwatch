@@ -147,6 +147,9 @@ fun LocationScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Locati
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     LaunchedEffect(top) { keyboard?.hide(); focus.clearFocus() }
+    // The map's tiles stay in memory while the location screens are open (map ↔ confirmation), then are let go.
+    val tiles = rememberTileCache()
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { tiles.release() } }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     AnimatedContent(top, transitionSpec = {
         val forward = stack.indexOf(targetState) >= stack.indexOf(initialState) && targetState != initialState

@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
@@ -128,6 +129,18 @@ class MapState(center: GeoPoint, zoom: Double) {
         }
     }
 
+    private var shownLevel = -1
+
+    /**
+     * The tile level drawn: a whole number near the zoom, changing only once the zoom is clearly past the middle
+     * (so a pinch that hovers around a level does not switch tiles back and forth).
+     */
+    internal fun level(): Int {
+        val z = zoom
+        if (shownLevel < 0 || z > shownLevel + 0.8 || z < shownLevel - 0.3) shownLevel = floor(z + 0.3).toInt().coerceIn(1, 19)
+        return shownLevel
+    }
+
     fun jumpTo(p: GeoPoint, toZoom: Double = zoom) { x = Mercator.x(p.longitude); y = Mercator.y(p.latitude); zoom = toZoom.coerceIn(MIN_ZOOM, MAX_ZOOM) }
 
     companion object {
@@ -137,55 +150,89 @@ class MapState(center: GeoPoint, zoom: Double) {
     }
 }
 
-/** Tiles in memory (about 40 MB at most) and on disk (the app's cache folder, kept 30 days). */
-class TileCache(context: Context) {
+/**
+ * Map tiles (0.9.8): kept in memory (up to a sixth of the app's memory, at most 96 MB; photographs decoded at half the
+ * memory of labels) and on disk (the app's cache folder, 30 days, about 150 MB). One cache for the whole app, so moving
+ * between the map and the confirmation never starts again from nothing.
+ *
+ * Loading: each frame says which tiles it wants and how much (the ones in the middle of the screen at the current
+ * zoom first, then the coarser level underneath and a ring around the screen). Six workers always take the most wanted
+ * tile that is still wanted: tiles that went off screen while the map moved are not fetched. A tile that failed is
+ * tried again a few seconds later.
+ */
+class TileCache private constructor(context: Context) {
     private val dir = File(context.cacheDir, "map-tiles")
-    private val memory = object : LruCache<String, ImageBitmap>(40 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    private val memory = object : LruCache<String, ImageBitmap>(
+        (Runtime.getRuntime().maxMemory() / 6).coerceIn(24L * 1024 * 1024, 96L * 1024 * 1024).toInt()) {
+        override fun sizeOf(key: String, value: ImageBitmap) = value.asAndroidBitmap().allocationByteCount
     }
-    private val failed = HashSet<String>()
+    private val lock = Any()
+    /** Wanted this frame: url → priority (lower first). */
+    private var wanted = HashMap<String, Float>()
     private val loading = HashSet<String>()
-    private val gate = Semaphore(6)
+    private val failedAt = HashMap<String, Long>()
+    private val wake = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /** Bumped when a tile arrives, to redraw. */
     var version by mutableIntStateOf(0)
-    /** True once a tile could not be fetched (no network): the screen says so. */
+    /** True while tiles cannot be fetched (no network): the screen says so. */
     var offline by mutableStateOf(false)
+
+    init {
+        repeat(WORKERS) { scope.launch { work() } }
+    }
 
     fun get(url: String): ImageBitmap? = memory.get(url)
 
-    fun request(url: String) {
+    /** Starts a frame's list of wanted tiles. */
+    fun beginFrame() = synchronized(lock) { wanted = HashMap(wanted.size) }
+
+    /** Asks for a tile; [priority] lower is sooner. */
+    fun want(url: String, priority: Float) {
         if (!networkAllowed) { offline = true; return }
-        synchronized(this) { if (memory.get(url) != null || url in loading || url in failed) return; loading += url }
-        scope.launch {
-            val bmp = gate.withPermit { runCatching { load(url) }.getOrNull() }
-            synchronized(this@TileCache) { loading -= url; if (bmp == null) failed += url }
-            if (bmp != null) { memory.put(url, bmp); offline = false } else offline = true
-            withContext(Dispatchers.Main) { version++ }
+        if (memory.get(url) != null) return
+        synchronized(lock) {
+            val prev = wanted[url]
+            if (prev == null || priority < prev) wanted[url] = priority
         }
     }
 
-    /** Lets tiles that failed be tried again (when the user moves the map after the network came back). */
-    fun retryFailed() = synchronized(this) { failed.clear() }
+    /** Ends a frame: wakes the workers. */
+    fun endFrame() { wake.trySend(Unit) }
+
+    private suspend fun work() {
+        while (true) {
+            val url = synchronized(lock) {
+                val now = System.currentTimeMillis()
+                wanted.entries.asSequence()
+                    .filter { it.key !in loading && memory.get(it.key) == null && (failedAt[it.key]?.let { t -> now - t > RETRY_MS } ?: true) }
+                    .minByOrNull { it.value }?.key?.also { loading += it }
+            }
+            if (url == null || paused) { if (url != null) synchronized(lock) { loading -= url }; wake.receive(); continue }
+            val bmp = runCatching { load(url) }.getOrNull()
+            synchronized(lock) { loading -= url; if (bmp == null) failedAt[url] = System.currentTimeMillis() else failedAt.remove(url) }
+            if (bmp != null) { memory.put(url, bmp); offline = false } else offline = true
+            withContext(Dispatchers.Main) { version++ }
+            if (bmp == null) { kotlinx.coroutines.delay(400); wake.trySend(Unit) }
+        }
+    }
 
     private fun load(url: String): ImageBitmap? {
         val f = File(dir, url.substringAfter("/services/").replace('/', '_'))
+        val opaque = !url.contains("/Reference/")
+        val opts = BitmapFactory.Options().apply { inPreferredConfig = if (opaque) android.graphics.Bitmap.Config.RGB_565 else android.graphics.Bitmap.Config.ARGB_8888 }
         if (f.exists() && System.currentTimeMillis() - f.lastModified() < 30L * 24 * 3600 * 1000) {
-            BitmapFactory.decodeFile(f.path)?.let { return it.asImageBitmap() }
+            BitmapFactory.decodeFile(f.path, opts)?.let { it.prepareToDraw(); return it.asImageBitmap() }
         }
         val c = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 8_000; readTimeout = 10_000; setRequestProperty("User-Agent", WorldStore.USER_AGENT)
         }
         if (c.responseCode != 200) return null
         val bytes = c.inputStream.use { it.readBytes() }
-        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return null
+        bmp.prepareToDraw()
         runCatching { dir.mkdirs(); f.writeBytes(bytes) }
         return bmp.asImageBitmap()
-    }
-
-    companion object {
-        /** Off in tests: no tile is fetched and the map says it is offline. */
-        @Volatile var networkAllowed = true
     }
 
     /** Keeps the disk cache under about 150 MB, removing the oldest tiles. */
@@ -194,11 +241,31 @@ class TileCache(context: Context) {
         var total = files.sumOf { it.length() }
         for (f in files) { if (total < 150L * 1024 * 1024) break; total -= f.length(); f.delete() }
     }
+
+    /** For tests: a tile as if it had been loaded. */
+    internal fun put(url: String, img: ImageBitmap) { memory.put(url, img) }
+
+    /** For tests: what is wanted now, most wanted first. */
+    internal fun wantedNow(): List<String> = synchronized(lock) { wanted.entries.sortedBy { it.value }.map { it.key } }
+
+    /** Lets go of the tiles in memory (the location screens are closed). */
+    fun release() = memory.evictAll()
+
+    companion object {
+        private const val WORKERS = 6
+        private const val RETRY_MS = 4_000L
+        /** Off in tests: no tile is fetched and the map says it is offline. */
+        @Volatile var networkAllowed = true
+        /** In tests: tiles are wanted (and listed) but not fetched. */
+        @Volatile internal var paused = false
+        @Volatile private var instance: TileCache? = null
+        fun get(context: Context): TileCache = instance ?: synchronized(this) { instance ?: TileCache(context.applicationContext).also { instance = it } }
+    }
 }
 
 /**
- * A slippy map: drag to move, pinch or double-tap to zoom, fling to glide. Missing tiles are drawn from a coarser
- * zoom until they arrive, so the picture never goes blank.
+ * A slippy map: drag to move, pinch or double-tap to zoom, fling to glide. Nothing goes blank while tiles load: the
+ * coarser level is always drawn underneath (and finer tiles already loaded fill in when zooming out).
  */
 @Composable
 fun TileMap(state: MapState, layer: MapLayer, cache: TileCache, modifier: Modifier = Modifier) {
@@ -220,7 +287,6 @@ fun TileMap(state: MapState, layer: MapLayer, cache: TileCache, modifier: Modifi
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
                 state.moving = true
-                cache.retryFailed()
                 val tracker = VelocityTracker()
                 var multi = false
                 do {
@@ -246,46 +312,75 @@ fun TileMap(state: MapState, layer: MapLayer, cache: TileCache, modifier: Modifi
             state.size = IntSize(size.width.toInt(), size.height.toInt())
             @Suppress("UNUSED_VARIABLE") val v = cache.version // redraw when a tile arrives
             drawRect(Color(0xFF0B1A2A))
-            for (url in layer.urls) drawLayer(state, url, cache)
+            val level = state.level()
+            cache.beginFrame()
+            layer.urls.forEachIndexed { i, url -> drawLayer(state, url, cache, level, layerPriority = i * 0.5f) }
+            cache.endFrame()
         }
     }
 }
 
-private fun DrawScope.drawLayer(state: MapState, template: String, cache: TileCache) {
-    val zi = floor(state.zoom + 0.35).toInt().coerceIn(1, 19)
+private fun tileUrl(template: String, z: Int, x: Int, y: Int) = template.replace("{z}", "$z").replace("{x}", "$x").replace("{y}", "$y")
+
+private fun DrawScope.drawLayer(state: MapState, template: String, cache: TileCache, zi: Int, layerPriority: Float) {
     val n = 1 shl zi
     val tile = (state.tilePx * 2.0.pow(state.zoom - zi)).toFloat()
     val worldX = state.x * n * tile; val worldY = state.y * n * tile
     val left = worldX - size.width / 2; val top = worldY - size.height / 2
     val x0 = floor(left / tile).toInt(); val x1 = floor((left + size.width) / tile).toInt()
     val y0 = floor(top / tile).toInt().coerceAtLeast(0); val y1 = floor((top + size.height) / tile).toInt().coerceAtMost(n - 1)
+    val cx = (x0 + x1) / 2f; val cy = (y0 + y1) / 2f
     for (ty in y0..y1) for (tx in x0..x1) {
         val wx = ((tx % n) + n) % n
         val dx = (tx * tile - left).toFloat(); val dy = (ty * tile - top).toFloat()
-        val url = template.replace("{z}", "$zi").replace("{x}", "$wx").replace("{y}", "$ty")
+        val dst = IntOffset(dx.roundToInt(), dy.roundToInt())
+        val dstSize = IntSize((dx + tile).roundToInt() - dst.x, (dy + tile).roundToInt() - dst.y)
+        val url = tileUrl(template, zi, wx, ty)
         val img = cache.get(url)
-        if (img != null) {
-            drawImage(img, dstOffset = IntOffset(dx.roundToInt(), dy.roundToInt()), dstSize = IntSize((dx + tile).roundToInt() - dx.roundToInt(), (dy + tile).roundToInt() - dy.roundToInt()))
-            continue
-        }
-        cache.request(url)
-        // Meanwhile, the same area from a coarser tile, enlarged.
-        for (up in 1..4) {
+        if (img != null) { drawImage(img, dstOffset = dst, dstSize = dstSize); continue }
+        // Wanted most in the middle of the screen.
+        cache.want(url, layerPriority + kotlin.math.hypot((tx - cx).toDouble(), (ty - cy).toDouble()).toFloat())
+        // Meanwhile, finer tiles already loaded (zooming out), else the same area from a coarser tile, enlarged.
+        if (drawChildren(template, cache, zi, wx, ty, dst, dstSize)) continue
+        for (up in 1..6) {
             val pz = zi - up; if (pz < 0) break
             val k = 1 shl up
-            val px = wx / k; val py = ty / k
-            val parent = cache.get(template.replace("{z}", "$pz").replace("{x}", "$px").replace("{y}", "$py")) ?: continue
+            val parent = cache.get(tileUrl(template, pz, wx / k, ty / k))
+            if (parent == null) {
+                // The next level up is wanted too, so zooming out always has something to show.
+                if (up == 1) cache.want(tileUrl(template, pz, wx / k, ty / k), layerPriority + 20f)
+                continue
+            }
             val sub = parent.width / k
-            drawImage(parent, srcOffset = IntOffset((wx % k) * sub, (ty % k) * sub), srcSize = IntSize(sub, sub),
-                dstOffset = IntOffset(dx.roundToInt(), dy.roundToInt()), dstSize = IntSize((dx + tile).roundToInt() - dx.roundToInt(), (dy + tile).roundToInt() - dy.roundToInt()))
+            drawImage(parent, srcOffset = IntOffset((wx % k) * sub, (ty % k) * sub), srcSize = IntSize(sub, sub), dstOffset = dst, dstSize = dstSize)
             break
         }
     }
+    // A ring of tiles just outside the screen, so a short pan finds them ready.
+    for (ty in (y0 - 1)..(y1 + 1)) for (tx in (x0 - 1)..(x1 + 1)) {
+        if (ty in y0..y1 && tx in x0..x1) continue
+        if (ty < 0 || ty >= n) continue
+        cache.want(tileUrl(template, zi, ((tx % n) + n) % n, ty), layerPriority + 40f)
+    }
 }
 
-/** A tile cache for the screen, kept while it is shown. */
+/** Draws the four finer tiles of a tile if all are in memory; true if it did. */
+private fun DrawScope.drawChildren(template: String, cache: TileCache, zi: Int, x: Int, y: Int, dst: IntOffset, dstSize: IntSize): Boolean {
+    if (zi >= 19) return false
+    val kids = (0..1).flatMap { j -> (0..1).map { i -> cache.get(tileUrl(template, zi + 1, x * 2 + i, y * 2 + j)) } }
+    if (kids.any { it == null }) return false
+    val hw = dstSize.width / 2; val hh = dstSize.height / 2
+    kids.forEachIndexed { k, img ->
+        val i = k % 2; val j = k / 2
+        drawImage(img!!, dstOffset = IntOffset(dst.x + i * hw, dst.y + j * hh),
+            dstSize = IntSize(if (i == 0) hw else dstSize.width - hw, if (j == 0) hh else dstSize.height - hh))
+    }
+    return true
+}
+
+/** The app's tile cache. */
 @Composable
 fun rememberTileCache(): TileCache {
     val context = LocalContext.current.applicationContext
-    return remember { TileCache(context) }
+    return remember { TileCache.get(context) }
 }
