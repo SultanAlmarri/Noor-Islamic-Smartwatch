@@ -143,12 +143,24 @@ shot qibla_at_the_limit
 wait $REC; sleep 1
 adb pull /sdcard/qibla.mp4 "$OUT/qibla_at_the_limit.mp4" >/dev/null && log "recorded qibla"
 
-# ---- The Adhan's full-screen alert (a 20-second test alert, screen off).
+# ---- The Adhan's full-screen alert (a 20-second test alert, screen off, exact alarms allowed as on the owner's phone).
+for _ in 1 2 3 4 5; do
+  adb shell appops set $PKG SCHEDULE_EXACT_ALARM allow
+  adb shell appops get $PKG SCHEDULE_EXACT_ALARM | grep -q allow && break; sleep 2
+done
+adb shell appops set $PKG USE_FULL_SCREEN_INTENT allow 2>/dev/null
+adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; sleep 4
 adb logcat -c
 adb shell am broadcast -a com.noor.smartwatch.debug.SETUP --ei seconds 20 --ei max 30 --es prayer MAGHRIB -n $HOOK >/dev/null; sleep 3
-adb shell input keyevent KEYCODE_SLEEP; sleep 24
+adb logcat -d -s NoorE2E:I | grep SETUP | tee -a "$OUT/steps.txt"
+adb shell input keyevent KEYCODE_SLEEP
+for _ in $(seq 1 40); do adb shell dumpsys activity activities | grep -q "AdhanAlertActivity" && break; sleep 1; done
+adb shell dumpsys activity activities | grep -m3 "AdhanAlertActivity" | tee -a "$OUT/steps.txt"
+sleep 3
 shot adhan_full_screen
-adb shell input keyevent KEYCODE_WAKEUP; sleep 2; shot adhan_full_screen_awake
+adb shell dumpsys audio | grep -E "USAGE_ALARM" | grep -m2 "state:started" | tee -a "$OUT/steps.txt"
+sleep 30
+adb shell input keyevent KEYCODE_WAKEUP; sleep 2
 
 adb logcat -d | grep -E "AndroidRuntime|FATAL|NoorE2E" > "$OUT/app_log.txt" || true
 log "done"
