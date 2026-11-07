@@ -61,6 +61,8 @@ class NoorApplication : Application(), AlertHost {
         container = AppContainer(this)
         container.wear.start(container.scope)
         AlertNotifications.ensureChannels(this)
+        // The home sky's tables (a fraction of a second), built in the background before the first screen needs them.
+        container.scope.launch(kotlinx.coroutines.Dispatchers.Default) { com.noor.app.ui.today.Atmosphere.warmUp() }
         container.scope.launch {
             val s = container.settings.current()
             LocationWorker.sync(this@NoorApplication, s.backgroundUpdates && container.location.hasBackgroundPermission())

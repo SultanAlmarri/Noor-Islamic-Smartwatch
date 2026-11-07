@@ -92,10 +92,14 @@ internal class SkyLight(val lut: IntArray, val light: Atmosphere.Light, val key:
             (look.elevation * 50).toInt(), (look.sunAzimuth * 500).toInt(), (look.drawAltitude * 500).toInt(), (view.fov * 100).toInt(), capAlt.toInt(),
         )
 
+        /** The last one computed: coming back to the home tab shows it at once. */
+        @Volatile private var last: SkyLight? = null
+
         fun compute(k: Key): SkyLight {
+            last?.let { if (it.key == k) return it }
             val lut = IntArray(Atmosphere.NX * Atmosphere.NY)
             val light = Atmosphere.frame(k.elevation / 50.0, k.azimuth / 500.0, k.drawAltitude / 500.0, k.fov / 100.0, k.capAltitude.toDouble(), lut)
-            return SkyLight(lut, light, k)
+            return SkyLight(lut, light, k).also { last = it }
         }
     }
 }
