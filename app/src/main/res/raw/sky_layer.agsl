@@ -150,38 +150,46 @@ float4 banks(float3 v) {
 // warms them from below. Farther clouds are smaller, lower, slower and paler with the haze. They keep to the band of
 // sky below the text.
 
-float cloudDensity(float2 rel, float W, float H, float fi, float2 seed) {
+// Android's shader compiler unrolls every loop and inlines every call when it sizes a program, and refuses programs
+// beyond about 100 000 operations: the clouds are written to stay far below that (four clouds, six billows each, three
+// octaves of detail, three light samples), which also keeps them cheap to draw. (Loop bounds must be literals.)
+
+// The heap of billows of cloud [fi]: positive inside, about 1 at the heart.
+float cloudShape(float2 rel, float W, float H, float fi, float k) {
     float shape = -1.0;
-    for (int j = 0; j < 8; j++) {
+    for (int j = 0; j < 6; j++) {
         float fj = float(j);
-        float hj = hash12(float2(fi * 9.0 + fj, 5.0) + seed);
-        float hk = hash12(float2(fi * 9.0 + fj, 6.0) + seed);
-        float u;
-        float r;
-        float cy;
-        if (j < 5) {
-            u = (fj + 0.5) / 5.0;
-            r = H * (0.40 + 0.36 * sin(PI * u) + 0.16 * hj);
-            cy = -r * (0.55 + 0.15 * hk);
-        } else {
-            u = 0.25 + 0.5 * (fj - 5.0 + 0.5) / 3.0 + (hj - 0.5) * 0.15;
-            r = H * (0.34 + 0.24 * hj);
-            cy = -H * (0.80 + 0.40 * hk) - r * 0.2;
-        }
+        float hj = hash11(fi * 13.0 + fj * 3.7 + k);
+        float hk = hash11(fi * 7.0 + fj * 5.3 + k * 1.7);
+        float low = step(fj, 3.5);
+        // Four billows along the base, biggest in the middle; two towers on top.
+        float u = low > 0.5 ? (fj + 0.5) / 4.0 : 0.30 + 0.40 * (fj - 4.0) + (hj - 0.5) * 0.12;
+        float r = low > 0.5 ? H * (0.42 + 0.40 * sin(PI * u) + 0.14 * hj) : H * (0.38 + 0.24 * hj);
+        float cy = low > 0.5 ? -r * (0.55 + 0.15 * hk) : -H * (0.85 + 0.40 * hk) - r * 0.2;
         float2 q = (rel - float2((u - 0.5) * W * 0.84, cy)) / r;
         shape = max(shape, 1.0 - dot(q, q));
     }
-    // Billows within billows: turbulent noise, finer near the edges.
-    float2 lp = rel / (H * 0.42) + float2(fi * 3.3, 0.0) + seed;
-    float2 drift = float2(uTime * 0.010, -uTime * 0.006);
+    return shape;
+}
+
+// Turbulent noise for the billows within billows; [oct] octaves (1 to 3).
+float billows(float2 p, int oct) {
     float n = 0.0;
     float a = 0.5;
-    float2 p = lp + drift;
-    for (int k = 0; k < 4; k++) {
-        n += a * abs(vnoise(p) * 2.0 - 1.0);
-        p = ROT * p * 2.1 + float2(1.7, 9.2);
+    for (int k = 0; k < 3; k++) {
+        if (k < oct) {
+            n += a * abs(vnoise(p) * 2.0 - 1.0);
+            p = ROT * p * 2.1 + float2(1.7, 9.2);
+        }
         a *= 0.5;
     }
+    return n;
+}
+
+float cloudDensity(float2 rel, float W, float H, float fi, float k, int oct) {
+    float shape = cloudShape(rel, W, H, fi, k);
+    float2 lp = rel / (H * 0.42) + float2(fi * 3.3, k) + float2(uTime * 0.010, -uTime * 0.006);
+    float n = billows(lp, oct) * (oct >= 3 ? 1.0 : 1.15);
     // Worn more at the top than along the base.
     float top = sat(-rel.y / (H * 1.8));
     float d = shape * 1.4 - (n - 0.20) * (0.7 + 0.6 * top);
@@ -190,53 +198,55 @@ float cloudDensity(float2 rel, float W, float H, float fi, float2 seed) {
     return max(d, 0.0) * 1.6 * base;
 }
 
+// Cumulus: a few clouds at different distances. Each is a density field lit like vapour: light is marched through
+// it towards the Sun, so the side facing it glows and the body falls into soft shade; thin edges against a Sun behind
+// them are silvered; a low Sun warms them from below. Farther clouds are smaller, lower, slower and paler with the
+// haze. They keep to the band of sky below the text.
 float4 cumulusSprites(float2 fc, float3 v, float3 sunL, float3 sky) {
     float cover = uWeather.x;
     if (cover <= 0.001) return float4(0.0);
-    float count = floor(2.0 + cover * 9.0);
+    float count = min(floor(2.0 + cover * 5.0), 4.0);
     float band = max(uHorizon - uCloudTop, 40.0 * uDp);
     float unit = band / 90.0;
     float strip = uSize.x * 1.7;
-    float mu = dot(v, uSunDir);
-    float silverPhase = hg(mu, 0.75);
+    float silverPhase = hg(dot(v, uSunDir), 0.72);
     float lowSun = 1.0 - smoothstep(-0.02, 0.20, sunL.y);
+    float k = uWeather.z * 0.731 + uWeather.w * 0.377;
     float3 col = float3(0.0);
     float alpha = 0.0;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 4; i++) {
         float fi = float(i);
         if (fi < count) {
-            float h1 = hash12(float2(fi, 1.0) + uWeather.zw);
-            float h2 = hash12(float2(fi, 2.0) + uWeather.zw);
-            float h3 = hash12(float2(fi, 3.0) + uWeather.zw);
-            float h4 = hash12(float2(fi, 4.0) + uWeather.zw);
+            float h1 = hash11(fi * 1.31 + k);
+            float h2 = hash11(fi * 2.71 + k * 1.3);
+            float h3 = hash11(fi * 3.97 + k * 0.7);
+            float h4 = hash11(fi * 5.13 + k * 2.1);
             float depth = 1.0 - (fi + 0.6 * h1) / max(count, 1.0);
             float s = mix(1.0, 0.36, depth) * unit;
             float speed = (0.8 + 1.5 * (1.0 - depth)) * uDp;
             float cx = mod(h4 * strip + uTime * speed, strip) - (strip - uSize.x) * 0.5;
             float yb = uHorizon - (4.0 + 34.0 * pow(1.0 - depth, 1.3) + 8.0 * h1) * unit * uDp;
-            float W = (90.0 + 80.0 * h2) * s * uDp;
             // As tall as the band below the text allows: a cloud is never cut by the text's edge.
             float H = min((26.0 + 20.0 * h3) * s * uDp, max(yb - uCloudTop, 0.0) / 2.05);
-            W = min(W, H * 5.5);
+            float W = min((90.0 + 80.0 * h2) * s * uDp, H * 5.5);
             float2 rel = fc - float2(cx, yb);
             if (H > 4.0 * uDp && abs(rel.x) < W * 0.64 && rel.y < 4.0 * uDp && rel.y > -H * 2.0) {
-                float d = cloudDensity(rel, W, H, fi, uWeather.zw);
+                float d = cloudDensity(rel, W, H, fi, k, 3);
                 if (d > 0.002) {
-                    // March towards the Sun (on screen, biased upwards when it is high) to see how much vapour
-                    // stands in the way.
+                    // Towards the Sun (on screen, upwards when it is high): how much vapour stands in the way?
                     float2 toSun = uSunPos - fc;
                     float2 ld = normalize(toSun / max(length(toSun), 1.0) * 0.7 + float2(0.0, -1.0) * sat(sunL.y * 1.5) * 0.6 + float2(0.0, 0.001));
-                    float stepL = H * 0.09;
+                    float stepL = H * 0.16;
                     float tau = 0.0;
-                    for (int k = 1; k <= 5; k++) {
-                        tau += cloudDensity(rel + ld * stepL * float(k) * float(k) * 0.5, W, H, fi, uWeather.zw) * float(k) * 0.5;
+                    for (int j = 1; j <= 3; j++) {
+                        float fj = float(j);
+                        tau += cloudDensity(rel + ld * stepL * fj * fj * 0.75, W, H, fi, k, 1) * fj * 0.75;
                     }
                     float light = exp(-tau * 0.55);
                     float a = 1.0 - exp(-d * 3.5);
                     float lift = sat(-rel.y / (H * 1.6));
                     float under = lowSun * (1.0 - lift) * 0.7 * exp(-tau * 0.15);
-                    float thin = exp(-d * 2.5);
-                    float rim = thin * light * silverPhase;
+                    float rim = exp(-d * 2.5) * light * silverPhase;
                     float3 c = uSunCloud * (light * 1.7 + rim * 12.0 + under)
                         + mix(uAmbLow * 0.85, uAmbTop * 1.5, lift) * (0.55 + 0.45 * light);
                     float3 cd = mix(tone(c), sky, 0.06 + 0.50 * depth * depth);
@@ -259,7 +269,7 @@ float4 render(float2 fc) {
 
     // Night: the Milky Way, then the stars.
     if (uNight > 0.0) {
-        col += milkyWay(fc, alt) * uMilky;
+        if (uMilky > 0.0) col += milkyWay(fc, alt) * uMilky;
         col += stars(fc, alt) * uNight;
     }
 

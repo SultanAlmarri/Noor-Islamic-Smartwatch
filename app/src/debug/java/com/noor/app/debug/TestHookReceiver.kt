@@ -35,6 +35,8 @@ class TestHookReceiver : BroadcastReceiver() {
                     "com.noor.smartwatch.debug.CITY" -> {
                         app.container.settings.setOnboardingDone()
                         app.container.settings.setManualCity(intent.getStringExtra("city") ?: "dxb")
+                        // The emulator's software GPU is slow: keep the GPU sky at full quality so it is what gets photographed.
+                        app.getSharedPreferences("noor_ui", 0).edit().putBoolean("sky_quality_locked", true).putInt("sky_quality", 0).commit()
                         Log.i(TAG, "CITY done ${intent.getStringExtra("city")}")
                     }
                     "com.noor.smartwatch.debug.DUMP" -> AlertLog.all(app).forEach { r ->

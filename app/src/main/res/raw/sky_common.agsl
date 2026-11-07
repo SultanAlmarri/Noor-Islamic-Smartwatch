@@ -63,8 +63,10 @@ float fbm4(float2 p, float4 w) {
     float n = 0.0;
     for (int i = 0; i < 4; i++) {
         float wi = i == 0 ? w.x : (i == 1 ? w.y : (i == 2 ? w.z : w.w));
-        s += a * wi * vnoise(p);
-        n += a * wi;
+        if (wi > 0.0) {
+            s += a * wi * vnoise(p);
+            n += a * wi;
+        }
         p = ROT * p * 2.03 + float2(17.1, 9.2);
         a *= 0.5;
     }

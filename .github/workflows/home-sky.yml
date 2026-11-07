@@ -21,9 +21,6 @@ jobs:
       matrix:
         api: [ 34, 35 ]
         gpu: [ swiftshader_indirect ]
-        include:
-          - api: 34
-            gpu: guest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5

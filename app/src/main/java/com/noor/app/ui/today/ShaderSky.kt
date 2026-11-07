@@ -62,13 +62,16 @@ float4 ridgeTex(float2 p) { return float4(ridges.eval(p)); }
 
         private fun read(res: Resources, id: Int) = res.openRawResource(id).bufferedReader().use { it.readText() }
 
+        /** The full AGSL of the sky and the land shaders, as compiled. */
+        fun sources(res: Resources): Pair<String, String> = sources ?: run {
+            val common = read(res, R.raw.sky_common)
+            (SKY_HEAD + common + read(res, R.raw.sky_layer) + FOOT to LAND_HEAD + common + read(res, R.raw.land_layer) + FOOT).also { sources = it }
+        }
+
         fun create(res: Resources): SkyShaders? {
             if (failed) return null
             return try {
-                val (s, l) = sources ?: run {
-                    val common = read(res, R.raw.sky_common)
-                    (SKY_HEAD + common + read(res, R.raw.sky_layer) + FOOT to LAND_HEAD + common + read(res, R.raw.land_layer) + FOOT).also { sources = it }
-                }
+                val (s, l) = sources(res)
                 SkyShaders(RuntimeShader(s), RuntimeShader(l)).also { Log.i("NoorSky", "GPU sky shaders built") }
             } catch (e: Exception) {
                 Log.w("NoorSky", "Sky shaders unavailable; using the Canvas sky", e)
@@ -79,6 +82,35 @@ float4 ridgeTex(float2 p) { return float4(ridges.eval(p)); }
 
         fun usable(view: View): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !failed && view.isHardwareAccelerated
     }
+}
+
+/**
+ * How much the GPU renderer may draw (0.9.6), adapted to the phone: the app watches its own frames while they matter
+ * (the opening, dragging the Sun). If they stay slower than about 25 a second, the sky and the land are drawn at a
+ * lower resolution (level 1); if still slow, the Canvas renderer takes over (level 2). The level is remembered, so a
+ * slow phone starts at the right one. Debug builds can lock level 0 (the emulator test photographs the GPU path).
+ */
+internal object SkyQuality {
+    private const val PREFS = "noor_ui"
+    private const val KEY = "sky_quality"
+    const val LOCK = "sky_quality_locked"
+    val level = androidx.compose.runtime.mutableIntStateOf(-1)
+
+    fun load(context: android.content.Context): Int {
+        if (level.intValue < 0) level.intValue = runCatching { context.getSharedPreferences(PREFS, 0).getInt(KEY, 0) }.getOrDefault(0).coerceIn(0, 2)
+        return level.intValue
+    }
+
+    fun stepDown(context: android.content.Context) {
+        val p = runCatching { context.getSharedPreferences(PREFS, 0) }.getOrNull() ?: return
+        if (p.getBoolean(LOCK, false) || level.intValue >= 2) return
+        level.intValue = (level.intValue + 1).coerceAtMost(2)
+        p.edit().putInt(KEY, level.intValue).apply()
+        Log.i("NoorSky", "Frames too slow: sky quality now ${level.intValue}")
+    }
+
+    fun skyScale(density: Float, level: Int) = ((if (level == 0) 1.5f else 0.95f) / density).coerceIn(0.3f, 1f)
+    fun landScale(level: Int) = if (level == 0) 1f else 0.7f
 }
 
 /** Lays the child out at [scale] of the available size and draws it scaled back up, in its own cached layer. */
@@ -104,9 +136,9 @@ internal class GpuSkyInputs(
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
-internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time: () -> Float, parallax: () -> Float) {
+internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time: () -> Float, parallax: () -> Float, quality: Int = 0) {
     val density = androidx.compose.ui.platform.LocalDensity.current.density
-    val scale = (1.5f / density).coerceIn(0.4f, 1f)
+    val scale = SkyQuality.skyScale(density, quality)
     val paint = remember { Paint() }
     val lutCache = remember { LutShaderCache() }
     Box(Modifier.fillMaxSize().reducedLayer(scale) { translationY = parallax() * 0.5f }.drawBehind {
@@ -145,31 +177,32 @@ internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time:
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
-internal fun GpuLandLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, lift: () -> Float, time: () -> Float) {
+internal fun GpuLandLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, lift: () -> Float, quality: Int = 0, time: () -> Float) {
     val paint = remember { Paint() }
     val lutCache = remember { LutShaderCache() }
     val ridgeCache = remember { RidgeShaderCache() }
-    Box(Modifier.fillMaxSize().reducedLayer(1f) { translationY = lift() }.drawBehind {
+    val scale = SkyQuality.landScale(quality)
+    Box(Modifier.fillMaxSize().reducedLayer(scale) { translationY = lift() }.drawBehind {
         val i = inputs() ?: return@drawBehind
         if (!drawContext.canvas.nativeCanvas.isHardwareAccelerated) return@drawBehind
-        drawLand(shaders.land, paint, i, time(), lutCache, ridgeCache)
+        drawLand(shaders.land, paint, i, time(), lutCache, ridgeCache, size.width / i.view.w)
     })
 }
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-private fun DrawScope.drawLand(sh: RuntimeShader, paint: Paint, i: GpuSkyInputs, t: Float, lutCache: LutShaderCache, ridgeCache: RidgeShaderCache) {
+private fun DrawScope.drawLand(sh: RuntimeShader, paint: Paint, i: GpuSkyInputs, t: Float, lutCache: LutShaderCache, ridgeCache: RidgeShaderCache, s: Float) {
     val v = i.view; val look = i.look; val l = i.light.light
     val g = i.land.geometry(v.horizonY, v.h, v.density)
     sh.u("uSize", size.width, size.height)
-    sh.u("uDp", v.density)
-    sh.u("uHorizon", v.horizonY)
-    sh.u("uBaseA", g.base[0], g.base[1], g.base[2], g.base[3]); sh.u("uBaseB", g.base[4])
-    sh.u("uAmpA", g.amp[0], g.amp[1], g.amp[2], g.amp[3]); sh.u("uAmpB", g.amp[4])
+    sh.u("uDp", v.density * s)
+    sh.u("uHorizon", v.horizonY * s)
+    sh.u("uBaseA", g.base[0] * s, g.base[1] * s, g.base[2] * s, g.base[3] * s); sh.u("uBaseB", g.base[4] * s)
+    sh.u("uAmpA", g.amp[0] * s, g.amp[1] * s, g.amp[2] * s, g.amp[3] * s); sh.u("uAmpB", g.amp[4] * s)
     sh.u("uDistA", g.distKm[0], g.distKm[1], g.distKm[2], g.distKm[3]); sh.u("uDistB", g.distKm[4])
     sh.u("uRidgeN", LandProfile.N.toFloat())
     sh.u("uDunes", if (i.land.terrain == Terrain.DUNES) 1f else 0f)
     sh.u("uFov", v.fov.toFloat())
-    sh.u("uSunPos", look.sunX, look.sunY)
+    sh.u("uSunPos", look.sunX * s, look.sunY * s)
     sh.u("uSunEl", look.elevation.toFloat())
     sh.u3("uSunGround", l.sunGround); sh.u3("uAmbTop", l.ambTop); sh.u3("uAmbLow", l.ambLow)
     sh.u("uPage", i.page.red, i.page.green, i.page.blue)

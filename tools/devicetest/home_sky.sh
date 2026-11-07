@@ -59,7 +59,7 @@ run_city() {
     local hhmm=${item%%:*} name=${item##*:}
     setclock "1107${hhmm}2026.00"
     launch
-    sleep 5
+    sleep 20
     shot "home_${id}_${hhmm}_${name}"
     alive || { log "device gone"; exit 1; }
   done

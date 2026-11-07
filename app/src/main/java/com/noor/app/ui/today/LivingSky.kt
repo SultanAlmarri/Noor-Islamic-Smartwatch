@@ -338,7 +338,28 @@ internal fun LivingSky(
     val androidView = LocalView.current
     val resources = LocalContext.current.resources
     // Held as Any: the shader class exists only on Android 13 and later.
-    val shaders: Any? = remember { if (Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
+    val context = LocalContext.current
+    val quality = remember { SkyQuality.load(context) }.let { SkyQuality.level.intValue.coerceAtLeast(0) }
+    val built: Any? = remember { if (Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
+    val shaders: Any? = if (quality >= 2) null else built
+    // Frames are watched while they matter (the opening, dragging): if the GPU sky keeps the phone under about 25
+    // frames a second, it steps down (SkyQuality).
+    if (shaders != null && ambient) LaunchedEffect(scrubbing) {
+        if (!scrubbing) return@LaunchedEffect
+        var last = withFrameNanos { it }
+        var ema = 16.7f
+        var slowSince = -1L
+        while (true) {
+            val t = withFrameNanos { it }
+            val ms = (t - last) / 1e6f
+            last = t
+            ema = ema * 0.9f + ms.coerceAtMost(250f) * 0.1f
+            if (ema > 40f) {
+                if (slowSince < 0) slowSince = t
+                if (t - slowSince > 1_200_000_000L) { SkyQuality.stepDown(context); break }
+            } else slowSince = -1L
+        }
+    }
     var sizePx by remember { mutableStateOf(IntSize.Zero) }
     val densityValue = LocalDensity.current.density
     densityHolder[0] = densityValue
@@ -377,7 +398,7 @@ internal fun LivingSky(
 
     Box(modifier.clipToBounds().onSizeChanged { heightPx[0] = it.height.toFloat(); sizePx = it }.semantics { contentDescription = description }
         .graphicsLayer { alpha = smoothstep(0f, 0.38f, opening()) }) {
-        if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuSkyLayer(shaders as SkyShaders, gpuInputs, { skySeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
+        if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuSkyLayer(shaders as SkyShaders, gpuInputs, { skySeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax, quality)
         // 1 · Sky, warm air round a low Sun, stars, the moon. Farthest away, so it lags most when the page scrolls.
         if (shaders == null) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
             val w = size.width; val h = size.height
@@ -481,7 +502,7 @@ internal fun LivingSky(
         })
 
         // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
-        if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
+        if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
         else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
             val shapes = land.paths(w, h * layout.horizon, h, density)
