@@ -224,3 +224,31 @@ Growing the Adhan library further (needs the owner):
   added with written permission from the rights holder, or by commissioning recordings; both are the owner's business
   decisions.
 
+## 11. Home sky, opening, scrubbing and Qibla (0.9.6, 7 November 2026)
+
+The owner asked for a dramatically more beautiful, immersive and realistic home screen (top priority), a rethought
+opening, smooth transitions when dragging the Sun past Fajr, Shuruq, Maghrib and Isha, and a Qibla accuracy box that
+changes at once. Done as follows (details in [DESIGN.md](DESIGN.md#the-home-screen)):
+
+- **Rendering**: the sky is now computed by a physical model (`Atmosphere.kt`: single scattering by air, haze and ozone
+  over a round Earth with its shadow, daylight white balance, twilight exposure, filmic tone curve) into a small table
+  per moment, off the main thread. On Android 13+ two AGSL shaders (`app/src/main/res/raw`) draw the sky (Sun, moon
+  with its real phase, stars, Milky Way, cirrus, cloud banks, cumulus lit by marching light through them) at reduced
+  resolution in a cached layer, and the land (mountains and wooded hills, or dunes with lit and shaded faces; haze,
+  rim light, cloud shadows, mist) at full resolution. Below Android 13 the Canvas renderer draws the same computed sky.
+- **Readability**: a graduated darkening keeps white text at 4.5:1 (3:1 for the large countdown) at every Sun height,
+  tested; the Sun itself is never dimmed.
+- **Opening**: two to three seconds, from the start of the current prayer's time to now (fade up, Sun runs and
+  settles, clouds run fast then slow, land rises, path and prayers draw in); brief fade if seen in the last half hour;
+  a touch takes over.
+- **Dragging**: soft detents instead of snapping, a quick spring instead of jumps, twilight given more width (measured:
+  peak colour change per pixel about a third lower), prayer marks fill gradually, no on/off switches in the lighting.
+- **Qibla**: the hold (1 s, 0.6 s in the tips) and the fades are gone; the level shown is always the latest reading's;
+  the magnetometer is read at the heading's rate. `QiblaAccuracyTest` proves the change appears on the next frame.
+
+How it was checked: unit tests (sky model contrast and continuity, detents, Qibla), software renders of the Canvas
+renderer, a browser bench that compiles the same shader files (WebGL, headless Chromium) for whole-day contact sheets,
+and the `home-sky.yml` workflow on Android 14 and 15 emulators (the GPU shaders compiled and drawn by Android itself,
+photographs through the day, recordings of the opening and of a drag, the Qibla box with injected magnetic fields).
+Emulators draw with a software GPU: the pictures are faithful, but frame rate and battery use on a real phone are not
+measured yet.

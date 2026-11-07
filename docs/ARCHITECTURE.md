@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 6 November 2026 (version 0.9.5).
+Living document: each development phase adds its section. Last updated 7 November 2026 (version 0.9.6).
 
 ## Modules
 
@@ -157,15 +157,22 @@ Full description: `DESIGN.md`.
   blending) are pure Kotlin, so the phone's sky and the watch's glow are the same colours.
 - `app/ui/today/LivingSky` (0.8.0, home screen only): the layered scene (sky, stars and Milky Way, moon by Hijri day,
   clouds, sun and sun path, land by terrain, mist, birds), `SkyGeometry` (time warp and elevation scale) and the
-  `Terrain` choice by country; `TodayScreen.SkyHeader` adds the drag-the-sun interaction. `app/ui/components`: `Motion`
+  `Terrain` choice by country; `TodayScreen.SkyHeader` adds the drag-the-sun interaction (`SkyDetent`, 0.9.6) and the
+  opening (`OpeningSky`).
+- 0.9.6 home sky renderer: `Atmosphere` (pure Kotlin: the sky model, a 48 × 32 table of display colours per moment and
+  the light of the moment; JVM-tested for text contrast and continuity), `SkyLook`/`SkyView`/`Weather` (where things
+  are drawn, the day's weather), `LandProfile` (five skylines per place, also a 1024 × 2 table for the GPU),
+  `ShaderSky` (two `RuntimeShader`s from `res/raw/sky_common.agsl`, `sky_layer.agsl`, `land_layer.agsl`; the sky at
+  ~1.5 px/dp in a cached offscreen layer scaled up, the land at full resolution; Android 13+, hardware canvas only,
+  otherwise the Canvas renderer). The table is computed off the main thread, the latest request winning. `app/ui/components`: `Motion`
   (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## Known limitations (0.9.5)
+## Known limitations (0.9.6)
 
-- The 0.8.0 home screen's motion (drifting clouds, drag-the-sun, haptics, frame rate and battery) is checked only in
-  code and in still, software-rendered frames; software rendering cannot show animation, real-device smoothness, or
-  the exact look of soft gradients on a phone's GPU.
+- The home screen's GPU renderer (0.9.6) is checked on Android 14 and 15 emulators, which draw with a software GPU:
+  the pictures are faithful, but frame rate, heat and battery use on a real phone are not measured yet. The sky layer
+  is drawn at reduced resolution and both layers are cached to keep the cost down; a phone test is still needed.
 - Nothing in this version has been tested on a real phone or watch yet; all results above come from unit tests and
   software-rendered screens. Alerts in particular (alarm timing, playback, lock screen, Do Not Disturb, watch transfer)
   need a device test; "Test this alert" exists for that.

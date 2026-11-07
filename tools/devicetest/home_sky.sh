@@ -11,7 +11,9 @@
 #   (as near metal), photographing the accuracy box straight after each change.
 # - Saves the log lines of the sky renderer (it says whether the GPU shaders were built).
 #
-# The emulator draws with SwiftShader (a software GPU): pictures are faithful, speed is not that of a phone.
+# The emulator draws with SwiftShader (a software GPU): pictures are faithful, speed is not that of a phone. The stills
+# are taken with animations off (the scene still, as under "Remove animations"), so the software GPU is not busy
+# redrawing drifting clouds between shots; the recordings are made with animations on.
 set -u
 APK="$1"; OUT="$2"
 PKG=com.noor.smartwatch
@@ -31,6 +33,7 @@ adb shell wm density | tee -a "$OUT/steps.txt"
 adb install -r -g "$APK" | tail -1
 adb logcat -c
 
+animations() { for k in animator_duration_scale transition_animation_scale window_animation_scale; do adb shell settings put global $k "$1"; done; }
 city() { adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city "$1" -n $HOOK >/dev/null; sleep 2; }
 # setclock MMDDhhmmYYYY.ss in UTC
 setclock() { adb shell "date -u $1" >/dev/null; }
@@ -48,13 +51,15 @@ run_city() {
     local hhmm=${item%%:*} name=${item##*:}
     setclock "1107${hhmm}2026.00"
     launch
-    sleep 9
+    sleep 5
     shot "home_${id}_${hhmm}_${name}"
   done
 }
 
+animations 0
 run_city dxb "$DXB"
 run_city ist "$IST"
+animations 1
 
 # The opening, recorded: a fresh launch an hour after the last one (the full opening plays after half an hour).
 city dxb

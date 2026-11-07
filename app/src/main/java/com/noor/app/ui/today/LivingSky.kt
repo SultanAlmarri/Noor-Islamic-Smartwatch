@@ -350,8 +350,9 @@ internal fun LivingSky(
     val skyLight = rememberSkyLight(look, skyView, capAlt)
     val weather = remember(scene.seed, scene.terrain) { Weather.of(scene.seed, scene.terrain) }
     val landProfile = remember(scene.landSeed, scene.terrain) { LandProfile.of(scene.landSeed, scene.terrain) }
-    // The GPU layers' own clocks (seconds): the sky's moves about 20 times a second (drifting clouds, twinkling stars),
-    // the land's 4 times (cloud shadows, mist); each layer is redrawn only when its clock moves.
+    // The GPU layers' own clocks (seconds): the sky's moves about 15 times a second (drifting clouds move less than a
+    // fifth of a dp per tick, so it looks continuous), the land's 4 times (cloud shadows, mist); each layer is redrawn
+    // only when its clock moves, so the GPU works a few percent of the time while the screen is simply looked at.
     val origin = remember(scene.seed) { (((scene.seed % 997) + 997) % 997).toFloat() * 3.7f }
     val skySeconds = remember { mutableFloatStateOf(origin + (stillTime ?: 0.13f) * CYCLE_SECONDS.toFloat()) }
     val landSeconds = remember { mutableFloatStateOf(skySeconds.floatValue) }
@@ -366,7 +367,7 @@ internal fun LivingSky(
                     if (sec - landSeconds.floatValue >= 0.25f) landSeconds.floatValue = sec
                 }
             }
-            delay(40)
+            delay(60)
         }
     }
     val gpuInputs: () -> GpuSkyInputs? = {

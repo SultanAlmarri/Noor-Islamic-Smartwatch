@@ -33,36 +33,60 @@ The header, top to bottom: the place, the next prayer with its time on the same 
 The text is measured once laid out, and the noon Sun always sits below it. On short screens the place shows on one
 line, and on very short ones the prayer and the countdown sit side by side, so the arc keeps its room.
 
-The scene, far to near:
+The scene (0.9.6), far to near:
 
-1. **Sky**: the live sky colours; warm air round a low Sun; while the Sun is below the horizon, its glow on the
-   horizon shows where it is, cooling through twilight. At dawn and dusk, opposite the Sun, the Earth's own shadow
-   (a blue-grey band on the horizon) with the pink Belt of Venus above it. At night stars over the whole sky, thinning
-   and twinkling more towards the horizon as the air thickens (there is no line where they stop), a faint Milky Way,
-   now and then a meteor. Over the desert at midday a pale warm haze lies along the horizon. A fine grain keeps the
-   slow gradients of the night sky free of steps.
-2. **Clouds**: fair-weather cumulus and high streaks, painted as light in vapour; at night only thin, pale, moonlit
-   veils (never dark shapes). They drift slowly and never rise into the text.
-3. **Sun**: its halo, long faint rays, the path and the Sun. The path is in the sky only and passes **behind** the
-   land, so the Sun rises and sets behind the dunes or hills; it is never drawn across the land.
-4. **Land**: four ridges fading with distance, spread over the depth the header gives them, the nearest fading into
-   the page. Dunes for arid countries, mountains and rolling hills elsewhere; fixed for a place. Mist at dawn, crests lit
-   by a low Sun.
-5. **Over the land**: the prayers. Those that fall while the Sun is up sit on the path; Fajr, Shuruq, Maghrib and Isha,
-   when the Sun is at or below the horizon, sit on the skyline at their moment. The next prayer's ring breathes. Birds
-   at dawn and dusk.
+1. **Sky, computed, not painted** (`Atmosphere.kt`): sunlight scattered by the air (blue first), by haze (the glow
+   round the Sun) and partly absorbed by ozone (which keeps the sky blue after sunset), over a round Earth whose shadow
+   rises opposite the Sun at dusk with the pink Belt of Venus above it. One table of colours per moment (48 × 32,
+   about 4 ms on a computer, computed off the main thread), with a daylight white balance, an exposure that follows
+   the Sun down through twilight as the eye adapts, and a filmic tone curve. Where text is written on the sky, a
+   graduated darkening (as a photographer's filter) keeps white text at 4.5:1 (3:1 for the large countdown) at every
+   height of the Sun; `AtmosphereTest` checks it from −40° to 90°.
+2. **Night**: stars on a jittered grid (two sizes, twinkling, thinning towards the horizon), the Milky Way with dark
+   dust lanes, the moon on the Sun's own path as far behind it as it is old, lit as a sphere from the Sun's side (its
+   phase is real), with earthshine and a halo.
+3. **Clouds**: high cirrus combed by the wind (lit pink long after sunset), distant cloud banks along the horizon, and
+   a few cumulus at different distances. Each cumulus is a density field (billows on a flat base, worn by turbulent
+   noise that slowly boils) lit by marching light through it towards the Sun: the side facing it glows, the body falls
+   into soft shade, thin edges are silvered when the Sun is behind, a low Sun warms them from below. Farther clouds are
+   smaller, lower, slower and paler with the haze. The weather changes from day to day and place to place (fewer
+   cumulus over the desert); clouds keep to the band of sky below the text.
+4. **Sun**: a disc with limb darkening, its colour the sunlight that reaches the ground (white at noon, orange-red at
+   the horizon), a bright core of glare and a wide soft bloom. It sinks behind the true horizon and behind the land.
+5. **Land** (`LandProfile.kt`, `land_layer.agsl`): five layers fading into the haze with distance, the nearest the
+   page itself. Hills: a mountain range of several summits far away, rolling wooded hills nearer, tree crowns along
+   the crests. Dunes: from each summit a sharp crest runs down across the dune, so a low Sun lights the windward face
+   and leaves the slip face in blue shade; faint ripples on the nearest. Lit per pixel from the Sun's side, a rim of
+   light along crests with the Sun low behind them, shadows of passing cumulus, mist in the valleys at dawn.
+6. **Over the land**: the sun path (behind the land, gold where the day has passed) and the prayers: on the path while
+   the Sun is up, on the skyline at Fajr, Shuruq, Maghrib and Isha. The next prayer's ring breathes; a mark fills as
+   the Sun passes it, over a few minutes rather than at once. Birds at dawn and dusk.
 
-**Opening**: once per launch, in 0.9 s, the sky runs through the hours before now (about ten) and settles on this
-moment, while the path draws itself. The prayer, its time and the countdown are the real ones from the first frame;
-nothing waits for it. It does not replay when the user comes back to the tab, and it is off under "Remove animations".
-`TodayOpeningDesignTest` renders frames at 0, 0.3, 0.6 and 1 s.
+**How it is drawn**: on Android 13 and later by two GPU shaders (`res/raw/*.agsl`, AGSL): the sky at about 1.5 pixels
+per dp in a cached layer scaled up (it is soft everywhere), the land at full resolution (the skyline must be crisp),
+each redrawn only when what it shows changes. Below Android 13, or if a shader cannot be built, the Canvas renderer
+draws the same computed sky with its own clouds and land. The shaders are developed with a browser bench that compiles
+the very same files (WebGL), and checked on Android 14 and 15 emulators in CI (`home-sky.yml`).
 
-**Touch**: drag sideways across the sky to move the Sun along its path; the scene relights, it catches on each prayer
-with a haptic tick, the header shows that moment, and it springs back to now when let go.
+**Opening** (0.9.6): the day's sky comes in. The scene fades up from the page while the Sun runs, moving off gently and
+settling slowly, from the start of the current prayer's time (at least 50 minutes, at most 6 hours back) to this
+moment: sunrise into morning, dusk into night with the stars coming out. The clouds run fast and slow to their real
+drift, the land rises a little, the path and its prayers draw themselves. About two to three seconds, once per launch;
+if the full opening was seen in the last half hour, only a brief fade. A touch on the sky takes over at once. The
+prayer, its time and the countdown are the real ones from the first frame. Off under "Remove animations".
+`TodayOpeningDesignTest` renders frames through it.
 
-**Calm and cost**: the scene changes once a minute; paths are built once per size; the ambient clock ticks about 30
-times a second, rests when the sky is scrolled away or the app is in the background, and stops entirely under
-"Remove animations". The opening redraws the scene every frame for 0.9 s only.
+**Touch** (0.9.6): drag sideways across the sky to move the Sun along its path. It follows the finger on a quick,
+critically damped spring (no jump when the finger lands far from it). Each prayer is a soft detent: near a mark the Sun
+slows and rests exactly on the prayer (a haptic tick, the header shows the prayer and its time), then moves off gently;
+nothing snaps, so the sky never jumps (`SkyDetentTest`). Twilight has more of the width than before (dragging through
+dawn and dusk changed the colours up to nine times faster per pixel than at midday; now about a third less). The scene
+relights continuously; it springs back to now when let go.
+
+**Calm and cost**: the scene's moment changes once a minute; the sky layer's clock ticks about 15 times a second for
+drifting clouds and twinkling stars, the land's 4 times a second; both rest when the sky is scrolled away or the app is
+in the background, and stop entirely under "Remove animations". While the Sun is dragged or during the opening, both
+layers redraw every frame.
 
 ## Appearance
 

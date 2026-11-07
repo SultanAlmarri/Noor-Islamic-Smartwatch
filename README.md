@@ -6,12 +6,12 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 **Install:** [latest development build](https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/tag/dev-latest)
 · [step-by-step guide](docs/INSTALL.md)
 
-## Status (6 November 2026, version 0.9.5)
+## Status (7 November 2026, version 0.9.6)
 
 | Part | State |
 |---|---|
 | Prayer-time engine (`core/prayer`) | Built and tested: NREL SPA port, 12 calculation profiles, high-latitude rules, Hijri date. Dubai profile matches 527 of 588 official IACAD times exactly, the rest by 1 minute |
-| Phone app (`app`) | Builds and passes its tests on every push: dashboard, settings, city picker, onboarding, location, watch sync |
+| Phone app (`app`) | Builds and passes its tests on every push: dashboard, settings, city picker, onboarding, location, watch sync. 0.9.6: the home sky is computed by a physical model and drawn by GPU shaders on Android 13+ (sky, clouds, land), checked on Android 14 and 15 emulators ([DESIGN.md](docs/DESIGN.md#the-home-screen)) |
 | Watch app (`wear`) | Builds and passes its tests: works on its own or with the phone; home with live countdown, Qibla compass, tasbih counter (tap or bezel), Hijri calendar with upcoming days, on-watch set-up (own location or city search), settings and sync; two tiles and four complications; Ongoing Activity during the Adhan ([WATCH.md](docs/WATCH.md)) |
 | Watch face via the watch app | v1.3.2 face packaged for Watch Face Push (Wear OS 6); passes all 10 checks of Google's official validator at every build |
 | Watch face v1.3.2 (`com.noorface.prayer`) | Preserved unchanged in `legacy/`; still installed separately |
