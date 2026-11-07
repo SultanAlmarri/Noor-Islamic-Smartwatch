@@ -102,8 +102,12 @@ Full details and sources: `AUTHORITIES.md`.
 - **Precise or approximate**: Android asks the user; Noor works with either. Precise → high-accuracy fix and
   neighbourhood names; approximate → balanced-power fix and town names.
 - **Names**: Android Geocoder in English and Arabic, cached while the user stays within 300 m (precise) or 3 km
-  (approximate); offline fallback to the bundled GeoNames gazetteer (34,197 places). Manual mode searches the same
-  gazetteer worldwide, offline, and stores the chosen place with its own time zone.
+  (approximate); offline fallback to the bundled GeoNames gazetteer (34,197 places). Manual mode (0.9.7, phone): the
+  location screen ([LOCATION.md](LOCATION.md)) with the phone's own offline world places (`core/prayer` `WorldPlaces`,
+  839,301 places, `app/src/main/assets/world.bin`), offline time-zone boundaries (`TimeZoneMap`, `tzmap.bin`), typed
+  coordinates (`Coordinates`), online search through Android's Geocoder (`app` `WorldStore`) and a satellite map
+  (`ui/location/TileMap.kt`, Esri tiles, Web Mercator, own gesture handling and tile cache). The exact point and its
+  zone are stored.
 - **Authority** (`Authorities.forPlace`): one registry, used by phone and watch. Each entry records its coverage,
   category (official timetable / validated calculation / authority parameters / recognised method) and source URL.
 - **Official timetables** (`authority/Timetable.kt`, `assets/timetables`): IACAD Dubai (carried days) and MUIS Singapore
@@ -129,6 +133,12 @@ Full details: `ALERTS.md`; sounds and credits: `SOUNDS.md`.
   `AlertNotifications` (three channels), `SoundLibrary` and `CustomSounds`.
 - Phone/Watch/Both: each device alerts only when chosen; phone notifications are local-only, so nothing is duplicated.
 - Full Adhans and imported sounds for watch alerts travel over a Data Layer channel; the watch reports what it holds.
+
+## Countdown (0.9.7)
+
+`core/prayer` `Countdowns.of(state, now)`: before a prayer, − time left; after it, + time since it began for a set
+while (`sinceWindow`), then the next prayer. The home screen (`countdownText`) and the notification (`StatusNotification`
+with Android's Chronometer counting down or up) use it, in the same format (`Formatter.timer`, the Chronometer's).
 
 ## Persistent prayer notification (0.9.3)
 
@@ -168,7 +178,11 @@ Full description: `DESIGN.md`.
   (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## Known limitations (0.9.6)
+## Known limitations (0.9.7)
+
+- 0.9.7's Adhan changes for Android 17 are checked on Android 14 and 15 emulators with a real scheduled alarm; the
+  Android 17 emulator image does not run reliably on GitHub's machines, so Android 17 needs the owner's phone.
+- The map's imagery and gestures, and the phone's geocoder, are checked in software and on an emulator only.
 
 - The home screen's GPU renderer (0.9.6) is checked on Android 14 and 15 emulators, which draw with a software GPU:
   the pictures are faithful, but frame rate, heat and battery use on a real phone are not measured yet. The sky layer

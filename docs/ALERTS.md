@@ -59,6 +59,24 @@ wear          AlertSection (permissions on the watch), ReceivedSounds
   the watch reports what it holds (`WatchReport.sounds`) and removes files no longer used. The watch also reports
   whether it may post notifications and set exact alarms; the phone shows that in the Adhan tab.
 
+### Android 17 and audio started from the background (0.9.7)
+
+Android 17 restricts audio that an app starts while it is not visible: focus can be refused and playback silenced
+unless the app is running a suitable foreground service or the user can see it. The owner's Fold (Android 17) logged
+every scheduled Adhan as "played 0 s" while tests played. Since 0.9.7:
+
+- Prayer alarms are **alarm-clock alarms** (`AlarmManager.setAlarmClock`, `AlertHost.alarmClockAlarms`, phone): shown to
+  the user as the next alarm, exempt from Doze and from the background-start limits.
+- The Adhan notification has a **full-screen alert** (`AdhanAlertActivity`: over the lock screen, turns the screen on,
+  large Stop) where Android allows it (`USE_FULL_SCREEN_INTENT`; on Android 14+ the user can turn this off).
+- `AdhanService` starts the sound only once Android reports it in the foreground (it waits up to 1 s).
+- `AlertPlayer` no longer stops when audio focus is lost or refused: only a phone call stops the Adhan. If playback ends
+  early or the player fails, it resumes where it was (at most three times). The history records why it ended.
+
+`AdhanPlaybackTest` covers the alarm type and the focus and call rules; `tools/devicetest/alert_e2e.sh` has `scheduled`
+and `scheduled-hardened` scenarios that let the real prayer alarm fire (device clock moved to 45 s before it), the latter
+with Android 17's hardening at its strictest (`cmd audio set-enable-hardening enable`).
+
 ## Permissions
 
 | Permission | Why | If refused |

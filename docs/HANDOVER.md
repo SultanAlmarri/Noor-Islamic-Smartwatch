@@ -35,7 +35,7 @@ so work can continue without rebuilding or re-deciding anything. Rules for worki
 ### Phone app (`app`)
 
 Bottom tabs: **Prayers** (Today, the home screen), **Qibla**, **Adhan**, **Watch**, **Settings**. Also onboarding,
-the city picker, the accuracy/source page, and the Adhan sub-pages (prayer page, sound library, My sounds).
+the location screen (0.9.7: search, map, coordinates, country → city → area; [LOCATION.md](LOCATION.md)), the accuracy/source page, and the Adhan sub-pages (prayer page, sound library, My sounds).
 
 - **Home (Today)**: the next prayer and a live countdown over a scene of the real sky at the user's place and moment
   (details in section 5); a date bar with arrows, a calendar sheet and "Today"; a pager of days from 2021 to 2035
@@ -257,3 +257,48 @@ unrolls loops and inlines calls, limit ~100 000 operations); the clouds were rew
 
 Still needs the owner's phone: smoothness of the opening and of dragging, battery use with the home screen open, the
 look on a real OLED screen, and a real compass near metal (the emulator check injected magnetometer readings).
+
+## 12. Countdown, notification, Qibla, Adhan, location, Sun marks (0.9.7, 7 November 2026)
+
+Phone app only (the watch is unchanged). What the owner asked, and what was done:
+
+- **Countdown − / +** (`core/prayer` `Countdowns`): before a prayer "−1:23:45"; once it has come, "+04:12" since it
+  began, for a while, then the next prayer's "−". How long: Fajr 25 min, Shuruq 15 (the time after sunrise before
+  prayer is allowed), Dhuhr, Asr and Isha 20, Maghrib 10 — about the wait between Adhan and iqama in most mosques, as
+  prayer apps that show elapsed time do; it ends earlier if the next prayer comes first. The home screen and the
+  persistent notification use the same function and format (h:mm:ss, or mm:ss under an hour, as Android's own
+  Chronometer writes it); a test compares them at every 97 s over two days across midnight.
+- **Notification**: Android counts down with "−" or up with "+" by itself; rebuilt half a second after each change and
+  at midnight. Collapsed (Android allows 48 dp): prayer and time with the large countdown, then the Hijri date and the
+  place on one line that shrinks to fit (the date first, so only an extremely long place name can be shortened there).
+  Expanded: the place and the date each on their own lines, wrapped, never cut. Renders: `55_status_notification_*`.
+- **Qibla flicker**: a reading near a limit crossed it many times a second. Now (phone only, `CompassTracker`) the
+  field strength, the sensor's estimate and the tilt are averaged over 0.1 s, a level gets worse at once at the same
+  limits, and better only once clearly past them (field 12 %/21 %, estimate 8.5°/21°, flat 25°); no timer. The label
+  has a fixed-width slot so the meter does not move. Tests: noisy readings at each limit (≤ 1 change in 10 s, where
+  judging each reading alone changes 50+ times), and real changes shown within 0.1 s (0.25 s for a 35° estimate jump).
+- **Adhan stopping after 1–2 s** (the owner's report: Samsung Fold, Android 17, every scheduled entry "played 0 s",
+  tests fine): Android 17 restricts audio started from the background, and the player stopped on any loss of audio
+  focus. Now: prayer alarms are alarm-clock alarms (`setAlarmClock`, which Android treats as user-visible), the Adhan
+  notification has a full-screen alert (`AdhanAlertActivity`, over the lock screen, with Stop), the service waits until
+  it is really in the foreground before starting the sound, a focus loss no longer stops the Adhan (only a phone call
+  does), and an early end or player error resumes where it was (up to 3 times). The alert history now records the
+  reason an Adhan ended. Checked on Android 14 and 15 emulators with a real scheduled prayer alarm (clock moved to just
+  before the prayer, Noor's process killed, screen off, Doze): the full test Adhan plays (31.5 s), even with audio
+  focus refused. The Android 17 emulator image does not run reliably on GitHub's machines (its system services drop
+  out after boot), so Android 17 itself is checked only on the owner's phone: after installing, the alert history
+  should show "played" with the whole duration at the next prayer.
+- **Location**: redesigned completely ([LOCATION.md](LOCATION.md)).
+- **Sun marks and the black Sun** (committed earlier the same day): Shuruq and Maghrib marks exactly where the drawn
+  path meets the horizon (the Sun's upper edge with refraction), Fajr and Isha below ground at the Sun's real
+  depression; the land opens a little where the Sun rises and sets so it is never hidden; the Sun's disc colour comes
+  from its light through the air (it reddens and dims, never black). `SunMarkTest` covers five cities from Reykjavik to
+  Jakarta, three dates and two screen sizes.
+
+Evidence: unit and Robolectric tests (counts in the release notes), software renders in `app/build/screenshots`, the
+`device-alerts.yml` emulator runs, and `phone-preview.yml` (Android 15 emulator photographs of the countdown before and
+after a prayer, the notification, the location screens with real satellite imagery, the Qibla box held at its limit,
+the full-screen Adhan), published to the `phone-preview` pre-release.
+
+Still needs the owner's phone: the scheduled Adhan on Android 17 (the decisive check), the full-screen Adhan over the
+lock screen, map gestures and imagery speed, the phone's geocoder results, and the compass near metal.

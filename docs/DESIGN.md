@@ -127,6 +127,14 @@ elevation, and gold on the sky 4.5:1 (`ThemeContrastTest`, `SkyPaletteTest`).
   compass is uncertain (the sensor's own estimate), turning green with a haptic tap when the phone faces the Qibla.
 - **The watch preview** (Watch tab) is a drawn watch showing exactly what the Noor watch app shows now, with the glow
   of the current sky under it.
+- **The countdown** (0.9.7): "−1:23:45" before a prayer (a true minus sign), "+04:12" for a while after it, the same
+  on the home screen and in the notification; the title then names the prayer that has come.
+- **Choosing a location** (0.9.7, [LOCATION.md](LOCATION.md)): one search box first; then four calm rows (current
+  location, map, coordinates, browse) in one group; every path ends on a confirmation card with the point on a
+  satellite picture, the time zone in words and today's times, and one gold "Use this location" button. The map is
+  full-bleed with a gold pin fixed at its centre (it lifts while the map moves), round floating buttons on the side,
+  and the place under the pin in a card at the bottom. In Arabic, coordinates read "25.20480° ش، 55.27080° ق" and the
+  time zone is named in Arabic.
 - **Tab bar**: five destinations; the selected one gold with a soft pill behind its icon and a light haptic tick.
   The Today icon is Noor's sun path.
 
