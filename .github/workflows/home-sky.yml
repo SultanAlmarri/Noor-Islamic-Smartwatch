@@ -6,7 +6,9 @@ name: Home sky on real Android (emulator)
 on:
   push:
     branches: [ main, 'sky/**' ]
-    paths: [ 'app/**', 'shared/**', 'core/**', 'tools/devicetest/home_sky.sh', '.github/workflows/home-sky.yml' ]
+    # Only what the pictures show: the home sky, the Qibla screen and the compass, and this test itself.
+    paths: [ 'app/src/main/res/raw/**', 'app/src/main/java/com/noor/app/ui/today/**', 'app/src/main/java/com/noor/app/ui/qibla/**',
+             'shared/src/main/java/com/noor/shared/compass/**', 'tools/devicetest/home_sky.sh', '.github/workflows/home-sky.yml' ]
   workflow_dispatch:
 
 permissions:
