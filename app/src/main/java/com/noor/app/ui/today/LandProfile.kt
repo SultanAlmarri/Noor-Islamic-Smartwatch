@@ -50,10 +50,19 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
         )
     }
 
-    /** The top of the land at [x] (px) across a width [w]: where it meets the sky. */
-    fun skylineAt(x: Float, w: Float, g: Geometry): Float {
+    /**
+     * The top of the land at [x] (px) across a width [w]: where it meets the sky. Where the Sun rises and sets
+     * ([riseX], [setX]) the land is kept below the horizon line [horizonY], as the land shader does.
+     */
+    fun skylineAt(x: Float, w: Float, g: Geometry, horizonY: Float = 0f, density: Float = 1f, riseX: Float = -1e5f, setX: Float = -1e5f): Float {
+        val open = horizonOpening(x, riseX, setX, density)
         var m = Float.MAX_VALUE
-        for (l in 0 until LAYERS) m = min(m, g.base[l] - g.amp[l] * height(l, x / w))
+        for (l in 0 until LAYERS) {
+            val y0 = g.base[l] - g.amp[l] * height(l, x / w)
+            val cap = maxOf((g.base[l] - horizonY - density) / g.amp[l], 0f)
+            val y = g.base[l] - g.amp[l] * (height(l, x / w).let { it + (minOf(it, cap) - it) * open })
+            m = min(m, if (open > 0f) y else y0)
+        }
         return m
     }
 

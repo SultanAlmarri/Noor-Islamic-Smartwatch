@@ -28,13 +28,29 @@ uniform float uWind;
 uniform float2 uLutSize;
 uniform float uLutPow;
 uniform float uSeed;       // the lie of the land
+uniform float2 uSunrise;   // where the Sun rises and sets on the horizon (x, px; far off screen when it does not)
 
 float pick4(float4 a, float b, int i) { return i == 0 ? a.x : (i == 1 ? a.y : (i == 2 ? a.z : (i == 3 ? a.w : b))); }
+
+// Where the Sun rises and sets, the land opens onto the true horizon (a pass between the hills, a gap between the
+// dunes), so the Sun meets the horizon exactly at the moment of Shuruq and of Maghrib, where their marks are.
+float openAt(float x) {
+    float a = 1.0 - smoothstep(12.0 * uDp, 34.0 * uDp, abs(x - uSunrise.x));
+    float b = 1.0 - smoothstep(12.0 * uDp, 34.0 * uDp, abs(x - uSunrise.y));
+    return max(a, b);
+}
 
 float ridgeAt(float x, int layer) {
     float u = sat(x / uSize.x) * (uRidgeN - 1.0) + 0.5;
     float4 t = ridgeTex(float2(u, layer < 3 ? 0.5 : 1.5));
     return layer == 0 ? t.r : (layer == 1 ? t.g : (layer == 2 ? t.b : (layer == 3 ? t.r : t.g)));
+}
+
+// The height of [layer] at [x], kept below the true horizon where the land opens for sunrise and sunset.
+float landHeight(float x, int layer, float base, float amp) {
+    float h = ridgeAt(x, layer);
+    float cap = max((base - uHorizon - 1.0 * uDp) / max(amp, 1.0), 0.0);
+    return mix(h, min(h, cap), openAt(x));
 }
 
 // Fine relief on the skyline the table is too coarse to hold: crags far away, scrub nearer, nothing on sand.
@@ -153,13 +169,13 @@ float4 render(float2 fc) {
         if (acc.a < 0.995) {
             float base = pick4(uBaseA, uBaseB, i);
             float amp = pick4(uAmpA, uAmpB, i);
-            float h = ridgeAt(fc.x, i);
-            float topY = base - amp * h - edgeDetail(fc.x, i);
+            float h = landHeight(fc.x, i, base, amp);
+            float topY = base - amp * h - edgeDetail(fc.x, i) * (1.0 - openAt(fc.x));
             float cov = sat((fc.y - topY) / aa + 0.5);
             if (cov > 0.0) {
                 // Slope over a few dp: the table holds 8-bit heights, too coarse to differentiate pixel by pixel.
-                float hl = ridgeAt(fc.x - 4.0 * uDp, i);
-                float hr = ridgeAt(fc.x + 4.0 * uDp, i);
+                float hl = landHeight(fc.x - 4.0 * uDp, i, base, amp);
+                float hr = landHeight(fc.x + 4.0 * uDp, i, base, amp);
                 float slope = (hl - hr) * amp / (8.0 * uDp);
                 float3 c = shade(fc, i, topY, slope);
                 if (i == 4) {

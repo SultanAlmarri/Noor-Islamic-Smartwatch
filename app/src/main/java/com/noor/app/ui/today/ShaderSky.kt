@@ -158,7 +158,7 @@ internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time:
         val ca = cos(look.drawAltitude); val az = look.sunAzimuth
         sh.u("uSunDir", (ca * sin(az)).toFloat(), sin(look.drawAltitude).toFloat(), (ca * cos(az)).toFloat())
         sh.u("uSunEl", look.elevation.toFloat())
-        sh.u3("uSunDisc", l.sunGround, 2.2); sh.u3("uSunCloud", l.sunCloud); sh.u3("uSunHigh", l.sunHigh)
+        sh.u3("uSunDisc", l.sunDisc); sh.u3("uSunGlow", l.sunGlow); sh.u3("uSunCloud", l.sunCloud); sh.u3("uSunHigh", l.sunHigh)
         sh.u3("uAmbTop", l.ambTop); sh.u3("uAmbLow", l.ambLow)
         sh.u("uNight", look.night)
         sh.u("uTime", t)
@@ -213,6 +213,7 @@ private fun DrawScope.drawLand(sh: RuntimeShader, paint: Paint, i: GpuSkyInputs,
     sh.u("uWind", t * 0.02f)
     sh.u("uLutSize", Atmosphere.NX.toFloat(), Atmosphere.NY.toFloat()); sh.u("uLutPow", Atmosphere.LUT_POW.toFloat())
     sh.u("uSeed", (i.scene.landSeed % 97).toFloat())
+    sh.u("uSunrise", v.sunrise.first * s, v.sunrise.second * s)
     sh.setInputBuffer("skyLut", lutCache.shaderFor(i.light))
     sh.setInputBuffer("ridges", ridgeCache.shaderFor(i.land))
     paint.shader = sh

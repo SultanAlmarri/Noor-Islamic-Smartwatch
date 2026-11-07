@@ -200,8 +200,13 @@
       }
     }
     const sunAt = (h) => { const T = trans(h, Math.sin(p.sunEl * DEG), [0, 0, 0]); return T.map((t, c) => t * SUN[c] * 20 * exposure / Math.PI); };
+    // The disc: through the air at its apparent height (refraction), at its own radiance; and the glare.
+    const refr = (el) => { const h = Math.max(el, -1.9); return 1.02 / Math.tan((h + 10.3 / (h + 5.11)) * DEG) / 60; };
+    const Td = trans(H0, Math.sin((p.sunEl + refr(p.sunEl)) * DEG), [0, 0, 0]);
+    const sunDisc = Td.map((t, c) => t * SUN[c] * 20 * exposure / Math.PI * 2500);
+    const sg = sunAt(0.3);
     return {
-      exposure, night, lut, z,
+      exposure, night, lut, z, sunDisc, sunGlow: sg.map(x => x * 0.132),
       sunGround: sunAt(0.3), sunCloud: sunAt(2.0), sunHigh: sunAt(8.0),
       ambTop: z.map(x => x * exposure), ambHor: hz.map(x => x * exposure),
     };

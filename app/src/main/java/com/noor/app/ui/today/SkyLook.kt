@@ -20,6 +20,8 @@ internal class SkyView(scene: SkyScene, val w: Float, val h: Float, val density:
     val cloudTopY = h * layout.cloudTop
     val geometry = SkyGeometry(scene, w, horizonY, arcTopY, h * layout.ground, rtl)
     val fov: Double = (w / density * 0.0051).toDouble().coerceIn(1.6, 2.6)
+    /** Where the Sun rises and sets on the horizon today, px (far off screen when it does not). */
+    val sunrise: Pair<Float, Float> = sunriseSunsetX(scene, geometry)
 
     /** Altitude (degrees) seen at height [y] (px). */
     fun altitudeAt(y: Float): Double = ALT_TOP * ((horizonY - y) / horizonY).toDouble().coerceIn(0.0, 1.0).pow(ALT_POW)

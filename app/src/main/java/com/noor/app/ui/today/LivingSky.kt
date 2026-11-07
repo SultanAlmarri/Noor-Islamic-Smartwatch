@@ -150,8 +150,22 @@ internal class SkyGeometry(scene: SkyScene, private val w: Float, val horizonY: 
         return if (rtl) w - u else u
     }
 
-    fun y(el: Double): Float = if (el >= 0) (horizonY - (el / maxEl) * (horizonY - arcTopY)).toFloat()
-        else (horizonY + (-el / -minEl) * (groundY - horizonY)).toFloat()
+    private val maxApp = apparent(maxEl)
+
+    /**
+     * Height on screen of the Sun at true elevation [el] (degrees), as it is seen (0.9.7). Shuruq and Maghrib are the
+     * moments the Sun's upper edge touches the horizon, with the air lifting it near the horizon (refraction): 50' in
+     * all, by the standard definition the prayer times use. So the path is drawn as the Sun's visible upper edge: it
+     * meets the horizon line exactly at Shuruq and at Maghrib, where their marks are. The lift fades out a few degrees
+     * below the horizon, where nothing is seen.
+     */
+    fun y(el: Double): Float {
+        val e = apparent(el)
+        return if (e >= 0) (horizonY - (e / maxApp) * (horizonY - arcTopY)).toFloat()
+        else (horizonY + (-e / -minEl) * (groundY - horizonY)).toFloat()
+    }
+
+    private fun apparent(el: Double): Double = el + horizonLift(el)
 
     /** The fraction of the day drawn at [px] (inverse of [x]). */
     fun fractionAt(px: Float): Double {
@@ -505,7 +519,8 @@ internal fun LivingSky(
         if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
         else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
-            val shapes = land.paths(w, h * layout.horizon, h, density)
+            val (riseX, setX) = sunriseSunsetX(scene, SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl))
+            val shapes = land.paths(w, h * layout.horizon, h, density, riseX, setX)
 
             onDrawBehind {
                 val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
@@ -518,16 +533,11 @@ internal fun LivingSky(
             val w = size.width; val h = size.height
             val hy = h * layout.horizon
             val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
-            val shapes = land.paths(w, hy, h, density)
-            // The path lives in the sky (and goes behind the land); a prayer that falls while the Sun is below the
-            // horizon (Fajr, Isha, and Shuruq and Maghrib at the horizon itself) sits on the skyline at its moment.
+            // Each prayer at the Sun's real position at its moment: in the sky on the path, on the horizon at Shuruq
+            // and Maghrib, below it (in the land) at Fajr and Isha.
             val marks = scene.events.map { (p, t) ->
                 val f = scene.path.fraction(t)
-                val x = g.x(f)
-                val el = scene.elevationAt(f)
-                val sky = g.y(el)
-                val onLand = min(shapes.skylineAt(x), hy) - 2.dp.toPx()
-                Triple(p, f, Offset(x, if (el > 0.5 && sky < onLand) sky else onLand))
+                Triple(p, f, prayerMark(scene, g, f))
             }
             onDrawBehind {
                 val shownF = display
@@ -537,6 +547,8 @@ internal fun LivingSky(
                 marks.forEach { (p, f, pt) ->
                     val passed = smoothstep(-1f, 1f, ((shownF - f) / soft).toFloat())
                     val dot = Color.White
+                    // Below the horizon a mark sits on the land: a soft shadow keeps it readable there.
+                    if (pt.y > hy + 2.dp.toPx()) drawCircle(Color.Black.copy(alpha = 0.28f * markAlpha), 7.dp.toPx(), pt)
                     when {
                         p == scene.next -> {
                             // The next prayer's ring breathes, slowly, while it waits.
@@ -560,6 +572,43 @@ internal fun LivingSky(
 }
 
 private const val CYCLE_SECONDS = 240.0
+
+/**
+ * Where the Sun rises and sets, the land opens onto the true horizon (0.9.7): within about 34 dp of those points no
+ * layer of land stands above the horizon line, so the Sun meets the horizon exactly at the moment of Shuruq and of
+ * Maghrib, where their marks are. Returns 1 at the opening, 0 away from it. Shared by both renderers (the land shader
+ * has the same rule, `openAt`) and the tests.
+ */
+/**
+ * How much higher the Sun's visible upper edge stands than its centre's true elevation [el] (degrees): its radius
+ * (16') plus refraction, scaled so that at the standard sunrise and sunset elevation (−50') the edge is exactly on the
+ * horizon, and fading out between there and 4° below, where nothing is seen.
+ */
+internal fun horizonLift(el: Double): Double {
+    val r0 = Atmosphere.refraction(-0.8333)
+    if (el >= -0.8333) return Atmosphere.refraction(el) * (0.5667 / r0) + 0.2667
+    val t = ((el + 4.0) / (4.0 - 0.8333)).coerceIn(0.0, 1.0)
+    return 0.8333 * t * t * (3 - 2 * t)
+}
+
+internal fun horizonOpening(x: Float, riseX: Float, setX: Float, density: Float): Float {
+    fun one(c: Float): Float { val d = abs(x - c) / density; return 1f - smoothstep(12f, 34f, d) }
+    return max(one(riseX), one(setX))
+}
+
+/** Where on screen the Sun rises and sets today (far off screen when it does not, as in polar day or night). */
+internal fun sunriseSunsetX(scene: SkyScene, g: SkyGeometry): Pair<Float, Float> {
+    val rise = scene.events.firstOrNull { it.first == Prayer.SHURUQ }?.let { g.x(scene.path.fraction(it.second)) } ?: -1e5f
+    val set = scene.events.firstOrNull { it.first == Prayer.MAGHRIB }?.let { g.x(scene.path.fraction(it.second)) } ?: -1e5f
+    return rise to set
+}
+
+/**
+ * Where a prayer's mark sits (0.9.7): at the Sun's real position at that moment, on the same scale as the path. So
+ * Shuruq and Maghrib (the Sun's upper edge on the horizon, 0.83° below it) sit on the horizon itself, which the land
+ * leaves open there, and Fajr and Isha (the Sun 15–20° down) sit below the horizon, in the land, where the Sun is.
+ */
+internal fun prayerMark(scene: SkyScene, g: SkyGeometry, f: Double): Offset = Offset(g.x(f), g.y(scene.elevationAt(f)))
 
 private val densityHolder = floatArrayOf(2.625f)
 private fun densityOf() = densityHolder[0]
@@ -846,7 +895,7 @@ private class LandField(private val ridges: List<Ridge>) {
         fun skylineAt(x: Float): Float = skyline[(x / step).toInt().coerceIn(0, skyline.size - 1)]
     }
 
-    fun paths(w: Float, horizonY: Float, h: Float, density: Float): Shapes {
+    fun paths(w: Float, horizonY: Float, h: Float, density: Float, riseX: Float = -1e5f, setX: Float = -1e5f): Shapes {
         val fills = ArrayList<Path>(); val edges = ArrayList<Path>(); val bases = ArrayList<Float>()
         val step = 3f * density
         val skyline = FloatArray((w / step).toInt() + 3) { Float.MAX_VALUE }
@@ -861,7 +910,9 @@ private class LandField(private val ridges: List<Ridge>) {
             var x = 0f
             var first = true
             while (x <= w + step) {
-                val y = base - amp * r.shape(x / w)
+                // Kept below the horizon where the Sun rises and sets (see horizonOpening).
+                val y0 = base - amp * r.shape(x / w)
+                val y = y0 + (horizonY + density - y0).coerceAtLeast(0f) * horizonOpening(x, riseX, setX, density)
                 fill.lineTo(x, y)
                 val k = (x / step).toInt().coerceIn(0, skyline.size - 1)
                 if (y < skyline[k]) skyline[k] = y

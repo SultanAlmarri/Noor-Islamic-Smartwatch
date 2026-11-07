@@ -77,7 +77,10 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const el = dd.elAt(f);
     const hy = cfg.horizonDp * dp, arcTop = cfg.arcTopDp * dp, groundY = (cfg.hDp - 6) * dp;
     const maxEl = Math.max(dd.maxEl, 12), minEl = Math.min(dd.minEl, -24);
-    const yOf = (e) => e >= 0 ? hy - (e / maxEl) * (hy - arcTop) : hy + (-e / -minEl) * (groundY - hy);
+    const refr = (el) => { const h = Math.max(el, -1.9); return 1.02 / Math.tan((h + 10.3 / (h + 5.11)) * DEG) / 60; };
+    const hLift = (el) => { if (el >= -0.8333) return refr(el) * (0.5667 / refr(-0.8333)) + 0.2667; const t = Math.max(0, Math.min(1, (el + 4) / (4 - 0.8333))); return 0.8333 * t * t * (3 - 2 * t); };
+    const app = (e) => e + hLift(e); const maxApp = app(maxEl);
+    const yOf = (e0) => { const e = app(e0); return e >= 0 ? hy - (e / maxApp) * (hy - arcTop) : hy + (-e / -minEl) * (groundY - hy); };
     const sunX = xOf(f), sunY = yOf(el);
     const altTop = 80, altPow = 1.25;
     const altAt = (y) => altTop * Math.pow(Math.max(0, Math.min(1, (hy - y) / hy)), altPow);
@@ -103,7 +106,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     let lx = sunX - mx, ly = sunY - my; const ll = Math.hypot(lx, ly) || 1; lx /= ll; ly /= ll;
     const pa = Math.PI - phase; // phase angle
     const moonLight = [lx * Math.sin(pa), ly * Math.sin(pa), Math.cos(pa)];
-    const sunDisc = fr.sunGround.map(x => x * 2.2);
+    const sunDisc = fr.sunDisc;
     const nightAmb = [0.010, 0.017, 0.045].map(x => x * night * 1.6);
     const wind = (cfg.time || 0) * 0.02;
     const common = {
@@ -113,7 +116,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     };
     const skyU = Object.assign({}, common, {
       uSize: [SW, SH], uDp: dp * s, uHorizon: hy * s, uAltTop: altTop, uAltPow: altPow,
-      uSunPos: [sunX * s, sunY * s], uSunDir: sd, uSunDisc: sunDisc, uSunCloud: fr.sunCloud, uSunHigh: fr.sunHigh,
+      uSunPos: [sunX * s, sunY * s], uSunDir: sd, uSunDisc: sunDisc, uSunGlow: fr.sunGlow, uSunCloud: fr.sunCloud, uSunHigh: fr.sunHigh,
       uCloudTop: (arcTop - 8 * dp) * s, uMoon: [mx * s, my * s, 10 * dp * s, moonVis], uMoonLight: moonLight,
       uMilky: smooth(0.55, 1, night), uTextBottom: (arcTop - 16 * dp) * s,
     });
@@ -138,7 +141,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const landU = Object.assign({}, common, {
       uSize: [W, H], uDp: dp, uHorizon: hy, uBaseA: base.slice(0, 4), uBaseB: base[4], uAmpA: amp.slice(0, 4), uAmpB: amp[4],
       uDistA: dists.slice(0, 4), uDistB: dists[4], uRidgeN: N, uDunes: dunes ? 1 : 0, uSunPos: [sunX, sunY],
-      uPage: page, uMist: mist, uSeed: (cfg.landSeed || 7) % 97,
+      uPage: page, uMist: mist, uSeed: (cfg.landSeed || 7) % 97, uSunrise: [xOf(dd.ev.SHURUQ), xOf(dd.ev.MAGHRIB)],
     });
     const lut = { w: nx, h: ny, data: new Uint8Array(fr.lut.buffer) };
     const ridge = { w: N, h: 2, data: rdata };
@@ -174,8 +177,8 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const next = cfg.next || 'ASR';
     g.globalAlpha = fade * marksA;
     for (const [p, fq] of Object.entries(dd.ev)) {
-      const x = xOf(fq), e = dd.elAt(fq), sy = yOf(e), onLand = Math.min(skyline(x), hy) - 2 * dp;
-      const y = e > 0.5 && sy < onLand ? sy : onLand;
+      const x = xOf(fq), y = yOf(dd.elAt(fq));
+      if (y > hy + 2 * dp) { g.beginPath(); g.fillStyle = 'rgba(0,0,0,0.28)'; g.arc(x, y, 7 * dp, 0, 7); g.fill(); }
       g.beginPath();
       if (p === next) { g.fillStyle = 'rgba(246,214,150,0.25)'; g.arc(x, y, 10.5 * dp, 0, 7); g.fill(); g.beginPath(); g.strokeStyle = '#F6D696'; g.lineWidth = 1.8 * dp; g.arc(x, y, 5.5 * dp, 0, 7); g.stroke(); }
       else if (fq <= f) { g.fillStyle = 'rgba(255,255,255,0.95)'; g.arc(x, y, 3 * dp, 0, 7); g.fill(); }

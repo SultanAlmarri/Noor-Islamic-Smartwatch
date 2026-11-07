@@ -13,7 +13,8 @@ uniform float uLutPow;     // the table's altitude curve
 uniform float2 uSunPos;    // where the Sun is drawn, px
 uniform float3 uSunDir;    // direction of the drawn Sun (view space)
 uniform float uSunEl;      // the Sun's true elevation, degrees
-uniform float3 uSunDisc;   // radiance of the disc (exposed, linear)
+uniform float3 uSunDisc;   // radiance of the disc (exposed, linear; refraction included)
+uniform float3 uSunGlow;   // glare round it
 uniform float3 uSunCloud;  // sunlight at the cumulus (exposed, linear)
 uniform float3 uSunHigh;   // sunlight at the cirrus
 uniform float3 uAmbTop;    // skylight from above
@@ -311,15 +312,17 @@ float4 render(float2 fc) {
     float rd = 7.5;
     float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above * (1.0 - cuA) * (1.0 - 0.6 * ciA);
     if (disc > 0.0) {
+        // The Sun adds light to the sky behind it: never darker than the sky, so it cannot turn black at the horizon.
         float limb = 1.0 - 0.45 * (1.0 - sqrt(sat(1.0 - (r / rd) * (r / rd))));
-        col = mix(col, tone(uSunDisc * limb), disc);
+        float3 dc = tone(uSunDisc * limb) * disc;
+        col = 1.0 - (1.0 - col) * (1.0 - dc);
     }
 
     // Glare round the Sun: a bright core and a wide soft bloom, in front of the clouds (the wide part kept gentle where
     // the text is).
     float sunVis = smoothstep(-5.0, 0.5, uSunEl);
     if (sunVis > 0.0) {
-        float3 gc = tone(uSunDisc * 0.06);
+        float3 gc = tone(uSunGlow);
         float wide = 0.22 * exp(-r / 55.0) * mix(1.0, 0.4, smoothstep(-10.0, 30.0, textAbove));
         float g = (0.55 * exp(-max(r - rd, 0.0) / 9.0) * (1.0 - 0.7 * cuA) + wide) * sunVis;
         col = 1.0 - (1.0 - col) * (1.0 - gc * g);

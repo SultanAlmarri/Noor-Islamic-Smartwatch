@@ -207,7 +207,25 @@ internal object Atmosphere {
         var night = 0.0
         val sunGround = DoubleArray(3); val sunCloud = DoubleArray(3); val sunHigh = DoubleArray(3)
         val ambTop = DoubleArray(3); val ambLow = DoubleArray(3)
+        /**
+         * The Sun's own disc as seen through the air: its radiance (thousands of times the sky's), reddened along the
+         * way, at its apparent height (refraction lifts it about half a degree at the horizon). 0.9.7: the disc used
+         * to take the colour of the light on the ground, which falls to nothing as the Sun reaches the horizon, so it
+         * turned black at sunrise and sunset.
+         */
+        val sunDisc = DoubleArray(3)
+        /** The glare round the disc. */
+        val sunGlow = DoubleArray(3)
     }
+
+    /** Atmospheric refraction (Sæmundsson), degrees, for a true elevation [el] in degrees; standard air. */
+    fun refraction(el: Double): Double {
+        val h = el.coerceAtLeast(-1.9)
+        return 1.02 / kotlin.math.tan((h + 10.3 / (h + 5.11)) * DEG) / 60.0
+    }
+
+    /** Disc radiance relative to E/π (a white surface lit by the Sun): 1 / solid angle of the Sun, scaled to taste. */
+    private const val DISC = 2500.0
 
     /**
      * Fills [lut] (NX × NY ARGB, row 0 at the horizon) with the sky for the Sun at [sunEl] (true elevation, degrees),
@@ -272,6 +290,11 @@ internal object Atmosphere {
             for (k in 0..2) out[k] = w.t[k] * sun[k] * E_SUN * exposure / PI
         }
         sunAt(0.3, light.sunGround); sunAt(2.0, light.sunCloud); sunAt(8.0, light.sunHigh)
+        trans(EYE_H, sin((sunEl + refraction(sunEl)) * DEG), w.t)
+        for (k in 0..2) {
+            light.sunDisc[k] = w.t[k] * sun[k] * E_SUN * exposure / PI * DISC
+            light.sunGlow[k] = light.sunGround[k] * 0.132
+        }
         for (k in 0..2) {
             light.ambTop[k] = z[k] * exposure + NIGHT_TOP[k] * night * 1.6
             light.ambLow[k] = hz[k] * exposure + NIGHT_TOP[k] * night * 2.4
