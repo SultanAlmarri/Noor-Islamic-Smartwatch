@@ -98,9 +98,10 @@ class LocationViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun hasLocationPermission() = container.location.hasForegroundPermission()
+    /** Automatic mode at once; the first fix arrives in the background (the home screen shows it when it comes). */
     fun useAutomatic(done: () -> Unit) = viewModelScope.launch {
         container.settings.setLocationMode(com.noor.app.data.LocationMode.AUTO)
-        container.location.refresh()
+        container.scope.launch { runCatching { container.location.refresh() } }
         done()
     }
 
