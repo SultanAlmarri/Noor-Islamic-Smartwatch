@@ -142,6 +142,10 @@ fun LocationScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Locati
     BackHandler(enabled = stack.size > 1) { pop() }
     var coordsDialog by rememberSaveable { mutableStateOf(false) }
     val top = stack.last()
+    // The keyboard never stays open over the next step (it would cover the confirmation's buttons).
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    LaunchedEffect(top) { keyboard?.hide(); focus.clearFocus() }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     AnimatedContent(top, transitionSpec = {
         val forward = stack.indexOf(targetState) >= stack.indexOf(initialState) && targetState != initialState
@@ -444,6 +448,10 @@ private fun MapPane(vm: LocationViewModel, start: GeoPoint?, startZoom: Double, 
     var query by rememberSaveable { mutableStateOf("") }
     val search = vm.search.collectAsStateWithLifecycle().value
     var searching by remember { mutableStateOf(false) }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    fun closeSearch() { searching = false; keyboard?.hide(); focus.clearFocus() }
+    LaunchedEffect(state.moving) { if (state.moving) closeSearch() }
     // The place under the pin, from the offline list, once the map rests.
     LaunchedEffect(world) {
         snapshotFlow { Triple(state.x, state.y, state.zoom) }.distinctUntilChanged().debounce(250).collect {
@@ -469,11 +477,11 @@ private fun MapPane(vm: LocationViewModel, start: GeoPoint?, startZoom: Double, 
                 GlassCard(Modifier.fillMaxWidth().heightIn(max = 340.dp).padding(top = 6.dp), padding = 0.dp) {
                     LazyColumn {
                         search.coordinates?.let { p -> item { PlaceRow(icon = Icons.Rounded.Place, title = stringResource(R.string.loc_use_coords), subtitle = coords(p)) {
-                            searching = false; scope.launch { state.animateTo(p, 17.0) } } } }
+                            closeSearch(); scope.launch { state.animateTo(p, 17.0) } } } }
                         items(search.offline.take(25), key = { "o" + it.row }) { p -> PlaceItem(p, ar) {
-                            searching = false; scope.launch { state.animateTo(p.point, if (p.neighbourhood) 15.5 else if (p.population > 200_000) 12.0 else 14.0) } } }
+                            closeSearch(); scope.launch { state.animateTo(p.point, if (p.neighbourhood) 15.5 else if (p.population > 200_000) 12.0 else 14.0) } } }
                         items(search.online, key = { "n" + it.point.latitude + it.point.longitude + it.title }) { f ->
-                            PlaceRow(flag = Flags.emoji(f.countryCode), title = f.title, subtitle = f.subtitle) { searching = false; scope.launch { state.animateTo(f.point, 16.5) } }
+                            PlaceRow(flag = Flags.emoji(f.countryCode), title = f.title, subtitle = f.subtitle) { closeSearch(); scope.launch { state.animateTo(f.point, 16.5) } }
                         }
                         if (search.searchingOnline) item {
                             Text(stringResource(R.string.loc_online_searching), style = MaterialTheme.typography.bodySmall, color = c.textMuted, modifier = Modifier.padding(16.dp))
