@@ -32,3 +32,46 @@ object Schedule {
         return ScheduleState(days[1], current, next, Duration.between(now, next.at), (done / total).coerceIn(0f, 1f))
     }
 }
+
+/**
+ * What the countdown shows at a moment (0.9.7). Before a prayer: the time left, with a minus sign. Once its time has
+ * come: the time since it began, with a plus sign, for the usual wait between the Adhan and the iqama, then the next
+ * prayer's countdown again. Shared by the home screen and the persistent notification, so they always agree.
+ */
+data class Countdown(
+    /** The prayer counted to (before it) or from (after it). */
+    val event: TimedEvent,
+    /** True after the prayer's time (+ time since); false before it (− time left). */
+    val elapsed: Boolean,
+    /** Time left, or time since. Never negative. */
+    val duration: Duration,
+    /** When this display changes next (the prayer's time, or the end of its "since" period). */
+    val changesAt: Instant,
+)
+
+object Countdowns {
+    /**
+     * How long the time since a prayer is shown: about the wait between the Adhan and the iqama in most mosques
+     * (around 20 minutes; Fajr longer, Maghrib short), and for Shuruq the quarter of an hour after sunrise before
+     * prayer is again allowed. Ends earlier if the next prayer comes first.
+     */
+    fun sinceWindow(p: Prayer): Duration = Duration.ofMinutes(when (p) {
+        Prayer.FAJR -> 25
+        Prayer.SHURUQ -> 15
+        Prayer.DHUHR -> 20
+        Prayer.ASR -> 20
+        Prayer.MAGHRIB -> 10
+        Prayer.ISHA -> 20
+    })
+
+    fun of(state: ScheduleState, now: Instant): Countdown {
+        val cur = state.current
+        if (cur != null) {
+            val end = minOf(cur.at.plus(sinceWindow(cur.prayer)), state.next.at)
+            if (now.isBefore(end)) return Countdown(cur, elapsed = true, Duration.between(cur.at, now).coerceAtLeast(Duration.ZERO), end)
+        }
+        return Countdown(state.next, elapsed = false, Duration.between(now, state.next.at).coerceAtLeast(Duration.ZERO), state.next.at)
+    }
+
+    private fun Duration.coerceAtLeast(min: Duration): Duration = if (this < min) min else this
+}

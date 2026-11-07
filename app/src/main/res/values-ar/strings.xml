@@ -412,4 +412,6 @@
     <string name="adhan_random_needs">اختر أذانين على الأقل في المفضلة (♡) من مكتبة الأذان.</string>
     <string name="adhan_screen_stop">إيقاف</string>
     <string name="adhan_screen_close">متابعة الأذان</string>
+    <string name="since_prayer">الوقت منذ دخول الصلاة</string>
+    <string name="since_sunrise">الوقت منذ الشروق</string>
 </resources>

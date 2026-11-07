@@ -408,4 +408,6 @@
     <string name="adhan_random_needs">Mark at least two Adhans as favourites (♡) in the Adhan library.</string>
     <string name="adhan_screen_stop">Stop</string>
     <string name="adhan_screen_close">Keep playing</string>
+    <string name="since_prayer">Time since the prayer began</string>
+    <string name="since_sunrise">Time since sunrise</string>
 </resources>

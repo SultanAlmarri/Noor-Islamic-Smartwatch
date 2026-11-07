@@ -1,43 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Persistent prayer notification (0.9.3): next prayer and its time, place and Hijri date, and a live countdown that
-     Android itself ticks (Chronometer), so Noor does not wake up every second. -->
+<!-- Persistent prayer notification, collapsed (0.9.7). Android 12 and later give a collapsed custom view at most 48dp,
+     so the height is spent on two rows:
+       1 · the prayer and its time, and the live countdown (− before the prayer, + after it), ticked by Android itself;
+       2 · the Hijri date and the place across the whole width, shrinking to fit instead of being cut off. Only a place
+           name too long for any readable size is shortened here (the date first, so it is always whole).
+     The countdown is sized in dp so that a large font setting cannot push the second row out of the 48dp. The expanded
+     view (notification_status_big) shows the place and the date on their own lines, wrapped, never cut. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/status_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="center_vertical"
-    android:orientation="horizontal">
+    android:orientation="vertical">
 
     <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <TextView
             android:id="@+id/status_prayer"
             style="@style/TextAppearance.Compat.Notification.Title"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:ellipsize="end"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:textAlignment="viewStart" />
 
-        <TextView
-            android:id="@+id/status_line"
-            style="@style/TextAppearance.Compat.Notification.Line2"
+        <Chronometer
+            android:id="@+id/status_countdown"
+            style="@style/TextAppearance.Compat.Notification.Title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1" />
+            android:layout_marginStart="12dp"
+            android:fontFeatureSettings="tnum"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textDirection="ltr"
+            android:textSize="25dp" />
     </LinearLayout>
 
-    <Chronometer
-        android:id="@+id/status_countdown"
-        style="@style/TextAppearance.Compat.Notification.Title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:fontFeatureSettings="tnum"
-        android:textDirection="ltr"
-        android:textSize="26sp" />
+    <TextView
+        android:id="@+id/status_line"
+        style="@style/TextAppearance.Compat.Notification.Line2"
+        android:layout_width="match_parent"
+        android:layout_height="18dp"
+        android:autoSizeMaxTextSize="14sp"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeStepGranularity="0.5sp"
+        android:autoSizeTextType="uniform"
+        android:gravity="center_vertical"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textAlignment="viewStart" />
 </LinearLayout>

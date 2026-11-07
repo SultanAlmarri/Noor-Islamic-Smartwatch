@@ -29,6 +29,13 @@ class FormatterTest {
         assertEquals(1L to 8L, f.hoursMinutes(Duration.ofSeconds(3600 + 7 * 60 + 5)))
     }
 
+    @Test fun timerReadsLikeAndroidsChronometer() {
+        val f = Formatter(false, Numerals.WESTERN, TimeFormat.H12)
+        assertEquals("1:07:05", f.timer(Duration.ofSeconds(3600 + 7 * 60 + 5)))
+        assertEquals("07:05", f.timer(Duration.ofSeconds(7 * 60 + 5)))
+        assertEquals("00:00", f.timer(Duration.ofSeconds(-3)))
+    }
+
     @Test fun degreesHaveExactlyTwoDecimals() {
         val f = Formatter(false, Numerals.WESTERN, TimeFormat.H12)
         assertEquals("\u200E259.39°\u200E", f.degrees(259.3912))

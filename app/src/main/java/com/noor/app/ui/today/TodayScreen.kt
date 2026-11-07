@@ -420,26 +420,30 @@ private fun SkyHeader(
             val away by animateFloatAsState(if (scrubbing) 1f else 0f, tween(NoorMotion.Standard), label = "scrub")
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(Modifier.fillMaxWidth().graphicsLayer { alpha = 1f - away; translationY = -12.dp.toPx() * away }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    val until = Duration.between(u.now, st.next.at)
-                    val nextLabel = stringResource(R.string.next_prayer)
+                    // 0.9.7: − time left before a prayer; once it has come, + time since it for a while (Countdowns),
+                    // then the next prayer's countdown. The notification shows the same.
+                    val cd = com.noor.prayer.Countdowns.of(st, u.now)
+                    val shownAt = cd.event.at
+                    val countdownText = countdownText(cd, f)
+                    val label = stringResource(when { !cd.elapsed -> R.string.next_prayer; cd.event.prayer == com.noor.prayer.Prayer.SHURUQ -> R.string.since_sunrise; else -> R.string.since_prayer })
                     val title: @Composable (Boolean) -> Unit = { inline ->
-                        AnimatedContent(st.next.prayer to st.next.date, transitionSpec = {
+                        AnimatedContent(cd.event.prayer to cd.event.date, transitionSpec = {
                             (fadeIn(tween(NoorMotion.Standard)) + slideInVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) { it / 3 }) togetherWith fadeOut(tween(NoorMotion.Quick))
                         }, label = "nextName") { (p, d) ->
-                            PrayerTitle(f.prayerName(p, d), f.arabic, hero.titleSize, time = if (inline) f.timeAt(st.next.at, place.zone) else null, spoken = nextLabel)
+                            PrayerTitle(f.prayerName(p, d), f.arabic, hero.titleSize, time = if (inline) f.timeAt(shownAt, place.zone) else null, spoken = label)
                         }
                     }
                     if (hero.sideBySide) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(0.85f)) {
                             title(false)
                             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                                Text(f.timeAt(st.next.at, place.zone), style = MaterialTheme.typography.titleMedium.merge(Tabular).copy(shadow = SkyText.Shadow), color = Sky.OnSkySecondary)
+                                Text(f.timeAt(shownAt, place.zone), style = MaterialTheme.typography.titleMedium.merge(Tabular).copy(shadow = SkyText.Shadow), color = Sky.OnSkySecondary)
                             }
                         }
-                        Box(Modifier.weight(1.15f)) { Countdown(f.countdown(until), hero.countdownMax) }
+                        Box(Modifier.weight(1.15f)) { Countdown(countdownText, hero.countdownMax) }
                     } else {
                         title(true)
-                        Countdown(f.countdown(until), hero.countdownMax)
+                        Countdown(countdownText, hero.countdownMax)
                     }
                 }
                 if (away > 0f) {
@@ -574,6 +578,9 @@ internal object OpeningSky {
 private object SkyText {
     val Shadow = androidx.compose.ui.graphics.Shadow(Color(0x40081530), Offset(0f, 1.5f), 10f)
 }
+
+/** "−1:10:34" before a prayer, "+04:12" after it (0.9.7): a true minus sign, the same in both languages, as in the notification. */
+internal fun countdownText(c: com.noor.prayer.Countdown, f: Formatter): String = (if (c.elapsed) "+" else "\u2212") + f.timer(c.duration)
 
 /** "2:10" large, ":39" quieter; the changing digits roll into place. Fitted to the width, so it never wraps. */
 @Composable

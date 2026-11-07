@@ -40,6 +40,16 @@ class Formatter(val arabic: Boolean, private val numerals: Numerals, private val
         return digits(if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s))
     }
 
+    /**
+     * The prayer countdown on the home screen and in the notification (0.9.7): h:mm:ss, or mm:ss under an hour, exactly
+     * as Android's own Chronometer writes it in the notification, so the two always read alike.
+     */
+    fun timer(d: Duration): String {
+        val total = maxOf(0L, d.seconds)
+        val h = total / 3600; val m = (total % 3600) / 60; val s = total % 60
+        return digits(if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s))
+    }
+
     fun hoursMinutes(d: Duration): Pair<Long, Long> {
         val total = maxOf(0L, d.seconds + 59) / 60
         return total / 60 to total % 60

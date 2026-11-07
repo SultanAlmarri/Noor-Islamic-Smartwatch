@@ -25,7 +25,8 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 
 /**
- * The persistent prayer notification (0.9.3): what it says at any moment, that it is silent and ongoing in its own
+ * The persistent prayer notification (0.9.3): what it says at any moment (0.9.7: − before a prayer, + for a while after
+ * it, always the same as the home screen), that it is silent and ongoing in its own
  * low-importance category, that its next update is armed at the next prayer with a non-waking alarm, and that turning it
  * off removes it. One test method (DataStore allows one instance per process).
  */
@@ -40,14 +41,52 @@ class StatusNotificationTest {
         val config = WearSync.configFor(base, 0L, app.container.timetables)!!
         val dubai = ZoneId.of("Asia/Dubai")
 
-        // 1 · Content at fixed moments (pure): Wednesday 4 Nov 2026 in Dubai.
-        val asr = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, dubai).toInstant()
-        val c = StatusNotification.content(config, base, asr, arabic = false)
+        // 1 · Content at fixed moments (pure): Wednesday 4 Nov 2026 in Dubai (Asr 15:14, Maghrib 17:40).
+        val f = com.noor.app.util.Formatter(false, base.numerals, base.timeFormat)
+        val day = { h: Int, m: Int, sec: Int -> ZonedDateTime.of(2026, 11, 4, h, m, sec, 0, dubai).toInstant() }
+        val before = day(16, 0, 0)
+        val c = StatusNotification.content(config, base, before, arabic = false)
         assertEquals("Maghrib", c.prayer)
         assertEquals("5:40 PM", c.time)
         assertEquals("Dubai  ·  24 Jumada al-Ula 1448 AH", c.line)
-        assertEquals(config.state(asr).next.at, c.nextAt)
-        assertEquals(c.nextAt.plusSeconds(1), c.refreshAt)
+        assertEquals("Dubai", c.place)
+        assertEquals("24 Jumada al-Ula 1448 AH", c.hijri)
+        assertFalse(c.elapsed)
+        assertEquals("\u22121:40:00", c.countdown(before, f))
+        assertEquals(config.state(before).next.at, c.nextAt)
+        assertEquals(c.nextAt, c.countAt)
+        // Rebuilt half a second after the prayer's time, when it has become "+ since".
+        assertEquals(c.nextAt.plusMillis(500), c.refreshAt)
+        // 0.9.7: once Asr has come (15:14), + time since it for 20 minutes, then − to Maghrib.
+        val asr = day(15, 29, 21)
+        val a = StatusNotification.content(config, base, asr, arabic = false)
+        assertEquals("Asr", a.prayer)
+        assertEquals("3:14 PM", a.time)
+        assertTrue(a.elapsed)
+        assertEquals("+15:21", a.countdown(asr, f))
+        assertEquals(day(15, 34, 0).plusMillis(500), a.refreshAt)
+        assertEquals("Maghrib", StatusNotification.content(config, base, day(15, 34, 0).plusMillis(500), arabic = false).prayer)
+        // The second before Maghrib, the moment of it, and the end of its 10 minutes.
+        assertEquals("\u221200:01", StatusNotification.content(config, base, day(17, 39, 59), false).countdown(day(17, 39, 59), f))
+        StatusNotification.content(config, base, day(17, 40, 0), false).let {
+            assertEquals("Maghrib", it.prayer); assertTrue(it.elapsed); assertEquals("+00:00", it.countdown(day(17, 40, 0), f))
+            assertEquals(day(17, 50, 0).plusMillis(500), it.refreshAt)
+        }
+        assertEquals("Isha", StatusNotification.content(config, base, day(17, 50, 1), false).prayer)
+        // The notification and the home screen say the same thing at every moment of two days, across midnight.
+        var t = day(0, 0, 7)
+        while (t.isBefore(day(0, 0, 7).plus(java.time.Duration.ofDays(2)))) {
+            val home = com.noor.app.ui.today.countdownText(com.noor.prayer.Countdowns.of(config.state(t), t), f)
+            val n = StatusNotification.content(config, base, t, arabic = false)
+            assertEquals(t.toString(), home, n.countdown(t, f))
+            assertTrue(t.toString(), n.refreshAt.isAfter(t))
+            // Nothing it shows changes before its next update.
+            val justBefore = n.refreshAt.minusMillis(1001)
+            if (justBefore.isAfter(t)) StatusNotification.content(config, base, justBefore, false).let {
+                assertEquals(t.toString(), n.prayer to n.line, it.prayer to it.line); assertEquals(n.elapsed, it.elapsed)
+            }
+            t = t.plusSeconds(97)
+        }
         // After Isha the next prayer is tomorrow's Fajr, but the date line changes at midnight, so it updates then.
         val late = ZonedDateTime.of(2026, 11, 4, 22, 0, 0, 0, dubai).toInstant()
         val n = StatusNotification.content(config, base, late, arabic = false)
@@ -56,7 +95,7 @@ class StatusNotificationTest {
         // Friday: Jumu'ah; Arabic: Arabic only, with the digits chosen.
         val friday = ZonedDateTime.of(2026, 11, 6, 11, 0, 0, 0, dubai).toInstant()
         assertEquals("Jumu’ah", StatusNotification.content(config, base, friday, arabic = false).prayer)
-        val ar = StatusNotification.content(config, base.copy(numerals = com.noor.app.data.Numerals.ARABIC_INDIC), asr, arabic = true)
+        val ar = StatusNotification.content(config, base.copy(numerals = com.noor.app.data.Numerals.ARABIC_INDIC), before, arabic = true)
         assertEquals("المغرب", ar.prayer)
         assertTrue(ar.line.startsWith("دبي"))
         assertFalse(Regex("[A-Za-z]").containsMatchIn(ar.prayer + ar.time + ar.line))
@@ -78,18 +117,60 @@ class StatusNotificationTest {
         val alarm = shadowOf(app.getSystemService(AlarmManager::class.java)).scheduledAlarms.single { it.operation?.creatorPackage == app.packageName && it.type == AlarmManager.RTC }
         assertEquals(expected.refreshAt.toEpochMilli(), alarm.triggerAtTime)
 
-        // A software render of the notification as Android builds it, for review (not a photo of a phone's shade).
-        runCatching {
-            val parent = android.widget.FrameLayout(app)
-            val v = posted.contentView.apply(app, parent)
-            val d = app.resources.displayMetrics
-            val w = (360 * d.density).toInt()
-            v.measure(android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
-            v.layout(0, 0, w, v.measuredHeight)
-            val bmp = android.graphics.Bitmap.createBitmap(w, v.measuredHeight.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
-            val canvas = android.graphics.Canvas(bmp); canvas.drawColor(0xFFF2F2F2.toInt()); v.draw(canvas)
-            val dir = java.io.File("build/screenshots").apply { mkdirs() }
-            java.io.File(dir, "55_status_notification_en.png").outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        // The countdown is Android's own Chronometer, reading exactly like the home screen's.
+        for (sec in listOf(0L, 5L, 65L, 599L, 3599L, 3600L, 7322L, 36000L))
+            assertEquals(android.text.format.DateUtils.formatElapsedTime(sec), f.timer(java.time.Duration.ofSeconds(sec)))
+        val parent = android.widget.FrameLayout(app)
+        for (view in listOf(posted.contentView, posted.bigContentView)) {
+            val chrono = view.apply(app, parent).findViewById<android.widget.Chronometer>(R.id.status_countdown)
+            assertEquals(if (expected.elapsed) "+%s" else "\u2212%s", chrono.format)
+            assertEquals(!expected.elapsed, chrono.isCountDown)
+        }
+
+        // Software renders of the notification as Android builds it, for review (not photos of a phone's shade), with a
+        // usual and a very long place name: collapsed, the date and the place shrink to fit within Android's 48dp;
+        // expanded, they wrap and are read in full. The width is the content area of a notification on a narrow phone
+        // (about 270dp).
+        val long = config.copy(placeEn = "Al Barsha South Third, Dubai, United Arab Emirates", placeAr = "البرشاء جنوب الثالثة، دبي، الإمارات العربية المتحدة")
+        val usual = config.copy(placeEn = "Al Barsha South, Dubai", placeAr = "البرشاء جنوب، دبي")
+        for ((name, arabic, cfg) in listOf(Triple("en", false, usual), Triple("ar", true, usual), Triple("en_long", false, long), Triple("ar_long", true, long))) {
+            val ctx = if (arabic) app.createConfigurationContext(android.content.res.Configuration(app.resources.configuration).also { it.setLocale(java.util.Locale("ar")) }) else app
+            val lc = StatusNotification.content(cfg, base, asr, arabic)
+            val n = StatusNotification.build(ctx, app, lc, asr)
+            for ((kind, view, maxDp) in listOf(Triple("collapsed", n.contentView, 48), Triple("expanded", n.bigContentView, 252))) {
+                val v = view.apply(ctx, parent)
+                val d = app.resources.displayMetrics
+                val w = (270 * d.density).toInt()
+                // Twice, as Android does when the text shrinks to fit and asks for a new layout.
+                repeat(2) {
+                    v.measure(android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
+                    v.layout(0, 0, w, v.measuredHeight)
+                }
+                assertTrue("$name $kind ${v.measuredHeight / d.density}dp", v.measuredHeight <= maxDp * d.density + 0.5f)
+                for (id in listOf(R.id.status_line, R.id.status_place, R.id.status_hijri, R.id.status_prayer)) {
+                    val tv = v.findViewById<android.widget.TextView>(id) ?: continue
+                    if (tv.visibility != android.view.View.VISIBLE) continue
+                    val layout = tv.layout!!
+                    val cut = (0 until layout.lineCount).sumOf { layout.getEllipsisCount(it) }
+                    if (id == R.id.status_line) {
+                        // Collapsed: one line, never below 10sp; the Hijri date always whole; a usual place whole too.
+                        assertEquals(1, layout.lineCount)
+                        assertTrue("$name ${tv.textSize / d.scaledDensity}sp", tv.textSize / d.scaledDensity >= 9.99f)
+                        assertTrue("$name: ${tv.text}", layout.getEllipsisStart(0) >= lc.hijri.length + 3 || cut == 0)
+                        if (cfg === usual) assertEquals("$name collapsed: ${tv.text}", 0, cut)
+                    } else {
+                        // Expanded: the prayer, the place and the date, every word of them.
+                        assertEquals("$name $kind ${tv.text}", 0, cut)
+                        assertTrue("$name $kind ${tv.text}", layout.getLineEnd(layout.lineCount - 1) == tv.text.length)
+                    }
+                }
+                runCatching {
+                    val bmp = android.graphics.Bitmap.createBitmap(w, v.measuredHeight.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
+                    val canvas = android.graphics.Canvas(bmp); canvas.drawColor(0xFFF2F2F2.toInt()); v.draw(canvas)
+                    val dir = java.io.File("build/screenshots").apply { mkdirs() }
+                    java.io.File(dir, "55_status_notification_${kind}_$name.png").outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                }
+            }
         }
 
         // 3 · Off: removed, and nothing left armed.
