@@ -187,8 +187,19 @@ internal object Atmosphere {
     // The designed night: a deep blue, a little lighter towards the horizon (airglow, distant light).
     private val NIGHT_TOP = doubleArrayOf(0.010, 0.017, 0.045)
     private val NIGHT_LOW = doubleArrayOf(0.028, 0.044, 0.085)
-    /** Text is written on the sky above [Frame.capAltitude]: its relative luminance is kept below this (white ≥ 4.5:1). */
+    /** Small text on the sky: relative luminance at most this (white ≥ 4.5:1). */
     const val TEXT_LUMINANCE = 0.18
+    /** The large countdown: at most this (white ≥ 3:1, WCAG's large-text minimum). */
+    const val LARGE_TEXT_LUMINANCE = 0.30
+
+    /**
+     * How bright the sky may be at [altDeg] when the text ends at [capAlt]: the small text higher up gets 4.5:1, the
+     * band just above the text's bottom (the large countdown) 3:1, and below the text the limit lifts gradually over
+     * 15°, so it reads as the natural darkening of the upper sky rather than a band.
+     */
+    fun textLimit(altDeg: Double, capAlt: Double): Double = if (altDeg >= capAlt)
+        LARGE_TEXT_LUMINANCE + (TEXT_LUMINANCE - LARGE_TEXT_LUMINANCE) * smooth(capAlt, capAlt + 12, altDeg)
+    else LARGE_TEXT_LUMINANCE + (1 - LARGE_TEXT_LUMINANCE) * (1 - smooth(capAlt - 15, capAlt, altDeg))
 
     /** The light of one moment, for the shaders: all linear, already exposed. */
     class Light {
@@ -215,19 +226,42 @@ internal object Atmosphere {
         val exposure = min(600.0, targetLuminance(sunEl) / max(luma(z[0], z[1], z[2]), 1e-9))
         val night = night(sunEl)
         val c = w.out; val tm = w.tone
+        // First the sky as the eye would see it (display values, kept linear for the next step)...
+        val lin = DoubleArray(NX * NY * 3)
         for (j in 0 until NY) {
             val v = j / (NY - 1.0)
             val altDeg = v.pow(LUT_POW) * 90
             val alt = max(altDeg, 0.2) * DEG
             val ca = cos(alt); val sa = sin(alt)
             val wN = (1 - v).pow(2.5)
-            val cap = smooth(capAlt - 6, capAlt, altDeg)
             for (i in 0 until NX) {
                 val az = (i / (NX - 1.0) - 0.5) * fov
                 radiance(ca * sin(az), sa, ca * cos(az), sl, sp, w, c)
                 for (k in 0..2) c[k] = c[k] * exposure + night * (NIGHT_TOP[k] + (NIGHT_LOW[k] - NIGHT_TOP[k]) * wN)
                 tone(c, tm)
-                if (cap > 0) capLuminance(tm, TEXT_LUMINANCE + (1 - cap) * 0.82)
+                for (k in 0..2) lin[(j * NX + i) * 3 + k] = linear(tm[k])
+            }
+        }
+        // ...then, where text is written on it, a graduated filter as a photographer would use: one smooth darkening
+        // from just above the horizon up to the text, as strong as this moment needs for the text to stay readable
+        // (decided on the typical column; the few brightest, near the Sun, are held by the limit below).
+        val ratios = ArrayList<Double>()
+        for (j in 0 until NY) {
+            val altDeg = (j / (NY - 1.0)).pow(LUT_POW) * 90
+            if (altDeg < capAlt) continue
+            val lim = textLimit(altDeg, capAlt)
+            for (i in 0 until NX) ratios += luma(lin[(j * NX + i) * 3], lin[(j * NX + i) * 3 + 1], lin[(j * NX + i) * 3 + 2]) / lim
+        }
+        ratios.sort()
+        val typical = if (ratios.isEmpty()) 0.0 else ratios[(ratios.size * 0.7).toInt().coerceAtMost(ratios.size - 1)]
+        val darken = if (typical > 1) 1 / typical else 1.0
+        for (j in 0 until NY) {
+            val altDeg = (j / (NY - 1.0)).pow(LUT_POW) * 90
+            val k = 1 - (1 - darken) * smooth(2.0, capAlt + 4, altDeg)
+            for (i in 0 until NX) {
+                val o = (j * NX + i) * 3
+                for (ch in 0..2) tm[ch] = srgb(lin[o + ch] * k)
+                capLuminance(tm, textLimit(altDeg, capAlt))
                 lut[j * NX + i] = (0xFF shl 24) or (channel(tm[0]) shl 16) or (channel(tm[1]) shl 8) or channel(tm[2])
             }
         }

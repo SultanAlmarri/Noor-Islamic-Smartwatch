@@ -20,15 +20,21 @@ class AtmosphereTest {
         return 0.2126 * ch(16) + 0.7152 * ch(8) + 0.0722 * ch(0)
     }
 
-    /** White text on the sky above the text's bottom edge keeps at least 4.5:1, whatever the Sun is doing. */
+    /**
+     * White text on the sky keeps its contrast whatever the Sun is doing: at least 4.5:1 where the small text is, at
+     * least 3:1 (large text) just above the text's bottom edge where the countdown is.
+     */
     @Test fun whiteTextStaysReadableAtEveryElevation() {
         val cap = 16.0
-        val firstRow = (0 until ny).first { Atmosphere.rowOf(cap) <= it / (ny - 1.0) }
         for (e in -40..90 step 2) for (az in listOf(-0.9, 0.0, 0.9)) {
             val t = lut(e.toDouble(), az, cap)
-            for (j in firstRow until ny) for (i in 0 until nx) {
-                val c = (1.05) / (lum(t[j * nx + i]) + 0.05)
-                assertTrue("el $e az $az row $j: contrast $c", c >= 4.4)
+            for (j in 0 until ny) {
+                val alt = Math.pow(j / (ny - 1.0), Atmosphere.LUT_POW) * 90
+                val need = when { alt >= cap + 12 -> 4.45; alt >= cap -> 2.95; else -> continue }
+                for (i in 0 until nx) {
+                    val c = (1.05) / (lum(t[j * nx + i]) + 0.05)
+                    assertTrue("el $e az $az row $j (alt $alt): contrast $c", c >= need)
+                }
             }
         }
     }
