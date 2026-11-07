@@ -92,6 +92,20 @@ watch-face packaging step). Point Gradle at the SDK with `ANDROID_HOME` or with 
 - If you cannot build locally, for example because the Android SDK cannot be downloaded, GitHub Actions builds and
   tests every push. A push to `main` also republishes the owner's download links.
 
+### The home sky's GPU shaders (0.9.6)
+
+- Source: `app/src/main/res/raw/sky_common.agsl`, `sky_layer.agsl`, `land_layer.agsl` (AGSL, Android 13+); the
+  sky model is `Atmosphere.kt`. Below Android 13, or if a shader cannot be built, the Canvas renderer is used.
+- AGSL pitfalls met so far: loop bounds must be literals (not even a `const int`); every loop is unrolled and every
+  call inlined when Android sizes a program, and it refuses programs above ~100 000 operations ("program is too
+  large": the first 0.9.6 sky did that on the emulators). `SkyShaderSizeTest` estimates the size and must stay under
+  65 000; `SkyShaderCompileTest` compiles both with the SkSL in Robolectric's native graphics (an older dialect:
+  `sample(child, p)` for `child.eval(p)`; it does not enforce the size limit).
+- Iterate on looks with a WebGL bench that compiles the same files (headless Chromium, a small GLSL prelude), then
+  confirm on Android with `.github/workflows/home-sky.yml` (Android 14 and 15 emulators; pictures also go to the
+  `home-sky-preview` pre-release, since workflow artifacts cannot be downloaded from a Claude Code cloud session).
+  The emulators draw with a software GPU: faithful pictures, but slow, so stills are taken with animations off.
+
 ## Delivery workflow (how every change has reached the owner so far)
 
 1. Run the relevant tests and both release builds.
