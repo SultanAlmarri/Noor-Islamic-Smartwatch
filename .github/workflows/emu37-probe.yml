@@ -12,10 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: anim-ram4g
-            target: google_apis
-            ram: 4096M
-            opts: -no-window -gpu swiftshader_indirect -no-snapshot -camera-back none
           - name: noanim-ram4g
             target: google_apis
             ram: 4096M
@@ -55,7 +51,7 @@ jobs:
           disable-animations: true
           emulator-options: ${{ matrix.opts }}
           script: |
-            adb shell getprop ro.build.version.sdk; adb shell getprop ro.build.version.release
+            adb shell getprop ro.build.version.sdk; adb shell getprop ro.build.version.release; adb shell service list | head -3 || true
             E2E_LOG=alert-e2e-probe-${{ matrix.name }}.txt bash tools/devicetest/alert_e2e.sh app/build/outputs/apk/debug/app-debug.apk all
       - uses: actions/upload-artifact@v4
         if: always()
