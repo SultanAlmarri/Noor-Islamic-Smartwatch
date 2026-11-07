@@ -30,6 +30,8 @@ import java.time.LocalDate
 /** Test host: a phone in Dubai. */
 class TestHostApp : Application(), AlertHost {
     var config: WatchConfig? = null
+    var alarmClock = false
+    override val alarmClockAlarms: Boolean get() = alarmClock
     override val alertDevice = AlertDevice.PHONE
     override val notificationIcon = android.R.drawable.ic_lock_idle_alarm
     override suspend fun alertConfig(): WatchConfig? = config

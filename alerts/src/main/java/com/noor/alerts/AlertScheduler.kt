@@ -52,17 +52,32 @@ object AlertScheduler {
                 continue
             }
             val pi = pending(context, p, planned, PendingIntent.FLAG_UPDATE_CURRENT) ?: continue
-            val at = planned.at.toEpochMilli()
-            runCatching {
-                if (exact) am?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-                else am?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            }.onFailure {
-                // The exact-alarm permission was revoked between the check and the call.
-                am?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            }
+            arm(context, am, planned.at.toEpochMilli(), pi, exact)
         }
         if (config != null) AlertNotifications.ensureChannels(context)
         return ScheduleStatus(plan.minByOrNull { it.at }, plan.size, exact, System.currentTimeMillis()).also { lastStatus = it }
+    }
+
+    /**
+     * 0.9.7: prayer alarms are alarm-clock alarms (AlarmManager.setAlarmClock), as an alarm clock's are: delivered at
+     * the exact minute even in deep sleep, never deferred by battery management, and the app may show its Adhan screen
+     * and play while the phone is locked. Android 17 silences sound from apps in the background unless they are visible
+     * or properly in the foreground; plain exact alarms were enough before it, not after (the Adhan stopped within a
+     * second or two at real prayer times while the in-app test, started with the app open, played in full).
+     * Side effect: Android shows its alarm icon and "next alarm" for the next prayer. Without the exact-alarm
+     * permission, an inexact alarm is used and the backup Adhan takes over (see the dispatcher).
+     */
+    private fun arm(context: Context, am: AlarmManager?, at: Long, pi: PendingIntent, exact: Boolean) {
+        runCatching {
+            when {
+                exact && context.alertHost?.alarmClockAlarms == true -> am?.setAlarmClock(AlarmManager.AlarmClockInfo(at, AlertNotifications.contentIntent(context)), pi)
+                exact -> am?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+                else -> am?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            }
+        }.onFailure {
+            // The exact-alarm permission was revoked between the check and the call.
+            runCatching { am?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi) }
+        }
     }
 
     private fun pending(context: Context, p: Prayer, planned: PlannedAlert?, flag: Int): PendingIntent? {
@@ -81,9 +96,7 @@ object AlertScheduler {
         val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_TEST).putExtra(EXTRA_PRAYER, prayer.name)
             .putExtra(EXTRA_DATE, LocalDate.now().toString()).putExtra(EXTRA_AT, at)
         val pi = PendingIntent.getBroadcast(context, REQUEST_BASE + 50, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        return runCatching {
-            if (canScheduleExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-            else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-        }.isSuccess
+        // The same kind of alarm as a real prayer, so the test goes the same way.
+        return runCatching { arm(context, am, at, pi, canScheduleExact(context)) }.isSuccess
     }
 }

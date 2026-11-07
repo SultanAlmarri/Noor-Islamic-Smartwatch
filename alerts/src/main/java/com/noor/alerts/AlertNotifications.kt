@@ -112,8 +112,17 @@ object AlertNotifications {
             .apply { if (detail != null) setStyle(NotificationCompat.BigTextStyle().bigText("$body\n$detail")) }
             .addAction(0, stopLabel, stop)
             .setDeleteIntent(stop)
+            .apply { fullScreen(context)?.let { setFullScreenIntent(it, true) } }
             .also { b -> runCatching { context.alertHost?.decoratePlaying(context, ID_PLAYING, b, title) } }
             .build()
+    }
+
+    /** The Adhan screen, shown over the lock screen while the Adhan plays (Android shows a heads-up instead if in use). */
+    private fun fullScreen(context: Context): PendingIntent? {
+        val intent = context.alertHost?.adhanScreen(context) ?: return null
+        if (android.os.Build.VERSION.SDK_INT >= 34 && context.getSystemService(NotificationManager::class.java)?.canUseFullScreenIntent() != true) return null
+        return PendingIntent.getActivity(context, 2, intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
     /** The prayer-time notification for notification-only and silent alerts, and after a sound has finished. */

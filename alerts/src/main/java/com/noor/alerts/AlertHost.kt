@@ -39,6 +39,15 @@ interface AlertHost {
     fun launchIntent(context: Context): Intent
 
     /**
+     * A full-screen Adhan screen to show while the Adhan plays with the phone locked (like an alarm clock's), or null
+     * for none (the watch). Being visible also lets the sound play under Android 17's background-audio rules.
+     */
+    fun adhanScreen(context: Context): Intent? = null
+
+    /** Arm prayer alarms as alarm-clock alarms (the phone, for Android 17's background audio rules); false keeps exact alarms. */
+    val alarmClockAlarms: Boolean get() = false
+
+    /**
      * Last chance to add to the notification shown while a sound plays, before it is posted. The watch uses this to
      * make it an Ongoing Activity (an icon on the watch face and in Recents that leads back to the Stop button).
      */

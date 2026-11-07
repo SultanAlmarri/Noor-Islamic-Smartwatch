@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Optional: lets the low-frequency background refresh run when the app is closed (asked separately, with an explanation). -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- The Adhan screen over the lock screen while the Adhan plays, as an alarm clock does. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
         android:name=".NoorApplication"
@@ -30,6 +32,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The Adhan screen, over the lock screen while the Adhan plays. -->
+        <activity
+            android:name=".adhan.AdhanAlertActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.noor.smartwatch.adhan"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Noor" />
 
         <!-- Recalculate for the new zone when the user travels or changes the clock. -->
         <receiver android:name=".data.TimeChangeReceiver" android:exported="false">

@@ -11,8 +11,14 @@ import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.app.ActivityManager
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 import java.time.Instant
 
@@ -70,6 +76,7 @@ internal data class PlayRequest(
 class AdhanService : Service() {
     private lateinit var player: AlertPlayer
     private var current: PlayRequest? = null
+    private val main = Handler(Looper.getMainLooper())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -89,8 +96,11 @@ class AdhanService : Service() {
                     if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0)
                 current?.let { finishNotification(it, null) }
                 current = req
+                playing.value = Playing(req.title, req.body, req.atMs)
                 if (req.vibrate) vibrate(this)
-                start(req, req.source, usingFallback = false)
+                // Claim audio only once Android counts this service as running in the foreground (normally at once;
+                // at most a second): on Android 17 a request made a moment too early is refused as from the background.
+                whenForeground(SystemClock.elapsedRealtime()) { if (current === req) start(req, req.source, usingFallback = false) }
             }
             ACTION_STOP -> {
                 if (player.isPlaying) player.stop() else { stopVibration(this); shutdown() }
@@ -104,12 +114,21 @@ class AdhanService : Service() {
         player.play(source, req.volumePercent, req.gradualSeconds, req.maxSeconds) { result -> ended(req, result, usingFallback) }
     }
 
+    private fun whenForeground(since: Long, action: () -> Unit) {
+        val info = ActivityManager.RunningAppProcessInfo()
+        runCatching { ActivityManager.getMyMemoryState(info) }
+        if (info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE ||
+            SystemClock.elapsedRealtime() - since >= FOREGROUND_WAIT_MS) action()
+        else main.postDelayed({ whenForeground(since, action) }, 50)
+    }
+
     /** One play ended: record it, or, if nothing was heard, try the next way of making the prayer heard. */
     private fun ended(req: PlayRequest, result: PlayResult, usingFallback: Boolean) {
         if (current !== req) return
         if (result.played) {
             log(req) { it.copy(outcome = if (usingFallback) AlertOutcome.PLAYED_FALLBACK else AlertOutcome.PLAYED,
-                playedMs = result.playedMs, stoppedByUser = result.stoppedByUser, detail = it.detail) }
+                playedMs = result.playedMs, stoppedByUser = result.stoppedByUser,
+                detail = listOfNotNull(it.detail, result.report).joinToString("; ").ifEmpty { null }) }
             done(req, note = if (usingFallback) req.fallbackNote else null)
             return
         }
@@ -123,11 +142,12 @@ class AdhanService : Service() {
             return
         }
         if (result.stoppedByUser) {
-            log(req) { it.copy(outcome = AlertOutcome.PLAYED, playedMs = 0, stoppedByUser = true) }
+            log(req) { it.copy(outcome = AlertOutcome.PLAYED, playedMs = 0, stoppedByUser = true,
+                detail = listOfNotNull(it.detail, result.report).joinToString("; ").ifEmpty { null }) }
             done(req, note = null); return
         }
         // Noor's own player could not play anything on this device: Android's notification system plays the backup Adhan.
-        log(req) { it.copy(outcome = AlertOutcome.BACKUP_SOUND, detail = listOfNotNull(it.detail, "player: ${result.error}").joinToString("; ")) }
+        log(req) { it.copy(outcome = AlertOutcome.BACKUP_SOUND, detail = listOfNotNull(it.detail, "player: ${result.error}", result.report).joinToString("; ")) }
         stopVibration(this)
         current = null
         AlertNotifications.postBackup(this, req.notificationId, req.title, req.body, Instant.ofEpochMilli(req.atMs),
@@ -147,25 +167,37 @@ class AdhanService : Service() {
         shutdown()
     }
 
+    /** What is playing now, for the Adhan screen. */
+    data class Playing(val title: String, val body: String, val atMs: Long)
+
     private fun finishNotification(req: PlayRequest, note: String?) {
         if (req.keepNotification) AlertNotifications.post(this, req.notificationId, AlertNotifications.CHANNEL_SILENT, req.title, req.body,
             Instant.ofEpochMilli(req.atMs), listOfNotNull(req.detail, note).joinToString("\n").ifEmpty { null })
     }
 
     private fun shutdown() {
+        current = null
+        playing.value = null
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     override fun onDestroy() {
+        main.removeCallbacksAndMessages(null)
         player.stop(notify = false)
         stopVibration(this)
+        playing.value = null
         super.onDestroy()
     }
 
     companion object {
         const val ACTION_PLAY = "com.noor.alerts.PLAY"
         const val ACTION_STOP = "com.noor.alerts.STOP"
+        private const val FOREGROUND_WAIT_MS = 1_000L
+
+        private val playing = MutableStateFlow<Playing?>(null)
+        /** The alert sounding now (null when none), for the Adhan screen. */
+        val nowPlaying: StateFlow<Playing?> get() = playing
 
         internal fun start(context: Context, req: PlayRequest) =
             ContextCompat.startForegroundService(context, req.toIntent(context))

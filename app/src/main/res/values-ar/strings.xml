@@ -410,4 +410,6 @@
     <string name="adhan_random">عشوائي من المفضلة</string>
     <string name="adhan_random_detail">أذان مختلف من مفضلتك (%1$s) في كل مرة؛ لا يتكرر أحدها حتى تُسمع كلها.</string>
     <string name="adhan_random_needs">اختر أذانين على الأقل في المفضلة (♡) من مكتبة الأذان.</string>
+    <string name="adhan_screen_stop">إيقاف</string>
+    <string name="adhan_screen_close">متابعة الأذان</string>
 </resources>

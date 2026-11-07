@@ -52,6 +52,8 @@ class NoorApplication : Application(), AlertHost {
     override val notificationIcon = R.drawable.ic_notification
     override suspend fun alertConfig(): WatchConfig? = container.alertConfig()
     override fun launchIntent(context: Context): Intent = Intent(context, MainActivity::class.java)
+    override fun adhanScreen(context: Context): Intent = Intent(context, com.noor.app.adhan.AdhanAlertActivity::class.java)
+    override val alarmClockAlarms: Boolean get() = true
     override val alertLanguage: String? get() = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language
     override fun onPrayerAlarm(context: Context) = com.noor.app.notify.StatusNotification.refreshAsync(context)
 
