@@ -49,7 +49,11 @@ PY
 # Taps the centre of the first element whose text or description contains $1 (uiautomator).
 tap_text() {
   no_anr
-  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/ui.xml" >/dev/null 2>&1
+  for _ in 1 2 3; do
+    rm -f "$OUT/ui.xml"
+    adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/ui.xml" >/dev/null 2>&1
+    grep -q "$1" "$OUT/ui.xml" 2>/dev/null && break; sleep 2
+  done
   local xy; xy=$(python3 - "$OUT/ui.xml" "$1" <<'PY'
 import re, sys
 x = open(sys.argv[1], encoding='utf-8').read(); want = sys.argv[2]
@@ -104,9 +108,8 @@ if [ -n "$NEXT" ]; then
 fi
 
 # ---- Choosing a location.
-adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; sleep 6
-tap_text "Settings"; sleep 3
-tap_text "Location mode"; sleep 4
+# (The animated home screen never settles, so uiautomator cannot read it: the debug build opens the page directly.)
+adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT --es noor.route cities >/dev/null; sleep 8
 shot location_home
 tap_text "Browse by country"; sleep 4; shot location_countries
 adb shell input keyevent KEYCODE_BACK; sleep 2
@@ -125,8 +128,7 @@ adb shell input keyevent KEYCODE_BACK; sleep 2
 adb shell input keyevent KEYCODE_BACK; sleep 2
 
 # ---- Qibla: the field held at the Good/Fair limit, with noise, recorded.
-adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; sleep 6
-tap_text "Qibla"; sleep 4
+adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT --es noor.route qibla >/dev/null; sleep 6
 adb emu sensor set acceleration 0:0:9.81
 # The emulator's normal field (2:28:-35) is 44.9 µT. Readings alternate between 12.6 % and 15.8 % stronger (50.5 and
 # 51.9 µT): judged one by one they cross the Good/Fair limit (15 %) every 0.45 s; the label must stay put.

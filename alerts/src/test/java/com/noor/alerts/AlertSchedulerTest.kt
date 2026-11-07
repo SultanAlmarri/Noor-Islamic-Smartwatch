@@ -36,6 +36,7 @@ class TestHostApp : Application(), AlertHost {
     override val notificationIcon = android.R.drawable.ic_lock_idle_alarm
     override suspend fun alertConfig(): WatchConfig? = config
     override fun launchIntent(context: Context): Intent = Intent(Intent.ACTION_MAIN).setPackage(context.packageName)
+    override fun adhanScreen(context: Context): Intent = Intent("com.noor.test.ADHAN_SCREEN").setPackage(context.packageName)
 }
 
 @RunWith(RobolectricTestRunner::class)

@@ -108,7 +108,10 @@ object AlertNotifications {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
-            .setSilent(true)
+            // Not setSilent(): that makes it a "silent" group child, which Android never lets interrupt, so the
+            // full-screen Adhan would never open. The channel itself has no sound or vibration (the player plays the
+            // Adhan), and updates do not alert again.
+            .setOnlyAlertOnce(true)
             .apply { if (detail != null) setStyle(NotificationCompat.BigTextStyle().bigText("$body\n$detail")) }
             .addAction(0, stopLabel, stop)
             .setDeleteIntent(stop)

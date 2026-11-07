@@ -84,4 +84,31 @@ class AdhanPlaybackTest {
         assertTrue("report: ${r.report}", r.report!!.contains("focus lost"))
         audio.mode = AudioManager.MODE_NORMAL
     }
+
+}
+
+/**
+ * Android 13 here: on 14 and later Android first asks whether the user allows full-screen alerts for Noor, which
+ * Robolectric cannot answer (on a phone it is allowed by default for an alarm app installed outside Google Play).
+ */
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(application = TestHostApp::class, sdk = [33])
+class AdhanFullScreenTest {
+    /**
+     * 0.9.7: the notification shown while the Adhan plays opens the full-screen Adhan over the lock screen. It must not
+     * be a "silent" group child (Android suppresses every interruption, the full-screen one included, for those), and
+     * its channel makes no sound of its own (the player plays the Adhan).
+     */
+    @Test fun theAdhanNotificationCanOpenTheFullScreenAlert() {
+        val app = org.robolectric.RuntimeEnvironment.getApplication()
+        AlertNotifications.ensureChannels(app)
+        val n = AlertNotifications.playing(app, "Maghrib", "5:38 PM", java.time.Instant.now(), null, "Stop")
+        org.junit.Assert.assertNotNull("full-screen intent", n.fullScreenIntent)
+        assertEquals(android.app.Notification.CATEGORY_ALARM, n.category)
+        assertFalse("not a silent group child", n.group == "silent" || n.groupAlertBehavior == android.app.Notification.GROUP_ALERT_SUMMARY)
+        val ch = app.getSystemService(android.app.NotificationManager::class.java).getNotificationChannel(AlertNotifications.CHANNEL_ADHAN)
+        assertEquals(android.app.NotificationManager.IMPORTANCE_HIGH, ch.importance)
+        org.junit.Assert.assertNull(ch.sound)
+        assertFalse(ch.shouldVibrate())
+    }
 }

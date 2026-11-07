@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -182,6 +183,13 @@ private fun NoorRoot(s: AppSettings) {
                 isAppearanceLightNavigationBars = !dark
             }
         }
+    }
+
+    // Debug builds only: open a page directly (`adb shell am start ... --es noor.route cities`), for the device tests,
+    // which cannot always read the animated home screen to tap their way there.
+    val activity = LocalView.current.context as? Activity
+    LaunchedEffect(Unit) {
+        if (BuildConfig.DEBUG) activity?.intent?.getStringExtra("noor.route")?.let { r -> runCatching { nav.navigate(r) } }
     }
 
     Scaffold(
