@@ -122,7 +122,8 @@ import java.util.Locale
 sealed interface LocStep {
     data object Home : LocStep
     data object Countries : LocStep
-    data class Cities(val countryCode: String) : LocStep
+    data class Regions(val countryCode: String) : LocStep
+    data class Cities(val countryCode: String, val region: WorldPlaces.Region? = null) : LocStep
     data class Areas(val city: WorldPlaces.Place, val areas: List<WorldPlaces.Place>) : LocStep
     data class MapPick(val start: GeoPoint?, val zoom: Double) : LocStep
     data object Confirm : LocStep
@@ -159,8 +160,16 @@ fun LocationScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Locati
             LocStep.Home -> HomePane(contentPadding, vm, onBack = { pop() }, onCountries = { push(LocStep.Countries) },
                 onMap = { push(LocStep.MapPick(it, if (it == null) 2.5 else 12.0)) }, onCoords = { coordsDialog = true },
                 onPicked = { push(LocStep.Confirm) }, onAutomatic = onDone)
-            LocStep.Countries -> CountriesPane(contentPadding, vm, onBack = { pop() }, onCountry = { push(LocStep.Cities(it)) })
-            is LocStep.Cities -> CitiesPane(contentPadding, vm, step.countryCode, onBack = { pop() },
+            // 0.9.8: country → region → city → area, narrowing step by step. Small countries skip the regions.
+            LocStep.Countries -> CountriesPane(contentPadding, vm, onBack = { pop() }, onCountry = { cc ->
+                val w = vm.world.value
+                val named = w?.regions(cc)?.count { it.name.isNotBlank() } ?: 0
+                push(if (w != null && named > 1 && w.count(cc) > 40) LocStep.Regions(cc) else LocStep.Cities(cc))
+            })
+            is LocStep.Regions -> RegionsPane(contentPadding, vm, step.countryCode, onBack = { pop() },
+                onRegion = { push(LocStep.Cities(step.countryCode, it)) },
+                onCity = { city, areas -> if (areas.isEmpty()) { vm.pick(city); push(LocStep.Confirm) } else push(LocStep.Areas(city, areas)) })
+            is LocStep.Cities -> CitiesPane(contentPadding, vm, step.countryCode, step.region, onBack = { pop() },
                 onCity = { city, areas -> if (areas.isEmpty()) { vm.pick(city); push(LocStep.Confirm) } else push(LocStep.Areas(city, areas)) })
             is LocStep.Areas -> AreasPane(contentPadding, vm, step.city, step.areas, onBack = { pop() },
                 onPick = { vm.pick(it); push(LocStep.Confirm) }, onMap = { push(LocStep.MapPick(step.city.point, 13.5)) })
@@ -288,36 +297,116 @@ private fun CountriesPane(contentPadding: PaddingValues, vm: LocationViewModel, 
     }
 }
 
+/** What a country's regions are called, in English and Arabic (emirates, states, governorates, provinces, regions). */
+private fun regionsWord(cc: String, ar: Boolean): String = when (cc) {
+    "AE" -> if (ar) "الإمارات" else "Emirates"
+    "US", "IN", "MY", "NG", "SD", "SS", "AU", "MX", "BR", "DE", "AT", "VE", "TR" -> if (ar) "الولايات" else "States"
+    "EG", "JO", "IQ", "SY", "YE", "OM", "KW", "BH", "PS", "LB", "TN" -> if (ar) "المحافظات" else "Governorates"
+    "CA", "PK", "IR", "AF", "ID", "CN", "ZA", "IT", "ES", "NL", "AR", "PH", "KR", "DZ" -> if (ar) "المقاطعات" else "Provinces"
+    else -> if (ar) "المناطق" else "Regions"
+}
+
+/** One place in a list, opening its areas (or choosing it at once when it has none). */
 @Composable
-private fun CitiesPane(contentPadding: PaddingValues, vm: LocationViewModel, countryCode: String, onBack: () -> Unit,
-                       onCity: (WorldPlaces.Place, List<WorldPlaces.Place>) -> Unit) {
+private fun OpenablePlace(p: WorldPlaces.Place, ar: Boolean, world: WorldPlaces?, opening: Int?, setOpening: (Int?) -> Unit,
+                          showRegion: Boolean, onCity: (WorldPlaces.Place, List<WorldPlaces.Place>) -> Unit) {
+    val scope = rememberCoroutineScope()
+    PlaceItem(p, ar, showRegion = showRegion, inCountry = true, busy = opening == p.row) {
+        if (opening != null) return@PlaceItem
+        if (p.neighbourhood || world == null) { onCity(p, emptyList()); return@PlaceItem }
+        setOpening(p.row)
+        scope.launch {
+            val areas = withContext(Dispatchers.Default) { world.areas(p) }
+            setOpening(null)
+            onCity(p, areas)
+        }
+    }
+}
+
+/** A country with regions: its largest cities at a glance, then its regions; a search across the whole country. */
+@Composable
+private fun RegionsPane(contentPadding: PaddingValues, vm: LocationViewModel, countryCode: String, onBack: () -> Unit,
+                        onRegion: (WorldPlaces.Region) -> Unit, onCity: (WorldPlaces.Place, List<WorldPlaces.Place>) -> Unit) {
     val ar = isArabicUi()
+    val c = NoorTheme.colors
     val world = vm.world.collectAsStateWithLifecycle().value
     var filter by rememberSaveable { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
     var opening by remember { mutableStateOf<Int?>(null) }
-    val cities by produceState<List<WorldPlaces.Place>?>(null, world, countryCode) { value = world?.let { w -> withContext(Dispatchers.Default) { w.cities(countryCode) } } }
-    val filtered by produceState<List<WorldPlaces.Place>?>(null, world, filter, cities) {
+    val country = WorldStore.countryName(countryCode, ar)
+    val regions by produceState<List<WorldPlaces.Region>?>(null, world, countryCode, ar) { value = world?.let { w -> withContext(Dispatchers.Default) { w.regions(countryCode, ar) } } }
+    val largest by produceState<List<WorldPlaces.Place>>(emptyList(), world, countryCode) { value = world?.let { w -> withContext(Dispatchers.Default) { w.largest(countryCode, 6) } }.orEmpty() }
+    val found by produceState<List<WorldPlaces.Place>?>(null, world, filter) {
         val f = filter.trim()
         value = if (f.length < 2) null else world?.let { w -> withContext(Dispatchers.Default) { w.search(f, 200, countryCode) } }
     }
     Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
-        Header((Flags.emoji(countryCode)?.let { "$it  " } ?: "") + WorldStore.countryName(countryCode, ar), onBack)
-        SearchField(filter, stringResource(R.string.loc_cities_filter), onChange = { filter = it })
-        val list = filtered ?: cities
-        if (list == null) Loading()
+        Header((Flags.emoji(countryCode)?.let { "$it  " } ?: "") + country, onBack)
+        SearchField(filter, stringResource(R.string.loc_find_in, country), onChange = { filter = it })
+        if (regions == null) Loading()
         LazyColumn(Modifier.fillMaxSize()) {
-            items(list.orEmpty(), key = { it.row }) { p ->
-                PlaceItem(p, ar, inCountry = true, busy = opening == p.row) {
-                    if (opening != null) return@PlaceItem
-                    if (p.neighbourhood) { onCity(p, emptyList()); return@PlaceItem }
-                    opening = p.row
-                    scope.launch {
-                        val areas = withContext(Dispatchers.Default) { world!!.areas(p) }
-                        opening = null
-                        onCity(p, areas)
-                    }
+            val f = found
+            if (f != null) {
+                items(f, key = { "f" + it.row }) { p -> OpenablePlace(p, ar, world, opening, { opening = it }, showRegion = true, onCity = onCity) }
+                if (f.isEmpty()) item {
+                    Text(stringResource(R.string.search_no_results, filter), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 24.dp))
                 }
+            } else {
+                if (largest.isNotEmpty()) item { SectionLabel(stringResource(R.string.loc_largest_cities)) }
+                items(largest, key = { "l" + it.row }) { p -> OpenablePlace(p, ar, world, opening, { opening = it }, showRegion = true, onCity = onCity) }
+                item { SectionLabel(regionsWord(countryCode, ar)) }
+                items(regions.orEmpty(), key = { "r" + it.index }) { r ->
+                    val name = (if (ar) r.nameAr ?: r.name else r.name).ifBlank { stringResource(R.string.loc_other_places) }
+                    val largestName = r.largest?.let { if (ar) it.nameAr ?: it.name else it.name }
+                    val f2 = Formatter(ar, vm.settings.collectAsStateWithLifecycle().value?.numerals ?: com.noor.app.data.Numerals.WESTERN, com.noor.app.data.TimeFormat.H12)
+                    PlaceRow(icon = Icons.Rounded.Public, title = name, chevron = true,
+                        subtitle = if (largestName != null) stringResource(R.string.loc_region_sub, largestName, f2.number(r.places)) else null) { onRegion(r) }
+                }
+            }
+            item { Spacer(Modifier.height(32.dp)) }
+        }
+    }
+}
+
+/**
+ * The towns and cities of a region (or of a whole small country): largest first; the villages and places GeoNames has
+ * no population for are folded under one row, so a long list never comes all at once.
+ */
+@Composable
+private fun CitiesPane(contentPadding: PaddingValues, vm: LocationViewModel, countryCode: String, region: WorldPlaces.Region?, onBack: () -> Unit,
+                       onCity: (WorldPlaces.Place, List<WorldPlaces.Place>) -> Unit) {
+    val ar = isArabicUi()
+    val world = vm.world.collectAsStateWithLifecycle().value
+    var filter by rememberSaveable { mutableStateOf("") }
+    var opening by remember { mutableStateOf<Int?>(null) }
+    var villagesOpen by rememberSaveable { mutableStateOf(false) }
+    val cities by produceState<List<WorldPlaces.Place>?>(null, world, countryCode, region) {
+        value = world?.let { w -> withContext(Dispatchers.Default) { if (region != null) w.cities(region) else w.cities(countryCode) } }
+    }
+    val filtered by produceState<List<WorldPlaces.Place>?>(null, world, filter, cities) {
+        val f = filter.trim()
+        value = if (f.length < 2) null else world?.let { w -> withContext(Dispatchers.Default) {
+            w.search(f, 300, countryCode).filter { region == null || it.admin1Code == region.code }
+        } }
+    }
+    val regionName = region?.let { (if (ar) it.nameAr ?: it.name else it.name).ifBlank { stringResource(R.string.loc_other_places) } }
+    val title = regionName ?: ((Flags.emoji(countryCode)?.let { "$it  " } ?: "") + WorldStore.countryName(countryCode, ar))
+    Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
+        Header(title, onBack)
+        SearchField(filter, stringResource(R.string.loc_find_in, regionName ?: WorldStore.countryName(countryCode, ar)), onChange = { filter = it })
+        val all = filtered ?: cities
+        if (all == null) Loading()
+        val towns = all.orEmpty().filter { filtered != null || it.population > 0 }
+        val villages = if (filtered != null) emptyList() else all.orEmpty().filter { it.population <= 0 }.sortedBy { WorldPlaces.sortKey(it.name) }
+        LazyColumn(Modifier.fillMaxSize()) {
+            items(towns, key = { it.row }) { p -> OpenablePlace(p, ar, world, opening, { opening = it }, showRegion = region == null, onCity = onCity) }
+            if (villages.isNotEmpty()) {
+                item(key = "villages") {
+                    val f2 = Formatter(ar, vm.settings.collectAsStateWithLifecycle().value?.numerals ?: com.noor.app.data.Numerals.WESTERN, com.noor.app.data.TimeFormat.H12)
+                    PlaceRow(icon = Icons.Rounded.Place, title = stringResource(R.string.loc_villages, f2.number(villages.size)), subtitle = null,
+                        chevron = !villagesOpen) { villagesOpen = !villagesOpen }
+                }
+                if (villagesOpen) items(villages, key = { "v" + it.row }) { p -> OpenablePlace(p, ar, world, opening, { opening = it }, showRegion = region == null, onCity = onCity) }
             }
             if (filtered != null && filtered!!.isEmpty()) item {
                 Text(stringResource(R.string.search_no_results, filter), style = MaterialTheme.typography.bodyMedium, color = NoorTheme.colors.textSecondary,

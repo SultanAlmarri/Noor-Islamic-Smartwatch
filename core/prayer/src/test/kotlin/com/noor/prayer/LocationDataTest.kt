@@ -79,6 +79,21 @@ class LocationDataTest {
         val areas = world.areas(dubai).map { it.name }
         for (n in listOf("Jumayrā", "Al Karama", "Dubai Marina", "Mirdif")) assertTrue(n in areas, "$n in Dubai's areas")
         assertTrue("Sharjah" !in areas, "Sharjah is not in Dubai")
+        // 0.9.8: country → region → city. The UAE's seven emirates, Dubai's towns, Saudi Arabia's regions.
+        val emirates = world.regions("AE").filter { it.name.isNotBlank() }
+        assertEquals(7, emirates.size, emirates.map { it.name }.toString())
+        assertTrue(world.regions("AE").last().name.isBlank(), "places with no region come last")
+        assertTrue(emirates.any { it.name == "Dubai" && it.largest?.name == "Dubai" })
+        assertTrue(emirates.all { it.nameAr != null }, emirates.map { it.nameAr }.toString())
+        val dubaiEmirate = emirates.first { it.name == "Dubai" }
+        val towns = world.cities(dubaiEmirate)
+        assertEquals("Dubai", towns.first().name)
+        assertTrue(towns.all { it.admin1Code == dubaiEmirate.code && !it.neighbourhood })
+        assertEquals(towns.size, dubaiEmirate.places)
+        assertTrue(world.regions("SA").size >= 13)
+        assertEquals(world.cities("SA").size, world.regions("SA").sumOf { it.places })
+        assertTrue(world.regions("US").size >= 50)
+        assertEquals(listOf("Dubai", "Abu Dhabi", "Sharjah"), world.largest("AE", 3).map { it.name })
         // Small towns too: a few hundred people.
         assertTrue(world.cities("SA").size > 500, "SA ${world.cities("SA").size}")
         assertTrue(world.cities("GB").any { it.population in 500..2000 }, "GB small towns")

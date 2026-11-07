@@ -134,7 +134,12 @@ class LocationFlowTest {
         click("Browse by country")
         waitText("United Arab Emirates"); shot("65_location_countries_en")
         click("United Arab Emirates")
-        waitText("Abu Dhabi"); shot("66_location_cities_ae_en")
+        // 0.9.8: the country first offers its largest cities and its emirates.
+        waitText("EMIRATES"); waitText("Largest: Ras Al Khaimah"); shot("66_location_cities_ae_en")
+        click("Largest: Ras Al Khaimah")
+        waitText("Find a place in Ras Al Khaimah"); shot("66b_location_region_rak_en")
+        rule.runOnIdle { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        waitText("Largest: Ras Al Khaimah") // back on the emirates
         click("Dubai")
         waitText("Areas of Dubai"); waitText("Dubai, centre"); shot("67_location_areas_dubai_en")
         // The list is long (lists draw only what is on screen): find the area by name, as a user would.

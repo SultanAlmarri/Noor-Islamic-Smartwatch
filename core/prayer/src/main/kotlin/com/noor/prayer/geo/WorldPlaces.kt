@@ -65,6 +65,51 @@ class WorldPlaces private constructor(
     /** How many places a country has. */
     fun count(countryCode: String): Int = countryRanges[countryCode]?.let { it.last - it.first + 1 } ?: 0
 
+    /** A region of a country (state, province, emirate, governorate: GeoNames' first-level divisions). */
+    data class Region(
+        val index: Int, val countryCode: String, val code: String, val name: String, val nameAr: String?,
+        /** Towns, cities and villages in it. */
+        val places: Int,
+        /** Its largest town or city. */
+        val largest: Place?,
+    )
+
+    private val adminRanges: Map<Int, IntRange> by lazy {
+        val m = HashMap<Int, IntRange>()
+        var start = 0
+        for (i in 1..size) if (i == size || admin[i] != admin[start]) { m[admin[start].toInt()] = start until i; start = i }
+        m
+    }
+
+    /**
+     * The regions of a country, in alphabetical order (of the names in [arabic] or English), each with its number of
+     * places and its largest town. Places GeoNames gives no region come last, under an empty name.
+     */
+    fun regions(countryCode: String, arabic: Boolean = false): List<Region> {
+        val r = countryRanges[countryCode] ?: return emptyList()
+        val seen = LinkedHashSet<Int>()
+        for (i in r) seen += admin[i].toInt()
+        return seen.map { a ->
+            val ar = adminRanges.getValue(a)
+            val towns = ar.filter { kind[it].toInt() == 0 }
+            val key = adminKeys[a]
+            Region(a, countryCode, key.substring(key.indexOf('.') + 1), adminNames[a], adminNamesAr[a].ifEmpty { null }, towns.size,
+                towns.maxByOrNull { pop[it] }?.let { place(it) })
+        }.filter { it.places > 0 }.sortedWith(compareBy<Region> { it.name.isBlank() || it.code == "00" }.thenBy { sortKey(if (arabic) it.nameAr ?: it.name else it.name) })
+    }
+
+    /** Towns, cities and villages of one region: largest first, then by name. */
+    fun cities(region: Region): List<Place> {
+        val r = adminRanges[region.index] ?: return emptyList()
+        return r.filter { kind[it].toInt() == 0 }.map { place(it) }.sortedWith(compareByDescending<Place> { it.population }.thenBy { fold(it.name) })
+    }
+
+    /** The [n] largest towns and cities of a country. */
+    fun largest(countryCode: String, n: Int): List<Place> {
+        val r = countryRanges[countryCode] ?: return emptyList()
+        return r.filter { kind[it].toInt() == 0 }.sortedByDescending { pop[it] }.take(n).map { place(it) }
+    }
+
     /** Towns, cities and villages of a country: largest first, then by name. */
     fun cities(countryCode: String): List<Place> {
         val r = countryRanges[countryCode] ?: return emptyList()

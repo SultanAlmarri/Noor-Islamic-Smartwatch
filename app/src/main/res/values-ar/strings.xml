@@ -469,4 +469,9 @@
     <!-- 0.9.8 -->
     <string name="elapsed_setting">الوقت منذ دخول الصلاة</string>
     <string name="elapsed_setting_desc">بعد دخول وقت الصلاة: «+» والوقت منذ دخولها، لمدة ١٥ إلى ٣٠ دقيقة أثناء أداء الصلاة؛ ثم العدّ التنازلي للصلاة التالية. عند الإيقاف: الصلاة التالية مباشرة.</string>
+    <string name="loc_largest_cities">أكبر المدن</string>
+    <string name="loc_other_places">أماكن أخرى</string>
+    <string name="loc_region_sub">أكبرها: %1$s · %2$s مكانًا</string>
+    <string name="loc_villages">القرى والأماكن الصغيرة (%1$s)</string>
+    <string name="loc_find_in">ابحث عن مكان في %1$s</string>
 </resources>

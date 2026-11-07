@@ -465,4 +465,9 @@
     <!-- 0.9.8 -->
     <string name="elapsed_setting">Time since each prayer</string>
     <string name="elapsed_setting_desc">After a prayer’s time: “+” and the time since it began, for 15 to 30 minutes while the prayer is being prayed; then the next prayer’s countdown. Off: straight to the next prayer.</string>
+    <string name="loc_largest_cities">Largest cities</string>
+    <string name="loc_other_places">Other places</string>
+    <string name="loc_region_sub">Largest: %1$s · %2$s places</string>
+    <string name="loc_villages">Villages and small places (%1$s)</string>
+    <string name="loc_find_in">Find a place in %1$s</string>
 </resources>
