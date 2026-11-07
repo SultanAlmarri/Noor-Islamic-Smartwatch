@@ -9,6 +9,9 @@ on:
     paths: [ 'app/**', 'shared/**', 'core/**', 'tools/devicetest/home_sky.sh', '.github/workflows/home-sky.yml' ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   sky:
     runs-on: ubuntu-latest
@@ -56,3 +59,16 @@ jobs:
         with:
           name: home-sky-api${{ matrix.api }}
           path: home-sky-api${{ matrix.api }}
+
+      # Also as a pre-release asset, so the pictures can be fetched where workflow artifacts cannot (a Claude Code
+      # cloud session); replaced on each run.
+      - name: Publish the pictures as a pre-release asset
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d home-sky-api${{ matrix.api }} ] || exit 0
+          (cd home-sky-api${{ matrix.api }} && zip -qr ../home-sky-api${{ matrix.api }}.zip .)
+          gh release view home-sky-preview >/dev/null 2>&1 || gh release create home-sky-preview --prerelease \
+            --title "Home sky preview (emulator pictures)" --notes "Pictures and recordings from the home-sky workflow; replaced on each run." || true
+          gh release upload home-sky-preview home-sky-api${{ matrix.api }}.zip --clobber
