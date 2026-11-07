@@ -157,13 +157,16 @@ object StatusNotification {
     }
 
     /**
-     * The live countdown, ticked by Android itself on its own clock (elapsed time, which survives clock changes):
-     * counting down to the prayer with a minus sign, or up from it with a plus sign.
+     * The live countdown, ticked by Android itself on its own clock (elapsed time, which survives clock changes). It
+     * always counts from the prayer's time: before it, Android writes the time left with its own minus sign ("−00:17");
+     * after it, with our plus sign ("+04:12"). So if the rebuild at the prayer's time comes a moment late, the
+     * countdown passes through "00:00" — never a wrong or doubled sign (a count-down with our own "−" would read
+     * "−−00:01").
      */
     private fun countdown(v: RemoteViews, c: Content, now: Instant) {
         val base = SystemClock.elapsedRealtime() + Duration.between(now, c.countAt).toMillis()
-        v.setChronometer(R.id.status_countdown, base, if (c.elapsed) "+%s" else "$MINUS%s", true)
-        v.setChronometerCountDown(R.id.status_countdown, !c.elapsed)
+        v.setChronometer(R.id.status_countdown, base, if (c.elapsed) "+%s" else null, true)
+        v.setChronometerCountDown(R.id.status_countdown, false)
     }
 
     fun ensureChannel(ctx: Context) {

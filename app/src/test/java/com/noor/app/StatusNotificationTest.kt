@@ -123,8 +123,26 @@ class StatusNotificationTest {
         val parent = android.widget.FrameLayout(app)
         for (view in listOf(posted.contentView, posted.bigContentView)) {
             val chrono = view.apply(app, parent).findViewById<android.widget.Chronometer>(R.id.status_countdown)
-            assertEquals(if (expected.elapsed) "+%s" else "\u2212%s", chrono.format)
-            assertEquals(!expected.elapsed, chrono.isCountDown)
+            // Counting from the prayer's time: Android writes the minus before it, our format the plus after it.
+            assertEquals(if (expected.elapsed) "+%s" else null, chrono.format)
+            assertFalse(chrono.isCountDown)
+        }
+        // What the Chronometer shows, before and after a prayer, and in the moment before the rebuild: the same text
+        // as the home screen, and never a doubled sign.
+        for ((moment, label) in listOf(day(17, 39, 43) to "before Maghrib", day(17, 41, 5) to "after Maghrib")) {
+            val cm = StatusNotification.content(config, base, moment, arabic = false)
+            val nn = StatusNotification.build(app, app, cm, moment)
+            val chrono = nn.contentView.apply(app, parent).findViewById<android.widget.Chronometer>(R.id.status_countdown)
+            assertEquals(label, cm.countdown(moment, f), chrono.text.toString())
+        }
+        run {
+            // Built 2 s before Maghrib, seen 1.2 s after it (the rebuild not yet done): "00:01", not "−−00:01".
+            val cm = StatusNotification.content(config, base, day(17, 39, 58), arabic = false)
+            val nn = StatusNotification.build(app, app, cm, day(17, 39, 58))
+            val chrono = nn.contentView.apply(app, parent).findViewById<android.widget.Chronometer>(R.id.status_countdown)
+            org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMillis(3200))
+            chrono.base = chrono.base // redraws its text at the new time
+            assertEquals("00:01", chrono.text.toString())
         }
 
         // Software renders of the notification as Android builds it, for review (not photos of a phone's shade), with a
