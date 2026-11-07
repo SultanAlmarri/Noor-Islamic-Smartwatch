@@ -69,12 +69,37 @@
   // Ridge profiles, 0..1 over the width.
   function rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
   function noise1(r, n) { const v = Array.from({ length: n + 4 }, r); return (x) => { const i = Math.floor(x), f = x - i; const u = f * f * (3 - 2 * f); return v[(i % n + n) % n] * (1 - u) + v[((i + 1) % n + n) % n] * u; }; }
-  function ridges(seed, dunes, N) {
+  // terrain: 'dunes' | 'hills' | 'mountains' | 'sea' (true/false still mean dunes/hills). A close port of LandProfile.kt.
+  function ridges(seed, terrain, N) {
+    if (terrain === true) terrain = 'dunes'; if (terrain === false || terrain === undefined) terrain = 'hills';
+    const dunes = terrain === 'dunes';
     const r = rng(seed * 2654435761 + 7);
     const out = [];
     const norm = (arr, lo) => { const mn = Math.min(...arr), mx = Math.max(...arr); return arr.map(v => lo + (1 - lo) * (v - mn) / (mx - mn + 1e-9)); };
     for (let layer = 0; layer < 5; layer++) {
-      const arr = new Array(N);
+      const arr = new Array(N).fill(0);
+      if (terrain === 'sea' && layer <= 2) {
+        if (layer === 0 && r() < 0.7) {
+          const left = r() < 0.5, width = 0.18 + 0.16 * r(), n1 = noise1(r, 64);
+          for (let i = 0; i < N; i++) { const u = i / (N - 1); const t = (left ? u : 1 - u) / width; arr[i] = t >= 1 ? 0 : Math.min(1, Math.max(0, Math.pow(1 - t, 0.7) * (0.75 + 0.25 * n1(u * 14)))); }
+        }
+        out.push(arr); continue;
+      }
+      if (terrain === 'sea') {
+        const f = [0, 0, 0, 1.6, 0.9][layer]; const ns = [noise1(r, 64), noise1(r, 64), noise1(r, 64)];
+        for (let i = 0; i < N; i++) { const u = i / (N - 1); arr[i] = 0.6 * ns[0](u * f * 2) + 0.3 * ns[1](u * f * 5.1) + 0.1 * ns[2](u * f * 13); }
+        out.push(norm(arr, 0.1)); continue;
+      }
+      if (terrain === 'mountains' && layer <= 1) {
+        const ns = [noise1(r, 64), noise1(r, 64), noise1(r, 64), noise1(r, 64), noise1(r, 64), noise1(r, 64)]; const broad = noise1(r, 64);
+        const sharp = layer === 0 ? 1.6 : 1.25;
+        for (let i = 0; i < N; i++) {
+          const u = i / (N - 1); let s = 0, a = 0.55, fq = layer === 0 ? 2.6 : 3.4, w = 1;
+          for (let o = 0; o < 6; o++) { const v = Math.pow(1 - Math.abs(ns[o](u * fq) * 2 - 1), sharp); s += a * v * w; w = Math.min(1, v * 2.0); a *= 0.5; fq *= 2.1; }
+          arr[i] = s * (0.45 + 0.55 * broad(u * 1.3));
+        }
+        out.push(norm(arr, 0.0)); continue;
+      }
       if (dunes) {
         const f = [3.4, 2.5, 1.8, 1.25, 0.85][layer];
         const ph = r(), n1 = noise1(r, 64), n2 = noise1(r, 64);

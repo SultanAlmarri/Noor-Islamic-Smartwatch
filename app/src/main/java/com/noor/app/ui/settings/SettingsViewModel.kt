@@ -63,6 +63,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun setHijriAdjust(d: Int) = viewModelScope.launch { repo.setHijriAdjust(d) }
     fun setStatusNotification(on: Boolean) = viewModelScope.launch { repo.setStatusNotification(on) }
     fun setElapsedAfterPrayer(on: Boolean) = viewModelScope.launch { repo.setElapsedAfterPrayer(on) }
+    fun setScenery(v: com.noor.app.data.Scenery) = viewModelScope.launch { repo.setScenery(v) }
     fun completeOnboarding() = viewModelScope.launch { repo.setOnboardingDone() }
 
     fun setLanguage(l: Language) = viewModelScope.launch {

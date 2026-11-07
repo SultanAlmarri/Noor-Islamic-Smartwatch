@@ -13,6 +13,10 @@ uniform float4 uDistA;     // distance of layers 0..3, km
 uniform float uDistB;
 uniform float uRidgeN;     // samples across the width in the ridge table
 uniform float uDunes;      // 1 in sand country
+uniform float uTerrain;    // 0 dunes, 1 hills, 2 mountains, 3 sea (0.9.8)
+uniform float uAltTop;     // the sky's altitude at the top edge, degrees (for the sea's reflection)
+uniform float uAltPow;
+uniform float4 uMoonL;     // the moon: x, y (px), visibility, light (0 new … 1 full), for its path on the sea and moonlight
 uniform float uFov;
 uniform float2 uSunPos;    // px (same scale as this layer)
 uniform float uSunEl;      // degrees, true
@@ -31,6 +35,9 @@ uniform float uSeed;       // the lie of the land
 uniform float2 uSunrise;   // where the Sun rises and sets on the horizon (x, px; far off screen when it does not)
 
 float pick4(float4 a, float b, int i) { return i == 0 ? a.x : (i == 1 ? a.y : (i == 2 ? a.z : (i == 3 ? a.w : b))); }
+
+bool isSea() { return uTerrain > 2.5; }
+bool isMountains() { return uTerrain > 1.5 && uTerrain < 2.5; }
 
 // Where the Sun rises and sets, the land opens onto the true horizon (a pass between the hills, a gap between the
 // dunes), so the Sun meets the horizon exactly at the moment of Shuruq and of Maghrib, where their marks are.
@@ -57,10 +64,12 @@ float landHeight(float x, int layer, float base, float amp) {
 float edgeDetail(float x, int layer) {
     float xd = x / uDp + uSeed * 37.0;
     if (uDunes > 0.5) return 0.0;
-    if (layer == 0) {
+    if (isSea() && layer <= 2) return ridgeAt(x, layer) > 0.02 ? (vnoise1(xd * 0.4) * 0.8) * uDp : 0.0;
+    if (layer == 0 || (isMountains() && layer == 1)) {
         float a = 1.0 - abs(vnoise1(xd * 0.22) * 2.0 - 1.0);
         float b = 1.0 - abs(vnoise1(xd * 0.55 + 7.0) * 2.0 - 1.0);
-        return (a * a * 1.3 + b * b * 0.6) * uDp;
+        float k = isMountains() ? 2.0 : 1.0;
+        return (a * a * 1.3 + b * b * 0.6) * uDp * k;
     }
     // Tree crowns and bushes along the crest: rounded bumps a few dp across.
     float s = vnoise1(xd * 0.33 + float(layer) * 13.0) * 0.7 + vnoise1(xd * 0.8 + float(layer) * 5.0) * 0.3;
@@ -71,6 +80,51 @@ float3 skyAt(float x, float altDeg) {
     float v = pow(sat(altDeg / 90.0), 1.0 / uLutPow);
     float2 p = float2(sat(x / uSize.x) * (uLutSize.x - 1.0) + 0.5, v * (uLutSize.y - 1.0) + 0.5);
     return lutAt(p).rgb;
+}
+
+// The sea (0.9.8): a calm sea mirrors the sky, more so towards the horizon where the light grazes it; small waves,
+// finer and closer together with distance, tilt the reflection; the Sun (and the moon at night) lays a glittering path
+// across the water towards the viewer; a line of foam where the water meets the shore.
+float3 water(float2 fc, float shoreTop) {
+    float dy = max(fc.y - uHorizon, 0.4 * uDp);
+    float dyDp = dy / uDp;
+    float z = 60.0 / (dyDp + 1.5);                       // how far away this part of the sea is (arbitrary units)
+    float2 wp = float2(fc.x / uDp * 0.045 * z / 6.0, z * 1.6) + float2(uTime * 0.02, uTime * 0.05);
+    float w1 = vnoise(wp * float2(1.0, 0.35));
+    float w2 = vnoise(wp * float2(2.3, 0.8) + float2(3.1, 7.7));
+    float slope = (w1 - 0.5) * 0.7 + (w2 - 0.5) * 0.4;   // tilt of the little waves
+    // The angle below the horizon, then the sky at the same angle above it, shifted by the waves.
+    float dep = uAltTop * pow(sat(dy / uHorizon), uAltPow);
+    float altR = max(dep * (1.0 + slope * 0.9) + slope * 1.5, 0.0);
+    float3 refl = skyAt(fc.x + slope * 6.0 * uDp, altR);
+    float cosv = sin(radians(max(dep, 0.3)));
+    float fres = 0.02 + 0.98 * pow(1.0 - cosv, 5.0);
+    float3 deep = tone(uAmbTop * 0.10 + uSunGround * 0.012) * float3(0.55, 0.85, 0.95);
+    float3 c = mix(deep, refl, sat(0.25 + 0.75 * fres));
+    // Long swells and wind ripples, drawn out sideways by perspective, darker in the troughs.
+    float swell = vnoise(float2(fc.x / uDp * 0.010 * z / 6.0, z * 3.2 + uTime * 0.04));
+    float ripple = vnoise(float2(fc.x / uDp * 0.05 * z / 6.0, z * 9.0 - uTime * 0.07));
+    c *= 0.86 + 0.16 * swell + 0.10 * ripple;
+    // The Sun's path: bright flecks where a wave faces it, in a band that widens towards the shore.
+    float sunUp = smoothstep(-1.0, 1.5, uSunEl) * (1.0 - 0.6 * smoothstep(20.0, 60.0, uSunEl));
+    if (sunUp > 0.0) {
+        float width = (6.0 + dyDp * 0.7) * uDp * (1.0 + 0.05 * max(uSunEl, 0.0));
+        float lane = exp(-pow((fc.x - uSunPos.x) / width, 2.0));
+        float flecks = pow(sat(w1 * 0.55 + w2 * 0.55 + ripple * 0.3 - 0.25), 5.0) * 7.0;
+        c += tone(uSunGround * 1.6 + uSunGround * 2.0 * (1.0 - smoothstep(2.0, 12.0, uSunEl))) * lane * (flecks + 0.35) * sunUp;
+    }
+    // The moon's path at night.
+    float moonUp = uMoonL.z * uNight;
+    if (moonUp > 0.0) {
+        float width = (4.0 + dyDp * 0.45) * uDp;
+        float lane = exp(-pow((fc.x - uMoonL.x) / width, 2.0));
+        float glint = pow(sat(w1 * 0.6 + w2 * 0.6 - 0.2), 6.0) * 4.0 + 0.15;
+        c += float3(0.62, 0.68, 0.80) * lane * glint * moonUp * (0.25 + 0.75 * uMoonL.w) * 0.55;
+    }
+    // Foam where the sea meets the shore.
+    float foam = exp(-max(shoreTop - fc.y, 0.0) / (1.2 * uDp)) * step(fc.y, shoreTop + uDp) * (0.55 + 0.45 * vnoise(float2(fc.x / uDp * 0.15, uTime * 0.3)));
+    c = mix(c, tone(uSunGround * 0.9 + uAmbTop * 1.4) + float3(0.04), foam * 0.6);
+    return c;
 }
 
 // The colour of one layer at a point: lit surface in linear light, then haze over distance (display colours).
@@ -95,7 +149,13 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     float face = depth;
     float3 albedo;
     float bounce = 0.12;
-    if (uDunes > 0.5) {
+    if (isSea() && layer <= 2 && ridgeAt(fc.x, layer) < 0.02) {
+        float sb = pick4(uBaseA, uBaseB, 3); float sa = pick4(uAmpA, uAmpB, 3);
+        float3 cw = water(fc, sb - sa * landHeight(fc.x, 3, sb, sa));
+        float3 airW = skyAt(fc.x, 0.6);
+        return mix(airW, cw, exp(-0.02 * dist * (1.0 - sat(below / 30.0))));
+    }
+    if (uDunes > 0.5 || (isSea() && layer >= 3)) {
         // Sand: from each summit a sharp crest runs down across the dune to its lee side; on one side of it the
         // windward face, on the other the steeper slip face, so a low Sun lights one and leaves the other in shade.
         float hLee = ridgeAt(fc.x - 10.0 * uDp, layer);
@@ -125,6 +185,18 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
         float3 grass = mix(float3(0.14, 0.16, 0.07), float3(0.24, 0.23, 0.11), g);
         float3 wood = float3(0.055, 0.075, 0.035);
         albedo = layer == 0 ? mix(rock, grass, 0.25 + 0.3 * g) : mix(grass, wood, trees * (0.25 + 0.15 * float(layer)) + 0.15 * float(layer) / 4.0);
+        if (isMountains() && layer <= 1) {
+            // High ranges: bare rock, and snow from the summits down, deepest on the highest peaks, in streaks
+            // down the gullies; it takes every colour of sunrise and sunset.
+            float hHere = ridgeAt(fc.x, layer);
+            float line = layer == 0 ? 0.32 : 0.62;
+            float streak = (vnoise(float2(xd * 0.12, below * 0.05 + float(layer) * 3.0)) - 0.5) * 7.0;
+            float snowDepth = (hHere - line) * amp / uDp * 1.3 + streak;
+            float snow = (1.0 - smoothstep(snowDepth - 1.2, snowDepth + 1.2, below)) * step(0.0, snowDepth + 1.0);
+            float3 bare = mix(float3(0.17, 0.17, 0.17), float3(0.30, 0.28, 0.25), g);
+            albedo = mix(mix(bare, albedo, layer == 0 ? 0.15 : 0.45), float3(0.86, 0.88, 0.92), sat(snow));
+            bounce = mix(bounce, 0.35, sat(snow));
+        }
     }
 
     // Cloud shadows: from this point towards the Sun, is a cumulus in the way?

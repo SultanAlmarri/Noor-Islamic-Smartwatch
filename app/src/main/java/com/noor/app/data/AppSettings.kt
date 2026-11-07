@@ -12,6 +12,8 @@ enum class Numerals { WESTERN, ARABIC_INDIC }
 enum class TimeFormat { H12, H24 }
 /** SUN: light from sunrise until Maghrib, dark through the night, following the prayer times of the current place. */
 enum class ThemeMode { SUN, SYSTEM, DARK, LIGHT }
+/** The landscape under the home screen's sky (0.9.8): chosen by place, or one the user prefers. */
+enum class Scenery { AUTO, DUNES, HILLS, MOUNTAINS, SEA }
 
 /** The last position the app knows about (or the city chosen by hand). Kept so the app works offline and after restarts. */
 data class KnownLocation(
@@ -66,4 +68,5 @@ data class AppSettings(
     val statusNotification: Boolean = false,
     /** After a prayer's time: "+" time since it for a while (default), or straight to the next prayer's "−" (0.9.8). */
     val elapsedAfterPrayer: Boolean = true,
+    val scenery: Scenery = Scenery.AUTO,
 )

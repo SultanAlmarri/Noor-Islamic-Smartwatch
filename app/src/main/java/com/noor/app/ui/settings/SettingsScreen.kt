@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.Brightness6
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Landscape
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MyLocation
@@ -172,6 +173,15 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         add(Row(R.string.settings_display, Icons.Rounded.AccessTime, stringResource(R.string.time_format),
             stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24), stringResource(R.string.kw_time), { dialog = Dialog.TIME }))
         add(Row(R.string.settings_display, Icons.Rounded.Brightness6, stringResource(R.string.theme), themeLabel(s.theme), stringResource(R.string.kw_theme), { dialog = Dialog.THEME }))
+        // 0.9.8: the landscape under the home screen's sky.
+        run {
+            val place = com.noor.app.data.PrayerProvider.place(s)
+            val t = com.noor.app.ui.today.terrainFor(s.scenery, place?.countryCode, place?.point?.elevationM)
+            val name = stringResource(sceneryName(t))
+            add(Row(R.string.settings_display, Icons.Rounded.Landscape, stringResource(R.string.scenery_title),
+                if (s.scenery == com.noor.app.data.Scenery.AUTO) stringResource(R.string.scenery_auto_short, name) else name,
+                stringResource(R.string.kw_scenery), { onOpenRoute(com.noor.app.Routes.SCENERY) }))
+        }
         add(Row(R.string.settings_watch, Icons.Rounded.Watch, stringResource(R.string.settings_watch_row), null, stringResource(R.string.kw_watch), { onOpenRoute(com.noor.app.Routes.WATCH) }))
         add(Row(R.string.settings_about, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), null, stringResource(R.string.kw_accuracy), onOpenAccuracy))
         add(Row(R.string.settings_about, Icons.Rounded.Info, stringResource(R.string.about_version, BuildConfigInfo.versionName), null, "", null))

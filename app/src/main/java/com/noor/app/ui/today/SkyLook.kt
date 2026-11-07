@@ -55,6 +55,8 @@ internal class SkyLook(
     val moonX: Float, val moonY: Float, val moonVisibility: Float,
     /** Direction of sunlight on the moon in its own frame (x right, y down, z towards us): its phase. */
     val moonLight: FloatArray,
+    /** How much of the moon is lit, 0 (new) … 1 (full): how much light it gives at night (0.9.8). */
+    val moonIllumination: Float = 0f,
 ) {
     companion object {
         fun at(scene: SkyScene, view: SkyView, display: Double): SkyLook {
@@ -77,7 +79,8 @@ internal class SkyLook(
             val evening = scene.eveningAt(display)
             val e = el.toFloat()
             val mist = if (!evening) 0.85f * smooth(0f, 1f, 1f - abs(e + 1f) / 13f) + 0.18f * night else 0.22f * night + 0.12f * smooth(0f, 1f, 1f - abs(e - 1f) / 10f)
-            return SkyLook(el, sunX, sunY, view.azimuthAt(sunX), drawAlt * PI / 180, night, smooth(0.55f, 1f, night), mist, mx, my, moonVis, moonLight)
+            val illum = ((1 - cos(phase)) / 2).toFloat()
+            return SkyLook(el, sunX, sunY, view.azimuthAt(sunX), drawAlt * PI / 180, night, smooth(0.55f, 1f, night), mist, mx, my, moonVis, moonLight, illum)
         }
 
         fun smooth(a: Float, b: Float, x: Float): Float { val t = ((x - a) / (b - a)).coerceIn(0f, 1f); return t * t * (3 - 2 * t) }

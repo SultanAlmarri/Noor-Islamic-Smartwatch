@@ -80,15 +80,41 @@ enum class Terrain {
     /** Sand seas: long, smooth crests with a steeper slip face. */
     DUNES,
     /** Mountain ridges far away, softening into rolling hills nearby. */
-    HILLS;
+    HILLS,
+    /** High ranges (0.9.8): tall, sharp ridges with snow on the far peaks, forested slopes nearer. */
+    MOUNTAINS,
+    /** The open sea to the horizon (0.9.8), the Sun's and the moon's path on the water, a low shore in front. */
+    SEA;
 
     companion object {
         /** Arid countries of the Arabian Peninsula, the Sahara and its edges, and the Levant's deserts. */
         private val ARID = setOf(
             "AE", "SA", "QA", "KW", "BH", "OM", "YE", "IQ", "JO", "EG", "LY", "DZ", "TN", "MA", "EH", "MR", "ML", "NE", "TD", "SD", "DJ",
         )
+        /** Small island countries: the sea is never far. */
+        private val ISLANDS = setOf(
+            "MV", "BH", "SG", "MT", "CY", "MU", "SC", "KM", "BS", "BB", "FJ", "TO", "WS", "KI", "MH", "PW", "FM", "NR", "TV", "CV", "ST",
+            "AG", "DM", "GD", "KN", "LC", "VC", "TT", "BM", "KY", "VU", "SB",
+        )
+        /** Countries lying mostly among high mountains. */
+        private val ALPINE = setOf("NP", "BT", "CH", "AT", "AF", "KG", "TJ", "LS", "AD", "LI")
 
         fun of(countryCode: String?): Terrain = if (countryCode?.uppercase() in ARID) DUNES else HILLS
+
+        /**
+         * The scenery that fits a place (0.9.8): high places (1,400 m and above) and alpine countries show mountains,
+         * small island countries the sea, the deserts dunes, everywhere else hills.
+         */
+        fun auto(countryCode: String?, elevationM: Double?): Terrain {
+            val cc = countryCode?.uppercase()
+            return when {
+                elevationM != null && elevationM >= 1400.0 -> MOUNTAINS
+                cc in ISLANDS -> SEA
+                cc in ARID -> DUNES
+                cc in ALPINE -> MOUNTAINS
+                else -> HILLS
+            }
+        }
     }
 }
 
@@ -963,13 +989,44 @@ private fun landField(seed: Long, terrain: Terrain): LandField {
                 Ridge(22f, 68f, rolling(0.8f, ph(), ph())),
             ))
         }
+        Terrain.MOUNTAINS -> {
+            // Tall, sharp ranges far away; forested ridges and foothills nearer.
+            fun peaks(p1: Float, p2: Float, p3: Float, k: Float): (Float) -> Float = { u ->
+                val a = 1f - abs(sin(2.1f * PI.toFloat() * u * k + p1))
+                val b = 1f - abs(sin(4.7f * PI.toFloat() * u * k + p2))
+                val c = 1f - abs(sin(10.9f * PI.toFloat() * u * k + p3))
+                (0.55f * a * a * a + 0.32f * b * b + 0.13f * c).coerceIn(0f, 1f)
+            }
+            fun rolling(freq: Float, p1: Float, p2: Float): (Float) -> Float = { u ->
+                val v = 0.62f * sin(2 * PI.toFloat() * freq * u + p1) + 0.38f * sin(2 * PI.toFloat() * freq * 2.3f * u + p2)
+                ((v + 1f) / 2f).coerceIn(0f, 1f)
+            }
+            LandField(listOf(
+                Ridge(56f, 4f, peaks(ph(), ph(), ph(), 1f)),
+                Ridge(34f, 20f, peaks(ph(), ph(), ph(), 1.4f)),
+                Ridge(22f, 42f, rolling(1.15f, ph(), ph())),
+                Ridge(22f, 68f, rolling(0.8f, ph(), ph())),
+            ))
+        }
+        Terrain.SEA -> {
+            // Flat water to the horizon, a low shore in front.
+            fun shore(freq: Float, p1: Float): (Float) -> Float = { u -> ((0.6f * sin(2 * PI.toFloat() * freq * u + p1) + 1f) / 2f).coerceIn(0f, 1f) }
+            LandField(listOf(
+                Ridge(0.5f, 0f, { 0f }),
+                Ridge(0.5f, 20f, { 0f }),
+                Ridge(12f, 50f, shore(1.4f, ph())),
+                Ridge(16f, 70f, shore(0.8f, ph())),
+            ))
+        }
     }
 }
 
-/** The ground's own colour in plain daylight: warm sand, or the sage of grass and scrub seen from afar. */
+/** The ground's own colour in plain daylight: warm sand, the sage of grass and scrub, grey-green mountains, the sea. */
 private fun soilOf(terrain: Terrain): Color = when (terrain) {
     Terrain.DUNES -> Color(0xFFD9B07A)
     Terrain.HILLS -> Color(0xFF7F9A78)
+    Terrain.MOUNTAINS -> Color(0xFF7D8A86)
+    Terrain.SEA -> Color(0xFF4F7F96)
 }
 
 /**

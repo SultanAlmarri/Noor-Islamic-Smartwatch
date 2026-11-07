@@ -143,6 +143,7 @@ internal object Routes {
     const val SETTINGS = "settings"
     const val CITIES = "cities"
     const val ACCURACY = "accuracy"
+    const val SCENERY = "scenery"
     const val ADHAN = "adhan"
     const val ADHAN_PRAYER = "adhan/prayer/{p}"
     const val ADHAN_LIBRARY = "adhan/library"
@@ -246,6 +247,7 @@ private fun NoorRoot(s: AppSettings) {
                 })
             }
             composable(Routes.ACCURACY) { AccuracyScreen(content, onBack = { nav.popBackStack() }) }
+            composable(Routes.SCENERY) { com.noor.app.ui.settings.SceneryScreen(content, onBack = { nav.popBackStack() }) }
         }
     }
 }

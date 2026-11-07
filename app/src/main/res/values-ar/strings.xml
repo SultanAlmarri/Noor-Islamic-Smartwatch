@@ -474,4 +474,15 @@
     <string name="loc_region_sub">أكبرها: %1$s · %2$s مكانًا</string>
     <string name="loc_villages">القرى والأماكن الصغيرة (%1$s)</string>
     <string name="loc_find_in">ابحث عن مكان في %1$s</string>
+    <string name="scenery_title">مشهد الشاشة الرئيسية</string>
+    <string name="scenery_intro">المشهد الطبيعي تحت السماء في الشاشة الرئيسية. أما الضوء والشمس والقمر والنجوم والغيوم فتتبع السماء الحقيقية حيث أنت.</string>
+    <string name="scenery_auto">تلقائي</string>
+    <string name="scenery_auto_now">%1$s، لـ%2$s. يتغير عند السفر: كثبان الصحراء، أو التلال الخضراء، أو الجبال العالية، أو بحر جزيرة صغيرة.</string>
+    <string name="scenery_auto_short">تلقائي · %1$s</string>
+    <string name="scenery_dunes">كثبان</string>
+    <string name="scenery_hills">تلال</string>
+    <string name="scenery_mountains">جبال</string>
+    <string name="scenery_sea">بحر</string>
+    <string name="scenery_note">طبيعة فقط: لا مبانٍ ولا أشخاص.</string>
+    <string name="kw_scenery">مشهد طبيعة خلفية كثبان تلال جبال بحر صحراء</string>
 </resources>

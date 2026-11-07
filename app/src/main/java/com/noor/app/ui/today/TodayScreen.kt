@@ -298,10 +298,10 @@ private fun SkyHeader(
     val next = st.next.prayer.takeIf { st.next.date == today }
     val hijriDay = HijriDate.of(today, u.settings.hijriAdjust).day
     val landSeed = remember(place.nameEn, place.point) { place.nameEn.hashCode().toLong() * 7919L + (place.point.latitude * 100).toLong() }
-    val scene = remember(path, events, minute, next, hijriDay, landSeed) {
+    val scene = remember(path, events, minute, next, hijriDay, landSeed, u.settings.scenery) {
         SkyScene(
             path, events, minute, next, hijriDay = hijriDay, southernHemisphere = place.point.latitude < 0,
-            terrain = Terrain.of(place.countryCode), seed = landSeed * 1_000_003L + today.toEpochDay(), landSeed = landSeed,
+            terrain = terrainFor(u.settings.scenery, place.countryCode, place.point.elevationM), seed = landSeed * 1_000_003L + today.toEpochDay(), landSeed = landSeed,
         )
     }
     val current by rememberUpdatedState(scene)
@@ -577,6 +577,15 @@ internal object OpeningSky {
 /** A soft shadow under text on the sky, so white stays crisp on the palest noon sky. */
 private object SkyText {
     val Shadow = androidx.compose.ui.graphics.Shadow(Color(0x40081530), Offset(0f, 1.5f), 10f)
+}
+
+/** The landscape to draw: the user's choice, or the one that fits the place (0.9.8). */
+internal fun terrainFor(s: com.noor.app.data.Scenery, countryCode: String?, elevationM: Double?): Terrain = when (s) {
+    com.noor.app.data.Scenery.AUTO -> Terrain.auto(countryCode, elevationM)
+    com.noor.app.data.Scenery.DUNES -> Terrain.DUNES
+    com.noor.app.data.Scenery.HILLS -> Terrain.HILLS
+    com.noor.app.data.Scenery.MOUNTAINS -> Terrain.MOUNTAINS
+    com.noor.app.data.Scenery.SEA -> Terrain.SEA
 }
 
 /** "−1:10:34" before a prayer, "+04:12" after it (0.9.7): a true minus sign, the same in both languages, as in the notification. */

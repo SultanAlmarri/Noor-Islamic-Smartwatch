@@ -121,14 +121,17 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       uMilky: smooth(0.55, 1, night), uTextBottom: (arcTop - 16 * dp) * s,
     });
     // Land geometry.
-    const dunes = !!cfg.dunes;
-    const layers = dunes ? [[16, 3], [20, 16], [24, 32], [26, 50], [26, 72]] : [[40, 3], [28, 16], [24, 32], [22, 50], [24, 72]];
-    const dists = dunes ? [22, 7, 2.8, 1.1, 0.35] : [48, 15, 6, 2.2, 0.6];
+    const terrain = cfg.terrain || (cfg.dunes ? 'dunes' : 'hills');
+    const dunes = terrain === 'dunes';
+    const SPEC = { dunes: [[16, 3], [20, 16], [24, 32], [26, 50], [26, 72]], hills: [[40, 3], [28, 16], [24, 32], [22, 50], [24, 72]],
+      mountains: [[58, 2], [40, 14], [30, 30], [24, 50], [24, 72]], sea: [[16, 0], [1, 8], [1, 20], [12, 54], [18, 74]] };
+    const DIST = { dunes: [22, 7, 2.8, 1.1, 0.35], hills: [48, 15, 6, 2.2, 0.6], mountains: [34, 14, 6, 2.2, 0.6], sea: [40, 10, 3, 0.8, 0.3] };
+    const layers = SPEC[terrain], dists = DIST[terrain];
     const deepest = 72;
     const spread = Math.max(0.55, Math.min(1.4, ((cfg.hDp - cfg.horizonDp) - 12) / deepest));
     const base = layers.map(l => hy + l[1] * spread * dp), amp = layers.map(l => l[0] * dp);
     const N = 1024;
-    const rid = Scene.ridges(cfg.landSeed || 7, dunes, N);
+    const rid = Scene.ridges(cfg.landSeed || 7, terrain, N);
     const rdata = new Uint8Array(N * 2 * 4);
     for (let i = 0; i < N; i++) { rdata[i * 4 + 3] = 255; rdata[(N + i) * 4 + 3] = 255; for (let l = 0; l < 5; l++) {
       const row = l < 3 ? 0 : 1, ch = l < 3 ? l : l - 3;
@@ -142,6 +145,8 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       uSize: [W, H], uDp: dp, uHorizon: hy, uBaseA: base.slice(0, 4), uBaseB: base[4], uAmpA: amp.slice(0, 4), uAmpB: amp[4],
       uDistA: dists.slice(0, 4), uDistB: dists[4], uRidgeN: N, uDunes: dunes ? 1 : 0, uSunPos: [sunX, sunY],
       uPage: page, uMist: mist, uSeed: (cfg.landSeed || 7) % 97, uSunrise: [xOf(dd.ev.SHURUQ), xOf(dd.ev.MAGHRIB)],
+      uTerrain: { dunes: 0, hills: 1, mountains: 2, sea: 3 }[terrain], uAltTop: altTop, uAltPow: altPow,
+      uMoonL: [mx, my, moonVis, (1 - Math.cos(phase)) / 2],
     });
     const lut = { w: nx, h: ny, data: new Uint8Array(fr.lut.buffer) };
     const ridge = { w: N, h: 2, data: rdata };

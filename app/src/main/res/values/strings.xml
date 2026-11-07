@@ -470,4 +470,15 @@
     <string name="loc_region_sub">Largest: %1$s · %2$s places</string>
     <string name="loc_villages">Villages and small places (%1$s)</string>
     <string name="loc_find_in">Find a place in %1$s</string>
+    <string name="scenery_title">Home scenery</string>
+    <string name="scenery_intro">The landscape under the sky on the home screen. Everything else (the light, the Sun, the moon, the stars, the clouds) follows the real sky where you are.</string>
+    <string name="scenery_auto">Automatic</string>
+    <string name="scenery_auto_now">%1$s, for %2$s. Changes when you travel: desert dunes, green hills, high mountains or the sea of a small island.</string>
+    <string name="scenery_auto_short">Automatic · %1$s</string>
+    <string name="scenery_dunes">Dunes</string>
+    <string name="scenery_hills">Hills</string>
+    <string name="scenery_mountains">Mountains</string>
+    <string name="scenery_sea">Sea</string>
+    <string name="scenery_note">Only nature: no buildings and no people.</string>
+    <string name="kw_scenery">scenery landscape background dunes hills mountains sea desert home</string>
 </resources>
