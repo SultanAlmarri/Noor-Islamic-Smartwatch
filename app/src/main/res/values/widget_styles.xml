@@ -36,10 +36,12 @@
         <item name="android:fontFeatureSettings">tnum</item>
     </style>
 
+    <!-- The countdown: the app's own Plex Arabic Light (its digits are all one width), set tight as on the home screen. -->
     <style name="Widget.Noor.Text.Countdown">
-        <item name="android:textSize">22sp</item>
-        <item name="android:fontFamily">sans-serif-light</item>
-        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:letterSpacing">-0.04</item>
         <item name="android:textDirection">ltr</item>
+        <item name="android:textAlignment">viewStart</item>
+        <item name="android:layoutDirection">ltr</item>
     </style>
 </resources>

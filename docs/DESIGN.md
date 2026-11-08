@@ -117,7 +117,7 @@ the sky shader once a second by day (15 times at night, for the twinkling stars)
 in the background, and stop entirely under "Remove animations". While the Sun is dragged or during the opening, both
 layers redraw every frame.
 
-## Home-screen widgets (0.9.10)
+## Home-screen widgets (0.9.10, 0.9.11)
 
 Three widgets, each in Noor's language and digits, opening Noor when tapped (`widget/Widgets.kt`, `widget/WidgetSky.kt`):
 
@@ -129,11 +129,15 @@ Three widgets, each in Noor's language and digits, opening Noor when tapped (`wi
   and the next prayer, place, date and countdown.
 
 They say exactly what the home screen and the notification say (`StatusNotification.content`): − before a prayer, +
-for 30 minutes after it, then the next. The seconds are ticked by Android itself (a Chronometer); where the phone's
-digits differ from Noor's, Noor writes the countdown to the minute. The pictures are drawn with the ordinary Canvas, off
-the main thread. Updates come at each prayer, at the end of a "+" period, at midnight, every 15 minutes for the picture
-(every minute when Noor writes the countdown), and when the place, times or settings change — all by non-waking alarms,
-so a sleeping phone is never woken for a widget (`WidgetsTest`).
+for 30 minutes after it, then the next. The countdown is the home screen's (0.9.11): "−1:23:45" before a prayer,
+"+13:00" after it, hours, minutes and seconds, "−1:23" bright and ":45" quieter, in Plex Light. Only Android can tick
+seconds on a home screen without Noor running, so it is a Chronometer, and Android writes its digits in the phone's
+language; the widgets set it in fonts made from Plex (`tools/widget/count_fonts.py`) that draw any digits Android writes
+as the digits chosen in Noor, a pair for each choice. Each pair is a quieter copy with, laid over it, a bright copy whose
+font draws the last ":ss" blank (a contextual substitution), which gives the two shades. The pictures are drawn with the
+ordinary Canvas, off the main thread. Updates come at each prayer, at the end of a "+" period, at midnight, every 15
+minutes for the picture, and when the place, times or settings change — all by non-waking alarms, so a sleeping phone
+is never woken for a widget (`WidgetsTest`).
 
 ## Appearance
 

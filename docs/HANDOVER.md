@@ -427,9 +427,23 @@ land.
 
 ## 15. Home-screen widgets (0.9.10, 8 November 2026)
 
-The owner asked for widgets. Three, designed to match the home screen ([DESIGN.md](DESIGN.md#home-screen-widgets-0910)):
+The owner asked for widgets. Three, designed to match the home screen ([DESIGN.md](DESIGN.md#home-screen-widgets-0910-0911)):
 **Next prayer** (2×1), **Today's prayers** (4×2) and **Noor sky** (4×2, the home sky in small with the Sun's path and
 the prayers). They show the same countdown as the home screen and the notification, in Noor's language and digits,
 and update themselves at each prayer, at midnight and every 15 minutes for the picture, without waking a sleeping
 phone. Tested with Robolectric on a simulated home screen (`WidgetsTest`: content, Arabic, the phone's other digits,
 the next update, pictures); not yet seen on a real launcher.
+
+## 16. The widgets' countdown, as on the home screen (0.9.11, 8 November 2026)
+
+The owner wanted the widgets to show the home screen's countdown exactly: −/+, hours, minutes and seconds, ticking.
+0.9.10 already ticked seconds where the phone's digits matched Noor's, but on the owner's phone (Arabic phone, Noor in
+English) it fell back to "−1 h 23 min". Now every widget shows "−1:23:45" / "+13:00" with "−1:23" bright and ":45"
+quieter, whatever the phone's language: Android ticks it (a Chronometer, so Noor need not run), and Noor's own fonts,
+built by `tools/widget/count_fonts.py` from Plex, draw whatever digits Android writes as Noor's digits and leave the
+seconds out of the bright copy laid over a quieter one ([DESIGN.md](DESIGN.md#home-screen-widgets-0910-0911)). The
+per-minute updates of 0.9.10's fallback are gone. `WidgetsTest` checks the text Android writes ("−1:27:00" at 14:10,
+"+13:00" at 15:50 in Istanbul on 4 November 2026), that on a screen it ticks by itself, one second each second with
+no update from Noor, the pair shown for each choice of digits and the next update, and saves pictures of each state. The fonts' shaping was checked with HarfBuzz. Not yet seen on a real launcher: whether
+every launcher applies a widget's own fonts is the thing to look at on the phone (if one did not, the countdown would
+still tick, but in the system font and the phone's digits, with the seconds bright).
