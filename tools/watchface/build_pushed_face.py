@@ -67,6 +67,22 @@ def build_tools(sdk):
     return os.path.join(sdk, 'build-tools', versions[-1])
 
 
+def check_slots(variant, xml_path):
+    """Rules Wear OS enforces when a face is made active that Google's validator does not check (a Wear OS 6 emulator
+    refused the whole face, with 'systemDataSourceFallbackDefaultType EMPTY must be in the supportedTypes list'):
+    every complication slot's fallback type, primary and secondary provider types are among its supported types."""
+    import xml.etree.ElementTree as ET
+    for slot in ET.parse(xml_path).getroot().iter('ComplicationSlot'):
+        supported = slot.get('supportedTypes', '').split()
+        policy = slot.find('DefaultProviderPolicy')
+        if policy is None:
+            continue
+        for attr in ('defaultSystemProviderType', 'primaryProviderType', 'secondaryProviderType'):
+            t = policy.get(attr)
+            if t is not None and t not in supported:
+                raise SystemExit(f'{variant}: slot {slot.get("slotId")}: {attr} {t} is not in supportedTypes {supported}')
+
+
 def build_one(variant, bt, platform, assets, validator):
     with tempfile.TemporaryDirectory() as tmp:
         res = os.path.join(tmp, 'res')
@@ -74,6 +90,7 @@ def build_one(variant, bt, platform, assets, validator):
         if not os.path.isdir(src):
             raise SystemExit(f'{variant}: {src} missing (run: python3 tools/watchface/noor_face.py generate)')
         shutil.copytree(src, res)
+        check_slots(variant, os.path.join(res, 'raw', 'watchface.xml'))
         man = os.path.join(tmp, 'AndroidManifest.xml'); open(man, 'w').write(manifest(variant))
         run([os.path.join(bt, 'aapt2'), 'compile', '--dir', res, '-o', os.path.join(tmp, 'res.zip')])
         run([os.path.join(bt, 'aapt2'), 'link', '-o', os.path.join(tmp, 'unaligned.apk'), '-I', platform, '--manifest', man,

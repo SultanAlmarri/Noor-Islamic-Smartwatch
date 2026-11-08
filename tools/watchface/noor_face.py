@@ -102,7 +102,9 @@ def next_prayer_slot(design, accent, title_y, line_y, ring_r, ring_t):
                  + text(60, line_y, W - 120, 36, "%s", ["[COMPLICATION.TEXT]"], 27, CREAM, ambient_alpha=200))
     return (f'<ComplicationSlot slotId="0" x="0" y="0" width="{W}" height="{H}" displayName="slot_next" '
             f'supportedTypes="RANGED_VALUE SHORT_TEXT" isCustomizable="FALSE">'
-            f'<DefaultProviderPolicy defaultSystemProvider="EMPTY" defaultSystemProviderType="EMPTY" primaryProvider="{NEXT}" primaryProviderType="RANGED_VALUE"/>'
+            # The system's fallback type must be one of the slot's supported types, or Wear OS refuses the whole face
+            # (it cannot be made active, not even by the user): seen on a Wear OS 6 emulator; the validator accepts it.
+            f'<DefaultProviderPolicy defaultSystemProvider="EMPTY" defaultSystemProviderType="SHORT_TEXT" primaryProvider="{NEXT}" primaryProviderType="RANGED_VALUE"/>'
             f'<BoundingBox x="90" y="{title_y - 6}" width="{W - 180}" height="{line_y - title_y + 50}"/>'
             f'<Complication type="RANGED_VALUE">{progress(ring_r, ring_t, accent)}{body}</Complication>'
             f'<Complication type="SHORT_TEXT">{short}</Complication>'
@@ -112,7 +114,7 @@ def next_prayer_slot(design, accent, title_y, line_y, ring_r, ring_t):
 def hijri_slot(y, size, color):
     return (f'<ComplicationSlot slotId="1" x="0" y="{y}" width="{W}" height="{size + 12}" displayName="slot_hijri" '
             f'supportedTypes="LONG_TEXT SHORT_TEXT" isCustomizable="FALSE">'
-            f'<DefaultProviderPolicy defaultSystemProvider="EMPTY" defaultSystemProviderType="EMPTY" primaryProvider="{HIJRI}" primaryProviderType="LONG_TEXT"/>'
+            f'<DefaultProviderPolicy defaultSystemProvider="EMPTY" defaultSystemProviderType="SHORT_TEXT" primaryProvider="{HIJRI}" primaryProviderType="LONG_TEXT"/>'
             f'<BoundingBox x="100" y="0" width="{W - 200}" height="{size + 12}"/>'
             f'<Complication type="LONG_TEXT">{text(70, 0, W - 140, size + 12, "%s", ["[COMPLICATION.TEXT]"], size, color, ambient_alpha=170)}</Complication>'
             f'<Complication type="SHORT_TEXT">{text(70, 0, W - 140, size + 12, "%s", ["[COMPLICATION.TEXT]"], size, color, ambient_alpha=170)}</Complication>'
