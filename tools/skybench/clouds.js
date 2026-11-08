@@ -71,7 +71,7 @@
     }
     cu *= 0.35 + 0.65 * Math.max(day, storm);
     const ci = c01(w.cirrusBase * (0.55 + 0.9 * n3) * (1 - overcast));
-    return { cumulus: c01(cu), size: c01(size), cluster: c01(cluster), layer: c01(layer), overcast: c01(overcast), storm: c01(storm), rain: c01(rain), showers: c01(showers), cirrus: ci };
+    return { cumulus: c01(cu), size: c01(size), cluster: c01(cluster), layer: c01(layer), overcast: c01(overcast), storm: c01(storm), rain: c01(rain), showers: c01(showers), cirrus: ci, hour: h };
   }
 
   const SPEC = [
@@ -172,7 +172,7 @@
         if (kind === CONGESTUS) d = Math.max(d, sp[4]);
       }
       const heightKm = sp[2] + (sp[3] - sp[2]) * h5;
-      az0 += kind === CUMULONIMBUS ? 0 : f.time * 0.007 / d;
+      az0 += kind === CUMULONIMBUS ? 0 : (f.time * 0.007 + (st.hour ?? 12) * 4) / d;
       const az = az0 - win * Math.floor(az0 / win + 0.5);
       const cx = f.w * (0.5 + az / f.fov), drop = d * d / (2 * EARTH_R);
       let wPx, k, yb;

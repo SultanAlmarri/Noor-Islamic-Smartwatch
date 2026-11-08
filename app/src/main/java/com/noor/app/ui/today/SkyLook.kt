@@ -67,6 +67,8 @@ internal class Weather private constructor(
         /** Rain shafts and virga under distant clouds. */
         val showers: Float,
         val cirrus: Float,
+        /** The hour of the day (0…24): over the hours the clouds travel with the wind. */
+        val hour: Float = 12f,
     )
 
     /** The weather at [fraction] of the day (0 midnight … 1 midnight). */
@@ -123,7 +125,7 @@ internal class Weather private constructor(
         cu *= 0.35f + 0.65f * kotlin.math.max(day, storm)
         val ci = (cirrusBase * (0.55f + 0.9f * n3) * (1 - overcast)).coerceIn(0f, 1f)
         fun c(x: Float) = x.coerceIn(0f, 1f)
-        return State(c(cu), c(size), c(cluster), c(layer), c(overcast), c(storm), c(rain), c(showers), ci)
+        return State(c(cu), c(size), c(cluster), c(layer), c(overcast), c(storm), c(rain), c(showers), ci, h)
     }
 
     companion object {

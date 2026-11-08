@@ -256,8 +256,9 @@ internal object CloudField {
                 if (kind == CloudTable.CONGESTUS) d = max(d, sp[4].toDouble())
             }
             val heightKm = (sp[2] + (sp[3] - sp[2]) * h5).toDouble()
-            // Drifting with the wind, the nearer the faster; a thunderstorm stays in view (it would take hours).
-            az0 += if (kind == CloudTable.CUMULONIMBUS) 0.0 else f.time * 0.007 / d
+            // Drifting with the wind, the nearer the faster (seconds of the ambient clock, and the hours of the day, so a
+            // cloud seen in the morning has moved on by noon); a thunderstorm stays in view (it would take hours).
+            az0 += if (kind == CloudTable.CUMULONIMBUS) 0.0 else (f.time * 0.007 + st.hour * 4.0) / d
             val az = az0 - window * floor(az0 / window + 0.5)
             val cx = (f.w * (0.5 + az / f.fov)).toFloat()
             val drop = d * d / (2 * EARTH_R)
