@@ -72,9 +72,9 @@ The scene (0.9.6), far to near:
    and a grey overcast deck are drawn by the sky shader, with high cirrus and distant banks along the horizon. Each
    cloud fades in and out on its own as the weather changes, so dragging the Sun through the day never makes the sky
    jump (`CloudFieldTest`). Clouds keep clear of the text written on the sky by fading out below it.
-   0.9.8 computed every cloud for every pixel 15 times a second in the sky shader (slow on many phones); now the phone
-   draws a few dozen pictures through one colour matrix each, the same on every phone, and the sky shader is a quarter
-   of its former size.
+   0.9.8 sampled its clouds for every pixel of the sky, 15 times a second, in the sky shader; now the phone draws a few
+   dozen pictures through one colour matrix each, the same on every phone, and the sky shader (about a third smaller,
+   its overcast and cloud-layer parts skipped when the weather has none) is redrawn once a second by day.
 4. **Sun**: a disc with limb darkening, its colour the sunlight that reaches the ground (white at noon, orange-red at
    the horizon), a bright core of glare and a wide soft bloom. It sinks behind the true horizon and behind the land.
 5. **Land** (`LandProfile.kt`, `land_layer.agsl`): five layers fading into the haze with distance, the nearest the

@@ -395,8 +395,10 @@ What was found and done:
   nearly every frame during the opening and while dragging at night, and computed every cloud for every pixel of the
   sky 15 times a second; the frames slowed, and the quality guard switched the phone to the old Canvas renderer and
   remembered it. Now the stars are drawn in the background, the guard only lowers the resolution (never switches
-  renderer, and starts afresh under a new key), and the clouds left the sky shader altogether (about 40 000 → 12 000
-  operations); the sky shader redraws once a second by day.
+  renderer, and starts afresh under a new key), and the clouds left the sky shader (about 21 600 → 15 000 operations,
+  the new overcast and cloud-layer parts skipped when the weather has none); the sky shader redraws once a second by
+  day instead of 15 times (4 times under an overcast, 15 at night for the stars). The emulators draw on the CPU, so
+  their frame times say nothing about a phone's GPU; how smooth it is must be judged on a phone.
 - **Clouds** ([DESIGN.md](DESIGN.md#the-home-screen)): real clouds cut out of public-domain and CC0 photographs
   (`tools/sky/photo_clouds.py`, `tools/sky/photos/manifest.json`), placed in true perspective (6 to 110 km away), lit
   by the moment with one colour matrix each, the same on every phone (Canvas sky included). The computer-generated
