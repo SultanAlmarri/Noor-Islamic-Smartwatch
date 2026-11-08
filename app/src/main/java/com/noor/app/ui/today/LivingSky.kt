@@ -424,13 +424,15 @@ internal fun LivingSky(
     // The layers' own clocks (seconds), each layer redrawn only when its clock moves: the clouds' about 15 times a
     // second (they move less than a fifth of a dp per tick, so it looks continuous); the GPU sky's as often at night
     // (twinkling stars) but once a second by day (only the high cirrus drifts, far too slowly to see a step: 0.9.8
-    // redrew the whole sky 15 times a second); the land's 4 times (cloud shadows, mist). So the phone works a few
-    // percent of the time while the screen is simply looked at.
+    // redrew the whole sky 15 times a second), 4 times under an overcast or a layer of cloud; the land's 4 times
+    // (cloud shadows, mist). So the phone works a few percent of the time while the screen is simply looked at.
     val origin = remember(scene.seed) { (((scene.seed % 997) + 997) % 997).toFloat() * 3.7f }
     val cloudSeconds = remember { mutableFloatStateOf(origin + (stillTime ?: 0.13f) * CYCLE_SECONDS.toFloat()) }
     val skySeconds = remember { mutableFloatStateOf(cloudSeconds.floatValue) }
     val landSeconds = remember { mutableFloatStateOf(cloudSeconds.floatValue) }
     val starry = rememberUpdatedState(light.night > 0f)
+    // An overcast or a layer of cloud drifts overhead, where it moves fastest: then the sky ticks 4 times a second.
+    val decked = rememberUpdatedState(weatherNow.overcast > 0.03f || weatherNow.layer > 0.08f)
     if (ambient) LaunchedEffect(Unit) {
         val start = withFrameNanos { it }
         val base = cloudSeconds.floatValue
@@ -439,7 +441,7 @@ internal fun LivingSky(
                 if (parallax() < heightPx[0]) {
                     val sec = base + (t - start) / 1e9f
                     cloudSeconds.floatValue = sec
-                    if (starry.value || sec - skySeconds.floatValue >= 1f) skySeconds.floatValue = sec
+                    if (starry.value || sec - skySeconds.floatValue >= (if (decked.value) 0.25f else 1f)) skySeconds.floatValue = sec
                     if (sec - landSeconds.floatValue >= 0.25f) landSeconds.floatValue = sec
                 }
             }

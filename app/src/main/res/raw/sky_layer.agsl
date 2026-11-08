@@ -199,7 +199,7 @@ float4 cloudLayer(float3 v) {
     float amount = smoothstep(0.08, 0.3, uWx.y) * uWx.y;
     if (amount <= 0.001 || v.y < 0.003) return float4(0.0);
     float t = shellDistance(v.y, 2.0);
-    float2 p = float2(v.x, v.z) * t + float2(uWind, 0.0);
+    float2 p = float2(v.x, v.z) * t + float2(uWind * 0.5, 0.0);
     float far = sat(t / 80.0);
     float2 q = p * float2(0.30, 0.45) + uWeather.zw * 0.9;
     float broad = vnoise(q * 0.18 + float2(3.0, 1.0));
@@ -218,7 +218,7 @@ float4 cloudLayer(float3 v) {
 float4 overcastDeck(float3 v) {
     if (uWx.x <= 0.001) return float4(0.0);
     float t = shellDistance(max(v.y, 0.003), 1.4);
-    float2 p = float2(v.x, v.z) * t + float2(uWind * 0.8, 0.0);
+    float2 p = float2(v.x, v.z) * t + float2(uWind * 0.4, 0.0);
     float n = fbm4(p * float2(0.045, 0.07) + uWeather.wz * 0.6, float4(1.0, 0.8, 0.5, 0.25));
     float thick = sat(uWx.x * 1.35 - 0.25 + (n - 0.5) * 0.9 + 0.2 * smoothstep(20.0, 120.0, t));
     float a = smoothstep(0.02, 0.5, thick);
