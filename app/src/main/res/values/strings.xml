@@ -501,4 +501,13 @@
     <string name="face_sending">Sending to your watch…</string>
     <string name="face_pick_on_watch">Added to your watch faces. To show it, touch and hold your watch face, then choose Noor.</string>
     <string name="face_changes_hint">Your watch shows the change at once, if Noor is its watch face.</string>
+
+    <!-- Home-screen widgets (0.9.10) -->
+    <string name="widget_next_name">Next prayer</string>
+    <string name="widget_next_desc">The next prayer, its time and a live countdown, over the sky of the moment</string>
+    <string name="widget_today_name">Today’s prayers</string>
+    <string name="widget_today_desc">All of today’s prayer times, the next one marked, with the place, the Hijri date and the countdown</string>
+    <string name="widget_sky_name">Noor sky</string>
+    <string name="widget_sky_desc">The sky over your place now — weather, scenery and the Sun’s path with the prayers — and the next prayer</string>
+    <string name="widget_choose_place">Open Noor to choose your place</string>
 </resources>

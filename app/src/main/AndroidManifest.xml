@@ -64,6 +64,31 @@
             </intent-filter>
         </receiver>
 
+        <!-- Home-screen widgets (0.9.10). -->
+        <receiver android:name=".widget.NextPrayerWidget" android:exported="true" android:label="@string/widget_next_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_next_info" />
+        </receiver>
+        <receiver android:name=".widget.TodayWidget" android:exported="true" android:label="@string/widget_today_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_today_info" />
+        </receiver>
+        <receiver android:name=".widget.SkyWidget" android:exported="true" android:label="@string/widget_sky_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_sky_info" />
+        </receiver>
+        <!-- The widgets' own update times, restarts, app updates, clock, zone and language. -->
+        <receiver android:name=".widget.WidgetRefreshReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.noor.app.WIDGET_REFRESH" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Answers "Sync with phone" on the watch by publishing the settings again. -->
         <service
             android:name=".data.WatchRequestService"

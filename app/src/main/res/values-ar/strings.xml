@@ -505,4 +505,13 @@
     <string name="face_sending">جارٍ الإرسال إلى ساعتك…</string>
     <string name="face_pick_on_watch">أُضيفت إلى واجهات ساعتك. لعرضها اضغط مطولاً على واجهة الساعة ثم اختر نور.</string>
     <string name="face_changes_hint">تظهر التغييرات على ساعتك فوراً إذا كانت نور واجهتها.</string>
+
+    <!-- Home-screen widgets (0.9.10) -->
+    <string name="widget_next_name">الصلاة التالية</string>
+    <string name="widget_next_desc">الصلاة التالية ووقتها وعدّ تنازلي حيّ، فوق سماء اللحظة</string>
+    <string name="widget_today_name">صلوات اليوم</string>
+    <string name="widget_today_desc">مواقيت صلوات اليوم كلها، والتالية مميّزة، مع المكان والتاريخ الهجري والعدّ التنازلي</string>
+    <string name="widget_sky_name">سماء نور</string>
+    <string name="widget_sky_desc">السماء فوق مكانك الآن — الطقس والمشهد ومسار الشمس مع الصلوات — والصلاة التالية</string>
+    <string name="widget_choose_place">افتح نور لاختيار مكانك</string>
 </resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Darkens the top of a widget's sky picture a little, behind the prayer and the countdown written there. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient android:angle="270" android:startColor="#59000000" android:endColor="#00000000" />
+    <corners android:radius="22dp" />
+</shape>

@@ -424,3 +424,12 @@ Tests at 0.9.9: `core/prayer` 101 (1 skipped by design), `alerts` 14, `app` 58, 
 Still needs the owner's phone: how smooth it feels on a real (and an old) phone's GPU, and how the clouds, weather and
 scenery look on a real screen. Phones older than Android 13 get the new clouds and weather but keep the simpler Canvas
 land.
+
+## 15. Home-screen widgets (0.9.10, 8 November 2026)
+
+The owner asked for widgets. Three, designed to match the home screen ([DESIGN.md](DESIGN.md#home-screen-widgets-0910)):
+**Next prayer** (2×1), **Today's prayers** (4×2) and **Noor sky** (4×2, the home sky in small with the Sun's path and
+the prayers). They show the same countdown as the home screen and the notification, in Noor's language and digits,
+and update themselves at each prayer, at midnight and every 15 minutes for the picture, without waking a sleeping
+phone. Tested with Robolectric on a simulated home screen (`WidgetsTest`: content, Arabic, the phone's other digits,
+the next update, pictures); not yet seen on a real launcher.

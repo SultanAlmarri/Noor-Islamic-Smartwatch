@@ -57,7 +57,10 @@ class NoorApplication : Application(), AlertHost {
     override fun adhanScreen(context: Context): Intent = Intent(context, com.noor.app.adhan.AdhanAlertActivity::class.java)
     override val alarmClockAlarms: Boolean get() = true
     override val alertLanguage: String? get() = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language
-    override fun onPrayerAlarm(context: Context) = com.noor.app.notify.StatusNotification.refreshAsync(context)
+    override fun onPrayerAlarm(context: Context) {
+        com.noor.app.notify.StatusNotification.refreshAsync(context)
+        com.noor.app.widget.Widgets.refreshAsync(context)
+    }
 
     @OptIn(FlowPreview::class)
     override fun onCreate() {
@@ -101,6 +104,14 @@ class NoorApplication : Application(), AlertHost {
                 .distinctUntilChanged()
                 .debounce(300)
                 .collect { com.noor.app.notify.StatusNotification.refresh(this@NoorApplication) }
+        }
+        // The home-screen widgets follow the place, the times and the display choices, and the scenery.
+        container.scope.launch {
+            container.settings.settings
+                .map { s -> Triple(s.elapsedAfterPrayer to s.scenery, WearSync.configFor(s, 0L, container.timetables), Triple(s.language, s.numerals, s.timeFormat)) }
+                .distinctUntilChanged()
+                .debounce(500)
+                .collect { com.noor.app.widget.Widgets.refresh(this@NoorApplication) }
         }
     }
 }

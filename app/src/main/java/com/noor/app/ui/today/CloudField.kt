@@ -204,9 +204,10 @@ internal object CloudField {
 
     /**
      * The clouds (and shafts of rain) of [f], far to near, into [out] (its items are reused); returns how many. Only
-     * those at least partly in view are listed. A stroke of lightning, if one is flashing now, goes into [bolt].
+     * those at least partly in view are listed. A stroke of lightning, if one is flashing now, goes into [bolt]; with
+     * [lightning] false nothing flashes (a still picture, such as a widget's, must not freeze a flash).
      */
-    fun layout(table: CloudTable, f: Frame, out: ArrayList<CloudDraw>, bolt: Bolt? = null): Int {
+    fun layout(table: CloudTable, f: Frame, out: ArrayList<CloudDraw>, bolt: Bolt? = null, lightning: Boolean = true): Int {
         bolt?.let { it.intensity = 0f; it.path.clear(); it.branch.clear() }
         if (table.sprites.isEmpty()) return 0
         val st = f.state
@@ -226,7 +227,7 @@ internal object CloudField {
         val night = f.night.toDouble()
         val moonB = f.moonLight.toDouble()
         // Lightning: now and then, in a thunderstorm.
-        val flash = lightning(f)
+        val flash = if (lightning) lightning(f) else 0f
         var flashTarget = -1; var flashBest = -1f
         var n = 0
         for (i in 0 until SLOTS) {

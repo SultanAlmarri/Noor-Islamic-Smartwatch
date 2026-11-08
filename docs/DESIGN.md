@@ -117,6 +117,24 @@ the sky shader once a second by day (15 times at night, for the twinkling stars)
 in the background, and stop entirely under "Remove animations". While the Sun is dragged or during the opening, both
 layers redraw every frame.
 
+## Home-screen widgets (0.9.10)
+
+Three widgets, each in Noor's language and digits, opening Noor when tapped (`widget/Widgets.kt`, `widget/WidgetSky.kt`):
+
+- **Next prayer** (2×1, resizable): the next prayer, its time and a live countdown over the sky of the moment.
+- **Today's prayers** (4×2): the next prayer and the countdown, the place and the Hijri date, and all six times of the
+  day (the one counted to or from in gold) over the land, darkened for reading.
+- **Noor sky** (4×2, resizable): the home sky in small — the atmosphere's colours for this moment, the day's weather
+  with its photographed clouds, stars and the moon at night, the user's scenery, the Sun on its path with the prayers —
+  and the next prayer, place, date and countdown.
+
+They say exactly what the home screen and the notification say (`StatusNotification.content`): − before a prayer, +
+for 30 minutes after it, then the next. The seconds are ticked by Android itself (a Chronometer); where the phone's
+digits differ from Noor's, Noor writes the countdown to the minute. The pictures are drawn with the ordinary Canvas, off
+the main thread. Updates come at each prayer, at the end of a "+" period, at midnight, every 15 minutes for the picture
+(every minute when Noor writes the countdown), and when the place, times or settings change — all by non-waking alarms,
+so a sleeping phone is never woken for a widget (`WidgetsTest`).
+
 ## Appearance
 
 Night (ink and gold), Day (warm paper, ink, deeper gold), System, and **Follow the sun** (the default): light from
