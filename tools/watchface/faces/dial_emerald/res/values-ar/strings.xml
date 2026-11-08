@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="watch_face_name">نور</string>
+    <string name="cfg_seconds">الثواني</string>
+    <string name="slot_next">الصلاة القادمة</string>
+    <string name="slot_hijri">التاريخ الهجري</string>
+    <string name="slot_left">اليسار</string>
+    <string name="slot_right">اليمين</string>
+</resources>

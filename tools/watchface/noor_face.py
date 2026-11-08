@@ -16,7 +16,9 @@ The watch's own editor (long press on the face) offers what the phone does not s
 the two complications. The phone's Noor app chooses the design and the colour; the watch app replaces the face in
 place (same package, same slot), so the change shows at once and the face stays active.
 
-Usage (called by build_pushed_face.py): write_variant(res_dir, design, colour) fills a res folder.
+Usage: python3 tools/watchface/noor_face.py generate  (after any change here; needs Pillow, numpy and fontTools)
+writes every face's resources to tools/watchface/faces/<id>/res, which are committed, and the phone editor's
+pictures; tools/watchface/build_pushed_face.py packages and validates them at every build.
 """
 import math
 import os
@@ -396,7 +398,21 @@ def phone_previews(out_dir, size=360):
     Image.open(legacy).convert("RGB").resize((size, size), Image.LANCZOS).save(os.path.join(out_dir, "face_original.webp"), "WEBP", quality=88, method=6)
 
 
+def generate(root=os.path.join(ROOT, "tools/watchface/faces")):
+    """Writes every face's resources to tools/watchface/faces/<id>/res (committed; the build only packages them, so it
+    needs no Python libraries), and the phone editor's pictures."""
+    import shutil
+    for d in DESIGNS:
+        for c in COLOURS:
+            res = os.path.join(root, f"{d}_{c}", "res")
+            shutil.rmtree(os.path.dirname(res), ignore_errors=True)
+            write_variant(res, d, c)
+    phone_previews(os.path.join(ROOT, "app/src/main/res/drawable-nodpi"))
+
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 2 and sys.argv[1] == "previews":
         phone_previews(sys.argv[2])
+    elif len(sys.argv) > 1 and sys.argv[1] == "generate":
+        generate()

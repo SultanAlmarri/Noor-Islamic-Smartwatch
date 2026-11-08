@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="watch_face_name">Noor</string>
+    <string name="cfg_seconds">Seconds</string>
+    <string name="slot_next">Next prayer</string>
+    <string name="slot_hijri">Hijri date</string>
+    <string name="slot_left">Left</string>
+    <string name="slot_right">Right</string>
+</resources>
