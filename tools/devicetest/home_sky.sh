@@ -46,7 +46,27 @@ city() { adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city "$1"
 # setclock MMDDhhmmYYYY.ss in UTC
 setclock() { adb shell "date -u $1" >/dev/null; }
 launch() { adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; }
-shot() { adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes, $(adb get-state 2>&1))"; }
+# The emulator's own launcher sometimes stops answering under the software GPU; its "isn't responding" dialog would
+# dim the picture. Any that shows is closed before each picture ("Wait").
+no_anr() {
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/ui_anr.xml" >/dev/null 2>&1
+  if grep -q "isn't responding" "$OUT/ui_anr.xml" 2>/dev/null; then
+    local xy; xy=$(python3 - "$OUT/ui_anr.xml" <<'PY'
+import re, sys
+x = open(sys.argv[1], encoding='utf-8').read()
+for m in re.finditer(r'<node[^>]*>', x):
+    n = m.group(0)
+    if re.search(r'text="(Wait|Close app)"', n):
+        b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+        x1, y1, x2, y2 = map(int, b.groups()); print((x1 + x2) // 2, (y1 + y2) // 2); break
+PY
+)
+    [ -n "$xy" ] && adb shell input tap $xy && log "closed an 'isn't responding' dialog"; sleep 1
+  fi
+}
+shot() { no_anr; adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes, $(adb get-state 2>&1))"; }
+
+adb shell settings put secure anr_show_background 0 >/dev/null 2>&1; adb shell settings put global anr_show_background 0 >/dev/null 2>&1
 
 # Dubai is UTC+4, Istanbul UTC+3. 7 November 2026.
 DXB="0000:night 0115:fajr 0200:dawn 0228:sunrise 0315:morning 0800:noon 1130:asr 1315:golden 1336:sunset 1352:dusk 1420:isha 1800:late"
