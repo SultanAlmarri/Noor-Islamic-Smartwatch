@@ -86,6 +86,8 @@
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="21600" />
+            <!-- 0.9.8: the Noor watch face (pushed by this app) may show this data from the start, as its default. -->
+            <meta-data android:name="android.support.wearable.complications.SAFE_WATCH_FACES" android:value="com.noor.smartwatch.watchfacepush.noor" />
         </service>
 
         <!-- Today's Hijri date. -->
@@ -100,6 +102,8 @@
             </intent-filter>
             <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,LONG_TEXT" />
             <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="21600" />
+            <!-- 0.9.8: the Noor watch face (pushed by this app) may show this data from the start, as its default. -->
+            <meta-data android:name="android.support.wearable.complications.SAFE_WATCH_FACES" android:value="com.noor.smartwatch.watchfacepush.noor" />
         </service>
 
         <!-- Today's dhikr count; opens the tasbih. -->
@@ -129,6 +133,8 @@
             </intent-filter>
             <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,MONOCHROMATIC_IMAGE" />
             <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="0" />
+            <!-- 0.9.8: the Noor watch face (pushed by this app) may show this data from the start, as its default. -->
+            <meta-data android:name="android.support.wearable.complications.SAFE_WATCH_FACES" android:value="com.noor.smartwatch.watchfacepush.noor" />
         </service>
 
         <!-- "Noor" tile: Hijri date and shortcuts. -->

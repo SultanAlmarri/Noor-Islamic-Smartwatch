@@ -1,4 +1,4 @@
-# Noor on the watch (0.7.0)
+# Noor on the watch (0.7.0; watch face 0.9.8)
 
 How the Wear OS app is put together, what it does on its own, how it works with the phone, and what has and has not
 been verified. Written for maintainers; the user-facing install guide is [INSTALL.md](INSTALL.md).
@@ -17,6 +17,46 @@ been verified. Written for maintainers; the user-facing install guide is [INSTAL
 | **Noor tile** | Hijri date, three round shortcuts (Qibla, Tasbih, Calendar; ordered right-to-left in Arabic), today's tasbih count, "Times" edge button |
 | **Complications** | Next prayer (short, long, ranged; countdown drawn by the watch face), Hijri date (short: day + month; long: full date; switches at midnight), Qibla (short: bearing; monochrome image; opens the compass), Tasbih (short: today's count; opens the counter; resets at midnight) |
 | **Ongoing Activity** | While an Adhan plays on the watch, Noor's icon appears on the watch face and in Recents, one tap from the Stop button |
+
+## The Noor watch face (0.9.8)
+
+The watch app carries the Noor watch face and installs it with Watch Face Push (Wear OS 6 and later). It is written in
+Watch Face Format and shows **Noor's own data through Noor's complications**: the next prayer (name, countdown, and a
+ring that fills through the interval to it) and the Hijri date, so the face always agrees with the app (same place,
+method, official timetable and adjustments). Nothing about prayer times is calculated in the face itself.
+
+| Design | What it shows |
+| --- | --- |
+| Horizon | Time large in the middle; Hijri and Gregorian date above; next prayer and countdown below; the prayer ring round the edge; the night dunes of the home screen at the bottom |
+| Dial | Hands and minute ticks; the prayer ring inside the ticks; Hijri date; next prayer below; two complications chosen on the watch (Noor's Qibla bearing and the battery by default) |
+| Minimal | Time very large on black; next prayer and countdown in one line; a thin ring (the lightest on the battery) |
+| Original | The v1.3.2 face, resources unchanged |
+
+Each design comes in gold, emerald, turquoise, rose and silver (16 faces). On the watch's own editor (touch and hold
+the face) the user can turn the seconds on or off and, on the Dial, choose its two complications. Ambient mode keeps
+the time and the next prayer, dimmed, and drops the background, ring and dunes.
+
+**Choosing a face.** On the phone: Watch page → Noor watch face: large previews, design, colour, "Show on my watch". The
+phone publishes the choice (`/noor/face`, Data Layer); the watch app replaces the face in its slot in place
+(`updateWatchFace`, same package and slot), so the face stays active, the user's watch-editor settings are kept, and
+the change shows at once. The same choice is available on the watch (Settings → Noor watch face, or the face screen).
+The watch reports the face in its slot, the face asked for, and whether it is active back to the phone.
+
+**Making it the active face.** Wear OS lets an app do this only once, with the user's permission. The watch app asks
+at most once (remembered); if the system says that chance has been used (0.9.7 asked again each time and showed "The
+maximum number of attempts to set the watch face as active has been reached"), it says instead: "Added to your watch
+faces. To show it, touch and hold your watch face, then choose Noor." That is a normal state, not an error.
+
+**Keeping it current.** After the watch app is updated (`MY_PACKAGE_REPLACED`), a Noor face from an older build is
+replaced in place with this build's: 0.9.7's face (the original design) becomes the Horizon face in gold, unless the
+user chooses otherwise. The Horizon face in gold is also the face Wear OS adds by itself when the watch app is first
+installed (`assets/default_watchface.apk`).
+
+**Building.** `tools/watchface/noor_face.py` draws the designs (XML, the dunes, hands, a digits-only subset of IBM Plex
+Sans Arabic Light, the picker previews) into `tools/watchface/faces/<id>/res`, committed, and the phone editor's
+pictures; `tools/watchface/build_pushed_face.py` packages all 16 under one package name, signs them with the public
+development key and validates each with Google's validator at every build (about 20 s), writing the tokens for the
+watch app. `WatchFacesTest` checks the phone's list of faces against the build's.
 
 ## Working without the phone
 
@@ -62,6 +102,7 @@ The watch is declared standalone (`com.google.android.wearable.standalone = true
 | `tile/PrayerTileService.kt`, `tile/ToolsTileService.kt` | Tiles |
 | `complication/*` | Next prayer, Hijri date, Qibla, Tasbih complications |
 | `NoorWearApp.kt` | App container; Ongoing Activity for the Adhan (`AlertHost.decoratePlaying`) |
+| `facepush/FacePush.kt`, `facepush/FaceUpdateReceiver.kt`, `ui/FaceSetup.kt` | The Noor watch face: install, switch in place, activate once, update after an app update; the face screen and on-watch picker |
 
 Core additions: `dhikr/Tasbih.kt` (counter state machine), `calendar/IslamicCalendar.kt` (events), `LocalSetup.kt`.
 
@@ -79,6 +120,11 @@ Core additions: `dhikr/Tasbih.kt` (counter state machine), `calendar/IslamicCale
 - Renders are in `wear/build/screenshots` (CI artifact). They are software renders: the test renderer for tiles drops
   ProtoLayout's large "display" and "label large" text styles (the prayer name and the edge-button label), so the tests
   check those texts in the layout itself instead.
+
+- 0.9.8: `FacePushTest` (5, against a stand-in for Watch Face Push: switching designs is an in-place update, never a
+  second face; the activation is asked for at most once and "attempts used" becomes guidance, not an error; 0.9.7's
+  face is replaced after an update), `WatchFacesTest` (core: the phone's list matches the build; the report carries
+  the face), `FaceEditorTest` (phone: every face has a picture; design and colour choices).
 
 ## Needs a real watch
 

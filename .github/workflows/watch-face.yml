@@ -8,7 +8,7 @@ on:
   push:
     branches: [ main, 'noor/**' ]
     paths: [ 'tools/watchface/**', 'wear/src/main/java/com/noor/wear/facepush/**', 'wear/src/main/java/com/noor/wear/ui/FaceSetup.kt',
-             'wear/src/main/java/com/noor/wear/complication/**', 'tools/devicetest/watch_face.sh', '.github/workflows/watch-face.yml' ]
+             'wear/src/main/java/com/noor/wear/complication/**', 'wear/src/main/AndroidManifest.xml', 'tools/devicetest/watch_face.sh', '.github/workflows/watch-face.yml' ]
   workflow_dispatch:
 
 permissions:

@@ -313,3 +313,55 @@ Tests at 0.9.7: `core/prayer` 97 (1 skipped by design), `alerts` 14, `app` 46, `
 Still needs the owner's phone: the scheduled Adhan on Android 17 (the decisive check), the full-screen Adhan over the
 lock screen, the notification's switch at a prayer's time, map gestures and imagery speed, the phone's geocoder
 results, and the compass near metal.
+
+## 13. Notification digits, location regions, smooth map, scenery, night sky, clouds, the watch face (0.9.8, 8 November 2026)
+
+What the owner asked, and what was done:
+
+- **Notification digits** (the owner's photo: Noor in English, the phone in Arabic, the countdown in Arabic-Indic
+  digits). Android's Chronometer writes its digits in the phone's language and cannot be told otherwise. Now, when the
+  phone's digits differ from Noor's, Noor writes the countdown itself (`StatusTicker`: once a second, only while the
+  screen is on; nothing runs with the screen off), and uses the Chronometer as before when they agree. Tested for
+  every combination of phone and Noor digits (`StatusNotificationTest`), and photographed on an Android 15 emulator
+  set to Arabic (`phone_098.sh`).
+- **"Next prayer" twice** in the expanded notification: the header line Android draws already says it; the layout's
+  own caption is gone (the design is otherwise unchanged).
+- **Time since each prayer** (the "+" after a prayer): longer, and now with a switch (Settings → Time since each
+  prayer). Fajr, Dhuhr, Asr and Isha 30 minutes, Maghrib 15, Shuruq 20. Why: the "+" should last while a person is
+  plausibly still between the Adhan and the end of the congregation. The wait from Adhan to iqama is commonly about
+  20–25 minutes at Fajr and 15–20 at Dhuhr, Asr and Isha, and short at Maghrib (about 5–10); the prayer itself takes
+  another 5–10 minutes. 30 / 15 covers the iqama wait and the prayer in most
+  mosques without lingering into the next part of the day. Shuruq's 20 minutes is about how long after sunrise the Sun
+  takes to rise "a spear's length", when the forbidden time ends and Duha may be prayed. It always ends earlier if the
+  next prayer comes first.
+- **Arabic Settings title** (الإعدادات's last letter dropping): the screen titles used negative letter spacing, which
+  breaks Arabic joining; Arabic titles now have none.
+- **Location: country → state/emirate/region → city → area** ([LOCATION.md](LOCATION.md)): for countries with many
+  places, the country opens on its largest cities and its regions (emirates, states, governorates, provinces,
+  regions: named as each country does).
+- **Map** (no dark tiles while panning and zooming): one tile cache for the whole app (kept between screens), tiles
+  fetched nearest the centre first by six workers, old requests dropped as the view moves, the parent tile (up to six
+  levels up) or the children shown while a tile loads, and a zoom level that changes with hysteresis.
+- **Home scenery** (Settings → Home scenery): Automatic (by place: high places and alpine countries mountains,
+  islands the sea, arid countries dunes, the rest hills), or Dunes, Hills, Mountains (snow on the summits) or Sea
+  (water mirroring the sky, the Sun's glitter and the moon's glade, a beach).
+- **Night** ([DESIGN.md](DESIGN.md#the-home-screen)): the real sky for the user's place and the moment shown, 1,600
+  catalogue stars, the Milky Way where it is, moonlight on the sky, clouds and land by the moon's phase, airglow,
+  shooting stars.
+- **Clouds**: real cumulus, rendered offline as volumes and relit on the phone for the Sun or the moon; sharper and
+  cheaper to draw. Checked on Android 14 and 15 emulators (`home-sky.yml`: the GPU shaders compiled and drew every
+  moment).
+- **Watch face** ([WATCH.md](WATCH.md#the-noor-watch-face-098)): the error in the owner's photo ("The maximum number of
+  attempts to set the watch face as active has been reached") came from the watch app asking Wear OS again to make its
+  face active; Wear OS allows that once per app. It now asks at most once and otherwise guides the user to pick Noor
+  on the watch. The face the watch app installed was still the 1.3.2 design; there is now a new Noor face (Horizon,
+  Dial, Minimal, in five colours; the original stays available) that shows Noor's own data through Noor's
+  complications. A watch-face editor on the phone's Watch page (and on the watch) chooses design and colour; the watch
+  replaces the face in place, so it changes at once. After the watch app is updated, an older Noor face is replaced
+  with the new one automatically.
+
+Evidence: unit and Robolectric tests (counts below), software renders in `app/build/screenshots` and
+`wear/build/screenshots`, all 16 watch faces validated by Google's Watch Face Push validator at every build, the
+`home-sky.yml` (Android 14/15), `phone-preview.yml` (`phone_098.sh`, Android 15) and `watch-face.yml` (Wear OS 6.0
+emulator: the watch app installs the face, makes it active and switches designs in place; photographs) runs, published
+to the `home-sky-preview`, `phone-preview` and `watch-face-preview` pre-releases.

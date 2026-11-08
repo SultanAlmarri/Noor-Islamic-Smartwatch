@@ -42,19 +42,35 @@ The scene (0.9.6), far to near:
    the Sun down through twilight as the eye adapts, and a filmic tone curve. Where text is written on the sky, a
    graduated darkening (as a photographer's filter) keeps white text at 4.5:1 (3:1 for the large countdown) at every
    height of the Sun; `AtmosphereTest` checks it from −40° to 90°.
-2. **Night**: stars on a jittered grid (two sizes, twinkling, thinning towards the horizon), the Milky Way with dark
-   dust lanes, the moon on the Sun's own path as far behind it as it is old, lit as a sphere from the Sun's side (its
-   phase is real), with earthshine and a halo.
+2. **Night** (0.9.8: the real sky, `NightSky.kt`): the 1,600 stars brighter than magnitude 5 of the Yale Bright Star
+   Catalogue (public domain, `res/raw/stars.bin`, built by `tools/sky/build_stars.py`) at their true places for the
+   user's position and the moment shown, sized by brightness and tinted by temperature; fainter stars on the turning
+   celestial sphere; the Milky Way where it really is (galactic coordinates: the bright centre in Sagittarius, the
+   Great Rift); the airglow low down on a dark night; now and then a shooting star. The view faces the side where the
+   scene's Sun rises east (south when the scene runs left to right, north in Arabic, where the Pole Star and the Plough
+   show): a real, unmirrored sky. The moon on the Sun's own path, as far behind it as it is old, lit as a sphere from
+   the Sun's side (its phase is real), with earthshine and a halo; by its light (how much depends on the phase) the sky
+   turns a deep blue, clouds are silvered and the land shows its shapes in silver-blue. Dragging the Sun through the
+   night turns the stars with it. `NightSkyTest` checks sidereal time against Meeus and known stars (Polaris, Sirius,
+   the galactic centre) where an almanac puts them.
 3. **Clouds**: high cirrus combed by the wind (lit pink long after sunset), distant cloud banks along the horizon, and
-   a few cumulus at different distances. Each cumulus is a density field (billows on a flat base, worn by turbulent
-   noise that slowly boils) lit by marching light through it towards the Sun: the side facing it glows, the body falls
-   into soft shade, thin edges are silvered when the Sun is behind, a low Sun warms them from below. Farther clouds are
-   smaller, lower, slower and paler with the haze. The weather changes from day to day and place to place (fewer
-   cumulus over the desert); clouds keep to the band of sky below the text.
+   (0.9.8) real cumulus. Eight clouds (flat fair-weather cumulus, taller ones with towers, small puffs, a fragment) are
+   rendered once, offline, as volumes of vapour (`tools/sky/build_clouds.py`: a heap of billows worn by Perlin-Worley
+   and Worley noise, light followed through the volume with multiple scattering) and stored lit from six directions
+   (`res/raw/clouds_a.png`, `clouds_b.png`, as games light smoke). The sky shader blends the six by where the Sun
+   (at its true elevation) or the moon stands relative to each cloud, adds skylight, the forward scattering that silvers
+   thin edges, and haze with distance: a cloud beside the Sun is lit on that side, one in front of a low Sun glows at
+   its edges, after sunset they are lit from below; at night they are dim silhouettes or moonlit. Farther clouds are
+   smaller, lower and slower; the weather changes from day to day and place to place (fewer over the desert); clouds
+   keep to the band of sky below the text (`CloudAtlasTest` checks every cloud's height against the shader). They are
+   sharper than 0.9.6's clouds and far cheaper to draw (the sky shader halved in size).
 4. **Sun**: a disc with limb darkening, its colour the sunlight that reaches the ground (white at noon, orange-red at
    the horizon), a bright core of glare and a wide soft bloom. It sinks behind the true horizon and behind the land.
 5. **Land** (`LandProfile.kt`, `land_layer.agsl`): five layers fading into the haze with distance, the nearest the
-   page itself. Hills: a mountain range of several summits far away, rolling wooded hills nearer, tree crowns along
+   page itself. Four sceneries (0.9.8, Settings → Home scenery, or Automatic by place): Dunes, Hills, Mountains (sharp
+   ranges with snow on the summits that takes the colours of sunrise and sunset) and Sea (the water mirrors the sky,
+   the Sun's path glitters on it, the moon lays a glade, a pale beach with grass in front). Automatic: high places
+   (1,400 m and above) and alpine countries get mountains, islands the sea, arid countries dunes, the rest hills. Hills: a mountain range of several summits far away, rolling wooded hills nearer, tree crowns along
    the crests. Dunes: from each summit a sharp crest runs down across the dune, so a low Sun lights the windward face
    and leaves the slip face in blue shade; faint ripples on the nearest. Lit per pixel from the Sun's side, a rim of
    light along crests with the Sun low behind them, shadows of passing cumulus, mist in the valleys at dawn.

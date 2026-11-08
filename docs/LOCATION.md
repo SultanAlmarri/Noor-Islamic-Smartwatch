@@ -17,8 +17,9 @@ Settings → **Location mode** opens one screen (`app/.../ui/location/LocationSc
   search (results move the map there), zoom buttons and "my location". The bottom card names the place under the pin
   and shows its coordinates live.
 - **Enter coordinates**: latitude and longitude in two fields, or one pasted line.
-- **Browse by country**: country (flags, the user's own country first) → city, town or village (largest first, with a
-  filter) → area (the city's districts and suburbs, alphabetical, with a filter; "centre" and "pin your exact spot on
+- **Browse by country**: country (flags, the user's own country first) → (0.9.8, for large countries) its largest
+  cities and its states, emirates, provinces or regions → city, town or village (largest first, with a filter; small
+  villages folded) → area (the city's districts and suburbs, alphabetical, with a filter; "centre" and "pin your exact spot on
   the map" at the top). A village or town without districts goes straight to the confirmation.
 
 Every way ends on **Confirm the location**: the point on the satellite picture, its name and context, the exact

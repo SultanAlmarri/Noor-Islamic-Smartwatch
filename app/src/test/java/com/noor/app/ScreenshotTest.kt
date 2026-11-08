@@ -249,7 +249,7 @@ class ScreenshotTest {
         watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap()), installs = mapOf("node1" to Pending(t0 - 30_000, true)), now = t0)
         shot("20_watch_installing_night_en", "Tap Install there")
         watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport.copy(faceInstalledVersion = 1, faceActive = false))), now = t0)
-        shot("21_watch_face_ready_night_en", "Use the Noor watch face")
+        shot("21_watch_face_ready_night_en", "Show on my watch")
         watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport)), now = t0); shot("22_watch_done_night_en", "In use")
         watch = WatchScene(WatchSetupState(false, listOf(gw.copy(name = "Galaxy Watch4")), setOf("node1"), mapOf("node1" to doneReport.copy(sdkInt = 34, facePushSupported = false, faceActive = false, faceInstalledVersion = null))), now = t0)
         shot("23_watch_wearos5_night_en", "Needs Wear OS 6")
