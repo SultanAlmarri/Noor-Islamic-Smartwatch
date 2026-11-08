@@ -380,3 +380,42 @@ switch is not always complete), the Noor face on a real watch (it is installed, 
 and switched between designs on a Wear OS 6.0 emulator; Samsung's One UI 8 Watch may differ), the face's ring and
 seconds over a full day, the phone editor's "Show on my watch" over Bluetooth, and the new clouds and night sky on a
 real phone's GPU.
+
+## 14. Clouds from photographs, weather, scenery, speed (0.9.9, 8 November 2026)
+
+What the owner asked (phone app only; the watch app was not part of this round): 0.9.8 started with nice clouds,
+then after a few seconds switched to old, poor clouds with bad performance; the clouds looked like rectangles, few,
+bland, and bigger than the mountains; the hills and the beach looked like artifacts. Later: much more variety —
+isolated clouds, clusters, broken and layered skies, overcast, towering storms, lightning, rain, rain shafts and virga —
+evolving naturally through day and night, at a realistic scale and perspective.
+
+What was found and done:
+
+- **The switch to the old clouds** was the app protecting itself: 0.9.8 drew the star picture on the main thread
+  nearly every frame during the opening and while dragging at night, and computed every cloud for every pixel of the
+  sky 15 times a second; the frames slowed, and the quality guard switched the phone to the old Canvas renderer and
+  remembered it. Now the stars are drawn in the background, the guard only lowers the resolution (never switches
+  renderer, and starts afresh under a new key), and the clouds left the sky shader altogether (about 40 000 → 12 000
+  operations); the sky shader redraws once a second by day.
+- **Clouds** ([DESIGN.md](DESIGN.md#the-home-screen)): real clouds cut out of public-domain and CC0 photographs
+  (`tools/sky/photo_clouds.py`, `tools/sky/photos/manifest.json`), placed in true perspective (6 to 110 km away), lit
+  by the moment with one colour matrix each, the same on every phone (Canvas sky included). The computer-generated
+  clouds tried first in this round were dropped: the owner rightly found them unrealistic.
+- **Weather**: a character for each day and place, evolving hour by hour; clusters, layers, overcast, storms with
+  lightning, rain, rain shafts and virga (`Weather`, `CloudField`, `CloudLayer.kt`).
+- **Grey boxes**: the text-readability limit dimmed any cloud behind the text to grey; clouds now fade out below the
+  text instead.
+- **Scenery**: hills soft (groves, meadows, round tree crowns near) instead of blocky noise; mountains shaded and
+  snowed by altitude (no vertical bands); a plain beach of dry and wet sand; the headland slopes into the sea; gentler
+  crest rims; sea glitter sparkles rather than a white blot; land and sea lit flat and grey under an overcast.
+
+Evidence: unit and Robolectric tests (`CloudFieldTest`: every kind of day comes up, a day evolves without jumps,
+storms flash, sizes and places, lighting; `CloudAtlasTest`: every cloud whole and where the table says; the shaders'
+size and compilation), design-bench renders of every weather and time of day, and the `home-sky.yml` Android 14/15
+emulator run (GPU sky, clouds and land drawn by Android itself), published to the `home-sky-preview` pre-release.
+
+Tests at 0.9.9: `core/prayer` 101 (1 skipped by design), `alerts` 14, `app` 58, `wear` 29; all pass.
+
+Still needs the owner's phone: how smooth it feels on a real (and an old) phone's GPU, and how the clouds, weather and
+scenery look on a real screen. Phones older than Android 13 get the new clouds and weather but keep the simpler Canvas
+land.

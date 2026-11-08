@@ -53,25 +53,38 @@ The scene (0.9.6), far to near:
    turns a deep blue, clouds are silvered and the land shows its shapes in silver-blue. Dragging the Sun through the
    night turns the stars with it. `NightSkyTest` checks sidereal time against Meeus and known stars (Polaris, Sirius,
    the galactic centre) where an almanac puts them.
-3. **Clouds**: high cirrus combed by the wind (lit pink long after sunset), distant cloud banks along the horizon, and
-   (0.9.8) real cumulus. Eight clouds (flat fair-weather cumulus, taller ones with towers, small puffs, a fragment) are
-   rendered once, offline, as volumes of vapour (`tools/sky/build_clouds.py`: a heap of billows worn by Perlin-Worley
-   and Worley noise, light followed through the volume with multiple scattering) and stored lit from six directions
-   (`res/raw/clouds_a.png`, `clouds_b.png`, as games light smoke). The sky shader blends the six by where the Sun
-   (at its true elevation) or the moon stands relative to each cloud, adds skylight, the forward scattering that silvers
-   thin edges, and haze with distance: a cloud beside the Sun is lit on that side, one in front of a low Sun glows at
-   its edges, after sunset they are lit from below; at night they are dim silhouettes or moonlit. Farther clouds are
-   smaller, lower and slower; the weather changes from day to day and place to place (fewer over the desert); clouds
-   keep to the band of sky below the text (`CloudAtlasTest` checks every cloud's height against the shader). They are
-   sharper than 0.9.6's clouds and far cheaper to draw (the sky shader halved in size).
+3. **Clouds and weather** (0.9.9): real clouds, cut out of public-domain and CC0 photographs from Wikimedia Commons
+   (`tools/sky/photo_clouds.py`; the photographs, their authors and licences in `tools/sky/photos/manifest.json`):
+   fair-weather and middling cumulus, towering cumulus and thunderstorms with their anvils, ragged fractus. Each is
+   separated from the sky it was photographed against (the sky's blue fitted across the picture, the cloud's opacity
+   solved per pixel), kept as its own light and shade, and recoloured on the phone with the light of the moment from
+   the same atmosphere as the sky: white with blue-grey shade by day, gold at sunrise and sunset, flat grey under an
+   overcast, dim and moonlit at night; its lit side is turned to the Sun; far ones take the colour of the air.
+   Placement is true perspective: each cloud has a real width and distance (6 to 110 km), so small clouds crowd in
+   rows towards the horizon and larger ones stand nearer and higher; towers and storms rise from behind the land.
+   The **weather** (`Weather` in `SkyLook.kt`) gives each day at each place a character — clear, fair, convective
+   (cumulus building into towers and afternoon thunderstorms), stormy, layered, overcast, rainy or mixed; deserts are
+   more often clear, mountains more often stormy — and lets it evolve hour by hour with smooth randomness: heaped
+   clouds build through the day and melt at night, storms come late in the afternoon and linger into the evening, an
+   overcast thins and thickens. Clouds come in isolated, clustered and broken arrangements; under showery clouds hang
+   shafts of rain, or virga that evaporates before it reaches the ground; thunderstorms flash now and then (the cloud
+   lights up violet-white, often a stroke to the ground); rain falls in front of the land; a layer of stratocumulus
+   and a grey overcast deck are drawn by the sky shader, with high cirrus and distant banks along the horizon. Each
+   cloud fades in and out on its own as the weather changes, so dragging the Sun through the day never makes the sky
+   jump (`CloudFieldTest`). Clouds keep clear of the text written on the sky by fading out below it.
+   0.9.8 computed every cloud for every pixel 15 times a second in the sky shader (slow on many phones); now the phone
+   draws a few dozen pictures through one colour matrix each, the same on every phone, and the sky shader is a quarter
+   of its former size.
 4. **Sun**: a disc with limb darkening, its colour the sunlight that reaches the ground (white at noon, orange-red at
    the horizon), a bright core of glare and a wide soft bloom. It sinks behind the true horizon and behind the land.
 5. **Land** (`LandProfile.kt`, `land_layer.agsl`): five layers fading into the haze with distance, the nearest the
    page itself. Four sceneries (0.9.8, Settings → Home scenery, or Automatic by place): Dunes, Hills, Mountains (sharp
    ranges with snow on the summits that takes the colours of sunrise and sunset) and Sea (the water mirrors the sky,
-   the Sun's path glitters on it, the moon lays a glade, a pale beach with grass in front). Automatic: high places
+   the Sun's path glitters on it, the moon lays a glade, a plain beach of dry and wet sand in front). Automatic: high places
    (1,400 m and above) and alpine countries get mountains, islands the sea, arid countries dunes, the rest hills. Hills: a mountain range of several summits far away, rolling wooded hills nearer, tree crowns along
-   the crests. Dunes: from each summit a sharp crest runs down across the dune, so a low Sun lights the windward face
+   the crests (0.9.9: soft groves and meadows from afar, round tree crowns only on the nearest ridges; 0.9.8's noise
+   made square blotches). Mountains are shaded and snowed by altitude (the snowline is a height, ragged in the
+   gullies), not by depth below each jagged crest, which made vertical bands. Dunes: from each summit a sharp crest runs down across the dune, so a low Sun lights the windward face
    and leaves the slip face in blue shade; faint ripples on the nearest. Lit per pixel from the Sun's side, a rim of
    light along crests with the Sun low behind them, shadows of passing cumulus, mist in the valleys at dawn.
 6. **Over the land**: the sun path (behind the land, gold where the day has passed) and the prayers: on the path while
@@ -99,8 +112,8 @@ nothing snaps, so the sky never jumps (`SkyDetentTest`). Twilight has more of th
 dawn and dusk changed the colours up to nine times faster per pixel than at midday; now about a third less). The scene
 relights continuously; it springs back to now when let go.
 
-**Calm and cost**: the scene's moment changes once a minute; the sky layer's clock ticks about 15 times a second for
-drifting clouds and twinkling stars, the land's 4 times a second; both rest when the sky is scrolled away or the app is
+**Calm and cost**: the scene's moment changes once a minute; the clouds redraw about 15 times a second as they drift,
+the sky shader once a second by day (15 times at night, for the twinkling stars), the land 4 times a second; both rest when the sky is scrolled away or the app is
 in the background, and stop entirely under "Remove animations". While the Sun is dragged or during the opening, both
 layers redraw every frame.
 
