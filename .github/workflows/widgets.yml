@@ -1,0 +1,80 @@
+name: Widgets on real Android (emulator)
+
+# Noor's home-screen widgets hosted as a launcher hosts them, on Android 12, 14 and 15 emulators set to Arabic (the
+# owner's phone), with Noor in English and Western digits, then in Arabic: the countdown in Noor's font and digits, its
+# seconds ticking by themselves, its minutes changing on the minute, the sky drawn by the home screen's GPU renderer.
+# See tools/devicetest/widgets.sh. Pictures are uploaded, and published as a pre-release asset.
+
+on:
+  push:
+    branches: [ main, 'noor/**', 'widgets/**' ]
+    paths: [ 'app/src/main/java/com/noor/app/widget/**', 'app/src/main/java/com/noor/app/ui/today/**', 'app/src/main/res/**',
+             'app/src/debug/**', 'tools/devicetest/widgets.sh', 'tools/devicetest/widgets_check.py', '.github/workflows/widgets.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  widgets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [ 31, 34, 35 ]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable hardware acceleration for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Pillow for the picture checks
+        run: python3 -m pip install --quiet pillow
+
+      - name: Build the debug app
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Widgets on an Arabic phone, second after second
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
+          script: timeout 1500 bash tools/devicetest/widgets.sh app/build/outputs/apk/debug/app-debug.apk widgets-api${{ matrix.api }} || true
+
+      - name: The checks
+        run: |
+          cat widgets-api${{ matrix.api }}/widget_log.txt || true
+          cat widgets-api${{ matrix.api }}/analysis.txt || true
+          grep -q "ALL CHECKS ok" widgets-api${{ matrix.api }}/analysis.txt
+          # Android 13 and later draw the sky with the home screen's GPU renderer.
+          if [ ${{ matrix.api }} -ge 33 ]; then grep -q "Widget sky drawn on the GPU" widgets-api${{ matrix.api }}/widget_log.txt; fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: widgets-api${{ matrix.api }}
+          path: widgets-api${{ matrix.api }}
+
+      - name: Publish the pictures as a pre-release asset
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d widgets-api${{ matrix.api }} ] || exit 0
+          (cd widgets-api${{ matrix.api }} && zip -qr ../widgets-api${{ matrix.api }}.zip .)
+          gh release view widgets-preview >/dev/null 2>&1 || gh release create widgets-preview --prerelease \
+            --title "Widgets preview (emulator pictures)" --notes "Pictures from the widgets workflow; replaced on each run." || true
+          gh release upload widgets-preview widgets-api${{ matrix.api }}.zip --clobber

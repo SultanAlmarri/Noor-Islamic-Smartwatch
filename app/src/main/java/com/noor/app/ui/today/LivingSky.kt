@@ -514,43 +514,8 @@ internal fun LivingSky(
             val hy = h * layout.horizon
             val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
             val path = sunPath(scene, g)
-            val stroke = 1.6.dp.toPx()
-            val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
             onDrawBehind {
-                val shownF = display
-                val sunEl = scene.elevationAt(shownF)
-                val pathAlpha = pathIn()
-                val sun = Offset(g.x(shownF), g.y(sunEl))
-                // The Sun fades as it sinks below the horizon (no sudden switch at sunrise or sunset). On the GPU the
-                // shader draws the Sun itself.
-                val up = if (shaders != null) 0f else smoothstep(-2.5f, 0.5f, sunEl.toFloat())
-                if (up > 0f) clipRect(0f, 0f, w, hy + 2.dp.toPx()) {
-                    // Long, faint rays, turning slowly; longer and warmer when the Sun is low.
-                    val rays = 14
-                    val len = w * (0.20f + 0.24f * light.golden)
-                    val turn = now() * 2 * PI.toFloat() * 3f
-                    for (i in 0 until rays) {
-                        val a = turn + i * 2 * PI.toFloat() / rays
-                        val l = len * (if (i % 2 == 0) 1f else 0.62f)
-                        val end = Offset(sun.x + l * cos(a), sun.y + l * sin(a))
-                        drawLine(Brush.linearGradient(listOf(light.sunGlow.copy(alpha = (0.13f + 0.10f * light.golden) * up), Color.Transparent), sun, end),
-                            sun, end, strokeWidth = (if (i % 2 == 0) 3.dp else 1.5.dp).toPx(), cap = StrokeCap.Round)
-                    }
-                    val halo = (52 + 18 * light.golden).dp.toPx()
-                    drawCircle(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.62f * up), light.sunGlow.copy(alpha = 0.14f * up), Color.Transparent), center = sun, radius = halo), halo, sun)
-                }
-                clipRect(0f, 0f, w, hy) {
-                    drawPath(path, Color.White.copy(alpha = 0.5f * pathAlpha), style = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash))
-                    val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
-                    clipRect(left, 0f, right, hy) {
-                        drawPath(path, light.sunGlow.copy(alpha = 0.24f), style = Stroke(stroke * 4f, cap = StrokeCap.Round))
-                        drawPath(path, light.sunCore.copy(alpha = 0.95f), style = Stroke(stroke, cap = StrokeCap.Round))
-                    }
-                }
-                if (up > 0f) {
-                    drawCircle(light.sunCore.copy(alpha = up), (7f + 1.5f * light.golden).dp.toPx(), sun)
-                    drawCircle(Color.White.copy(alpha = 0.92f * up), 3.2.dp.toPx(), sun)
-                }
+                sunPathLayer(scene, g, path, display, light, gpu = shaders != null, pathAlpha = pathIn(), rayTurn = { now() * 2 * PI.toFloat() * 3f }, rtl = rtl)
             }
         })
 
@@ -575,41 +540,96 @@ internal fun LivingSky(
             val w = size.width; val h = size.height
             val hy = h * layout.horizon
             val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
-            // Each prayer at the Sun's real position at its moment: in the sky on the path, on the horizon at Shuruq
-            // and Maghrib, below it (in the land) at Fajr and Isha.
-            val marks = scene.events.map { (p, t) ->
-                val f = scene.path.fraction(t)
-                Triple(p, f, prayerMark(scene, g, f))
-            }
+            val marks = prayerMarks(scene, g)
             onDrawBehind {
-                val shownF = display
-                val markAlpha = marksIn()
-                // A mark fills as the Sun passes it, over a few minutes of the day, rather than switching.
-                val soft = 4.0 / (24 * 60)
-                marks.forEach { (p, f, pt) ->
-                    val passed = smoothstep(-1f, 1f, ((shownF - f) / soft).toFloat())
-                    val dot = Color.White
-                    // Below the horizon a mark sits on the land: a soft shadow keeps it readable there.
-                    if (pt.y > hy + 2.dp.toPx()) drawCircle(Color.Black.copy(alpha = 0.28f * markAlpha), 7.dp.toPx(), pt)
-                    when {
-                        p == scene.next -> {
-                            // The next prayer's ring breathes, slowly, while it waits.
-                            val breath = if (ambient) 0.5f + 0.5f * sin(2 * PI * now() * 40).toFloat() else 0.5f
-                            drawCircle(Sky.GoldOnSky.copy(alpha = (0.16f + 0.16f * breath) * markAlpha), (9f + 3f * breath).dp.toPx(), pt)
-                            drawCircle(Sky.GoldOnSky.copy(alpha = markAlpha), 5.5.dp.toPx(), pt, style = Stroke(1.8.dp.toPx()))
-                        }
-                        else -> {
-                            if (passed < 1f) {
-                                drawCircle(zenith.copy(alpha = 0.55f * (1f - passed) * markAlpha), 3.4.dp.toPx(), pt)
-                                drawCircle(dot.copy(alpha = 0.8f * (1f - passed) * markAlpha), 3.4.dp.toPx(), pt, style = Stroke(1.2.dp.toPx()))
-                            }
-                            if (passed > 0f) drawCircle(dot.copy(alpha = 0.95f * passed * markAlpha), (3.4f - 0.4f * passed).dp.toPx(), pt)
-                        }
-                    }
-                }
+                // The next prayer's ring breathes, slowly, while it waits.
+                prayerMarksLayer(scene, g, marks, display, marksIn(), zenith) { if (ambient) 0.5f + 0.5f * sin(2 * PI * now() * 40).toFloat() else 0.5f }
                 if (live && birdsFly(scene, display)) birds(now(), scene, display, light, w, h * layout.cloudTop, hy, rtl)
             }
         })
+    }
+}
+
+/** Each prayer at the Sun's real position at its moment: in the sky on the path, on the horizon at Shuruq and Maghrib,
+ *  below it (in the land) at Fajr and Isha. */
+internal fun prayerMarks(scene: SkyScene, g: SkyGeometry): List<Triple<Prayer, Double, Offset>> = scene.events.map { (p, t) ->
+    val f = scene.path.fraction(t)
+    Triple(p, f, prayerMark(scene, g, f))
+}
+
+/**
+ * 3 · The Sun's rays and halo, the Sun's path above the horizon (the day so far in gold), and the Sun. The GPU sky
+ * draws its own Sun ([gpu]): then only the path. The home screen's layer, and the widgets' (0.9.12).
+ */
+internal fun DrawScope.sunPathLayer(scene: SkyScene, g: SkyGeometry, path: Path, display: Double, light: Light, gpu: Boolean, pathAlpha: Float, rayTurn: () -> Float, rtl: Boolean) {
+    val w = size.width
+    val hy = g.horizonY
+    val stroke = 1.6.dp.toPx()
+    val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
+    val shownF = display
+    val sunEl = scene.elevationAt(shownF)
+    val sun = Offset(g.x(shownF), g.y(sunEl))
+    // The Sun fades as it sinks below the horizon (no sudden switch at sunrise or sunset). On the GPU the
+    // shader draws the Sun itself.
+    val up = if (gpu) 0f else smoothstep(-2.5f, 0.5f, sunEl.toFloat())
+    if (up > 0f) clipRect(0f, 0f, w, hy + 2.dp.toPx()) {
+        // Long, faint rays, turning slowly; longer and warmer when the Sun is low.
+        val rays = 14
+        val len = w * (0.20f + 0.24f * light.golden)
+        // Read only here, so a sky without these rays (the GPU's) is not redrawn as the clock ticks.
+        val turn = rayTurn()
+        for (i in 0 until rays) {
+            val a = turn + i * 2 * PI.toFloat() / rays
+            val l = len * (if (i % 2 == 0) 1f else 0.62f)
+            val end = Offset(sun.x + l * cos(a), sun.y + l * sin(a))
+            drawLine(Brush.linearGradient(listOf(light.sunGlow.copy(alpha = (0.13f + 0.10f * light.golden) * up), Color.Transparent), sun, end),
+                sun, end, strokeWidth = (if (i % 2 == 0) 3.dp else 1.5.dp).toPx(), cap = StrokeCap.Round)
+        }
+        val halo = (52 + 18 * light.golden).dp.toPx()
+        drawCircle(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.62f * up), light.sunGlow.copy(alpha = 0.14f * up), Color.Transparent), center = sun, radius = halo), halo, sun)
+    }
+    clipRect(0f, 0f, w, hy) {
+        drawPath(path, Color.White.copy(alpha = 0.5f * pathAlpha), style = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash))
+        val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
+        clipRect(left, 0f, right, hy) {
+            drawPath(path, light.sunGlow.copy(alpha = 0.24f), style = Stroke(stroke * 4f, cap = StrokeCap.Round))
+            drawPath(path, light.sunCore.copy(alpha = 0.95f), style = Stroke(stroke, cap = StrokeCap.Round))
+        }
+    }
+    if (up > 0f) {
+        drawCircle(light.sunCore.copy(alpha = up), (7f + 1.5f * light.golden).dp.toPx(), sun)
+        drawCircle(Color.White.copy(alpha = 0.92f * up), 3.2.dp.toPx(), sun)
+    }
+}
+
+/**
+ * 5 · The prayers on the Sun's path, at the Sun's real position at each prayer's moment (below the horizon, in the
+ * land, at Fajr and Isha): passed ones filled, the next one a gold ring. The home screen's layer, and the widgets'.
+ */
+internal fun DrawScope.prayerMarksLayer(scene: SkyScene, g: SkyGeometry, marks: List<Triple<Prayer, Double, Offset>>, display: Double, markAlpha: Float, zenith: Color, breathing: () -> Float) {
+    val hy = g.horizonY
+    val shownF = display
+    // A mark fills as the Sun passes it, over a few minutes of the day, rather than switching.
+    val soft = 4.0 / (24 * 60)
+    marks.forEach { (p, f, pt) ->
+        val passed = smoothstep(-1f, 1f, ((shownF - f) / soft).toFloat())
+        val dot = Color.White
+        // Below the horizon a mark sits on the land: a soft shadow keeps it readable there.
+        if (pt.y > hy + 2.dp.toPx()) drawCircle(Color.Black.copy(alpha = 0.28f * markAlpha), 7.dp.toPx(), pt)
+        when {
+            p == scene.next -> {
+                val breath = breathing()
+                drawCircle(Sky.GoldOnSky.copy(alpha = (0.16f + 0.16f * breath) * markAlpha), (9f + 3f * breath).dp.toPx(), pt)
+                drawCircle(Sky.GoldOnSky.copy(alpha = markAlpha), 5.5.dp.toPx(), pt, style = Stroke(1.8.dp.toPx()))
+            }
+            else -> {
+                if (passed < 1f) {
+                    drawCircle(zenith.copy(alpha = 0.55f * (1f - passed) * markAlpha), 3.4.dp.toPx(), pt)
+                    drawCircle(dot.copy(alpha = 0.8f * (1f - passed) * markAlpha), 3.4.dp.toPx(), pt, style = Stroke(1.2.dp.toPx()))
+                }
+                if (passed > 0f) drawCircle(dot.copy(alpha = 0.95f * passed * markAlpha), (3.4f - 0.4f * passed).dp.toPx(), pt)
+            }
+        }
     }
 }
 
@@ -702,7 +722,7 @@ internal fun interpolate(samples: List<Pair<Double, Double>>, f: Double): Double
     return if (f1 == f0) e0 else e0 + (e1 - e0) * ((f - f0) / (f1 - f0))
 }
 
-private fun sunPath(scene: SkyScene, g: SkyGeometry): Path = Path().apply {
+internal fun sunPath(scene: SkyScene, g: SkyGeometry): Path = Path().apply {
     scene.samples.forEachIndexed { i, (f, el) -> if (i == 0) moveTo(g.x(f), g.y(el)) else lineTo(g.x(f), g.y(el)) }
 }
 

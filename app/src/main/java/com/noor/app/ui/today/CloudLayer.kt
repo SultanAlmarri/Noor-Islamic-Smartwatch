@@ -212,24 +212,29 @@ internal fun RainLayer(inputs: () -> GpuSkyInputs?, ambient: Boolean) {
     }
     Box(Modifier.fillMaxSize().drawBehind {
         val i = inputs() ?: return@drawBehind
-        val r = i.state.rain
-        if (r < 0.01f) return@drawBehind
-        val t = clock.floatValue
-        val dp = density
-        val night = i.look.night
-        val veil = androidx.compose.ui.graphics.lerp(androidx.compose.ui.graphics.Color(0xFFB8C0C8), androidx.compose.ui.graphics.Color(0xFF1C222B), night)
-        drawRect(veil.copy(alpha = 0.10f * r))
-        val drop = androidx.compose.ui.graphics.lerp(androidx.compose.ui.graphics.Color(0xFFE6EBF0), androidx.compose.ui.graphics.Color(0xFF5E6874), night)
-        val n = (260 * r).toInt()
-        val w = size.width; val h = size.height
-        for (k in 0 until n) {
-            val h1 = CloudField.hash(77, k, 1); val h2 = CloudField.hash(77, k, 2); val h3 = CloudField.hash(77, k, 3)
-            val len = (10f + 18f * h3) * dp
-            val speed = (0.8f + 0.5f * h2) * h
-            val y = ((h1 * 7.31f + t * speed / (h + len)) % 1f) * (h + len) - len
-            val x = CloudField.hash(77, k, 4) * (w + 0.2f * h) - 0.1f * h + 0.18f * (y + len)
-            drawLine(drop.copy(alpha = (0.07f + 0.13f * CloudField.hash(77, k, 5)) * r), androidx.compose.ui.geometry.Offset(x, y),
-                androidx.compose.ui.geometry.Offset(x + 0.18f * len, y + len), strokeWidth = (0.6f + 0.7f * CloudField.hash(77, k, 6)) * dp)
-        }
+        if (i.state.rain < 0.01f) return@drawBehind
+        rain(i, clock.floatValue)
     })
+}
+
+/** Rain falling here at the rain clock [t] (seconds): the home screen's rain, and the widgets' (0.9.12). */
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.rain(i: GpuSkyInputs, t: Float) {
+    val r = i.state.rain
+    if (r < 0.01f) return
+    val dp = density
+    val night = i.look.night
+    val veil = androidx.compose.ui.graphics.lerp(androidx.compose.ui.graphics.Color(0xFFB8C0C8), androidx.compose.ui.graphics.Color(0xFF1C222B), night)
+    drawRect(veil.copy(alpha = 0.10f * r))
+    val drop = androidx.compose.ui.graphics.lerp(androidx.compose.ui.graphics.Color(0xFFE6EBF0), androidx.compose.ui.graphics.Color(0xFF5E6874), night)
+    val n = (260 * r).toInt()
+    val w = size.width; val h = size.height
+    for (k in 0 until n) {
+        val h1 = CloudField.hash(77, k, 1); val h2 = CloudField.hash(77, k, 2); val h3 = CloudField.hash(77, k, 3)
+        val len = (10f + 18f * h3) * dp
+        val speed = (0.8f + 0.5f * h2) * h
+        val y = ((h1 * 7.31f + t * speed / (h + len)) % 1f) * (h + len) - len
+        val x = CloudField.hash(77, k, 4) * (w + 0.2f * h) - 0.1f * h + 0.18f * (y + len)
+        drawLine(drop.copy(alpha = (0.07f + 0.13f * CloudField.hash(77, k, 5)) * r), androidx.compose.ui.geometry.Offset(x, y),
+            androidx.compose.ui.geometry.Offset(x + 0.18f * len, y + len), strokeWidth = (0.6f + 0.7f * CloudField.hash(77, k, 6)) * dp)
+    }
 }

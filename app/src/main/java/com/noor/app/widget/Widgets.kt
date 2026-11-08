@@ -9,6 +9,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
@@ -20,18 +21,22 @@ import com.noor.app.R
 import com.noor.app.data.AppSettings
 import com.noor.app.data.Language
 import com.noor.app.data.PrayerProvider
+import com.noor.app.data.ResolvedPlace
 import com.noor.app.data.WearSync
 import com.noor.app.notify.StatusNotification
 import com.noor.app.util.Formatter
 import com.noor.prayer.Prayer
+import com.noor.prayer.WatchConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /** The next prayer: its name and time, and a live countdown (0.9.10). */
@@ -51,24 +56,29 @@ open class WidgetProvider : AppWidgetProvider() {
 }
 
 /**
- * The home-screen widgets (0.9.10): [NextPrayerWidget], [TodayWidget] and [SkyWidget].
+ * The home-screen widgets (0.9.10; redrawn in 0.9.12): [NextPrayerWidget], [TodayWidget] and [SkyWidget].
  *
  * - They say what the home screen and the notification say ([StatusNotification.content]): before a prayer, the time
- *   left (−); for 30 minutes after it, the time since it (+); then the next prayer. The countdown looks as on the home
- *   screen ("−1:23:45", the seconds quieter, Noor's own digits and font) and its seconds are ticked by Android itself
- *   (0.9.11; 0.9.10 fell back to minutes where the phone's digits differed from Noor's), so the widgets cost nothing
- *   between updates.
- * - They are rebuilt when what they show changes: at each prayer, at the end of a "+" period, at midnight, every 15
- *   minutes for the sky picture (the Sun moves, the weather changes), and when the place, the times or the settings
- *   change. Those updates use non-waking alarms: a sleeping phone is never woken for them; they run as soon as it
- *   wakes, the only time a widget can be seen.
- * - Their backgrounds are pictures of the home sky of the moment ([WidgetSky]), drawn in the background.
+ *   left (−); for 30 minutes after it, the time since it (+); then the next prayer.
+ * - Everything is drawn as on the home screen, in the app's own fonts and digits: the sky picture by the home screen's
+ *   renderer ([WidgetSky]), the words ([TextArt]) and the countdown ([CountdownArt]: "−1:23" redrawn by Noor as each
+ *   minute begins, the seconds turned by Android itself every second).
+ * - A full update (pictures and words) comes at each prayer, at the end of a "+" period, at midnight, every 15 minutes
+ *   for the sky (the Sun moves, the weather changes), and when the place, the times or the settings change; between
+ *   them, only the countdown's minutes, as each minute begins. Both by one non-waking alarm, set 1.5 s before the minute:
+ *   a sleeping phone is never woken for a widget; when it wakes, the alarm due is delivered at once.
  */
 object Widgets {
-    private const val ACTION_REFRESH = "com.noor.app.WIDGET_REFRESH"
+    private const val TAG = "NoorWidgets"
+    private const val ACTION_TICK = "com.noor.app.WIDGET_TICK"
+    private const val EXTRA_AT = "at"
     private const val REQUEST = 7310
+    private const val PREFS = "noor_widgets"
+    private const val KEY_FULL_AT = "full_at"
     /** How often the sky picture is redrawn. */
     private val PICTURE_EVERY: Duration = Duration.ofMinutes(15)
+    /** The minute's alarm comes this early, so the new minutes are ready when the minute begins. */
+    private const val EARLY_MS = 1500L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lock = Mutex()
 
@@ -76,11 +86,18 @@ object Widgets {
 
     /** The time, for updates that do not say when they are for (a test sets its own). */
     internal var clock: () -> Instant = Instant::now
+    /** How the countdown is shown; null: as this phone allows (a test sets its own). */
+    internal var modeOverride: CountdownArt.Mode? = null
+    /** Puts up a widget's new minutes (a test's simulated home screen applies them itself). */
+    internal var partialUpdate: (AppWidgetManager, Int, RemoteViews) -> Unit = { manager, id, v -> manager.partiallyUpdateAppWidget(id, v) }
 
-    internal fun refreshFrom(receiver: BroadcastReceiver, context: Context) {
+    internal fun refreshFrom(receiver: BroadcastReceiver, context: Context, intent: Intent? = null) {
         val pending = receiver.goAsync()
         val app = context.applicationContext
-        scope.launch { try { refresh(app) } catch (_: Exception) { } finally { pending.finish() } }
+        val tickAt = intent?.takeIf { it.action == ACTION_TICK }?.getLongExtra(EXTRA_AT, 0L)?.takeIf { it > 0L }
+        scope.launch {
+            try { if (tickAt != null) tick(app, Instant.ofEpochMilli(tickAt)) else refresh(app) } catch (_: Exception) { } finally { pending.finish() }
+        }
     }
 
     fun refreshAsync(context: Context) {
@@ -91,42 +108,89 @@ object Widgets {
     private fun ids(app: Context, cls: Class<*>): IntArray =
         runCatching { AppWidgetManager.getInstance(app).getAppWidgetIds(ComponentName(app, cls)) }.getOrNull() ?: IntArray(0)
 
-    /** Rebuilds every Noor widget on the home screen and arms the next update (or nothing, if there is none). */
-    suspend fun refresh(context: Context, at: Instant? = null) = lock.withLock {
-        val app = context.applicationContext as? NoorApplication ?: return@withLock
-        val all = providers.associateWith { ids(app, it) }
-        if (all.values.all { it.isEmpty() }) { cancelRefresh(app); return@withLock }
+    /** What every widget shows at [now]: the settings, the place, the prayer counted to or from. */
+    private class Moment(
+        val app: NoorApplication, val s: AppSettings, val ctx: Context, val arabic: Boolean, val rtl: Boolean, val f: Formatter,
+        val now: Instant, val config: WatchConfig, val place: ResolvedPlace, val c: StatusNotification.Content,
+    ) {
+        val arabicDigits = s.numerals == com.noor.app.data.Numerals.ARABIC_INDIC
+        val mode = modeOverride ?: when {
+            Build.VERSION.SDK_INT >= 31 && !AlertScheduler.canScheduleExact(app) -> CountdownArt.Mode.SYSTEM
+            Build.VERSION.SDK_INT >= 31 -> CountdownArt.Mode.WHEEL
+            else -> CountdownArt.Mode.MINUTES
+        }
+    }
+
+    private suspend fun moment(app: NoorApplication, now: Instant): Moment? {
         val s = app.container.settings.current()
         val ctx = localized(app, s)
         val arabic = ctx.resources.configuration.locales[0].language == "ar"
         val rtl = ctx.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL
-        val f = Formatter(arabic, s.numerals, s.timeFormat)
-        val now = at ?: clock()
-        val config = WearSync.configFor(s, now.toEpochMilli(), app.container.timetables)
-        val place = PrayerProvider.place(s)
-        val manager = AppWidgetManager.getInstance(app)
-        if (config == null || place == null) {
-            for ((cls, ids) in all) for (id in ids) runCatching { manager.updateAppWidget(id, noPlace(ctx, app, cls)) }
-            cancelRefresh(app)
-            return@withLock
-        }
-        val c = StatusNotification.content(config, s, now, arabic)
-        val arabicDigits = s.numerals == com.noor.app.data.Numerals.ARABIC_INDIC
-        val ws = WidgetScene(s, place, config, now)
-        for ((cls, ids) in all) for (id in ids) runCatching {
-            val size = sizeOf(manager, id, app)
-            val views = when (cls) {
-                NextPrayerWidget::class.java -> nextPrayer(ctx, app, c, now, arabicDigits, ws, size, rtl)
-                TodayWidget::class.java -> today(ctx, app, c, now, f, arabicDigits, ws, size, rtl)
-                else -> sky(ctx, app, c, now, arabicDigits, ws, size, rtl)
-            }
-            manager.updateAppWidget(id, views)
-        }
-        armRefresh(app, minOf(c.refreshAt, now.plus(PICTURE_EVERY)))
+        val config = WearSync.configFor(s, now.toEpochMilli(), app.container.timetables) ?: return null
+        val place = PrayerProvider.place(s) ?: return null
+        return Moment(app, s, ctx, arabic, rtl, Formatter(arabic, s.numerals, s.timeFormat), now, config, place, StatusNotification.content(config, s, now, arabic))
     }
 
-    /** The widget's size on the screen, in px (portrait width and height), with the screen's density. */
-    internal class Size(val w: Int, val h: Int, val density: Float)
+    /** Rebuilds every Noor widget on the home screen and arms the next update (or nothing, if there is none). */
+    suspend fun refresh(context: Context, at: Instant? = null) = lock.withLock { refreshLocked(context, at) }
+
+    private suspend fun refreshLocked(context: Context, at: Instant?) {
+        val app = context.applicationContext as? NoorApplication ?: return
+        val all = providers.associateWith { ids(app, it) }
+        if (all.values.all { it.isEmpty() }) { cancelRefresh(app); return }
+        val now = at ?: clock()
+        val manager = AppWidgetManager.getInstance(app)
+        val m = moment(app, now)
+        if (m == null) {
+            val ctx = localized(app, app.container.settings.current())
+            for ((cls, ids) in all) for (id in ids) runCatching { manager.updateAppWidget(id, noPlace(ctx, app, cls, sizeOf(manager, id, app))) }
+            cancelRefresh(app)
+            return
+        }
+        val ws = WidgetScene(m.s, m.place, m.config, now)
+        for ((cls, ids) in all) for (id in ids) runCatching {
+            manager.updateAppWidget(id, build(m, cls, sizeOf(manager, id, app), ws))
+        }
+        val fullAt = minOf(m.c.refreshAt, now.plus(PICTURE_EVERY))
+        app.getSharedPreferences(PREFS, 0).edit().putLong(KEY_FULL_AT, fullAt.toEpochMilli()).apply()
+        // The countdown's minutes change as each minute begins; Android's own countdown (SYSTEM) needs no minutes.
+        armTick(app, if (m.mode == CountdownArt.Mode.SYSTEM) fullAt else nextMinute(now))
+        android.util.Log.i(TAG, "Full update at $now: ${m.c.prayer} ${m.c.countdown(now, m.f)} mode=${m.mode} widgets=${all.values.sumOf { it.size }} next full $fullAt")
+    }
+
+    /**
+     * The minute's alarm, due at [boundary] (the start of a minute): the countdown's new minutes, put up as the minute
+     * begins; or, when a full update is due, that.
+     */
+    internal suspend fun tick(context: Context, boundary: Instant) = lock.withLock {
+        val app = context.applicationContext as? NoorApplication ?: return@withLock
+        val all = providers.associateWith { ids(app, it) }
+        if (all.values.all { it.isEmpty() }) { cancelRefresh(app); return@withLock }
+        val early = clock()
+        // On time (the phone awake): the minute about to begin; late (it was asleep): now.
+        val target = if (boundary.isAfter(early) && Duration.between(early, boundary).toMillis() <= EARLY_MS + 1000) boundary else early
+        val m = moment(app, target.plusMillis(500))
+        if (m == null) { refreshLocked(app, null); return@withLock }
+        val manager = AppWidgetManager.getInstance(app)
+        val views = ArrayList<Pair<Int, RemoteViews>>()
+        if (m.mode != CountdownArt.Mode.SYSTEM) for ((cls, ids) in all) for (id in ids) runCatching {
+            val size = sizeOf(manager, id, app)
+            views += id to RemoteViews(app.packageName, layoutOf(cls, size)).apply { countdown(this, m, cls, size) }
+        }
+        val wait = Duration.between(clock(), target).toMillis()
+        if (wait > 0) delay(wait + 15)
+        for ((id, v) in views) runCatching { partialUpdate(manager, id, v) }
+        android.util.Log.i(TAG, "Minute $target (asked for $boundary, woke ${Duration.between(early, target).toMillis()} ms early): ${m.c.countdown(m.now, m.f)}")
+        val fullAt = app.getSharedPreferences(PREFS, 0).getLong(KEY_FULL_AT, 0L)
+        if (target.toEpochMilli() + 1000 >= fullAt) refreshLocked(app, maxOf(clock(), target))
+        else armTick(app, nextMinute(target.plusMillis(500)))
+    }
+
+    /** The start of the minute after [t]. */
+    private fun nextMinute(t: Instant): Instant = t.truncatedTo(ChronoUnit.MINUTES).plus(1, ChronoUnit.MINUTES)
+
+    /** The widget's size: its picture's px (portrait width and height) and density, and its size in dp. */
+    internal class Size(val w: Int, val h: Int, val density: Float, val wDp: Float, val hDp: Float)
 
     private fun sizeOf(manager: AppWidgetManager, id: Int, app: Context): Size {
         val o = runCatching { manager.getAppWidgetOptions(id) }.getOrNull()
@@ -135,7 +199,42 @@ object Widgets {
         val hDp = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)?.takeIf { it > 0 } ?: 110
         // Never larger than needed for a sharp picture (widgets' pictures travel to the launcher in memory).
         val k = minOf(1f, 900f / (wDp * d), 600f / (hDp * d))
-        return Size((wDp * d * k).toInt().coerceAtLeast(40), (hDp * d * k).toInt().coerceAtLeast(30), d * k)
+        return Size((wDp * d * k).toInt().coerceAtLeast(40), (hDp * d * k).toInt().coerceAtLeast(30), d * k, wDp.toFloat(), hDp.toFloat())
+    }
+
+    /** The sky widget is laid out as the home screen's header: side by side when short, stacked when tall. */
+    private fun tall(size: Size) = size.hDp >= 200f && size.wDp >= 200f
+
+    private fun layoutOf(cls: Class<*>, size: Size): Int = when (cls) {
+        NextPrayerWidget::class.java -> R.layout.widget_next
+        TodayWidget::class.java -> R.layout.widget_today
+        else -> if (tall(size)) R.layout.widget_sky_tall else R.layout.widget_sky
+    }
+
+    /** The countdown's font size (dp) in each widget: as large as the widget allows, as on the home screen. */
+    internal fun countdownDp(cls: Class<*>, size: Size): Float {
+        // "−0:00:00" is about 4.1 em wide with its margins.
+        val (byHeight, byWidth, max) = when (cls) {
+            NextPrayerWidget::class.java -> Triple(size.hDp * 0.42f, (size.wDp - 20f) / 4.1f, 52f)
+            TodayWidget::class.java -> Triple(size.hDp * 0.23f, (size.wDp - 20f) * 0.5f / 4.1f, 48f)
+            else -> if (tall(size)) Triple(size.hDp * 0.20f, (size.wDp - 24f) * 0.9f / 4.1f, CountdownWheelSpec.E_DP)
+                else Triple(size.hDp * 0.26f, (size.wDp - 20f) * 0.52f / 4.1f, 52f)
+        }
+        return minOf(byHeight, byWidth, max).coerceAtLeast(20f)
+    }
+
+    private fun titleDp(cls: Class<*>, size: Size): Float = when (cls) {
+        NextPrayerWidget::class.java -> if (size.hDp < 90f) 15f else 17f
+        TodayWidget::class.java -> 19f
+        else -> if (tall(size)) 24f else 20f
+    }
+
+    private fun countdown(v: RemoteViews, m: Moment, cls: Class<*>, size: Size) {
+        val d = m.app.resources.displayMetrics.density
+        val em = countdownDp(cls, size) * d
+        val text = m.c.countdown(m.now, m.f)
+        val base = SystemClock.elapsedRealtime() + Duration.between(m.now, m.c.countAt).toMillis()
+        CountdownArt.show(v, m.app, text, em, m.mode, m.c.elapsed, m.arabicDigits, base, listOf(m.c.prayer, text).joinToString(", "))
     }
 
     private fun open(app: Context): PendingIntent = PendingIntent.getActivity(app, 0,
@@ -143,82 +242,75 @@ object Widgets {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     /** Before a place is chosen: an invitation to open Noor. */
-    private fun noPlace(ctx: Context, app: Context, cls: Class<*>): RemoteViews {
-        val layout = when (cls) { NextPrayerWidget::class.java -> R.layout.widget_next; TodayWidget::class.java -> R.layout.widget_today; else -> R.layout.widget_sky }
-        return RemoteViews(app.packageName, layout).apply {
-            setTextViewText(R.id.widget_prayer, ctx.getString(R.string.widget_choose_place))
-            setViewVisibility(R.id.widget_time, View.GONE)
+    private fun noPlace(ctx: Context, app: Context, cls: Class<*>, size: Size): RemoteViews {
+        val d = app.resources.displayMetrics.density
+        val arabic = ctx.resources.configuration.locales[0].language == "ar"
+        val words = ctx.getString(R.string.widget_choose_place)
+        return RemoteViews(app.packageName, layoutOf(cls, size)).apply {
+            setInt(R.id.widget_root, "setLayoutDirection", if (arabic) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR)
+            setImageViewBitmap(R.id.widget_title, TextArt.small(app, words, 14f, d, TextArt.WHITE, arabic))
+            setContentDescription(R.id.widget_title, words)
             setViewVisibility(R.id.widget_countdown_box, View.GONE)
             setOnClickPendingIntent(R.id.widget_root, open(app))
         }
     }
 
-    private fun nextPrayer(ctx: Context, app: Context, c: StatusNotification.Content, now: Instant, arabicDigits: Boolean, ws: WidgetScene, size: Size, rtl: Boolean) =
-        RemoteViews(app.packageName, R.layout.widget_next).apply {
-            setImageViewBitmap(R.id.widget_sky, WidgetSky.picture(app.resources, ws, size.w, size.h, size.density, rtl, WidgetSky.Options(horizon = 0.80f)))
-            setTextViewText(R.id.widget_prayer, c.prayer)
-            setTextViewText(R.id.widget_time, c.time)
-            setTextViewText(R.id.widget_caption, caption(ctx, c))
-            countdown(this, c, now, arabicDigits)
-            setOnClickPendingIntent(R.id.widget_root, open(app))
+    /** One widget, whole. */
+    private fun build(m: Moment, cls: Class<*>, size: Size, ws: WidgetScene): RemoteViews {
+        val app = m.app
+        val d = app.resources.displayMetrics.density
+        val v = RemoteViews(app.packageName, layoutOf(cls, size))
+        // Laid out in Noor's language (a widget otherwise follows the phone's: right to left on an Arabic phone even
+        // with Noor in English); the countdown reads left to right in both, as on the home screen.
+        v.setInt(R.id.widget_root, "setLayoutDirection", if (m.rtl) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR)
+        val title = TextArt.title(app, m.c.prayer, m.c.time, m.arabic, titleDp(cls, size), d)
+        v.setImageViewBitmap(R.id.widget_title, title)
+        v.setContentDescription(R.id.widget_title, listOf(m.c.prayer, m.c.time).joinToString(", "))
+        lastTitle[cls] = m.c.prayer to m.c.time
+        val placeLine = listOfNotNull(m.c.place, m.c.hijri).joinToString("  ·  ")
+        if (cls != NextPrayerWidget::class.java) {
+            val small = if (cls == SkyWidget::class.java && tall(size)) 13f else 12f
+            v.setImageViewBitmap(R.id.widget_place, TextArt.small(app, placeLine, small, d, rtl = m.arabic))
+            v.setContentDescription(R.id.widget_place, placeLine)
         }
-
-    private fun today(ctx: Context, app: Context, c: StatusNotification.Content, now: Instant, f: Formatter, arabicDigits: Boolean, ws: WidgetScene, size: Size, rtl: Boolean) =
-        RemoteViews(app.packageName, R.layout.widget_today).apply {
-            setImageViewBitmap(R.id.widget_sky, WidgetSky.picture(app.resources, ws, size.w, size.h, size.density, rtl, WidgetSky.Options(horizon = 0.62f)))
-            setTextViewText(R.id.widget_prayer, c.prayer)
-            setTextViewText(R.id.widget_time, c.time)
-            setTextViewText(R.id.widget_place, listOfNotNull(c.place, c.hijri).joinToString("  ·  "))
-            countdown(this, c, now, arabicDigits)
-            // The six times; the one counted to or from is marked.
-            val marked = ws.state.let { st -> if (c.elapsed) st.current?.prayer else st.next.prayer }?.takeIf { c.countAt.atZone(ws.zone).toLocalDate() == ws.today }
-            for ((i, p) in Prayer.entries.withIndex()) {
-                val at = ws.day.instant(p)
-                setTextViewText(NAMES[i], f.prayerName(p, ws.today))
-                setTextViewText(TIMES[i], at?.let { f.timeAt(it, ws.zone) } ?: "—")
-                val on = p == marked
-                val color = if (on) 0xFFF6D696.toInt() else 0xFFFFFFFF.toInt()
-                setTextColor(NAMES[i], if (on) color else 0xD9FFFFFF.toInt())
-                setTextColor(TIMES[i], color)
+        countdown(v, m, cls, size)
+        // The sky, laid out as the home screen lays out its header: the text on top, the Sun's arc below it, the land.
+        val em = countdownDp(cls, size)
+        // As on the home screen, clouds keep below the words (they fade out above the words' bottom).
+        val options = when (cls) {
+            NextPrayerWidget::class.java -> WidgetSky.Options(horizon = 0.82f, cloudTop = 0.86f, textBottomDp = size.hDp * 0.86f)
+            TodayWidget::class.java -> {
+                val textDp = 6f + maxOf(titleDp(cls, size) * 1.5f + 22f, em * 0.97f)
+                WidgetSky.Options(horizon = 0.60f, cloudTop = textDp / size.hDp, textBottomDp = textDp)
             }
-            setOnClickPendingIntent(R.id.widget_root, open(app))
+            else -> {
+                val textDp = if (tall(size)) 10f + 22f + titleDp(cls, size) * 1.5f + em * 0.97f else 6f + maxOf(titleDp(cls, size) * 1.5f + 20f, em * 0.97f)
+                val land = if (tall(size)) maxOf(38f, size.hDp * 0.20f) else maxOf(26f, size.hDp * 0.20f)
+                val horizon = (size.hDp - land) / size.hDp
+                val arcTop = minOf(textDp + 12f, size.hDp - land - 22f) / size.hDp
+                WidgetSky.Options(horizon = horizon, arcTop = arcTop, cloudTop = (arcTop - 8f / size.hDp).coerceAtLeast(0f), ground = (size.hDp - 4f) / size.hDp,
+                    path = true, textBottomDp = textDp)
+            }
         }
-
-    private fun sky(ctx: Context, app: Context, c: StatusNotification.Content, now: Instant, arabicDigits: Boolean, ws: WidgetScene, size: Size, rtl: Boolean) =
-        RemoteViews(app.packageName, R.layout.widget_sky).apply {
-            setImageViewBitmap(R.id.widget_sky, WidgetSky.picture(app.resources, ws, size.w, size.h, size.density, rtl, WidgetSky.Options(path = true, horizon = 0.76f, arcTop = 0.40f)))
-            setTextViewText(R.id.widget_prayer, c.prayer)
-            setTextViewText(R.id.widget_time, c.time)
-            setTextViewText(R.id.widget_place, listOfNotNull(c.place, c.hijri).joinToString("  ·  "))
-            countdown(this, c, now, arabicDigits)
-            setOnClickPendingIntent(R.id.widget_root, open(app))
+        v.setImageViewBitmap(R.id.widget_sky, WidgetSky.picture(app.resources, ws, size.w, size.h, size.density, m.rtl, options))
+        if (cls == TodayWidget::class.java) {
+            // The six times; the one counted to or from is marked.
+            val marked = ws.state.let { st -> if (m.c.elapsed) st.current?.prayer else st.next.prayer }?.takeIf { m.c.countAt.atZone(ws.zone).toLocalDate() == ws.today }
+            val names = Prayer.entries.map { m.f.prayerName(it, ws.today) }
+            val times = Prayer.entries.map { p -> ws.day.instant(p)?.let { m.f.timeAt(it, ws.zone) } ?: "—" }
+            val index = if (marked == null) -1 else Prayer.entries.indexOf(marked)
+            v.setImageViewBitmap(R.id.widget_grid, TextArt.grid(app, names, times, index, ((size.wDp - 20f) * d).toInt(), d, m.arabic))
+            v.setContentDescription(R.id.widget_grid, names.indices.joinToString(", ") { "${names[it]} ${times[it]}" })
+            lastToday = TodayText(names, times, index)
         }
-
-    private fun caption(ctx: Context, c: StatusNotification.Content) =
-        ctx.getString(when { !c.elapsed -> R.string.next_prayer; c.sunrise -> R.string.since_sunrise; else -> R.string.since_prayer })
-
-    /**
-     * The countdown, as on the home screen ("−1:23:45", "+04:12", the seconds quieter), ticked by Android itself every
-     * second from the prayer's time, so the widget costs nothing between updates. Android writes the phone's own
-     * digits; the countdown's fonts (tools/widget/count_fonts.py) draw them as the digits chosen in Noor.
-     */
-    private fun countdown(v: RemoteViews, c: StatusNotification.Content, now: Instant, arabicDigits: Boolean) {
-        val (on, off) = if (arabicDigits) COUNT_ARABIC to COUNT_LATIN else COUNT_LATIN to COUNT_ARABIC
-        val base = SystemClock.elapsedRealtime() + Duration.between(now, c.countAt).toMillis()
-        for (id in off) v.setViewVisibility(id, View.GONE)
-        for (id in on) {
-            v.setViewVisibility(id, View.VISIBLE)
-            v.setChronometer(id, base, if (c.elapsed) "+%s" else null, true)
-            v.setChronometerCountDown(id, false)
-        }
+        v.setOnClickPendingIntent(R.id.widget_root, open(app))
+        return v
     }
 
-    /** The quieter full countdown and the bright one over it whose seconds are blank, in Western or Arabic-Indic digits. */
-    internal val COUNT_LATIN = intArrayOf(R.id.widget_count_dim_latin, R.id.widget_count_lead_latin)
-    internal val COUNT_ARABIC = intArrayOf(R.id.widget_count_dim_arabic, R.id.widget_count_lead_arabic)
-
-    private val NAMES = intArrayOf(R.id.widget_name_0, R.id.widget_name_1, R.id.widget_name_2, R.id.widget_name_3, R.id.widget_name_4, R.id.widget_name_5)
-    private val TIMES = intArrayOf(R.id.widget_time_0, R.id.widget_time_1, R.id.widget_time_2, R.id.widget_time_3, R.id.widget_time_4, R.id.widget_time_5)
+    /** What the widgets last wrote, for tests (their words are pictures; the same words are their descriptions). */
+    internal class TodayText(val names: List<String>, val times: List<String>, val marked: Int)
+    @Volatile internal var lastToday: TodayText? = null
+    internal val lastTitle = java.util.concurrent.ConcurrentHashMap<Class<*>, Pair<String, String>>()
 
     /** The language chosen in Noor (or the phone's). */
     private fun localized(app: Context, s: AppSettings): Context {
@@ -226,17 +318,19 @@ object Widgets {
         return app.createConfigurationContext(Configuration(app.resources.configuration).also { it.setLocale(Locale(tag)) })
     }
 
-    private fun pending(app: Context, flag: Int): PendingIntent? =
-        PendingIntent.getBroadcast(app, REQUEST, Intent(app, WidgetRefreshReceiver::class.java).setAction(ACTION_REFRESH), flag or PendingIntent.FLAG_IMMUTABLE)
+    private fun pending(app: Context, flag: Int, at: Long = 0L): PendingIntent? =
+        PendingIntent.getBroadcast(app, REQUEST, Intent(app, WidgetRefreshReceiver::class.java).setAction(ACTION_TICK).putExtra(EXTRA_AT, at), flag or PendingIntent.FLAG_IMMUTABLE)
 
-    private fun armRefresh(app: Context, at: Instant) {
+    /** One alarm for everything: due [EARLY_MS] before [boundary], or at once if that has passed. */
+    private fun armTick(app: Context, boundary: Instant) {
         val am = app.getSystemService(AlarmManager::class.java) ?: return
-        val pi = pending(app, PendingIntent.FLAG_UPDATE_CURRENT) ?: return
+        val pi = pending(app, PendingIntent.FLAG_UPDATE_CURRENT, boundary.toEpochMilli()) ?: return
+        val at = boundary.toEpochMilli() - EARLY_MS
         // Non-waking (RTC): delivered at the time if the phone is awake, otherwise as soon as it wakes.
         runCatching {
-            if (AlertScheduler.canScheduleExact(app)) am.setExact(AlarmManager.RTC, at.toEpochMilli(), pi)
-            else am.set(AlarmManager.RTC, at.toEpochMilli(), pi)
-        }.onFailure { am.set(AlarmManager.RTC, at.toEpochMilli(), pi) }
+            if (AlertScheduler.canScheduleExact(app)) am.setExact(AlarmManager.RTC, at, pi)
+            else am.set(AlarmManager.RTC, at, pi)
+        }.onFailure { am.set(AlarmManager.RTC, at, pi) }
     }
 
     private fun cancelRefresh(app: Context) {
@@ -245,7 +339,7 @@ object Widgets {
     }
 }
 
-/** The widgets' own update time, a restart, an app update, a clock, time-zone or language change. */
+/** The widgets' own alarm (the minute, or a full update), a restart, an app update, a clock, time-zone or language change. */
 class WidgetRefreshReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) = Widgets.refreshFrom(this, context)
+    override fun onReceive(context: Context, intent: Intent) = Widgets.refreshFrom(this, context, intent)
 }

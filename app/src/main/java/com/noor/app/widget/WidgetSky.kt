@@ -13,12 +13,10 @@ import android.graphics.Shader
 import com.noor.app.data.AppSettings
 import com.noor.app.data.ResolvedPlace
 import com.noor.app.ui.today.Atmosphere
-import com.noor.app.ui.today.CloudAtlas
-import com.noor.app.ui.today.CloudField
-import com.noor.app.ui.today.CloudPainter
 import com.noor.app.ui.today.LandProfile
 import com.noor.app.ui.today.SceneLayout
 import com.noor.app.ui.today.SkyLight
+import com.noor.app.ui.today.SkyPicture
 import com.noor.app.ui.today.SkyLook
 import com.noor.app.ui.today.SkyScene
 import com.noor.app.ui.today.SkyView
@@ -55,26 +53,37 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
 }
 
 /**
- * The picture behind the widgets (0.9.10): the home sky as it is now — the atmosphere's colours for this moment and
- * place, the day's weather with the photographed clouds (lit as on the home screen, never caught mid-flash), the stars
- * and the moon at night, the user's scenery, and (on the large widget) the Sun's path with the Sun and the prayers.
- * Drawn with the ordinary Canvas, off the main thread, a few times an hour; rounded at the corners.
+ * The picture behind the widgets: the home sky of the moment (0.9.10). Since 0.9.12 drawn by the home screen's own
+ * code ([SkyPicture]: its GPU sky and land, clouds, the Sun's path and the prayers at the Sun's real position at each,
+ * Fajr and Isha below the horizon); where the GPU cannot draw it (before Android 13), by the Canvas painter below, which
+ * draws the path and the prayers with the home screen's own code too. Rounded at the corners; off the main thread.
  */
 internal object WidgetSky {
-    class Options(val land: Boolean = true, val path: Boolean = false, val horizon: Float = 0.74f, val arcTop: Float = 0.30f)
+    /**
+     * Heights as fractions of the picture: [horizon], the noon Sun's [arcTop], the deepest night point [ground], the
+     * clouds' [cloudTop]; [path]: the Sun's path and the prayers; [textBottomDp]: clouds fade out above it.
+     */
+    class Options(val horizon: Float, val arcTop: Float = 0.30f, val cloudTop: Float = 0f, val ground: Float = 0.985f, val path: Boolean = false, val textBottomDp: Float? = null)
 
     fun picture(res: Resources, ws: WidgetScene, w: Int, h: Int, density: Float, rtl: Boolean, o: Options): Bitmap {
-        val bmp = Bitmap.createBitmap(w.coerceAtLeast(8), h.coerceAtLeast(8), Bitmap.Config.ARGB_8888)
+        val layout = SceneLayout(cloudTop = o.cloudTop, arcTop = o.arcTop, horizon = o.horizon, ground = o.ground)
+        val spec = SkyPicture.Spec(w.coerceAtLeast(8), h.coerceAtLeast(8), density, layout, rtl, o.path, o.textBottomDp?.let { it * density }, corner = 22f * density)
+        SkyPicture.gpu(res, ws.scene, spec)?.let { android.util.Log.i("NoorWidgets", "Widget sky drawn on the GPU (${spec.w}x${spec.h})"); return it }
+        android.util.Log.i("NoorWidgets", "Widget sky drawn with Canvas (${spec.w}x${spec.h})")
+        return canvasPicture(res, ws, spec, o)
+    }
+
+    private fun canvasPicture(res: Resources, ws: WidgetScene, spec: SkyPicture.Spec, o: Options): Bitmap {
+        val w = spec.w; val h = spec.h; val density = spec.density
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val wf = bmp.width.toFloat(); val hf = bmp.height.toFloat()
-        val r = 22f * density
-        c.clipPath(Path().apply { addRoundRect(RectF(0f, 0f, wf, hf), r, r, Path.Direction.CW) })
-        val layout = SceneLayout(cloudTop = 0f, arcTop = o.arcTop, horizon = if (o.land) o.horizon else 0.97f, ground = 1f)
-        val view = SkyView(ws.scene, wf, hf, density, layout, rtl)
-        val fraction = ws.scene.nowFraction
-        val look = SkyLook.at(ws.scene, view, fraction)
-        val light = SkyLight.compute(SkyLight.key(look, view, 90.0))
-        val state = ws.weather.at(fraction)
+        SkyPicture.round(c, spec)
+        val inputs = SkyPicture.inputs(ws.scene, spec)
+        val view = inputs.view
+        val look = inputs.look
+        val light = inputs.light
+        val state = inputs.state
         val hy = view.horizonY
 
         // The sky: the atmosphere's table laid out over the picture.
@@ -104,44 +113,20 @@ internal object WidgetSky {
             p.color = argb(0.92f * look.moonVisibility, 0.97f, 0.96f, 0.9f)
             c.drawCircle(look.moonX, look.moonY, mr, p)
         }
-        // The Sun and its glare, behind the clouds.
-        if (look.elevation > -1.5 && look.sunY < hy + 2 * density) {
-            val disc = DoubleArray(3); val glow = DoubleArray(3)
-            Atmosphere.tone(light.light.sunDisc.copyOf().also { for (k in 0..2) it[k] *= 0.004 }, disc)
-            Atmosphere.tone(light.light.sunGlow.copyOf(), glow)
-            val gr = 40f * density
-            p.shader = RadialGradient(look.sunX, look.sunY, gr, intArrayOf(argb(0.55f, glow), argb(0.12f, glow), 0), floatArrayOf(0f, 0.35f, 1f), Shader.TileMode.CLAMP)
-            c.drawCircle(look.sunX, look.sunY, gr, p); p.shader = null
-            p.color = argb(1f, maxOf(disc[0], 0.9), maxOf(disc[1], 0.8), maxOf(disc[2], 0.6))
-            c.save(); c.clipRect(0f, 0f, wf, hy)
-            c.drawCircle(look.sunX, look.sunY, 6.5f * density, p)
-            c.restore()
-        }
+        // The Sun: drawn with the path, by the path layer, as the home screen draws it (without the path, a widget has
+        // no room under its words for the Sun's arc: SkyPicture.Spec.sun).
         // An overcast greys the whole sky.
         if (state.overcast > 0.02f) {
             val g = (0.62 * (1 - 0.75 * look.night)).toFloat()
             p.color = argb(0.85f * state.overcast, g, g * 1.01f, g * 1.04f)
             c.drawRect(0f, 0f, wf, hy, p)
         }
-        // The clouds of the moment.
-        CloudAtlas.preload(res)
-        CloudAtlas.get(res)?.let { atlas ->
-            val f = CloudField.Frame(wf, hf, hy, density, view.fov, 40f, ws.weather, state, look.sunAzimuth, look.elevation, light.light, light.lut,
-                look.night, look.moonVisibility * look.moonIllumination * look.night)
-            CloudPainter().draw(c, atlas, f, -1e6f, -1e6f + 1f, lightning = false)
-        }
-        if (o.land) drawLand(c, ws, view, light, look, wf, hf, density)
-        if (o.path) drawPath(c, ws, view, look, wf, density)
-        // Rain falling here.
-        if (state.rain > 0.02f) {
-            val rnd = java.util.Random(77)
-            p.strokeWidth = 0.8f * density
-            for (i in 0 until (140 * state.rain).toInt()) {
-                val x = rnd.nextFloat() * wf; val y = rnd.nextFloat() * hf; val len = (8 + 10 * rnd.nextFloat()) * density
-                p.color = argb((0.08f + 0.12f * rnd.nextFloat()) * state.rain, 0.9f, 0.92f, 0.95f)
-                c.drawLine(x, y, x + len * 0.18f, y + len, p)
-            }
-        }
+        // The clouds of the moment, the path, the land, as on the home screen.
+        SkyPicture.clouds(res, c, inputs, spec, SkyPicture.time(ws.scene))
+        if (o.path) SkyPicture.path(c, inputs, spec, gpu = false)
+        drawLand(c, ws, view, light, look, wf, hf, density)
+        SkyPicture.rainOver(c, inputs, spec)
+        if (o.path) SkyPicture.marks(c, inputs, spec)
         return bmp
     }
 
@@ -203,44 +188,6 @@ internal object WidgetSky {
             p.shader = LinearGradient(0f, top, 0f, g.base[layer] + 6 * density,
                 shade(albedo, g.distKm[layer], 1.0), shade(albedo, g.distKm[layer], 0.55), Shader.TileMode.CLAMP)
             c.drawPath(path, p); p.shader = null
-        }
-    }
-
-    private fun drawPath(c: Canvas, ws: WidgetScene, view: SkyView, look: SkyLook, w: Float, density: Float) {
-        val geo = view.geometry
-        val scene = ws.scene
-        val hy = view.horizonY
-        val path = Path(); var first = true
-        for (i in 0..240) {
-            val fr = i / 240.0
-            val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr))
-            if (first) { path.moveTo(x, y); first = false } else path.lineTo(x, y)
-        }
-        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-        c.save(); c.clipRect(0f, 0f, w, hy)
-        p.color = argb(0.55f, 1.0, 1.0, 1.0); p.strokeWidth = 1.1f * density; p.pathEffect = DashPathEffect(floatArrayOf(2 * density, 4.5f * density), 0f)
-        c.drawPath(path, p); p.pathEffect = null
-        // The day so far, in gold.
-        val sunX = geo.x(scene.nowFraction)
-        c.save()
-        if (view.rtl) c.clipRect(sunX, 0f, w, hy) else c.clipRect(0f, 0f, sunX, hy)
-        p.color = argb(0.28f, 1.0, 0.84, 0.55); p.strokeWidth = 4.5f * density; c.drawPath(path, p)
-        p.color = argb(0.95f, 1.0, 0.93, 0.76); p.strokeWidth = 1.4f * density; c.drawPath(path, p)
-        c.restore(); c.restore()
-        // The prayers on the path (on the horizon while the Sun is below it).
-        val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-        for ((prayer, at) in scene.events) {
-            val fr = scene.path.fraction(at)
-            val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr)).coerceAtMost(hy)
-            val passed = !at.isAfter(ws.now)
-            if (prayer == scene.next) {
-                fill.color = argb(0.25f, 0.96, 0.84, 0.59); c.drawCircle(x, y, 7.5f * density, fill)
-                p.color = argb(1f, 0.96, 0.84, 0.59); p.strokeWidth = 1.5f * density; c.drawCircle(x, y, 4f * density, p)
-            } else if (passed) {
-                fill.color = argb(0.95f, 1.0, 1.0, 1.0); c.drawCircle(x, y, 2.3f * density, fill)
-            } else {
-                p.color = argb(0.8f, 1.0, 1.0, 1.0); p.strokeWidth = 1f * density; c.drawCircle(x, y, 2.6f * density, p)
-            }
         }
     }
 

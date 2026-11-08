@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widgets' countdown (0.9.12; widget/CountdownArt.kt), left to right in every language as on the home screen:
+     - widget_count_main: Noor's picture of "−1:23:" (the app's font and digits; redrawn on the minute);
+     - widget_count_window: a small window onto widget_count_seconds, an analog clock whose second hand is the wheel of the
+       sixty seconds' labels (res/drawable/cd_wheel_*), turned by Android one step each second; its sizes and the window's
+       place are set with the picture;
+     - widget_count_plain: Android's own countdown, where Noor may not set exact alarms. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_countdown_box"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:clipChildren="true"
+    android:gravity="center_vertical"
+    android:layoutDirection="ltr"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:id="@+id/widget_count_main"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY" />
+
+    <FrameLayout
+        android:id="@+id/widget_count_window"
+        android:layout_width="1px"
+        android:layout_height="1px"
+        android:clipChildren="true"
+        android:importantForAccessibility="noHideDescendants"
+        android:visibility="gone">
+
+        <AnalogClock
+            android:id="@+id/widget_count_seconds"
+            android:layout_width="1px"
+            android:layout_height="1px"
+            android:dial="@drawable/cd_dial"
+            android:hand_hour="@drawable/cd_blank"
+            android:hand_minute="@drawable/cd_blank"
+            android:importantForAccessibility="no" />
+    </FrameLayout>
+
+    <Chronometer
+        android:id="@+id/widget_count_plain"
+        style="@style/Widget.Noor.Text.Countdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+</LinearLayout>

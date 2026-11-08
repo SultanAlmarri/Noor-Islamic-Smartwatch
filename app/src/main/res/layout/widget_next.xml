@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The next-prayer widget (0.9.10): the sky of the moment behind the next prayer, its time and the live countdown. -->
+<!-- The next-prayer widget (0.9.12): over the sky of the moment, the prayer and its time and the countdown, centred, as
+     on the home screen. The words are pictures in the app's fonts (widget/TextArt.kt); the countdown is widget_countdown. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -13,86 +14,24 @@
         android:contentDescription="@null"
         android:scaleType="centerCrop" />
 
-    <ImageView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:contentDescription="@null"
-        android:scaleType="fitXY"
-        android:src="@drawable/widget_scrim_top" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center_vertical|start"
+        android:gravity="center"
         android:orientation="vertical"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp">
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp">
 
-        <TextView
-            android:id="@+id/widget_caption"
-            style="@style/Widget.Noor.Text.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
+        <ImageView
+            android:id="@+id/widget_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:baselineAligned="true"
-            android:orientation="horizontal">
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter" />
 
-            <TextView
-                android:id="@+id/widget_prayer"
-                style="@style/Widget.Noor.Text.Title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-
-            <TextView
-                android:id="@+id/widget_time"
-                style="@style/Widget.Noor.Text.Body"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp" />
-        </LinearLayout>
-
-        <!-- The countdown, as on the home screen: ticked by Android itself every second, drawn in Noor's own digits (the
-             font draws whatever digits Android writes as Noor's); a quieter copy underneath and, over it, a bright copy whose
-             seconds are blank, so "−1:23" is bright and ":45" quieter. The pair for Noor's digits is shown. -->
-        <FrameLayout
-            android:id="@+id/widget_countdown_box"
+        <include
+            layout="@layout/widget_countdown"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-
-            <Chronometer
-                android:id="@+id/widget_count_dim_latin"
-                style="@style/Widget.Noor.Text.Countdown"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/noor_count_latin"
-                android:textColor="#80FFFFFF" />
-
-            <Chronometer
-                android:id="@+id/widget_count_lead_latin"
-                style="@style/Widget.Noor.Text.Countdown"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/noor_count_latin_lead"
-                android:textColor="#FFFFFFFF" />
-
-            <Chronometer
-                android:id="@+id/widget_count_dim_arabic"
-                style="@style/Widget.Noor.Text.Countdown"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/noor_count_arabic"
-                android:textColor="#80FFFFFF" />
-
-            <Chronometer
-                android:id="@+id/widget_count_lead_arabic"
-                style="@style/Widget.Noor.Text.Countdown"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/noor_count_arabic_lead"
-                android:textColor="#FFFFFFFF" />
-        </FrameLayout>
+            android:layout_height="wrap_content" />
     </LinearLayout>
 </FrameLayout>

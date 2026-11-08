@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <application>
+        <!-- Debug only: Noor's widgets hosted as a launcher hosts them, for tools/devicetest/widgets.sh. -->
+        <activity
+            android:name="com.noor.app.debug.WidgetHostActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
         <receiver
             android:name="com.noor.app.debug.TestHookReceiver"
             android:exported="true"

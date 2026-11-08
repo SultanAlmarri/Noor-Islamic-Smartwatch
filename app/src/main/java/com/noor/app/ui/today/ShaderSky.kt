@@ -154,44 +154,54 @@ internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time:
     Box(Modifier.fillMaxSize().reducedLayer(scale) { translationY = parallax() * 0.5f }.drawBehind {
         val i = inputs() ?: return@drawBehind
         if (!drawContext.canvas.nativeCanvas.isHardwareAccelerated) return@drawBehind
-        val sh = shaders.sky
-        val s = size.width / i.view.w
-        val t = time()
-        val l = i.light.light; val look = i.look; val v = i.view
-        sh.u("uSize", size.width, size.height)
-        sh.u("uDp", v.density * s)
-        sh.u("uHorizon", v.horizonY * s)
-        sh.u("uAltTop", SkyView.ALT_TOP.toFloat()); sh.u("uAltPow", SkyView.ALT_POW.toFloat())
-        sh.u("uFov", v.fov.toFloat())
-        sh.u("uLutSize", Atmosphere.NX.toFloat(), Atmosphere.NY.toFloat()); sh.u("uLutPow", Atmosphere.LUT_POW.toFloat())
-        sh.u("uSunPos", look.sunX * s, look.sunY * s)
-        val ca = cos(look.drawAltitude); val az = look.sunAzimuth
-        sh.u("uSunDir", (ca * sin(az)).toFloat(), sin(look.drawAltitude).toFloat(), (ca * cos(az)).toFloat())
-        sh.u("uSunEl", look.elevation.toFloat())
-        sh.u3("uSunDisc", l.sunDisc); sh.u3("uSunGlow", l.sunGlow); sh.u3("uSunCloud", l.sunCloud); sh.u3("uSunHigh", l.sunHigh)
-        sh.u3("uAmbTop", l.ambTop); sh.u3("uAmbLow", l.ambLow)
-        sh.u("uNight", look.night)
-        sh.u("uTime", t)
-        sh.u("uWeather", i.state.cumulus, i.state.cirrus, i.weather.seedX, i.weather.seedY)
-        sh.u("uWx", i.state.overcast, i.state.layer, i.state.rain, 0f)
-        sh.u("uCloudTop", v.cloudTopY * s)
-        sh.u("uMoon", look.moonX * s, look.moonY * s, 10f * v.density * s, look.moonVisibility)
-        sh.u("uMoonLight", look.moonLight[0], look.moonLight[1], look.moonLight[2])
-        sh.u("uMilky", look.milkyWay)
-        sh.u("uWind", t * 0.02f)
-        sh.u("uTextBottom", i.textBottom * s)
-        // The real night sky: the celestial and galactic axes for this place and moment, and the catalogue's stars.
-        if (look.night > 0f) {
-            val fr = NightSky.frame(i.shownAt, i.scene.latitude, i.scene.longitude, v.rtl)
-            sh.u3("uCelX", fr.celX); sh.u3("uCelY", fr.celY); sh.u3("uCelZ", fr.celZ); sh.u3("uGalN", fr.galN); sh.u3("uGalC", fr.galC)
-        }
-        sh.u("uMoonIllum", look.moonIllumination)
-        sh.setInputBuffer("skyLut", lutCache.shaderFor(i.light))
         starCache.version.intValue // a new star picture redraws the layer
-        sh.setInputBuffer("starTex", starCache.shaderFor(i, size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1), s))
-        paint.shader = sh
-        drawIntoCanvas { it.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint) }
+        val stars = starCache.shaderFor(i, size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1), size.width / i.view.w)
+        val t = time()
+        drawIntoCanvas { shaders.drawSky(it.nativeCanvas, size.width, size.height, i, t, lutCache.shaderFor(i.light), stars, paint) }
     })
+}
+
+/**
+ * The sky shader drawn over [w] x [h] px of [canvas] (a hardware canvas) for [i] at the ambient clock [t]: the home
+ * screen's sky layer, and the widgets' pictures (0.9.12).
+ */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+internal fun SkyShaders.drawSky(canvas: android.graphics.Canvas, w: Float, h: Float, i: GpuSkyInputs, t: Float, lut: BitmapShader, stars: BitmapShader, paint: Paint) {
+    val sh = sky
+    val s = w / i.view.w
+    val l = i.light.light; val look = i.look; val v = i.view
+    sh.u("uSize", w, h)
+    sh.u("uDp", v.density * s)
+    sh.u("uHorizon", v.horizonY * s)
+    sh.u("uAltTop", SkyView.ALT_TOP.toFloat()); sh.u("uAltPow", SkyView.ALT_POW.toFloat())
+    sh.u("uFov", v.fov.toFloat())
+    sh.u("uLutSize", Atmosphere.NX.toFloat(), Atmosphere.NY.toFloat()); sh.u("uLutPow", Atmosphere.LUT_POW.toFloat())
+    sh.u("uSunPos", look.sunX * s, look.sunY * s)
+    val ca = cos(look.drawAltitude); val az = look.sunAzimuth
+    sh.u("uSunDir", (ca * sin(az)).toFloat(), sin(look.drawAltitude).toFloat(), (ca * cos(az)).toFloat())
+    sh.u("uSunEl", look.elevation.toFloat())
+    sh.u3("uSunDisc", l.sunDisc); sh.u3("uSunGlow", l.sunGlow); sh.u3("uSunCloud", l.sunCloud); sh.u3("uSunHigh", l.sunHigh)
+    sh.u3("uAmbTop", l.ambTop); sh.u3("uAmbLow", l.ambLow)
+    sh.u("uNight", look.night)
+    sh.u("uTime", t)
+    sh.u("uWeather", i.state.cumulus, i.state.cirrus, i.weather.seedX, i.weather.seedY)
+    sh.u("uWx", i.state.overcast, i.state.layer, i.state.rain, 0f)
+    sh.u("uCloudTop", v.cloudTopY * s)
+    sh.u("uMoon", look.moonX * s, look.moonY * s, 10f * v.density * s, look.moonVisibility)
+    sh.u("uMoonLight", look.moonLight[0], look.moonLight[1], look.moonLight[2])
+    sh.u("uMilky", look.milkyWay)
+    sh.u("uWind", t * 0.02f)
+    sh.u("uTextBottom", i.textBottom * s)
+    // The real night sky: the celestial and galactic axes for this place and moment, and the catalogue's stars.
+    if (look.night > 0f) {
+        val fr = NightSky.frame(i.shownAt, i.scene.latitude, i.scene.longitude, v.rtl)
+        sh.u3("uCelX", fr.celX); sh.u3("uCelY", fr.celY); sh.u3("uCelZ", fr.celZ); sh.u3("uGalN", fr.galN); sh.u3("uGalC", fr.galC)
+    }
+    sh.u("uMoonIllum", look.moonIllumination)
+    sh.setInputBuffer("skyLut", lut)
+    sh.setInputBuffer("starTex", stars)
+    paint.shader = sh
+    canvas.drawRect(0f, 0f, w, h, paint)
 }
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -204,15 +214,19 @@ internal fun GpuLandLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, lift
     Box(Modifier.fillMaxSize().reducedLayer(scale) { translationY = lift() }.drawBehind {
         val i = inputs() ?: return@drawBehind
         if (!drawContext.canvas.nativeCanvas.isHardwareAccelerated) return@drawBehind
-        drawLand(shaders.land, paint, i, time(), lutCache, ridgeCache, size.width / i.view.w)
+        val t = time()
+        drawIntoCanvas { shaders.drawLand(it.nativeCanvas, size.width, size.height, i, t, lutCache.shaderFor(i.light), ridgeCache.shaderFor(i.land), paint) }
     })
 }
 
+/** The land shader drawn over [w] x [h] px of [canvas] (a hardware canvas): the home screen's land, and the widgets'. */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-private fun DrawScope.drawLand(sh: RuntimeShader, paint: Paint, i: GpuSkyInputs, t: Float, lutCache: LutShaderCache, ridgeCache: RidgeShaderCache, s: Float) {
+internal fun SkyShaders.drawLand(canvas: android.graphics.Canvas, w: Float, h: Float, i: GpuSkyInputs, t: Float, lut: BitmapShader, ridges: BitmapShader, paint: Paint) {
+    val sh = land
+    val s = w / i.view.w
     val v = i.view; val look = i.look; val l = i.light.light
     val g = i.land.geometry(v.horizonY, v.h, v.density)
-    sh.u("uSize", size.width, size.height)
+    sh.u("uSize", w, h)
     sh.u("uDp", v.density * s)
     sh.u("uHorizon", v.horizonY * s)
     sh.u("uBaseA", g.base[0] * s, g.base[1] * s, g.base[2] * s, g.base[3] * s); sh.u("uBaseB", g.base[4] * s)
@@ -237,10 +251,10 @@ private fun DrawScope.drawLand(sh: RuntimeShader, paint: Paint, i: GpuSkyInputs,
     sh.u("uLutSize", Atmosphere.NX.toFloat(), Atmosphere.NY.toFloat()); sh.u("uLutPow", Atmosphere.LUT_POW.toFloat())
     sh.u("uSeed", (i.scene.landSeed % 97).toFloat())
     sh.u("uSunrise", v.sunrise.first * s, v.sunrise.second * s)
-    sh.setInputBuffer("skyLut", lutCache.shaderFor(i.light))
-    sh.setInputBuffer("ridges", ridgeCache.shaderFor(i.land))
+    sh.setInputBuffer("skyLut", lut)
+    sh.setInputBuffer("ridges", ridges)
     paint.shader = sh
-    drawIntoCanvas { it.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint) }
+    canvas.drawRect(0f, 0f, w, h, paint)
 }
 
 /** One bitmap per atmosphere table, sampled with bilinear filtering and clamped at the edges. */
