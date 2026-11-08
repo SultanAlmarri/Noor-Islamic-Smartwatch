@@ -50,7 +50,12 @@ PY
 )
 [ -n "$xy" ] && { log "confirm dialog at $xy"; adb shell input tap $xy; sleep 6; shot 02_after_confirm; state; }
 
-home 8; shot 10_face_horizon_gold
+home 8; shot 10_face_after_setup
+# If Wear OS did not make it active (an emulator may not), choose it as a user would; here with Wear's developer
+# command for setting the watch face, so that the face itself can be photographed.
+adb shell am broadcast -a com.google.android.wearable.app.DEBUG_SURFACE --es operation set-watchface --es watchFaceId com.noor.smartwatch.watchfacepush.noor 2>&1 | tail -1 | tee -a "$OUT/steps.txt"
+sleep 8; home 8; shot 11_face_horizon_gold
+state
 
 for v in dial_gold minimal_gold horizon_emerald dial_rose minimal_turquoise horizon_silver original horizon_gold; do
   log "face $v"

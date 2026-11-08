@@ -140,7 +140,7 @@ class FacePush internal constructor(
 
     /**
      * Makes the Noor face the active one, if this app may still do so (once, with the user's permission). After that,
-     * or if the system says the chance was used, the state reports [FaceState.Ready.needsPick] instead of an error.
+     * or if the system refuses for any reason, the state reports [FaceState.Ready.needsPick] instead of an error.
      */
     suspend fun activate(): FaceState {
         val s = slots ?: return FaceState.Unsupported
@@ -152,8 +152,10 @@ class FacePush internal constructor(
             s.setActive(slot.id)
             state()
         }.getOrElse { e ->
-            if (e is AttemptsUsedException) state()
-            else { Log.w(TAG, "activation failed", e); FaceState.Failed(e.message ?: e.javaClass.simpleName) }
+            // Whatever the reason (the one chance already used, or the system could not do it: a Wear OS 6 emulator
+            // answered "unknown error"), the face is on the watch: the user picks it there. Not shown as an error.
+            if (e !is AttemptsUsedException) Log.w(TAG, "activation failed", e)
+            state()
         }
     }
 

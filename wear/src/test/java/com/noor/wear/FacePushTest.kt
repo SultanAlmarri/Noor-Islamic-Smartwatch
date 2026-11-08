@@ -83,6 +83,19 @@ class FacePushTest {
         assertTrue(st.active); assertFalse(st.needsPick)
     }
 
+    @Test fun anyActivationFailureBecomesGuidance() = runBlocking {
+        // The system may fail for its own reasons (a Wear OS 6 emulator: "unknown error"): the face is installed, so the
+        // user is told to pick it, not shown an error; and the app does not keep asking.
+        val fake = object : FaceSlots by FakeSlots(FaceSlots.Slot("s1", 2, "horizon_gold")) {
+            var asked = 0
+            override suspend fun setActive(slot: String) { asked++; throw IllegalStateException("Unknown error") }
+        }
+        val p = FacePush(ApplicationProvider.getApplicationContext(), fake, catalogue)
+        val st = p.activate()
+        assertTrue("$st", st is FaceState.Ready && st.needsPick)
+        p.activate(); assertEquals(1, fake.asked)
+    }
+
     @Test fun firstActivationWorks() = runBlocking {
         val fake = FakeSlots(FaceSlots.Slot("s1", 2, "minimal_silver"))
         val p = push(fake)
