@@ -1,0 +1,70 @@
+name: Watch face on Wear OS 6 (emulator)
+
+# The Noor watch face end to end on a Wear OS 6.0 emulator: the watch app installs it with Watch Face Push, makes it
+# active, and switches it between designs and colours in place, as the phone's editor does. See
+# tools/devicetest/watch_face.sh. Pictures are uploaded and published as the watch-face-preview pre-release.
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'tools/watchface/**', 'wear/src/main/java/com/noor/wear/facepush/**', 'wear/src/main/java/com/noor/wear/ui/FaceSetup.kt',
+             'wear/src/main/java/com/noor/wear/complication/**', 'tools/devicetest/watch_face.sh', '.github/workflows/watch-face.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  face:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable hardware acceleration for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build the debug watch app (faces built and validated)
+        run: ./gradlew :wear:assembleDebug --stacktrace
+
+      - name: Wear OS 6.0 emulator
+        run: |
+          SDK=$ANDROID_HOME; BIN=$SDK/cmdline-tools/latest/bin
+          yes | $BIN/sdkmanager --licenses >/dev/null || true
+          $BIN/sdkmanager "emulator" "platform-tools" "system-images;android-36;android-wear-signed;x86_64" >/dev/null
+          echo no | $BIN/avdmanager create avd -n wear6 -k "system-images;android-36;android-wear-signed;x86_64" -d wearos_large_round --force
+          nohup $SDK/emulator/emulator -avd wear6 -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim > emulator.log 2>&1 &
+          $SDK/platform-tools/adb wait-for-device
+          for i in $(seq 1 120); do [ "$($SDK/platform-tools/adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && break; sleep 5; done
+          sleep 45
+          echo "$SDK/platform-tools" >> $GITHUB_PATH
+
+      - name: The face, end to end
+        run: timeout 1800 bash tools/devicetest/watch_face.sh wear/build/outputs/apk/debug/wear-debug.apk watch-face-wear6 || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: watch-face-wear6
+          path: |
+            watch-face-wear6
+            emulator.log
+
+      - name: Publish the pictures as a pre-release asset
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d watch-face-wear6 ] || exit 0
+          (cd watch-face-wear6 && zip -qr ../watch-face-wear6.zip .)
+          gh release view watch-face-preview >/dev/null 2>&1 || gh release create watch-face-preview --prerelease \
+            --title "Watch face preview (Wear OS 6 emulator pictures)" --notes "Pictures from the watch-face workflow; replaced on each run." || true
+          gh release upload watch-face-preview watch-face-wear6.zip --clobber

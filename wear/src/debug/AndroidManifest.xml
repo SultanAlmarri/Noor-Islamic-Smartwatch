@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only (never in the release APKs given to users): a hook for the Wear OS emulator test
+     (tools/devicetest/watch_face.sh). Only the shell (adb) holds the DUMP permission that guards it. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name="com.noor.wear.debug.WatchTestHook"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.noor.smartwatch.debug.WATCH_CITY" />
+                <action android:name="com.noor.smartwatch.debug.FACE" />
+                <action android:name="com.noor.smartwatch.debug.FACE_STATE" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
