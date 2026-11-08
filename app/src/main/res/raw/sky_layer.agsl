@@ -278,7 +278,11 @@ float4 cumulusSprites(float2 fc, float3 v, float3 sunL, float3 sky) {
                     // Skylight from above and round about, light off the ground from below.
                     float3 amb = uAmbTop * (ta.b * 1.05 + tb.b * 0.25) + uAmbLow * ((ta.r + ta.g) * 0.22 + tb.r * 0.30);
                     float3 c = uSunCloud * sun * 2.6 + amb * 1.3;
-                    float3 cd = mix(tone(c / max(a, 1e-3)), sky, 0.06 + 0.50 * depth * depth);
+                    float3 cd = tone(c / max(a, 1e-3));
+                    // Lit vapour is never as saturated as the light on it: a low Sun warmed a small cloud to a red ball
+                    // on Android (0.9.8); real sunset clouds are orange and pink, paler where brightest.
+                    cd = mix(float3(luma(cd)), cd, 0.62 + 0.18 * smoothstep(0.08, 0.4, sunL.y));
+                    cd = mix(cd, sky, 0.06 + 0.50 * depth * depth);
                     // At night (0.9.8): lit by the moon from where it stands, dark against the stars it hides.
                     float3 lm = float3(dot(moonDir, rt) * (1.0 - 2.0 * flip), dot(moonDir, up), dot(moonDir, f));
                     float moonT = sixWay(ta, tb, lm) / max(a, 1e-3);
