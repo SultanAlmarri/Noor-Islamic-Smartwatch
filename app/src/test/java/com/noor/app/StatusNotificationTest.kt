@@ -144,7 +144,7 @@ class StatusNotificationTest {
             for ((system, numerals, drawn) in listOf(Triple('\u0660', com.noor.app.data.Numerals.WESTERN, true), Triple('0', com.noor.app.data.Numerals.WESTERN, false),
                     Triple('0', com.noor.app.data.Numerals.ARABIC_INDIC, true), Triple('\u0660', com.noor.app.data.Numerals.ARABIC_INDIC, false))) {
                 StatusNotification.systemZeroDigit = { system }
-                assertEquals("$system $numerals", !drawn, StatusNotification.systemDigitsMatch(numerals))
+                assertEquals("$system $numerals", !drawn, StatusNotification.systemDigitsMatch(app, numerals))
                 val fd = com.noor.app.util.Formatter(false, numerals, base.timeFormat)
                 val moment = day(16, 0, 0)
                 val cm = StatusNotification.content(config, base.copy(numerals = numerals), moment, arabic = false)

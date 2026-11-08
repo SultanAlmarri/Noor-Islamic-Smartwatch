@@ -108,7 +108,7 @@ object StatusNotification {
         ensureChannel(ctx)
         val now = Instant.now()
         val c = content(config, s, now, arabic)
-        val drawn = !systemDigitsMatch(s.numerals)
+        val drawn = !systemDigitsMatch(app, s.numerals)
         val f = Formatter(arabic, s.numerals, s.timeFormat)
         runCatching { nm.notify(ID, build(ctx, app, c, now, if (drawn) f else null)) }
         if (drawn) {
@@ -136,15 +136,26 @@ object StatusNotification {
      * The digits Android writes in its own countdown are those of the phone's language (Arabic-Indic for Arabic),
      * whatever Noor's own setting. When they differ from the digits chosen in Noor, Noor draws the countdown itself.
      */
-    fun systemDigitsMatch(numerals: com.noor.app.data.Numerals): Boolean {
+    fun systemDigitsMatch(context: Context, numerals: com.noor.app.data.Numerals): Boolean {
         val want = if (numerals == com.noor.app.data.Numerals.ARABIC_INDIC) '\u0660' else '0'
-        return systemZeroDigit() == want
+        return systemZeroDigit(context) == want
     }
 
-    /** The zero Android's Chronometer would write (the system locale's); replaceable in tests. */
-    internal var systemZeroDigit: () -> Char = {
-        val locale = android.content.res.Resources.getSystem().configuration.locales[0]
-        String.format(locale, "%d", 0).firstOrNull() ?: '0'
+    /** The zero Android's Chronometer would write (in the phone's own language); replaceable in tests. */
+    internal var systemZeroDigit: (Context) -> Char = { context -> String.format(systemLocale(context), "%d", 0).firstOrNull() ?: '0' }
+
+    /**
+     * The phone's own language, which the notification shade (SystemUI) writes in. Not this process's configuration:
+     * on Android 13 and later the language chosen in Noor (a per-app language) is applied to this whole process,
+     * Resources.getSystem() included, so Noor in Arabic on an English phone would look like an Arabic phone (an
+     * Android 15 emulator showed the countdown in the phone's Western digits that way). Android is asked instead.
+     */
+    fun systemLocale(context: Context): java.util.Locale {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            runCatching { context.getSystemService(android.app.LocaleManager::class.java)?.systemLocales }.getOrNull()
+                ?.takeIf { !it.isEmpty }?.let { return it[0] }
+        }
+        return android.content.res.Resources.getSystem().configuration.locales[0]
     }
 
     fun refreshAsync(context: Context) {
