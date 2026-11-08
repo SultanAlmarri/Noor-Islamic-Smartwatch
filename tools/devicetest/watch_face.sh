@@ -9,6 +9,7 @@ APK=$1; OUT=$2; mkdir -p "$OUT"
 PKG=com.noor.smartwatch
 HOOK=$PKG/com.noor.wear.debug.WatchTestHook
 log() { echo "[$(date -u +%T)] $*" | tee -a "$OUT/steps.txt"; }
+adb() { timeout 120 "$(type -P adb)" "$@"; }
 shot() { adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes)"; }
 hook() { adb shell am broadcast -a "com.noor.smartwatch.debug.$1" "${@:2}" -n $HOOK >/dev/null; }
 state() { hook FACE_STATE; sleep 2; adb logcat -d -s NoorWatchTest:I | tail -1 | tee -a "$OUT/steps.txt"; }
