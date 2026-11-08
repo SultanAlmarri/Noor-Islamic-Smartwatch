@@ -315,7 +315,7 @@
     <string name="watch_feature_standalone_desc">يمكن ضبطها على الساعة بموقعها أو باختيار مدينة، وتُستخدم إعدادات هاتفك متى أرسلها</string>
     <string name="step_sync_own">تستخدم الساعة إعداداتها الخاصة التي اختيرت عليها. لتتبع هذا الهاتف مجددًا، أوقف «استخدام إعدادات الساعة» في إعدادات نور على الساعة.</string>
     <string name="watch_feature_editor">محرّر الواجهة</string>
-    <string name="watch_feature_editor_desc">الألوان والخطوط والتخطيط، مع معاينة مباشرة</string>
+    <string name="watch_feature_editor_desc">ثلاثة تصاميم بخمسة ألوان والواجهة الأصلية: اختر مع المعاينة فتتغير ساعتك فوراً</string>
     <string name="offline_watch_footer">تستخدم الساعة الموقع والجهة والتعديلات نفسها التي في هذا الهاتف، وتعمل من دونه.</string>
     <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك، واتجاه القبلة، والأذان، على هاتفك وساعتك.</string>
     <string name="onboarding_private">يبقى موقعك على هذا الهاتف.</string>
@@ -485,4 +485,24 @@
     <string name="scenery_sea">بحر</string>
     <string name="scenery_note">طبيعة فقط: لا مبانٍ ولا أشخاص.</string>
     <string name="kw_scenery">مشهد طبيعة خلفية كثبان تلال جبال بحر صحراء</string>
+    <string name="face_editor_title">واجهة الساعة</string>
+    <string name="face_preview_desc">واجهة نور: %1$s</string>
+    <string name="face_design_horizon">الأفق</string>
+    <string name="face_design_dial">العقارب</string>
+    <string name="face_design_minimal">البسيط</string>
+    <string name="face_design_original">الأصلي</string>
+    <string name="face_design_horizon_desc">الوقت بخط كبير، والتاريخ الهجري، والصلاة القادمة وحلقة تمتلئ حتى موعدها، فوق الكثبان.</string>
+    <string name="face_design_dial_desc">عقارب وعلامات الدقائق، وحلقة الصلاة، واتجاه القبلة والبطارية (يمكن تغييرهما من الساعة).</string>
+    <string name="face_design_minimal_desc">الوقت كبير جداً على خلفية سوداء، والصلاة القادمة في سطر واحد. موفّرة للبطارية.</string>
+    <string name="face_design_original_desc">واجهة نور من الإصدار 1.3.2 كما هي.</string>
+    <string name="face_colour_gold">ذهبي</string>
+    <string name="face_colour_emerald">زمردي</string>
+    <string name="face_colour_turquoise">فيروزي</string>
+    <string name="face_colour_rose">وردي</string>
+    <string name="face_colour_silver">فضي</string>
+    <string name="face_send">اعرضها على ساعتي</string>
+    <string name="face_on_watch">على ساعتك: %1$s.</string>
+    <string name="face_sending">جارٍ الإرسال إلى ساعتك…</string>
+    <string name="face_pick_on_watch">أُضيفت إلى واجهات ساعتك. لعرضها اضغط مطولاً على واجهة الساعة ثم اختر نور.</string>
+    <string name="face_changes_hint">تظهر التغييرات على ساعتك فوراً إذا كانت نور واجهتها.</string>
 </resources>

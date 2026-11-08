@@ -30,8 +30,8 @@ object StatusPublisher {
                 appVersionName = info.versionName ?: "",
                 sdkInt = Build.VERSION.SDK_INT,
                 facePushSupported = face !is FaceState.Unsupported,
-                faceBundledVersion = (face as? FaceState.Ready)?.bundledVersion ?: 0L,
-                faceInstalledVersion = (face as? FaceState.Ready)?.installedVersion,
+                faceBundledVersion = (face as? FaceState.Ready)?.bundledBuild ?: 0L,
+                faceInstalledVersion = (face as? FaceState.Ready)?.installedBuild,
                 faceActive = (face as? FaceState.Ready)?.active == true,
                 configReceivedAtMs = app.config.receivedAt.first(),
                 updatedAtMs = System.currentTimeMillis(),
@@ -42,6 +42,9 @@ object StatusPublisher {
                 },
                 sounds = ReceivedSounds.ids(context),
                 usingWatchSettings = app.config.state.first().source == ConfigSource.WATCH,
+                faceVariant = (face as? FaceState.Ready)?.installedVariant,
+                faceChosen = (face as? FaceState.Ready)?.chosen,
+                faceNeedsPick = (face as? FaceState.Ready)?.needsPick,
             )
             val req = PutDataMapRequest.create(WatchReport.PATH).apply { dataMap.putString(WatchReport.KEY, report.encode()) }
                 .asPutDataRequest().setUrgent()

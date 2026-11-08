@@ -132,4 +132,17 @@
     <string name="tile_tools_label">Noor</string>
     <string name="tile_tools_hint">Qibla · Tasbih · Calendar</string>
     <string name="tile_open_times">Times</string>
+    <string name="face_in_use">In use: %1$s</string>
+    <string name="face_pick_hint">Added to your watch faces. To show it, touch and hold your watch face, then choose Noor.</string>
+    <string name="face_design">Design</string>
+    <string name="face_colour">Colour</string>
+    <string name="face_design_horizon">Horizon</string>
+    <string name="face_design_dial">Dial</string>
+    <string name="face_design_minimal">Minimal</string>
+    <string name="face_design_original">Original (1.3.2)</string>
+    <string name="face_colour_gold">Gold</string>
+    <string name="face_colour_emerald">Emerald</string>
+    <string name="face_colour_turquoise">Turquoise</string>
+    <string name="face_colour_rose">Rose</string>
+    <string name="face_colour_silver">Silver</string>
 </resources>

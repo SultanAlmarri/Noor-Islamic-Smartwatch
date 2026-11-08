@@ -57,6 +57,22 @@ class WatchViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openOnWatch(nodeId: String) = viewModelScope.launch { setup.openNoorOnWatch(nodeId) }
 
+    /** The face being chosen in the editor (0.9.8). */
+    private val _faceChoice = MutableStateFlow(setup.faceChoice)
+    val faceChoice: StateFlow<com.noor.prayer.WatchFaces.Choice> = _faceChoice.asStateFlow()
+
+    fun selectFace(choice: com.noor.prayer.WatchFaces.Choice) { _faceChoice.value = choice; setup.faceChoice = choice }
+
+    /**
+     * Puts the chosen face on the watch. If Noor's face is not yet the active one and the watch app may still make
+     * it so (Wear OS allows that once, with a confirmation on the watch), its face screen is opened on the watch too.
+     */
+    fun sendFace(nodeId: String, report: com.noor.prayer.WatchReport?) = viewModelScope.launch {
+        val sent = setup.sendFace(_faceChoice.value)
+        val reached = if (report != null && !report.faceActive && report.faceNeedsPick != true) setup.openFaceSetupOnWatch(nodeId) else sent
+        _faces.update { it + (nodeId to Pending(System.currentTimeMillis(), sent || reached)) }
+    }
+
     fun syncNow() = viewModelScope.launch {
         _syncing.value = true
         _syncFailed.value = !container.wear.syncNow()

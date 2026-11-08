@@ -30,6 +30,15 @@ data class WatchReport(
     val sounds: Set<String> = emptySet(),
     /** The user chose the watch's own settings on the watch, so it does not follow the phone's (null = not reported). */
     val usingWatchSettings: Boolean? = null,
+    /** Which Noor face is installed ([WatchFaces] id; null = none, or an older watch app). */
+    val faceVariant: String? = null,
+    /** Which face the watch was last asked for (from the phone or on the watch). */
+    val faceChosen: String? = null,
+    /**
+     * The face is installed but not in use, and the app can no longer make it the active one (Wear OS lets an app do
+     * that once): the user chooses it on the watch (touch and hold the watch face).
+     */
+    val faceNeedsPick: Boolean? = null,
 ) {
     fun encode(): String = buildString {
         fun put(k: String, v: Any?) { if (v != null) append(k).append('=').append(v).append('\n') }
@@ -39,6 +48,7 @@ data class WatchReport(
         put("notif", notificationsAllowed); put("exact", exactAlarms); put("armed", alertsArmed)
         if (sounds.isNotEmpty()) put("sounds", sounds.sorted().joinToString(","))
         put("own", usingWatchSettings)
+        put("faceVar", faceVariant); put("faceChosen", faceChosen); put("facePick", faceNeedsPick)
     }
 
     companion object {
@@ -65,6 +75,9 @@ data class WatchReport(
                 alertsArmed = m["armed"]?.toIntOrNull(),
                 sounds = m["sounds"]?.split(',')?.filter { com.noor.prayer.alerts.SoundIds.isValid(it) }?.toSet().orEmpty(),
                 usingWatchSettings = m["own"]?.let { it == "true" },
+                faceVariant = m["faceVar"]?.takeIf { WatchFaces.parse(it) != null },
+                faceChosen = m["faceChosen"]?.takeIf { WatchFaces.parse(it) != null },
+                faceNeedsPick = m["facePick"]?.let { it == "true" },
             )
         }.getOrNull()
     }

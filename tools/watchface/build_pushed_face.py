@@ -1,30 +1,52 @@
 #!/usr/bin/env python3
-"""Packages the Noor watch face (Watch Face Format, unchanged resources of v1.3.2) for Watch Face Push.
+"""Packages the Noor watch faces for Watch Face Push (0.9.8) and validates each with Google's validator.
 
-The original release (package com.noorface.prayer, legacy/watchface-v1.3.2) is not modified: this script copies its
-resources into a build folder and links them under the package name Watch Face Push requires
-(<watch app id>.watchfacepush.<name>), signs the APK with the watch-face development key, runs Google's official
-Watch Face Push validator and writes the validation token as an Android string resource for the watch app.
+The watch app carries several versions of one watch face (package <watch app id>.watchfacepush.noor), all with the
+same package name, so that the watch app can replace the one in the user's slot with another in place (the face
+stays active, the system keeps the user's settings for it):
+
+- "original": the v1.3.2 face, resources unchanged (legacy/watchface-v1.3.2 is not modified: they are copied into
+  a build folder and linked under the Watch Face Push package name).
+- "<design>_<colour>": the Noor face of 0.9.8 (tools/watchface/noor_face.py), three designs in five colours. They
+  show Noor's own prayer data through Noor's complications.
+
+Each APK is signed with the watch-face development key (public on purpose, signing/) and validated; the validation
+tokens, the ids and the build number are written as Android resources for the watch app, the APKs as its assets.
 
 usage: build_pushed_face.py <sdk_dir> <out_dir> <validator_cli_jar>
 """
-import os, re, shutil, subprocess, sys, tempfile
+import concurrent.futures
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import noor_face  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 LEGACY_RES = os.path.join(ROOT, 'legacy', 'watchface-v1.3.2', 'NoorWatchFace', 'watchface', 'src', 'main', 'res')
 APP_ID = 'com.noor.smartwatch'
 FACE_PACKAGE = APP_ID + '.watchfacepush.noor'
-FACE_VERSION_CODE = 1          # independent of com.noorface.prayer (versionCode 7)
-FACE_VERSION_NAME = '1.3.2-push.1'
+# One build number for every face in this build: the watch app replaces an installed face whose build is older.
+# 1 was 0.9.6-0.9.7 (the original face only).
+FACE_BUILD = 2
 KEYSTORE = os.path.join(ROOT, 'signing', 'noor-watchface-dev.keystore')
+VARIANTS = ['original'] + [f'{d}_{c}' for d in noor_face.DESIGNS for c in noor_face.COLOURS]
+DEFAULT = 'horizon_gold'
 
-MANIFEST = f'''<?xml version="1.0" encoding="utf-8"?>
+
+def manifest(variant):
+    return f'''<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="{FACE_PACKAGE}">
     <uses-feature android:name="android.hardware.type.watch" />
     <application android:label="@string/watch_face_name" android:hasCode="false">
         <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
+        <meta-data android:name="noor.face.variant" android:value="{variant}" />
+        <meta-data android:name="noor.face.build" android:value="{FACE_BUILD}" />
         <property android:name="com.google.wear.watchface.format.version" android:value="4" />
-        <property android:name="noor.face.source" android:value="v1.3.2" />
     </application>
 </manifest>
 '''
@@ -43,23 +65,21 @@ def build_tools(sdk):
     return os.path.join(sdk, 'build-tools', versions[-1])
 
 
-def main(sdk, out, validator):
-    bt = build_tools(sdk)
-    platforms = [p for p in os.listdir(os.path.join(sdk, 'platforms')) if re.fullmatch(r'android-\d+', p) and int(p[8:]) >= 33]
-    if not platforms:
-        raise SystemExit('needs an Android platform 33 or newer in ' + sdk)
-    platform = os.path.join(sdk, 'platforms', 'android-36' if 'android-36' in platforms else max(platforms, key=lambda p: int(p[8:])), 'android.jar')
-    assets = os.path.join(out, 'assets'); res_out = os.path.join(out, 'res', 'values')
-    os.makedirs(assets, exist_ok=True); os.makedirs(res_out, exist_ok=True)
+def build_one(variant, bt, platform, assets, validator):
     with tempfile.TemporaryDirectory() as tmp:
-        res = os.path.join(tmp, 'res'); shutil.copytree(LEGACY_RES, res)
-        man = os.path.join(tmp, 'AndroidManifest.xml'); open(man, 'w').write(MANIFEST)
+        res = os.path.join(tmp, 'res')
+        if variant == 'original':
+            shutil.copytree(LEGACY_RES, res)
+        else:
+            design, colour = variant.split('_')
+            noor_face.write_variant(res, design, colour)
+        man = os.path.join(tmp, 'AndroidManifest.xml'); open(man, 'w').write(manifest(variant))
         run([os.path.join(bt, 'aapt2'), 'compile', '--dir', res, '-o', os.path.join(tmp, 'res.zip')])
         run([os.path.join(bt, 'aapt2'), 'link', '-o', os.path.join(tmp, 'unaligned.apk'), '-I', platform, '--manifest', man,
-             '--min-sdk-version', '36', '--target-sdk-version', '36', '--version-code', str(FACE_VERSION_CODE),
-             '--version-name', FACE_VERSION_NAME, '--no-auto-version', os.path.join(tmp, 'res.zip')])
+             '--min-sdk-version', '36', '--target-sdk-version', '36', '--version-code', str(FACE_BUILD),
+             '--version-name', f'0.9.8-{variant}', '--no-auto-version', os.path.join(tmp, 'res.zip')])
         run([os.path.join(bt, 'zipalign'), '-p', '-f', '4', os.path.join(tmp, 'unaligned.apk'), os.path.join(tmp, 'aligned.apk')])
-        apk = os.path.join(assets, 'default_watchface.apk')
+        apk = os.path.join(assets, f'{variant}.apk')
         run([os.path.join(bt, 'apksigner'), 'sign', '--ks', KEYSTORE, '--ks-key-alias', 'noor-wf-dev', '--ks-pass', 'pass:noor-dev-key',
              '--key-pass', 'pass:noor-dev-key', '--v1-signing-enabled', 'false', '--v2-signing-enabled', 'true',
              '--v3-signing-enabled', 'true', '--v4-signing-enabled', 'false', '--out', apk, os.path.join(tmp, 'aligned.apk')])
@@ -67,16 +87,37 @@ def main(sdk, out, validator):
     m = re.search(r'[Tt]oken[^:\n]*:\s*(\S+)', report)
     if not m:
         sys.stderr.write(report)
-        raise SystemExit('validator produced no token')
-    token = m.group(1)
-    open(os.path.join(out, 'validation.txt'), 'w').write(report)
+        raise SystemExit(f'{variant}: validator produced no token')
+    return variant, m.group(1), os.path.getsize(apk), report
+
+
+def main(sdk, out, validator):
+    bt = build_tools(sdk)
+    platforms = [p for p in os.listdir(os.path.join(sdk, 'platforms')) if re.fullmatch(r'android-\d+', p) and int(p[8:]) >= 33]
+    if not platforms:
+        raise SystemExit('needs an Android platform 33 or newer in ' + sdk)
+    platform = os.path.join(sdk, 'platforms', 'android-36' if 'android-36' in platforms else max(platforms, key=lambda p: int(p[8:])), 'android.jar')
+    assets = os.path.join(out, 'assets', 'faces'); res_out = os.path.join(out, 'res', 'values')
+    os.makedirs(assets, exist_ok=True); os.makedirs(res_out, exist_ok=True)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda v: build_one(v, bt, platform, assets, validator), VARIANTS))
+    tokens = {v: t for v, t, _, _ in results}
+    # The face Wear OS adds to the watch's faces by itself when the watch app is installed (assets/default_watchface.apk
+    # and its token in the manifest): the Horizon face in gold, the default the watch app also chooses.
+    shutil.copy(os.path.join(assets, f'{DEFAULT}.apk'), os.path.join(out, 'assets', 'default_watchface.apk'))
+    open(os.path.join(out, 'validation.txt'), 'w').write('\n\n'.join(f'== {v}\n{r}' for v, _, _, r in results))
+    items = lambda xs: ''.join(f'        <item>{x}</item>\n' for x in xs)
     open(os.path.join(res_out, 'noor_face.xml'), 'w').write(
         '<?xml version="1.0" encoding="utf-8"?>\n<!-- Generated by tools/watchface/build_pushed_face.py -->\n'
-        '<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@string/default_wf_token,@integer/noor_face_version_code">\n'
-        f'    <string name="default_wf_token" translatable="false">{token}</string>\n'
-        f'    <integer name="noor_face_version_code">{FACE_VERSION_CODE}</integer>\n'
+        '<resources xmlns:tools="http://schemas.android.com/tools" '
+        'tools:keep="@string/default_wf_token,@array/noor_face_ids,@array/noor_face_tokens,@integer/noor_face_version_code">\n'
+        f'    <string name="default_wf_token" translatable="false">{tokens[DEFAULT]}</string>\n'
+        f'    <integer name="noor_face_version_code">{FACE_BUILD}</integer>\n'
+        f'    <string-array name="noor_face_ids" translatable="false">\n{items(VARIANTS)}    </string-array>\n'
+        f'    <string-array name="noor_face_tokens" translatable="false">\n{items(tokens[v] for v in VARIANTS)}    </string-array>\n'
         '</resources>\n')
-    print(f'{FACE_PACKAGE} {FACE_VERSION_NAME}: {os.path.getsize(apk)} bytes, validation passed')
+    for v, _, size, _ in results:
+        print(f'{FACE_PACKAGE} {v}: {size} bytes, validation passed')
 
 
 if __name__ == '__main__':

@@ -12,6 +12,7 @@ import com.noor.app.ui.settings.SettingsSection
 import com.noor.app.ui.theme.Sky
 import com.noor.app.data.WearSync
 import com.noor.prayer.Prayer
+import com.noor.prayer.WatchFaces
 import com.noor.prayer.astro.SunPath
 import kotlinx.coroutines.delay
 import java.time.Duration
@@ -81,6 +82,7 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel())
     val lastSent by vm.lastSent.collectAsStateWithLifecycle()
     val installs by vm.installs.collectAsStateWithLifecycle()
     val faces by vm.faces.collectAsStateWithLifecycle()
+    val faceChoice by vm.faceChoice.collectAsStateWithLifecycle()
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val syncFailed by vm.syncFailed.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -96,6 +98,7 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel())
         WatchActions(
             install = vm::installOnWatch, useFace = vm::useNoorFace, open = vm::openOnWatch, sync = vm::syncNow,
             openGuide = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(INSTALL_GUIDE)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
+            faceChoice = faceChoice, selectFace = vm::selectFace, sendFace = vm::sendFace,
         ),
         now = System.currentTimeMillis(),
         preview = preview,
@@ -120,6 +123,10 @@ const val INSTALL_GUIDE = "https://github.com/SultanAlmarri/Noor-Islamic-Smartwa
 
 class WatchActions(
     val install: (String) -> Unit, val useFace: (String) -> Unit, val open: (String) -> Unit, val sync: () -> Unit, val openGuide: () -> Unit,
+    /** The watch-face editor (0.9.8): the face chosen, choosing another, and putting it on a watch. */
+    val faceChoice: WatchFaces.Choice = WatchFaces.DEFAULT,
+    val selectFace: (WatchFaces.Choice) -> Unit = {},
+    val sendFace: (String, WatchReport?) -> Unit = { _, _ -> },
 )
 
 /** Stateless Watch tab, so every state (no watch, installing, ready…) can be rendered and tested. */
@@ -179,9 +186,7 @@ fun WatchContent(
             SettingsDivider()
             SettingsItem(Icons.Rounded.CloudOff, stringResource(R.string.watch_feature_standalone), stringResource(R.string.watch_feature_standalone_desc), null)
             SettingsDivider()
-            SettingsItem(Icons.Rounded.Palette, stringResource(R.string.watch_feature_editor), stringResource(R.string.watch_feature_editor_desc), null) {
-                Pill(stringResource(R.string.in_development), filled = false)
-            }
+            SettingsItem(Icons.Rounded.Palette, stringResource(R.string.watch_feature_editor), stringResource(R.string.watch_feature_editor_desc), null)
         }
         Spacer(Modifier.height(12.dp))
     }
@@ -256,24 +261,38 @@ private fun WatchCard(
         }
         Hairline(inset = 58.dp)
 
-        // Step 3: the Noor watch face
+        // Step 3: the Noor watch face, with the editor (0.9.8).
         val faceTimedOut = face != null && now - face.startedAtMs > WatchViewModel.PENDING_TIMEOUT_MS
+        val chosen = actions.faceChoice
+        val onWatch = report?.faceVariant?.let(WatchFaces::parse)
+        val showing = report?.faceActive == true && report.faceVariant == chosen.id
+        val sending = face != null && face.reached && !faceTimedOut && report?.faceVariant != chosen.id
         Step(
             n = 3, done = report?.faceActive == true, title = stringResource(R.string.step_face_title),
             body = when {
                 !hasNoor -> stringResource(R.string.step_after_install)
                 report == null -> stringResource(R.string.step_face_open_first)
                 !report.facePushSupported -> stringResource(R.string.step_face_needs6, WatchViewModel.wearOsName(report.sdkInt))
-                report.faceActive -> stringResource(R.string.step_face_done)
                 face != null && !face.reached -> stringResource(R.string.step_app_unreached)
+                sending -> stringResource(R.string.face_sending)
+                report.faceActive && onWatch != null -> stringResource(R.string.face_on_watch, faceLabel(onWatch))
+                report.faceActive -> stringResource(R.string.step_face_done)
+                // Wear OS lets the watch app make its face active once; after that the user picks it, and that is fine.
+                report.faceNeedsPick == true -> stringResource(R.string.face_pick_on_watch)
                 face != null && !faceTimedOut -> stringResource(R.string.step_face_waiting)
                 report.faceInstalledVersion != null -> stringResource(R.string.step_face_installed)
                 else -> stringResource(R.string.step_face_todo)
             },
-            working = face != null && report?.faceActive != true && face.reached && !faceTimedOut,
-        ) {
-            if (hasNoor && connected && report?.facePushSupported == true && !report.faceActive)
-                PrimaryButton(stringResource(R.string.step_face_button)) { actions.useFace(node.id) }
+            working = sending,
+        ) {}
+        if (hasNoor && report?.facePushSupported == true) {
+            Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                FaceEditor(chosen, actions.selectFace)
+                Spacer(Modifier.height(6.dp))
+                if (connected && !showing) PrimaryButton(stringResource(R.string.face_send)) { actions.sendFace(node.id, report) }
+                Text(stringResource(R.string.face_changes_hint), style = MaterialTheme.typography.bodySmall, color = c.textMuted,
+                    modifier = Modifier.padding(top = 6.dp))
+            }
         }
         if (hasNoor && connected) {
             Hairline()

@@ -27,8 +27,9 @@
              offline. With the Noor phone app, the phone's settings are used. -->
         <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
 
-        <!-- The Noor watch face (assets/default_watchface.apk, built by tools/watchface/build_pushed_face.py) is added to
-             the watch face picker when this app is installed; it does not replace the face in use. -->
+        <!-- The Noor watch face (assets/default_watchface.apk, the Horizon design in gold, built by
+             tools/watchface/build_pushed_face.py) is added to the watch's faces when this app is installed; it does not
+             replace the face in use. The other designs and colours are in assets/faces and replace it in place. -->
         <meta-data
             android:name="com.google.android.wearable.marketplace.DEFAULT_WATCHFACE_VALIDATION_TOKEN"
             android:value="@string/default_wf_token" />
@@ -163,6 +164,12 @@
         </service>
 
         <!-- Recalculate when the watch's clock or zone changes. -->
+        <!-- 0.9.8: an older build of Noor's face on the watch is replaced with this build's after an app update. -->
+        <receiver android:name=".facepush.FaceUpdateReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <receiver android:name=".data.TimeChangeReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />

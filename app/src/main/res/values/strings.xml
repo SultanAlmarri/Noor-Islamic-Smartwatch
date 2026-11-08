@@ -315,7 +315,7 @@
     <string name="watch_feature_standalone_desc">Can be set up on the watch with its location or a city; your phone’s settings are used whenever it sends them</string>
     <string name="step_sync_own">The watch is using its own settings, chosen on the watch. To follow this phone again, turn off “Use this watch’s settings” in Noor’s settings on the watch.</string>
     <string name="watch_feature_editor">Watch face editor</string>
-    <string name="watch_feature_editor_desc">Colours, fonts and layout, with a live preview</string>
+    <string name="watch_feature_editor_desc">Three designs in five colours, and the original face: choose with a preview, and your watch changes at once</string>
     <string name="offline_watch_footer">The watch uses the same place, authority and adjustments as this phone and keeps working without it.</string>
     <string name="onboarding_tagline">Prayer times from the sky above you, the Qibla and the Adhan, on your phone and your watch.</string>
     <string name="onboarding_private">Your location stays on this phone.</string>
@@ -481,4 +481,24 @@
     <string name="scenery_sea">Sea</string>
     <string name="scenery_note">Only nature: no buildings and no people.</string>
     <string name="kw_scenery">scenery landscape background dunes hills mountains sea desert home</string>
+    <string name="face_editor_title">Watch face</string>
+    <string name="face_preview_desc">The Noor watch face: %1$s</string>
+    <string name="face_design_horizon">Horizon</string>
+    <string name="face_design_dial">Dial</string>
+    <string name="face_design_minimal">Minimal</string>
+    <string name="face_design_original">Original</string>
+    <string name="face_design_horizon_desc">The time large, the Hijri date, the next prayer and a ring that fills until it, over the dunes.</string>
+    <string name="face_design_dial_desc">Hands and minute marks, the prayer ring, the Qibla bearing and the battery (both changeable on the watch).</string>
+    <string name="face_design_minimal_desc">The time very large on black, the next prayer in one line. Easy on the battery.</string>
+    <string name="face_design_original_desc">The Noor face of version 1.3.2, as it was.</string>
+    <string name="face_colour_gold">Gold</string>
+    <string name="face_colour_emerald">Emerald</string>
+    <string name="face_colour_turquoise">Turquoise</string>
+    <string name="face_colour_rose">Rose</string>
+    <string name="face_colour_silver">Silver</string>
+    <string name="face_send">Show on my watch</string>
+    <string name="face_on_watch">On your watch: %1$s.</string>
+    <string name="face_sending">Sending to your watch…</string>
+    <string name="face_pick_on_watch">Added to your watch faces. To show it, touch and hold your watch face, then choose Noor.</string>
+    <string name="face_changes_hint">Your watch shows the change at once, if Noor is its watch face.</string>
 </resources>

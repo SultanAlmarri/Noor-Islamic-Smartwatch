@@ -136,4 +136,17 @@
     <string name="tile_tools_label">نور</string>
     <string name="tile_tools_hint">القبلة · التسبيح · التقويم</string>
     <string name="tile_open_times">المواقيت</string>
+    <string name="face_in_use">قيد الاستخدام: %1$s</string>
+    <string name="face_pick_hint">أُضيفت إلى واجهات ساعتك. لعرضها اضغط مطولاً على واجهة الساعة ثم اختر نور.</string>
+    <string name="face_design">التصميم</string>
+    <string name="face_colour">اللون</string>
+    <string name="face_design_horizon">الأفق</string>
+    <string name="face_design_dial">العقارب</string>
+    <string name="face_design_minimal">البسيط</string>
+    <string name="face_design_original">الأصلي (1.3.2)</string>
+    <string name="face_colour_gold">ذهبي</string>
+    <string name="face_colour_emerald">زمردي</string>
+    <string name="face_colour_turquoise">فيروزي</string>
+    <string name="face_colour_rose">وردي</string>
+    <string name="face_colour_silver">فضي</string>
 </resources>

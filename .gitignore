@@ -14,3 +14,4 @@ captures/
 # A private release key must never be committed.
 !signing/noor-dev.keystore
 !signing/noor-watchface-dev.keystore
+__pycache__/

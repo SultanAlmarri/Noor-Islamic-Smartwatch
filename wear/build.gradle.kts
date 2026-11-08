@@ -104,10 +104,12 @@ val faceValidator: Configuration by configurations.creating
 dependencies { faceValidator("com.google.android.wearable.watchface.validator:validator-push-cli:1.1.0-alpha01") }
 
 val buildPushedFace by tasks.registering(Exec::class) {
-    description = "Packages the Noor watch face for Watch Face Push and validates it with Google's validator."
+    description = "Packages the Noor watch faces for Watch Face Push and validates each with Google's validator."
     val out = layout.buildDirectory.dir("generated/watchface")
     inputs.dir(rootProject.file("legacy/watchface-v1.3.2/NoorWatchFace/watchface/src/main/res"))
     inputs.file(rootProject.file("tools/watchface/build_pushed_face.py"))
+    inputs.file(rootProject.file("tools/watchface/noor_face.py"))
+    inputs.files(rootProject.file("app/src/main/res/font/plex_arabic_light.ttf"), rootProject.file("app/src/main/res/font/plex_arabic_regular.ttf"))
     inputs.file(rootProject.file("signing/noor-watchface-dev.keystore"))
     inputs.files(faceValidator)
     outputs.dir(out)

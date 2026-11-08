@@ -11,8 +11,10 @@ import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataMapItem
+import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import com.noor.prayer.WatchConfig
+import com.noor.prayer.WatchFaces
 import com.noor.prayer.WatchReport
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
@@ -96,11 +98,33 @@ class WatchSetup(private val context: Context) {
 
     suspend fun openNoorOnWatch(nodeId: String): Boolean = startOnWatch(WatchReport.LINK_OPEN, nodeId)
 
+    /** The face chosen in the editor (0.9.8), remembered on the phone. */
+    var faceChoice: WatchFaces.Choice
+        get() = WatchFaces.parse(prefs.getString(KEY_FACE, null)) ?: WatchFaces.DEFAULT
+        set(v) { prefs.edit().putString(KEY_FACE, v.id).apply() }
+
+    private val prefs by lazy { context.getSharedPreferences("noor_watch", Context.MODE_PRIVATE) }
+
+    /**
+     * Publishes the chosen face to the watches (Data Layer, delivered when a watch is next in reach); the watch app
+     * replaces Noor's face with it in place. The time is included so that asking again re-applies it.
+     */
+    suspend fun sendFace(choice: WatchFaces.Choice): Boolean = runCatching {
+        faceChoice = choice
+        val req = PutDataMapRequest.create(WatchFaces.PATH).apply {
+            dataMap.putString(WatchFaces.KEY, choice.id); dataMap.putLong(WatchFaces.KEY_AT, System.currentTimeMillis())
+        }.asPutDataRequest().setUrgent()
+        withTimeoutOrNull(10_000) { Wearable.getDataClient(context).putDataItem(req).await(); true } ?: false
+    }.onFailure { Log.w(TAG, "Could not send the face", it) }.getOrDefault(false)
+
     private suspend fun startOnWatch(uri: String, nodeId: String): Boolean = runCatching {
         val intent = Intent(Intent.ACTION_VIEW).addCategory(Intent.CATEGORY_BROWSABLE).setData(Uri.parse(uri))
         // Completes once the watch has received the request; a watch out of reach never answers.
         withTimeoutOrNull(20_000) { remote.startRemoteActivity(intent, nodeId).await(); true } ?: false
     }.onFailure { Log.w(TAG, "Could not open $uri on $nodeId", it) }.getOrDefault(false)
 
-    companion object { private const val TAG = "NoorWatchSetup" }
+    companion object {
+        private const val TAG = "NoorWatchSetup"
+        private const val KEY_FACE = "face"
+    }
 }
