@@ -19,8 +19,12 @@ class WearText(private val config: WatchConfig?, deviceLocale: Locale = Locale.g
     private val arabicDigits = config?.arabicDigits == true
     private val h24 = config?.use24h == true
 
-    fun digits(s: String): String = if (!arabicDigits) s else buildString {
-        for (ch in s) append(if (ch in '0'..'9') '٠' + (ch - '0') else ch)
+    /** The digits chosen, whatever produced [s] (String.format writes the default locale's digits: 0.9.8). */
+    fun digits(s: String): String = buildString(s.length) {
+        for (ch in s) {
+            val d = when (ch) { in '0'..'9' -> ch - '0'; in '\u0660'..'\u0669' -> ch - '\u0660'; in '\u06F0'..'\u06F9' -> ch - '\u06F0'; else -> -1 }
+            append(if (d < 0) ch else if (arabicDigits) '\u0660' + d else '0' + d)
+        }
     }
 
     fun name(p: Prayer): String = if (arabic) p.ar else p.en

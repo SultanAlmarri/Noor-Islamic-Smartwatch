@@ -15,9 +15,17 @@ import java.util.Locale
 /** Text formatting with numerals chosen independently of the language (as on the watch face). */
 class Formatter(val arabic: Boolean, private val numerals: Numerals, private val timeFormat: TimeFormat) {
 
-    fun digits(s: String): String = if (numerals == Numerals.ARABIC_INDIC) buildString {
-        for (ch in s) append(if (ch in '0'..'9') ('٠' + (ch - '0')) else ch)
-    } else s
+    /**
+     * The digits chosen in Noor, whatever produced [s]: String.format and friends write the process's default
+     * locale's digits, which can be the phone's (Arabic-Indic or Persian on a phone in Arabic or Persian) even with
+     * Noor in English; an Android 15 emulator set to Arabic showed the notification's countdown that way (0.9.8).
+     */
+    fun digits(s: String): String = buildString(s.length) {
+        for (ch in s) {
+            val d = when (ch) { in '0'..'9' -> ch - '0'; in '\u0660'..'\u0669' -> ch - '\u0660'; in '\u06F0'..'\u06F9' -> ch - '\u06F0'; else -> -1 }
+            append(if (d < 0) ch else if (numerals == Numerals.ARABIC_INDIC) '\u0660' + d else '0' + d)
+        }
+    }
 
     /** Minutes after midnight -> "5:09" + suffix, or "05:09". */
     fun time(minutes: Int): Pair<String, String?> {

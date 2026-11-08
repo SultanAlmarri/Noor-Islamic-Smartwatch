@@ -39,4 +39,16 @@ class WearTextTest {
         val t = WearText(TestConfigs.dubai().copy(use24h = true))
         assertEquals("15:14", t.time(asr, zone))
     }
+
+    /** 0.9.8: the digits chosen, whatever the watch's default locale (an Arabic watch writes Arabic-Indic digits). */
+    @org.junit.Test fun digitsWhateverTheDefaultLocale() {
+        val saved = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("ar-SA"))
+            val w = WearText(TestConfigs.dubai("en", arabicDigits = false))
+            org.junit.Assert.assertEquals("1:05:09", w.digits("%d:%02d:%02d".format(1, 5, 9)))
+            val a = WearText(TestConfigs.dubai("ar", arabicDigits = true))
+            org.junit.Assert.assertEquals("١:٠٥:٠٩", a.digits("1:05:09"))
+        } finally { java.util.Locale.setDefault(saved) }
+    }
 }

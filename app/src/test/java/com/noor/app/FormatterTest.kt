@@ -22,6 +22,28 @@ class FormatterTest {
         assertEquals("5:40" to "م", g.time(17 * 60 + 40))
     }
 
+    /**
+     * 0.9.8: Noor's digits whatever the process's default locale: an app process can run with the phone's language
+     * (Arabic, Persian) as its default, and String.format writes that language's digits. Seen on an Android 15
+     * emulator set to Arabic: Noor in English showed "−٣:٠٤:٢٣" in the notification.
+     */
+    @Test fun noorsDigitsWhateverTheDefaultLocale() {
+        val saved = java.util.Locale.getDefault()
+        try {
+            for (tag in listOf("ar-SA", "ar-EG", "fa-IR", "en-US")) {
+                java.util.Locale.setDefault(java.util.Locale.forLanguageTag(tag))
+                val w = Formatter(false, Numerals.WESTERN, TimeFormat.H12)
+                assertEquals(tag, "1:07:05", w.countdown(Duration.ofSeconds(3600 + 7 * 60 + 5)))
+                assertEquals(tag, "12:05" to "PM", w.time(12 * 60 + 5))
+                val a = Formatter(true, Numerals.ARABIC_INDIC, TimeFormat.H24)
+                assertEquals(tag, "١:٠٧:٠٥", a.countdown(Duration.ofSeconds(3600 + 7 * 60 + 5)))
+                assertEquals(tag, "١٧:٤٠" to null, a.time(17 * 60 + 40))
+            }
+        } finally { java.util.Locale.setDefault(saved) }
+        // Persian digits are read as digits too.
+        assertEquals("2026", Formatter(false, Numerals.WESTERN, TimeFormat.H12).digits("۲۰۲۶"))
+    }
+
     @Test fun countdown() {
         val f = Formatter(false, Numerals.WESTERN, TimeFormat.H12)
         assertEquals("1:07:05", f.countdown(Duration.ofSeconds(3600 + 7 * 60 + 5)))
