@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
  * - CITY: a chosen city by id (e.g. dxb, ist), onboarding done; used by tools/devicetest/home_sky.sh.
  * - LANG: Noor's own language (en, ar, or the system's) and digits (western, arabic), whatever the phone's; for
  *   tools/devicetest/phone_098.sh (Noor in English on a phone set to Arabic).
+ * - SYSTEM_LOCALE: the phone's language (e.g. ar-SA), without a restart.
  * - STATUS: turns the persistent prayer notification on and logs the moments its countdown changes next
  *   (STATUS done next=<epoch ms> prayer=<P> since=<epoch ms or -1>), for tools/devicetest/phone_097.sh.
  */
@@ -59,6 +60,16 @@ class TestHookReceiver : BroadcastReceiver() {
                         repo.setNumerals(if (intent.getStringExtra("numerals") == "arabic") com.noor.app.data.Numerals.ARABIC_INDIC else com.noor.app.data.Numerals.WESTERN)
                         com.noor.app.notify.StatusNotification.refresh(app)
                         Log.i(TAG, "LANG done ${intent.getStringExtra("lang")} ${intent.getStringExtra("numerals")}")
+                    }
+                    "com.noor.smartwatch.debug.SYSTEM_LOCALE" -> {
+                        // The phone's own language, as Settings changes it (no restart): needs CHANGE_CONFIGURATION
+                        // (granted by adb) and the emulator's hidden-API policy relaxed (also by adb).
+                        val tag = intent.getStringExtra("locale") ?: "en-US"
+                        val am = Class.forName("android.app.ActivityManager").getMethod("getService").invoke(null)!!
+                        val cfg = am.javaClass.getMethod("getConfiguration").invoke(am) as android.content.res.Configuration
+                        cfg.setLocales(android.os.LocaleList.forLanguageTags(tag))
+                        am.javaClass.getMethod("updatePersistentConfiguration", android.content.res.Configuration::class.java).invoke(am, cfg)
+                        Log.i(TAG, "SYSTEM_LOCALE done $tag")
                     }
                     "com.noor.smartwatch.debug.DUMP" -> AlertLog.all(app).forEach { r ->
                         Log.i(TAG, "RECORD prayer=${r.prayer} test=${r.test} outcome=${r.outcome} playedMs=${r.playedMs} " +

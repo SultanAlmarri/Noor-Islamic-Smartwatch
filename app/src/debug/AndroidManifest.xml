@@ -2,6 +2,8 @@
 <!-- Debug builds only (never in the release APKs given to users): a hook that lets the on-device alert test set Noor up
      and read its alert history from the command line. Only the shell (adb) holds the DUMP permission that guards it. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug only: lets the emulator test switch the phone's language (granted by adb; a development permission). -->
+    <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
     <application>
         <receiver
             android:name="com.noor.app.debug.TestHookReceiver"
@@ -13,6 +15,7 @@
                 <action android:name="com.noor.smartwatch.debug.CITY" />
                 <action android:name="com.noor.smartwatch.debug.STATUS" />
                 <action android:name="com.noor.smartwatch.debug.LANG" />
+                <action android:name="com.noor.smartwatch.debug.SYSTEM_LOCALE" />
             </intent-filter>
         </receiver>
     </application>
