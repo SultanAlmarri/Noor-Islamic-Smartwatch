@@ -175,6 +175,13 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
         albedo = mix(float3(0.52, 0.32, 0.165), float3(0.62, 0.41, 0.23), tint);
         // Sand throws warm light into its own shadows.
         bounce = 0.30;
+        if (isSea()) {
+            // By the sea, a beach and the low dunes behind it: pale sand, tufts of grass, no steep slip faces.
+            n = normalize(mix(n, float3(0.0, 1.0, -0.35), 0.65));
+            float grass = vnoise(float2(xd * 0.05, below * 0.08 + float(layer) * 5.0)) * smoothstep(2.0, 14.0, below) * (layer == 3 ? 0.45 : 0.15);
+            albedo = mix(mix(float3(0.46, 0.40, 0.31), float3(0.58, 0.52, 0.41), tint), float3(0.24, 0.25, 0.14), grass);
+            bounce = 0.20;
+        }
     } else {
         // Hills: bare rock and dry grass on the far range, scrub and woodland nearer; the relief catches the light
         // in patches.
@@ -219,7 +226,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     float rimBand = exp(-max(below, 0.0) / (uDunes > 0.5 ? 1.6 : 1.0));
     float back = smoothstep(-1.0, 3.0, uSunEl) * (1.0 - smoothstep(8.0, 24.0, uSunEl));
     float rimNear = exp(-abs(fc.x - uSunPos.x) / (uSize.x * 0.22));
-    lit += uSunGround * rimBand * back * rimNear * 1.6 * shadow;
+    lit += uSunGround * rimBand * back * rimNear * (isSea() ? 0.6 : 1.6) * shadow;
 
     // Moonlight (0.9.8): by the light of a high, full moon the land shows its shapes in silver-blue, from the moon's side.
     float mvis = uMoonL.z * uNight * uMoonL.w;

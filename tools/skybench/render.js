@@ -17,6 +17,9 @@ uniform sampler2D tRidge; uniform vec2 tRidgeSize;
 vec4 ridgeTex(vec2 p) { return texture(tRidge, p / tRidgeSize); }
 uniform sampler2D tStars; uniform vec2 tStarsSize;
 vec4 starAt(vec2 p) { return texture(tStars, p / tStarsSize); }
+uniform sampler2D tCloudA; uniform sampler2D tCloudB; uniform vec2 tCloudSize;
+vec4 cloudTexA(vec2 p) { return texture(tCloudA, p / tCloudSize); }
+vec4 cloudTexB(vec2 p) { return texture(tCloudB, p / tCloudSize); }
 `;
   const FOOTER = `
 out vec4 fragColor;
@@ -57,6 +60,20 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const st = stars || { w: 1, h: 1, data: new Uint8Array(4) };
     tex(gl, 2, st.w, st.h, st.data, true);
     gl.uniform1i(gl.getUniformLocation(pr, 'tStars'), 2); gl.uniform2f(gl.getUniformLocation(pr, 'tStarsSize'), st.w, st.h);
+    // The baked clouds (premultiplied on upload, as Android's decoder does).
+    const cl = window.CLOUDS;
+    if (cl) {
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+      [[3, cl.a, 'tCloudA'], [4, cl.b, 'tCloudB']].forEach(([unit, img, name]) => {
+        const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.uniform1i(gl.getUniformLocation(pr, name), unit);
+      });
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.uniform2f(gl.getUniformLocation(pr, 'tCloudSize'), cl.a.width, cl.a.height);
+    }
     for (const [k, v] of Object.entries(uniforms)) {
       const l = gl.getUniformLocation(pr, k); if (l === null) continue;
       const a = Array.isArray(v) ? v : [v];
@@ -125,7 +142,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const atMs = Date.UTC(yy, mm - 1, ddn) + (f * 24 - cfg.place.tz) * 3600e3;
     const jd = atMs / 86400000 + 2440587.5, dd0 = jd - 2451545, T = dd0 / 36525;
     const gmst = ((280.46061837 + 360.98564736629 * dd0 + 0.000387933 * T * T - T * T * T / 38710000) % 360 + 360) % 360;
-    const lst = gmst + cfg.place.lon, lat = cfg.place.lat, a0 = lat < 0 ? 0 : 180;
+    const lst = gmst + cfg.place.lon, lat = cfg.place.lat, a0 = cfg.rtl ? 0 : 180;
     const view = (ra, dec) => { const h = (lst - ra) * D2R, d = dec * D2R, phi = lat * D2R;
       const up = Math.sin(phi) * Math.sin(d) + Math.cos(phi) * Math.cos(d) * Math.cos(h);
       const north = Math.cos(phi) * Math.sin(d) - Math.sin(phi) * Math.cos(d) * Math.cos(h);
@@ -211,8 +228,8 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     g.setLineDash([2 * dp, 5 * dp]); g.lineCap = 'round'; g.lineWidth = 1.3 * dp; g.strokeStyle = `rgba(255,255,255,${0.5 * pathA})`; g.stroke(path);
     g.setLineDash([]);
     g.save(); g.beginPath(); g.rect(0, 0, sunX, hy); g.clip();
-    g.lineWidth = 6.4 * dp; g.strokeStyle = 'rgba(255,213,140,0.20)'; g.stroke(path);
-    g.lineWidth = 1.6 * dp; g.strokeStyle = 'rgba(255,237,194,0.95)'; g.stroke(path);
+    g.lineWidth = 6.4 * dp; g.strokeStyle = `rgba(255,213,140,${0.20 * pathA})`; g.stroke(path);
+    g.lineWidth = 1.6 * dp; g.strokeStyle = `rgba(255,237,194,${0.95 * pathA})`; g.stroke(path);
     g.restore(); g.restore();
     g.drawImage(landC, 0, lift);
     // Prayer marks: in the sky, or on the skyline when the Sun is down.

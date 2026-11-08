@@ -51,8 +51,12 @@ internal class SkyShaders private constructor(val sky: RuntimeShader, val land: 
         private const val SKY_HEAD = """
 uniform shader skyLut;
 uniform shader starTex;
+uniform shader cloudA;
+uniform shader cloudB;
 float4 lutAt(float2 p) { return float4(skyLut.eval(p)); }
 float4 starAt(float2 p) { return float4(starTex.eval(p)); }
+float4 cloudTexA(float2 p) { return float4(cloudA.eval(p)); }
+float4 cloudTexB(float2 p) { return float4(cloudB.eval(p)); }
 """
         private const val LAND_HEAD = """
 uniform shader skyLut;
@@ -183,6 +187,8 @@ internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time:
         sh.u("uMoonIllum", look.moonIllumination)
         sh.setInputBuffer("skyLut", lutCache.shaderFor(i.light))
         sh.setInputBuffer("starTex", starCache.shaderFor(i, size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1), s))
+        val clouds = CloudAtlas.shaders(res)
+        sh.setInputBuffer("cloudA", clouds.first); sh.setInputBuffer("cloudB", clouds.second)
         paint.shader = sh
         drawIntoCanvas { it.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint) }
     })
@@ -271,6 +277,31 @@ internal class StarShaderCache(private val res: Resources) {
             v.horizonY * s, v.fov, SkyView.ALT_TOP, SkyView.ALT_POW, v.density * s, v.rtl)
         return BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).also { shader = it; key = k }
     }
+}
+
+/**
+ * The baked cumulus (0.9.8, tools/sky/build_clouds.py): eight clouds rendered as volumes, each lit from six directions,
+ * in two images the sky shader relights. Decoded once, off the main thread at start ([preload]); until then (or if
+ * they cannot be read) the sky simply has no cumulus.
+ */
+internal object CloudAtlas {
+    @Volatile private var loaded: Pair<BitmapShader, BitmapShader>? = null
+    private val none by lazy {
+        val b = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        BitmapShader(b, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).let { it to it }
+    }
+
+    @Synchronized fun preload(res: Resources) {
+        if (loaded != null) return
+        runCatching {
+            val o = android.graphics.BitmapFactory.Options().apply { inScaled = false; inPreferredConfig = Bitmap.Config.ARGB_8888 }
+            fun one(id: Int) = res.openRawResource(id).use { android.graphics.BitmapFactory.decodeStream(it, null, o) }!!.let(::linear)
+            loaded = one(R.raw.clouds_a) to one(R.raw.clouds_b)
+        }.onFailure { Log.w("NoorSky", "Clouds unavailable", it); loaded = none }
+    }
+
+    /** Normally decoded at start; if the sky is drawn first, decoded now (once). */
+    fun shaders(res: Resources): Pair<BitmapShader, BitmapShader> = loaded ?: run { preload(res); loaded } ?: none
 }
 
 internal class RidgeShaderCache {
