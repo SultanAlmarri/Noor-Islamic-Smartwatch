@@ -67,6 +67,21 @@ def build_tools(sdk):
     return os.path.join(sdk, 'build-tools', versions[-1])
 
 
+WFF_FUNCTIONS = {'round', 'floor', 'ceil', 'fract', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'abs', 'clamp', 'rand', 'log',
+                 'log2', 'log10', 'sqrt', 'cbrt', 'exp', 'expm1', 'deg', 'rad', 'pow', 'numberFormat', 'icuText',
+                 'icuBestText', 'subText', 'textLength', 'colorArgb', 'colorRgb', 'extractColorFromColors',
+                 'extractColorFromWeightedColors'}
+
+
+def check_expressions(variant, xml_path):
+    """Only Watch Face Format's own functions: an unknown one (min, max…) silently drops the element on the watch."""
+    text = open(xml_path, encoding='utf-8').read()
+    for expr in re.findall(r'(?:value|expression)="([^"]*)"', text):
+        for fn in re.findall(r'([A-Za-z_][A-Za-z0-9_]*)\s*\(', expr):
+            if fn not in WFF_FUNCTIONS:
+                raise SystemExit(f'{variant}: unknown function {fn}() in "{expr}"')
+
+
 def check_slots(variant, xml_path):
     """Rules Wear OS enforces when a face is made active that Google's validator does not check (a Wear OS 6 emulator
     refused the whole face, with 'systemDataSourceFallbackDefaultType EMPTY must be in the supportedTypes list'):
@@ -91,6 +106,7 @@ def build_one(variant, bt, platform, assets, validator):
             raise SystemExit(f'{variant}: {src} missing (run: python3 tools/watchface/noor_face.py generate)')
         shutil.copytree(src, res)
         check_slots(variant, os.path.join(res, 'raw', 'watchface.xml'))
+        check_expressions(variant, os.path.join(res, 'raw', 'watchface.xml'))
         man = os.path.join(tmp, 'AndroidManifest.xml'); open(man, 'w').write(manifest(variant))
         run([os.path.join(bt, 'aapt2'), 'compile', '--dir', res, '-o', os.path.join(tmp, 'res.zip')])
         run([os.path.join(bt, 'aapt2'), 'link', '-o', os.path.join(tmp, 'unaligned.apk'), '-I', platform, '--manifest', man,

@@ -76,11 +76,13 @@ def ring(radius, thickness, color, ambient_alpha=0):
 def progress(radius, thickness, accent):
     """The interval to the next prayer, from Noor's ranged complication: fills clockwise from the top."""
     d = radius * 2
-    frac = ("(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / "
-            "max(1, [COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]))")
+    # Watch Face Format has clamp() but no min() or max(): an unknown function silently drops the element (seen on a
+    # Wear OS 6 emulator: no ring at all).
+    frac = ("clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / "
+            "clamp([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN], 1, 1000000), 0, 1)")
     return (f'<PartDraw x="0" y="0" width="{W}" height="{H}"><Variant mode="AMBIENT" target="alpha" value="110"/>'
             f'<Arc centerX="{C}" centerY="{C}" width="{d}" height="{d}" startAngle="0" endAngle="1">'
-            f'<Transform target="endAngle" value="max(1, 360 * {frac})"/>'
+            f'<Transform target="endAngle" value="clamp(360 * {frac}, 1, 360)"/>'
             f'<Stroke color="{argb(accent)}" thickness="{thickness}" cap="ROUND"/></Arc></PartDraw>'
             # The bright head of the ring.
             f'<Group name="head" x="0" y="0" width="{W}" height="{H}" pivotX="0.5" pivotY="0.5">'
@@ -116,8 +118,8 @@ def hijri_slot(y, size, color):
             f'supportedTypes="LONG_TEXT SHORT_TEXT" isCustomizable="FALSE">'
             f'<DefaultProviderPolicy defaultSystemProvider="EMPTY" defaultSystemProviderType="SHORT_TEXT" primaryProvider="{HIJRI}" primaryProviderType="LONG_TEXT"/>'
             f'<BoundingBox x="100" y="0" width="{W - 200}" height="{size + 12}"/>'
-            f'<Complication type="LONG_TEXT">{text(70, 0, W - 140, size + 12, "%s", ["[COMPLICATION.TEXT]"], size, color, ambient_alpha=170)}</Complication>'
-            f'<Complication type="SHORT_TEXT">{text(70, 0, W - 140, size + 12, "%s", ["[COMPLICATION.TEXT]"], size, color, ambient_alpha=170)}</Complication>'
+            f'<Complication type="LONG_TEXT">{text(55, 0, W - 110, size + 12, "%s", ["[COMPLICATION.TEXT]"], size, color, ambient_alpha=170)}</Complication>'
+            f'<Complication type="SHORT_TEXT">{text(55, 0, W - 110, size + 12, "%s", ["[COMPLICATION.TEXT]"], size, color, ambient_alpha=170)}</Complication>'
             f'</ComplicationSlot>')
 
 
@@ -201,7 +203,7 @@ def scene(design, accent):
         parts += [
             f'<PartImage x="0" y="{H - 132}" width="{W}" height="132"><Image resource="dunes"/><Variant mode="AMBIENT" target="alpha" value="0"/></PartImage>',
             ring(214, 6, "#2EF4EEE2"),
-            hijri_slot(72, 25, argb(accent)),
+            hijri_slot(74, 22, argb(accent)),
             gregorian(108, 22),
             digital_time(140, 140, 118),
             next_prayer_slot(design, accent, 282, 322, 214, 6),
@@ -211,7 +213,7 @@ def scene(design, accent):
         parts += [
             ticks(accent),
             ring(192, 4, "#24F4EEE2"),
-            hijri_slot(96, 23, argb(accent)),
+            hijri_slot(98, 20, argb(accent)),
             side_slot(2, 62, 190, QIBLA, "SHORT_TEXT", "EMPTY", "slot_left", accent),
             side_slot(3, W - 62 - 96, 190, None, None, "WATCH_BATTERY", "slot_right", accent),
             next_prayer_slot(design, accent, 286, 322, 192, 5),
@@ -220,7 +222,7 @@ def scene(design, accent):
     else:
         parts += [
             ring(218, 3, "#22F4EEE2"),
-            hijri_slot(96, 24, MIST),
+            hijri_slot(98, 22, MIST),
             digital_time(130, 170, 150),
             next_prayer_slot(design, accent, 312, 312, 218, 3),
             seconds_dot(218, argb(accent)),
@@ -324,7 +326,7 @@ def preview_png(path, design, colour):
         dn = Image.open(os.path.join(os.path.dirname(path), "dunes.png")).resize((W * s, 132 * s))
         img.paste(dn, (0, (H - 132) * s), dn)
         arc(214, 6, 1.0, (52, 58, 70)); arc(214, 6, 0.62, accent)
-        tx(C, 84, 25, "17 Jumada I 1448", accent); tx(C, 119, 22, "SAT 8 NOV", mist)
+        tx(C, 86, 22, "28 Jumada al-Ula 1448 AH", accent); tx(C, 119, 22, "SAT 8 NOV", mist)
         tx(C, 210, 118, "10:08", cream, digits); tx(C, 302, 32, "Asr", accent); tx(C, 340, 27, "1h 23m", cream)
     elif design == "dial":
         for i in range(60):
@@ -332,7 +334,7 @@ def preview_png(path, design, colour):
             d.line([((C + r1 * math.sin(a)) * s, (C - r1 * math.cos(a)) * s), ((C + 218 * math.sin(a)) * s, (C - 218 * math.cos(a)) * s)],
                    fill=accent if i == 0 else (cream if hour else (110, 110, 110)), width=int((4.5 if hour else 2) * s))
         arc(192, 4, 1.0, (40, 46, 58)); arc(192, 5, 0.62, accent)
-        tx(C, 108, 23, "17 Jumada I 1448", accent)
+        tx(C, 109, 20, "28 Jumada al-Ula 1448 AH", accent)
         tx(C - 115, 225, 24, "258°", cream); tx(C + 115, 225, 24, "84%", cream)
         tx(C, 306, 32, "Asr", accent); tx(C, 340, 27, "1h 23m", cream)
         for ang, ln, wd, col in ((10 * 30 + 4, 118, 18, cream), (8 * 6, 180, 14, cream)):
@@ -341,7 +343,7 @@ def preview_png(path, design, colour):
         d.ellipse([(C - 9) * s, (C - 9) * s, (C + 9) * s, (C + 9) * s], fill=accent)
     else:
         arc(218, 3, 1.0, (40, 40, 40)); arc(218, 3, 0.62, accent)
-        tx(C, 108, 24, "17 Jumada I 1448", mist)
+        tx(C, 110, 22, "28 Jumada al-Ula 1448 AH", mist)
         tx(C, 215, 150, "10:08", cream, digits); tx(C, 334, 30, "Asr  ·  1h 23m", accent)
     out = Image.new("RGB", (W * s, H * s), (0, 0, 0)); out.paste(img, (0, 0), mask)
     out.resize((W, H), Image.LANCZOS).save(path, optimize=True)
