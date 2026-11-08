@@ -73,7 +73,10 @@ class TestHookReceiver : BroadcastReceiver() {
                         val am = Class.forName("android.app.ActivityManager").getMethod("getService").invoke(null)!!
                         val cfg = am.javaClass.getMethod("getConfiguration").invoke(am) as android.content.res.Configuration
                         cfg.setLocales(android.os.LocaleList.forLanguageTags(tag))
-                        am.javaClass.getMethod("updatePersistentConfiguration", android.content.res.Configuration::class.java).invoke(am, cfg)
+                        // Not persisted (that needs WRITE_SETTINGS): the running system, SystemUI included, takes it at once.
+                        runCatching { am.javaClass.getMethod("updatePersistentConfiguration", android.content.res.Configuration::class.java).invoke(am, cfg) }
+                            .recoverCatching { am.javaClass.getMethod("updateConfiguration", android.content.res.Configuration::class.java).invoke(am, cfg) }
+                            .getOrThrow()
                         Log.i(TAG, "SYSTEM_LOCALE done $tag")
                     }
                     "com.noor.smartwatch.debug.DUMP" -> AlertLog.all(app).forEach { r ->

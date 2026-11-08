@@ -51,7 +51,7 @@ PY
 system_locale() {
   # As Settings does it, without restarting Android (a restart loses the emulator in CI).
   adb shell am broadcast -a com.noor.smartwatch.debug.SYSTEM_LOCALE --es locale "$1" -n $HOOK >/dev/null; sleep 6
-  log "system language now: $(adb shell getprop persist.sys.locale | tr -d '\r'), $(adb logcat -d -s NoorE2E:I | grep SYSTEM_LOCALE | tail -1)"
+  log "system language now: $(adb shell getprop persist.sys.locale | tr -d '\r') / $(adb shell cmd activity get-config 2>/dev/null | grep -o 'config: [^ ]* [^ ]*' | head -1) / $(adb logcat -d -s NoorE2E:I | grep SYSTEM_LOCALE | tail -1)"
 }
 notification() {
   adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; sleep 6
@@ -68,7 +68,7 @@ adb shell svc power stayon true
 adb install -r -g "$APK" | tail -1
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
 adb shell pm grant $PKG android.permission.CHANGE_CONFIGURATION 2>&1 | tee -a "$OUT/steps.txt"
-adb shell appops set $PKG WRITE_SETTINGS allow
+adb shell appops set $PKG WRITE_SETTINGS allow 2>&1 | tee -a "$OUT/steps.txt"
 adb shell settings put global hidden_api_policy 1
 timeout 3000 "$(type -P adb)" logcat -v time > "$OUT/logcat.txt" 2>&1 &
 adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city dxb -n $HOOK >/dev/null; sleep 2
