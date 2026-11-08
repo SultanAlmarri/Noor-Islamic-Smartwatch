@@ -66,6 +66,7 @@ import com.noor.app.ui.theme.Sky
 import com.noor.prayer.Prayer
 import com.noor.prayer.astro.SunPath
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import java.time.Instant
 import kotlin.math.PI
 import kotlin.math.abs
@@ -372,7 +373,6 @@ internal fun LivingSky(
     val stars = remember { starField(150) }
     val grainBrush = remember { grain() }
     val dust = remember { dustField(220) }
-    val clouds = remember(scene.seed, scene.terrain) { cloudField(scene.seed, scene.terrain) }
     val land = remember(scene.landSeed, scene.terrain) { landField(scene.landSeed, scene.terrain) }
     val soil = soilOf(scene.terrain)
 
@@ -384,22 +384,27 @@ internal fun LivingSky(
     val context = LocalContext.current
     val quality = remember { SkyQuality.load(context) }.let { SkyQuality.level.intValue.coerceAtLeast(0) }
     val built: Any? = remember { if (Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
-    val shaders: Any? = if (quality >= 2) null else built
-    // Frames are watched while they matter (the opening, dragging): if the GPU sky keeps the phone under about 25
-    // frames a second, it steps down (SkyQuality).
-    if (shaders != null && ambient) LaunchedEffect(scrubbing) {
+    val shaders: Any? = built
+    // Frames are watched while the Sun is dragged (not during the opening): if the GPU sky keeps the phone under about
+    // 22 frames a second for three seconds, it is drawn at a lower resolution (SkyQuality). The first second of a drag
+    // is not judged (a first frame can be slow for reasons of its own).
+    if (shaders != null && ambient && quality == 0) LaunchedEffect(scrubbing) {
         if (!scrubbing) return@LaunchedEffect
+        // Not during the opening (read here, not in composition, so the opening does not recompose the screen).
+        androidx.compose.runtime.snapshotFlow { opening() >= 1f }.first { it }
         var last = withFrameNanos { it }
+        val start = last
         var ema = 16.7f
         var slowSince = -1L
         while (true) {
             val t = withFrameNanos { it }
             val ms = (t - last) / 1e6f
             last = t
-            ema = ema * 0.9f + ms.coerceAtMost(250f) * 0.1f
-            if (ema > 40f) {
+            ema = ema * 0.92f + ms.coerceAtMost(200f) * 0.08f
+            if (t - start < 1_000_000_000L) continue
+            if (ema > 45f) {
                 if (slowSince < 0) slowSince = t
-                if (t - slowSince > 1_200_000_000L) { SkyQuality.stepDown(context); break }
+                if (t - slowSince > 3_000_000_000L) { SkyQuality.stepDown(context); break }
             } else slowSince = -1L
         }
     }
@@ -414,20 +419,25 @@ internal fun LivingSky(
     val skyLight = rememberSkyLight(look, skyView, capAlt)
     val weather = remember(scene.seed, scene.terrain) { Weather.of(scene.seed, scene.terrain) }
     val landProfile = remember(scene.landSeed, scene.terrain) { LandProfile.of(scene.landSeed, scene.terrain) }
-    // The GPU layers' own clocks (seconds): the sky's moves about 15 times a second (drifting clouds move less than a
-    // fifth of a dp per tick, so it looks continuous), the land's 4 times (cloud shadows, mist); each layer is redrawn
-    // only when its clock moves, so the GPU works a few percent of the time while the screen is simply looked at.
+    // The layers' own clocks (seconds), each layer redrawn only when its clock moves: the clouds' about 15 times a
+    // second (they move less than a fifth of a dp per tick, so it looks continuous); the GPU sky's as often at night
+    // (twinkling stars) but once a second by day (only the high cirrus drifts, far too slowly to see a step: 0.9.8
+    // redrew the whole sky 15 times a second); the land's 4 times (cloud shadows, mist). So the phone works a few
+    // percent of the time while the screen is simply looked at.
     val origin = remember(scene.seed) { (((scene.seed % 997) + 997) % 997).toFloat() * 3.7f }
-    val skySeconds = remember { mutableFloatStateOf(origin + (stillTime ?: 0.13f) * CYCLE_SECONDS.toFloat()) }
-    val landSeconds = remember { mutableFloatStateOf(skySeconds.floatValue) }
-    if (shaders != null && ambient) LaunchedEffect(Unit) {
+    val cloudSeconds = remember { mutableFloatStateOf(origin + (stillTime ?: 0.13f) * CYCLE_SECONDS.toFloat()) }
+    val skySeconds = remember { mutableFloatStateOf(cloudSeconds.floatValue) }
+    val landSeconds = remember { mutableFloatStateOf(cloudSeconds.floatValue) }
+    val starry = rememberUpdatedState(light.night > 0f)
+    if (ambient) LaunchedEffect(Unit) {
         val start = withFrameNanos { it }
-        val base = skySeconds.floatValue
+        val base = cloudSeconds.floatValue
         while (true) {
             withFrameNanos { t ->
                 if (parallax() < heightPx[0]) {
                     val sec = base + (t - start) / 1e9f
-                    skySeconds.floatValue = sec
+                    cloudSeconds.floatValue = sec
+                    if (starry.value || sec - skySeconds.floatValue >= 1f) skySeconds.floatValue = sec
                     if (sec - landSeconds.floatValue >= 0.25f) landSeconds.floatValue = sec
                 }
             }
@@ -491,12 +501,8 @@ internal fun LivingSky(
             }
         }
 
-        // 2 · Clouds, drifting with the wind (still when animations are off).
-        if (shaders == null) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.4f }) {
-            val w = size.width; val h = size.height
-            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
-            drawClouds(clouds, light, w, h * layout.cloudTop, h * layout.horizon, now(), g.x(display), rtl)
-        }
+        // 2 · Clouds (0.9.9): the same on every phone, drifting with the wind (still when animations are off).
+        CloudLayer(gpuInputs, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
 
         // 3 · The Sun's rays and halo, the sun path above the horizon, and the Sun. The path is built once per size.
         Box(Modifier.fillMaxSize().drawWithCache {
@@ -781,134 +787,6 @@ private fun DrawScope.moon(hijriDay: Int, c: Offset, r: Float, visibility: Float
     }
     p.close()
     drawPath(p, moonColor.copy(alpha = 0.96f * visibility))
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Clouds
-
-/** One round billow of a cloud, in the cloud's own units: x across its width, y down its height (0 top), r in heights. */
-private class Puff(val x: Float, val y: Float, val r: Float)
-
-private class Cloud(
-    /** Position along a strip 1.6 screens wide (they drift across it and wrap). */
-    val x: Float,
-    /** 0 at the top of the cloud band, 1 at its bottom (the horizon). Where the cloud's base sits. */
-    val y: Float,
-    /** Width as a fraction of the screen. */
-    val width: Float,
-    /** Height in dp. */
-    val height: Float,
-    val streak: Boolean,
-    /** Relative drift speed: high clouds seem to move more slowly. */
-    val speed: Float,
-    val puffs: List<Puff>,
-)
-
-private const val STRIP = 1.6f
-
-/**
- * The day's clouds: a few fair-weather cumulus low over the land and some high, thin streaks, different each day and
- * place. Over the desert they are fewer; elsewhere the cumulus are more plentiful.
- */
-private fun cloudField(seed: Long, terrain: Terrain): List<Cloud> {
-    val rnd = java.util.Random(seed xor 0x5DEECE66DL)
-    val out = ArrayList<Cloud>()
-    val cumulus = if (terrain == Terrain.DUNES) 3 + rnd.nextInt(2) else 4 + rnd.nextInt(3)
-    for (i in 0 until cumulus) {
-        val big = rnd.nextFloat()
-        out += Cloud(
-            x = (i + rnd.nextFloat() * 0.6f) / cumulus * STRIP, y = 0.52f + rnd.nextFloat() * 0.34f,
-            width = 0.20f + 0.18f * big, height = 30f + 24f * big, streak = false, speed = 1f, puffs = cumulusPuffs(rnd),
-        )
-    }
-    val streaks = 2 + rnd.nextInt(2)
-    for (i in 0 until streaks) {
-        out += Cloud(
-            x = (i + rnd.nextFloat()) / streaks * STRIP, y = 0.10f + rnd.nextFloat() * 0.32f,
-            width = 0.34f + rnd.nextFloat() * 0.3f, height = 7f + rnd.nextFloat() * 5f, streak = true, speed = 0.55f,
-            puffs = List(3 + rnd.nextInt(2)) { j -> Puff(0.18f + 0.64f * (j + rnd.nextFloat() * 0.5f) / 3.5f, 0.5f + (rnd.nextFloat() - 0.5f) * 0.3f, 0.6f + rnd.nextFloat() * 0.3f) },
-        )
-    }
-    // High (far) first, so the low clouds pass in front.
-    return out.sortedBy { it.y }
-}
-
-/** A cumulus: a row of billows along a flat base, bigger towards the middle, a second tier above, a crown on top. */
-private fun cumulusPuffs(rnd: java.util.Random): List<Puff> {
-    val out = ArrayList<Puff>()
-    val n = 5 + rnd.nextInt(3)
-    for (i in 0 until n) {
-        val u = (i + 0.5f) / n
-        val bell = sin(PI * u).toFloat()
-        val r = 0.36f + 0.20f * bell + rnd.nextFloat() * 0.08f
-        out += Puff(0.06f + 0.88f * u + (rnd.nextFloat() - 0.5f) * 0.05f, 1f - r * 0.78f, r)
-    }
-    val m = 2 + rnd.nextInt(2)
-    for (j in 0 until m) out += Puff(0.28f + 0.44f * (j + 0.2f + rnd.nextFloat() * 0.6f) / m, 0.52f + rnd.nextFloat() * 0.06f, 0.44f + rnd.nextFloat() * 0.12f)
-    out += Puff(0.36f + rnd.nextFloat() * 0.28f, 0.34f + rnd.nextFloat() * 0.05f, 0.36f + rnd.nextFloat() * 0.10f)
-    return out
-}
-
-private fun DrawScope.drawClouds(clouds: List<Cloud>, light: Light, w: Float, top: Float, bottom: Float, drift: Float, sunX: Float, rtl: Boolean) {
-    val strip = w * STRIP
-    val band = bottom - top
-    clouds.forEach { c ->
-        val cw = c.width * w; val ch = c.height.dp.toPx()
-        // Drift with the wind towards the end of the reading direction, wrapping round the strip.
-        val moved = ((c.x * w + drift * strip * 0.9f * c.speed) % strip + strip) % strip - (strip - w) / 2
-        val x0 = if (rtl) w - moved - cw else moved
-        val y0 = top + c.y * band - ch
-        // Clouds at night are thin veils over the stars; by day and at sunset, full and bright.
-        val alpha = (if (c.streak) 0.55f + 0.3f * light.golden else 0.96f) * (1f - 0.8f * light.night)
-        for (dx in floatArrayOf(0f, strip, -strip)) {
-            val x = x0 + dx
-            if (x - ch > w || x + cw + ch < 0) continue
-            drawCloud(c, x, y0, cw, ch, light, alpha, sunX)
-        }
-    }
-}
-
-/**
- * One cloud, painted like light in vapour rather than outlined: the soft union of its billows gives the shape; the
- * light then colours it as a whole — lit from above by day, from below and from the Sun's side when the Sun is low,
- * faintly by the moon at night — and the base is flat and soft where it meets the air.
- */
-private fun DrawScope.drawCloud(c: Cloud, x: Float, y: Float, cw: Float, ch: Float, light: Light, alpha: Float, sunX: Float) {
-    val pad = ch * 0.9f
-    val bounds = Rect(x - pad, y - pad, x + cw + pad, y + ch + pad * 0.2f)
-    val canvas = drawContext.canvas
-    canvas.saveLayer(bounds, Paint().apply { this.alpha = alpha })
-    // The shape: soft-edged billows, all one colour, so they merge into one body with no seams.
-    c.puffs.forEach { p ->
-        val center = Offset(x + p.x * cw, y + p.y * ch)
-        val r = p.r * ch
-        if (c.streak) {
-            withTransform({ scale(cw / ch * 0.32f, 1f, center) }) {
-                drawCircle(Brush.radialGradient(0f to Color.White, 0.3f to Color.White.copy(alpha = 0.7f), 1f to Color.Transparent, center = center, radius = r), r, center)
-            }
-        } else {
-            drawCircle(Brush.radialGradient(0f to Color.White, 0.72f to Color.White, 0.9f to Color.White.copy(alpha = 0.45f), 1f to Color.Transparent, center = center, radius = r), r, center)
-        }
-    }
-    // The light, over the whole body.
-    val g = light.golden
-    val lit = light.cloudTop; val shade = light.cloudBase
-    val upper = Sky.mix(lit, shade, 0.8f * g)
-    val lower = Sky.mix(shade, lit, 0.75f * g)
-    val top = if (c.streak) y else y - pad * 0.5f
-    drawRect(Brush.verticalGradient(0f to upper, 0.45f to Sky.mix(upper, lower, 0.35f), 1f to lower, startY = top, endY = y + ch),
-        topLeft = bounds.topLeft, size = bounds.size, blendMode = BlendMode.SrcIn)
-    if (!c.streak) {
-        // A low Sun sets the side and underside facing it alight.
-        if (g > 0.05f) drawRect(
-            Brush.radialGradient(listOf(light.cloudGlow.copy(alpha = 0.85f * g), light.cloudGlow.copy(alpha = 0f)), center = Offset(sunX, y + ch * 1.15f), radius = max(cw * 1.1f, size.width * 0.42f)),
-            topLeft = bounds.topLeft, size = bounds.size, blendMode = BlendMode.SrcAtop,
-        )
-        // The base: flat, and soft where it meets the air.
-        drawRect(Brush.verticalGradient(0f to Color.Black, 0.84f to Color.Black, 1f to Color.Transparent, startY = y - pad, endY = y + ch),
-            topLeft = bounds.topLeft, size = bounds.size, blendMode = BlendMode.DstIn)
-    }
-    canvas.restore()
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

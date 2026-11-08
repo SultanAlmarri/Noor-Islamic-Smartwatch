@@ -1,0 +1,2 @@
+# The photographs are downloaded by photo_clouds.py --fetch (see manifest.json); not kept in the repository.
+*.jpg

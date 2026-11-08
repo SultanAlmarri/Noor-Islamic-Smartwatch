@@ -212,5 +212,5 @@
     };
   }
 
-  root.Atmo = { frame, radiance, dir, trans, aces, srgb, DEG };
+  root.Atmo = { frame, radiance, dir, trans, aces, srgb, tone, DEG };
 })(typeof window !== 'undefined' ? window : globalThis);

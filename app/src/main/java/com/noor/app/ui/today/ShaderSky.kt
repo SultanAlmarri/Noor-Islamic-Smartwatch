@@ -51,12 +51,8 @@ internal class SkyShaders private constructor(val sky: RuntimeShader, val land: 
         private const val SKY_HEAD = """
 uniform shader skyLut;
 uniform shader starTex;
-uniform shader cloudA;
-uniform shader cloudB;
 float4 lutAt(float2 p) { return float4(skyLut.eval(p)); }
 float4 starAt(float2 p) { return float4(starTex.eval(p)); }
-float4 cloudTexA(float2 p) { return float4(cloudA.eval(p)); }
-float4 cloudTexB(float2 p) { return float4(cloudB.eval(p)); }
 """
         private const val LAND_HEAD = """
 uniform shader skyLut;
@@ -91,28 +87,30 @@ float4 ridgeTex(float2 p) { return float4(ridges.eval(p)); }
 }
 
 /**
- * How much the GPU renderer may draw (0.9.6), adapted to the phone: the app watches its own frames while they matter
- * (the opening, dragging the Sun). If they stay slower than about 25 a second, the sky and the land are drawn at a
- * lower resolution (level 1); if still slow, the Canvas renderer takes over (level 2). The level is remembered, so a
- * slow phone starts at the right one. Debug builds can lock level 0 (the emulator test photographs the GPU path).
+ * How much the GPU renderer may draw (0.9.6; 0.9.9), adapted to the phone: the app watches its own frames while the
+ * Sun is dragged (not during the opening, when shaders are still warming up). If they stay slower than about 22 a second
+ * for three seconds, the sky and the land are drawn at a lower resolution (level 1). It never switches to the old Canvas
+ * renderer by itself (0.9.8 could, and a slow opening left phones there for good); that happens only where the GPU sky
+ * cannot be built at all. The level is remembered under a new key, so every phone starts again at full quality.
+ * Debug builds can lock level 0 (the emulator test photographs the GPU path).
  */
 internal object SkyQuality {
     private const val PREFS = "noor_ui"
-    private const val KEY = "sky_quality"
+    private const val KEY = "sky_quality_v2"
     const val LOCK = "sky_quality_locked"
     val level = androidx.compose.runtime.mutableIntStateOf(-1)
 
     fun load(context: android.content.Context): Int {
-        if (level.intValue < 0) level.intValue = runCatching { context.getSharedPreferences(PREFS, 0).getInt(KEY, 0) }.getOrDefault(0).coerceIn(0, 2)
+        if (level.intValue < 0) level.intValue = runCatching { context.getSharedPreferences(PREFS, 0).getInt(KEY, 0) }.getOrDefault(0).coerceIn(0, 1)
         return level.intValue
     }
 
     fun stepDown(context: android.content.Context) {
         val p = runCatching { context.getSharedPreferences(PREFS, 0) }.getOrNull() ?: return
-        if (p.getBoolean(LOCK, false) || level.intValue >= 2) return
-        level.intValue = (level.intValue + 1).coerceAtMost(2)
-        p.edit().putInt(KEY, level.intValue).apply()
-        Log.i("NoorSky", "Frames too slow: sky quality now ${level.intValue}")
+        if (p.getBoolean(LOCK, false) || level.intValue >= 1) return
+        level.intValue = 1
+        p.edit().putInt(KEY, 1).apply()
+        Log.i("NoorSky", "Frames too slow: sky drawn at a lower resolution")
     }
 
     fun skyScale(density: Float, level: Int) = ((if (level == 0) 1.5f else 0.95f) / density).coerceIn(0.3f, 1f)
@@ -186,9 +184,8 @@ internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time:
         }
         sh.u("uMoonIllum", look.moonIllumination)
         sh.setInputBuffer("skyLut", lutCache.shaderFor(i.light))
+        starCache.version.intValue // a new star picture redraws the layer
         sh.setInputBuffer("starTex", starCache.shaderFor(i, size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1), s))
-        val clouds = CloudAtlas.shaders(res)
-        sh.setInputBuffer("cloudA", clouds.first); sh.setInputBuffer("cloudB", clouds.second)
         paint.shader = sh
         drawIntoCanvas { it.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint) }
     })
@@ -254,54 +251,48 @@ internal class LutShaderCache {
 }
 
 /**
- * The catalogue's stars drawn for the moment shown, at the sky layer's size (0.9.8). Redrawn when the sky turns by
- * half a degree (two minutes) or the layout changes; two bitmaps alternate, so the one being shown is never redrawn.
- * In daylight the shader gets an empty one.
+ * The catalogue's stars drawn for the moment shown, at the sky layer's size (0.9.8), on a background thread (0.9.9:
+ * 0.9.8 drew them on the main thread whenever the sky turned by half a degree, which during the opening or a drag
+ * through the night was nearly every frame: the frames slowed until the sky stepped down to the old renderer). A new
+ * picture is asked for at most four times a second; until it is ready the last one is shown. In daylight the shader
+ * gets an empty one.
  */
 internal class StarShaderCache(private val res: Resources) {
-    private var key: List<Any>? = null
-    private var shader: BitmapShader? = null
-    private val bitmaps = arrayOfNulls<Bitmap>(2)
+    /** Changes when a new picture is ready: read while drawing, so the layer redraws then. */
+    val version = androidx.compose.runtime.mutableIntStateOf(0)
+    @Volatile private var ready: Pair<List<Any>, BitmapShader>? = null
+    @Volatile private var drawing = false
+    private var askedAt = 0L
+    private val pool = arrayOfNulls<Bitmap>(3)
     private var turn = 0
     private val empty by lazy { BitmapShader(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP) }
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
     fun shaderFor(i: GpuSkyInputs, w: Int, h: Int, s: Float): BitmapShader {
         if (i.look.night <= 0f) return empty
         val v = i.view
         val step = Math.floorDiv(i.shownAt.epochSecond, 120L)
         val k = listOf(step, w, h, i.scene.latitude, i.scene.longitude, v.horizonY * s, v.fov, v.rtl)
-        shader?.let { if (k == key) return it }
-        turn = 1 - turn
-        val bmp = bitmaps[turn]?.takeIf { it.width == w && it.height == h } ?: Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bitmaps[turn] = it }
-        NightSky.drawStars(bmp, NightSky.stars(res), java.time.Instant.ofEpochSecond(step * 120L + 60L), i.scene.latitude, i.scene.longitude,
-            v.horizonY * s, v.fov, SkyView.ALT_TOP, SkyView.ALT_POW, v.density * s, v.rtl)
-        return BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).also { shader = it; key = k }
-    }
-}
-
-/**
- * The baked cumulus (0.9.8, tools/sky/build_clouds.py): eight clouds rendered as volumes, each lit from six directions,
- * in two images the sky shader relights. Decoded once, off the main thread at start ([preload]); until then (or if
- * they cannot be read) the sky simply has no cumulus.
- */
-internal object CloudAtlas {
-    @Volatile private var loaded: Pair<BitmapShader, BitmapShader>? = null
-    private val none by lazy {
-        val b = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        BitmapShader(b, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).let { it to it }
+        val r = ready
+        val now = android.os.SystemClock.uptimeMillis()
+        if (r?.first != k && !drawing && now - askedAt >= 250) {
+            drawing = true; askedAt = now
+            // Three bitmaps in turn: the one shown, the one the GPU may still be reading, the one being drawn.
+            turn = (turn + 1) % 3
+            val bmp = pool[turn]?.takeIf { it.width == w && it.height == h } ?: Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { pool[turn] = it }
+            val lat = i.scene.latitude; val lon = i.scene.longitude; val hy = v.horizonY * s; val fov = v.fov; val dp = v.density * s; val rtl = v.rtl
+            STARS.execute {
+                runCatching {
+                    NightSky.drawStars(bmp, NightSky.stars(res), java.time.Instant.ofEpochSecond(step * 120L + 60L), lat, lon, hy, fov, SkyView.ALT_TOP, SkyView.ALT_POW, dp, rtl)
+                    val shader = BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+                    main.post { ready = k to shader; drawing = false; version.intValue++ }
+                }.onFailure { main.post { drawing = false } }
+            }
+        }
+        return r?.second ?: empty
     }
 
-    @Synchronized fun preload(res: Resources) {
-        if (loaded != null) return
-        runCatching {
-            val o = android.graphics.BitmapFactory.Options().apply { inScaled = false; inPreferredConfig = Bitmap.Config.ARGB_8888 }
-            fun one(id: Int) = res.openRawResource(id).use { android.graphics.BitmapFactory.decodeStream(it, null, o) }!!.let(::linear)
-            loaded = one(R.raw.clouds_a) to one(R.raw.clouds_b)
-        }.onFailure { Log.w("NoorSky", "Clouds unavailable", it); loaded = none }
-    }
-
-    /** Normally decoded at start; if the sky is drawn first, decoded now (once). */
-    fun shaders(res: Resources): Pair<BitmapShader, BitmapShader> = loaded ?: run { preload(res); loaded } ?: none
+    private companion object { val STARS: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor() }
 }
 
 internal class RidgeShaderCache {

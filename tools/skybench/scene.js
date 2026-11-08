@@ -81,7 +81,7 @@
       if (terrain === 'sea' && layer <= 2) {
         if (layer === 0 && r() < 0.7) {
           const left = r() < 0.5, width = 0.18 + 0.16 * r(), n1 = noise1(r, 64);
-          for (let i = 0; i < N; i++) { const u = i / (N - 1); const t = (left ? u : 1 - u) / width; arr[i] = t >= 1 ? 0 : Math.min(1, Math.max(0, Math.pow(1 - t, 0.7) * (0.75 + 0.25 * n1(u * 14)))); }
+          for (let i = 0; i < N; i++) { const u = i / (N - 1); const t = (left ? u : 1 - u) / width; const s = 1 - t, q = Math.min(s / 0.4, 1), tip = q * q * (3 - 2 * q); arr[i] = t >= 1 ? 0 : Math.min(1, Math.max(0, Math.pow(s, 0.7) * tip * (0.75 + 0.25 * n1(u * 14)))); }
         }
         out.push(arr); continue;
       }

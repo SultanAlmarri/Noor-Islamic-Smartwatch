@@ -1,6 +1,6 @@
 // Noor home sky: the sky of the moment (from the precomputed atmosphere table), the Sun, the moon, stars and the
-// Milky Way, high cirrus and a field of cumulus seen in perspective. Rendered at reduced resolution into a cached
-// layer (everything here is soft); see SkyRenderer.kt for the uniforms.
+// Milky Way, high cirrus and distant cloud banks. Rendered at reduced resolution into a cached layer (everything here is
+// soft); see ShaderSky.kt for the uniforms. The clouds themselves are drawn over it as pictures (CloudField.kt, 0.9.9).
 
 uniform float2 uSize;      // layer size, px
 uniform float uDp;         // layer px per dp
@@ -181,125 +181,6 @@ float4 banks(float3 v) {
     return float4(c, a * 0.85);
 }
 
-// Cumulus (0.9.8): real clouds, rendered once as volumes of vapour (tools/sky/build_clouds.py) and relit here. Each
-// of eight clouds (flat fair-weather cumulus, taller ones with towers, a congestus, small puffs, a fragment) was
-// rendered as seen from the front with light arriving from each of six directions; cloudTexA() holds the light from
-// the right, the left and above, cloudTexB() from below, behind and in front, both with the cover in alpha
-// (premultiplied). Here the six are blended by where the Sun (or the moon) stands relative to each cloud, so a
-// cloud beside the Sun is lit on that side, one in front of a low Sun glows at its edges and keeps a dark body, and
-// after sunset the light comes from below. Skylight, the forward scattering that silvers thin edges, and haze with
-// distance are added; farther clouds are smaller, lower and slower. They keep to the band of sky below the text.
-const float CL_W = 384.0;
-const float CL_H = 192.0;
-const float CL_BASE = 7.0;
-
-// Where in the atlas sprite [si] is at [uv] (0…1, y down); the half-size copy for distant clouds.
-float2 cloudUv(float si, float2 uv, float small) {
-    float2 sz = float2(CL_W, CL_H) * (small > 0.5 ? 0.5 : 1.0);
-    float2 o = small > 0.5 ? float2(mod(si, 4.0) * CL_W * 0.5, 4.0 * CL_H + floor(si / 4.0) * CL_H * 0.5)
-                           : float2(mod(si, 2.0) * CL_W, floor(si / 2.0) * CL_H);
-    return o + clamp(uv * sz, float2(1.0), sz - float2(1.0));
-}
-
-// How high sprite [si]'s cloud reaches, as a fraction of the sprite's height above its base.
-float cloudTop(float si) {
-    // As printed by tools/sky/build_clouds.py.
-    return si < 0.5 ? 0.45 : si < 1.5 ? 0.51 : si < 2.5 ? 0.63 : si < 3.5 ? 0.82 : si < 4.5 ? 0.83 : si < 5.5 ? 0.39 : si < 6.5 ? 0.31 : 0.30;
-}
-
-// The six-way light: [l] is the light's direction in the cloud's frame (x right, y up, z away from us).
-float sixWay(float4 ta, float4 tb, float3 l) {
-    float3 p = max(l, float3(0.0));
-    float3 n = max(-l, float3(0.0));
-    p *= p;
-    n *= n;
-    return p.x * ta.r + n.x * ta.g + p.y * ta.b + n.y * tb.r + p.z * tb.g + n.z * tb.b;
-}
-
-float4 cumulusSprites(float2 fc, float3 v, float3 sunL, float3 sky) {
-    float cover = uWeather.x;
-    if (cover <= 0.001) return float4(0.0);
-    float count = min(floor(2.0 + cover * 7.0), 8.0);
-    float band = max(uHorizon - uCloudTop, 40.0 * uDp);
-    float unit = band / 90.0;
-    float strip = uSize.x * 1.8;
-    // Forward scattering (relative to scattering evenly): thin vapour shines towards a Sun behind it.
-    float fwd = min(hg(dot(v, uSunDir), 0.6) * 4.0 * PI, 5.0);
-    float k = uWeather.z * 0.731 + uWeather.w * 0.377;
-    float moonB = uMoon.w * uMoonIllum * uNight;
-    float3 moonDir = viewDir(uMoon.xy);
-    float3 col = float3(0.0);
-    float alpha = 0.0;
-    for (int i = 0; i < 8; i++) {
-        float fi = float(i);
-        if (fi < count) {
-            float h1 = hash11(fi * 1.31 + k);
-            float h2 = hash11(fi * 2.71 + k * 1.3);
-            float h3 = hash11(fi * 3.97 + k * 0.7);
-            float h4 = hash11(fi * 5.13 + k * 2.1);
-            float depth = 1.0 - (fi + 0.6 * h1) / max(count, 1.0);
-            // Which cloud: near ones of most kinds (the tall one only on a cloudy day), far ones the low and small.
-            float pick = floor(h3 * 5.0);
-            float si = depth > 0.55 ? (pick < 1.0 ? 0.0 : pick < 2.0 ? 1.0 : pick < 3.0 ? 5.0 : pick < 4.0 ? 6.0 : 7.0)
-                                    : (pick < 1.0 ? 0.0 : pick < 2.0 ? 1.0 : pick < 3.0 ? 2.0 : pick < 4.0 ? (cover > 0.55 && h2 < 0.3 ? 3.0 : 2.0) : 5.0);
-            float flip = step(0.5, hash11(fi * 9.7 + k * 1.9));
-            float sc = mix(1.0, 0.30, depth) * unit;
-            float speed = (0.8 + 1.5 * (1.0 - depth)) * uDp;
-            float cx = mod(h4 * strip + uTime * speed, strip) - (strip - uSize.x) * 0.5;
-            // Nearer clouds bigger and higher; a big one that would reach the text sits lower instead (it stays the
-            // nearest, so it is drawn in front), and only shrinks if the band below the text cannot hold it.
-            float top = cloudTop(si) + 0.02;
-            float SW = min((170.0 + 110.0 * h2) * sc * uDp, 2.0 * max(uHorizon - uCloudTop - 5.0 * uDp, 0.0) / top);
-            float SH = SW * 0.5;
-            float yb = uHorizon - (3.0 + 34.0 * pow(1.0 - depth, 1.3) + 8.0 * h1) * unit * uDp;
-            yb = clamp(yb, uCloudTop + 2.0 * uDp + top * SH, uHorizon - 3.0 * uDp);
-            float2 rel = fc - float2(cx, yb);
-            float2 uv = float2(rel.x / SW + 0.5, 1.0 - CL_BASE / CL_H + rel.y / SH);
-            if (SW > 24.0 * uDp && uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
-                if (flip > 0.5) uv.x = 1.0 - uv.x;
-                float small = step(SW, CL_W * 0.75);
-                float2 tp = cloudUv(si, uv, small);
-                float4 ta = cloudTexA(tp);
-                float4 tb = cloudTexB(tp);
-                float a = ta.a;
-                if (a > 0.002) {
-                    // The cloud's own frame: towards it, its right, its up.
-                    float3 f = viewDir(float2(cx, yb - SH * 0.3));
-                    float3 rt = normalize(float3(f.z, 0.0, -f.x));
-                    float3 up = cross(f, rt);
-                    // The view always faces the Sun's side of the sky: light straight from behind (dark bodies, bright
-                    // rims) is kept for a Sun close behind the cloud; otherwise the cloud is lit more from above and
-                    // the side, as one is that stands away from the Sun's line.
-                    // The Sun at its true elevation (the sky on screen is compressed upwards; the light is not).
-                    float3 ls = float3(dot(sunL, rt) * (1.0 - 2.0 * flip), dot(sunL, up), dot(sunL, f));
-                    ls.z *= 0.35 + 0.65 * smoothstep(0.88, 0.99, ls.z);
-                    ls = normalize(ls + float3(0.0, 0.001, 0.0));
-                    float sun = sixWay(ta, tb, ls) * (0.85 + 0.15 * fwd);
-                    // Skylight from above and round about, light off the ground from below.
-                    float3 amb = uAmbTop * (ta.b * 1.05 + tb.b * 0.25) + uAmbLow * ((ta.r + ta.g) * 0.22 + tb.r * 0.30);
-                    float3 c = uSunCloud * sun * 2.6 + amb * 1.3;
-                    float3 cd = tone(c / max(a, 1e-3));
-                    // Lit vapour is never as saturated as the light on it: a low Sun warmed a small cloud to a red ball
-                    // on Android (0.9.8); real sunset clouds are orange and pink, paler where brightest.
-                    cd = mix(float3(luma(cd)), cd, 0.62 + 0.18 * smoothstep(0.08, 0.4, sunL.y));
-                    cd = mix(cd, sky, 0.06 + 0.50 * depth * depth);
-                    // At night (0.9.8): lit by the moon from where it stands, dark against the stars it hides.
-                    float3 lm = float3(dot(moonDir, rt) * (1.0 - 2.0 * flip), dot(moonDir, up), dot(moonDir, f));
-                    float moonT = sixWay(ta, tb, lm) / max(a, 1e-3);
-                    float3 moonlit = float3(0.42, 0.46, 0.56) * (0.25 + 1.6 * moonT) * moonB;
-                    // Without the moon, a little darker than the night sky they hide (lit only by its faint glow).
-                    cd = mix(cd, moonlit + sky * (0.45 + 0.25 * ta.b / max(a, 1e-3)) + float3(0.006, 0.008, 0.014), uNight);
-                    // The faintest wisps thinned a little: at this size they would only outline the cloud.
-                    a = a * a * (3.0 - 2.0 * a) * (1.0 - 0.15 * uNight);
-                    col = mix(col, cd, a);
-                    alpha = alpha + a * (1.0 - alpha);
-                }
-            }
-        }
-    }
-    return float4(col, alpha);
-}
-
 float4 render(float2 fc) {
     float alt = altAt(fc.y);
     float3 v = viewDir(fc);
@@ -327,19 +208,13 @@ float4 render(float2 fc) {
         col = mix(col, max(col, m.rgb), m.a);
     }
 
-    // Clouds: cirrus high above, then the cumulus. Both keep clear of the text written on the sky.
+    // High cirrus (paler behind the text written on the sky) and banks of cloud far along the horizon.
     float clear = smoothstep(uCloudTop - 12.0 * uDp, uCloudTop + 46.0 * uDp, fc.y);
     float4 ci = cirrus(v, fc);
     float ciA = ci.a * mix(0.35, 1.0, clear);
     if (ciA > 0.0) col = mix(col, tone(ci.rgb), ciA);
-    float sunAzL = (uSunPos.x / uSize.x - 0.5) * uFov;
-    float sunElR = radians(uSunEl);
-    float3 sunL = float3(cos(sunElR) * sin(sunAzL), sin(sunElR), cos(sunElR) * cos(sunAzL));
     float4 bk = banks(v);
     if (bk.a > 0.0) col = mix(col, mix(tone(bk.rgb), sky, 0.35), bk.a);
-    float4 cu = cumulusSprites(fc, v, sunL, sky);
-    float cuA = cu.a * smoothstep(uCloudTop - 40.0 * uDp, uCloudTop - 4.0 * uDp, fc.y);
-    if (cuA > 0.0) col = mix(col, cu.rgb / max(cu.a, 1e-3), cuA);
 
     // Text written on the sky stays readable (as the atmosphere table is): small text above gets 4.5:1, the large
     // countdown just above the text's bottom 3:1, and below it the limit lifts gradually. The Sun is not held to it.
@@ -356,7 +231,7 @@ float4 render(float2 fc) {
     float r = length(sd);
     float above = smoothstep(uHorizon + 0.5 * uDp, uHorizon - 0.5 * uDp, fc.y);
     float rd = 7.5;
-    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above * (1.0 - cuA) * (1.0 - 0.6 * ciA);
+    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above * (1.0 - 0.6 * ciA);
     if (disc > 0.0) {
         // The Sun adds light to the sky behind it: never darker than the sky, so it cannot turn black at the horizon.
         float limb = 1.0 - 0.45 * (1.0 - sqrt(sat(1.0 - (r / rd) * (r / rd))));
@@ -370,7 +245,7 @@ float4 render(float2 fc) {
     if (sunVis > 0.0) {
         float3 gc = tone(uSunGlow);
         float wide = 0.22 * exp(-r / 55.0) * mix(1.0, 0.4, smoothstep(-10.0, 30.0, textAbove));
-        float g = (0.55 * exp(-max(r - rd, 0.0) / 9.0) * (1.0 - 0.7 * cuA) + wide) * sunVis;
+        float g = (0.55 * exp(-max(r - rd, 0.0) / 9.0) + wide) * sunVis;
         col = 1.0 - (1.0 - col) * (1.0 - gc * g);
     }
 

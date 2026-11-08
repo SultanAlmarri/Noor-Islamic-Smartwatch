@@ -17,9 +17,6 @@ uniform sampler2D tRidge; uniform vec2 tRidgeSize;
 vec4 ridgeTex(vec2 p) { return texture(tRidge, p / tRidgeSize); }
 uniform sampler2D tStars; uniform vec2 tStarsSize;
 vec4 starAt(vec2 p) { return texture(tStars, p / tStarsSize); }
-uniform sampler2D tCloudA; uniform sampler2D tCloudB; uniform vec2 tCloudSize;
-vec4 cloudTexA(vec2 p) { return texture(tCloudA, p / tCloudSize); }
-vec4 cloudTexB(vec2 p) { return texture(tCloudB, p / tCloudSize); }
 `;
   const FOOTER = `
 out vec4 fragColor;
@@ -60,20 +57,6 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const st = stars || { w: 1, h: 1, data: new Uint8Array(4) };
     tex(gl, 2, st.w, st.h, st.data, true);
     gl.uniform1i(gl.getUniformLocation(pr, 'tStars'), 2); gl.uniform2f(gl.getUniformLocation(pr, 'tStarsSize'), st.w, st.h);
-    // The baked clouds (premultiplied on upload, as Android's decoder does).
-    const cl = window.CLOUDS;
-    if (cl) {
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-      [[3, cl.a, 'tCloudA'], [4, cl.b, 'tCloudB']].forEach(([unit, img, name]) => {
-        const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.uniform1i(gl.getUniformLocation(pr, name), unit);
-      });
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-      gl.uniform2f(gl.getUniformLocation(pr, 'tCloudSize'), cl.a.width, cl.a.height);
-    }
     for (const [k, v] of Object.entries(uniforms)) {
       const l = gl.getUniformLocation(pr, k); if (l === null) continue;
       const a = Array.isArray(v) ? v : [v];
@@ -222,6 +205,21 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip();
     g.globalAlpha = fade;
     g.drawImage(skyC, 0, 0, W, H);
+    // The clouds (CloudField.kt), at full resolution over the sky.
+    const t3 = performance.now();
+    if (window.CLOUDS && cfg.clouds !== 0) {
+      const cl = window.CLOUDS; window.DEBUG_CLOUDS = !!cfg.debugClouds; window.CLOUD_TUNE = cfg.cloudTune || null;
+      const draws = Clouds.layout(cl.table, {
+        w: W, h: H, horizonY: hy, dp, fov, time: cfg.time || 0,
+        weather: { regime: cfg.regime ?? 2, clouds: cfg.clouds ?? 14, seedX: weather[2], seedY: weather[3] },
+        sunAz, sunEl: el, light: { sunCloud: fr.sunCloud, ambTop: common.uAmbTop, ambLow: common.uAmbLow },
+        lut: fr.lut, night, moonLight: moonVis * ((1 - Math.cos(phase)) / 2) * night,
+      }, Atmo.tone);
+      const textBottom = arcTop - 16 * dp;
+      g.drawImage(Clouds.draw(W, H, draws, cl.image, textBottom - 6 * dp, textBottom + 34 * dp), 0, 0);
+      window.LAST_CLOUDS = draws;
+    }
+    const t4 = performance.now();
     // Sun path above the horizon (behind the land): dashed, gold where the day has passed.
     g.save(); g.beginPath(); g.rect(0, 0, W, hy); g.clip();
     const path = new Path2D(); dd.samples.forEach(([fq, e], i) => { const x = xOf(fq), y = yOf(e); i ? path.lineTo(x, y) : path.moveTo(x, y); });
@@ -260,7 +258,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       g.font = `600 ${28 * dp}px sans-serif`; g.fillText(cfg.title || 'Asr  ·  3:28 PM', W / 2, (cfg.topDp + 92) * dp);
       g.font = `300 ${68 * dp}px sans-serif`; g.fillText(cfg.countdown || '1:52:07', W / 2, (cfg.topDp + 168) * dp);
     }
-    return { url: out.toDataURL('image/png'), ms: [t1 - t0, t2 - t1], el, night, exposure: fr.exposure };
+    return { url: out.toDataURL('image/png'), ms: [t1 - t0, t2 - t1, t4 - t3], el, night, exposure: fr.exposure, clouds: (window.LAST_CLOUDS || []).length };
   };
   function smooth(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
 })();

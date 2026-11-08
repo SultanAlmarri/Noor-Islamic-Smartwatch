@@ -11,9 +11,10 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * 0.9.8: the baked cumulus (tools/sky/build_clouds.py). The two images match in size and layout; every cloud keeps
- * clear of its sprite's edges (no cut sides, nothing bleeding into the next sprite); and the heights the sky shader
- * assumes (cloudTop()) cover each cloud's real height, so that a cloud placed under the text is never cut by it.
+ * 0.9.9: the clouds cut out of photographs (tools/sky/photo_clouds.py). The image decodes as Android decodes it; the
+ * table names every cloud inside the image, each kind the sky needs is there, each copy is smaller than the one before;
+ * and no cloud touches the sides or top of its picture (it would show a straight edge in the sky — 0.9.9's first cuts
+ * did), nor its bottom unless its base is meant to hide behind the land.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -21,24 +22,30 @@ import java.io.File
 class CloudAtlasTest {
     private val raw = listOf(File("src/main/res/raw"), File("app/src/main/res/raw")).first { it.isDirectory }
 
-    @Test fun atlasMatchesTheShader() {
-        fun load(name: String) = File(raw, name).readBytes().let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-        val a = load("clouds_a.png"); val b = load("clouds_b.png")
-        assertEquals(768, a.width); assertEquals(960, a.height); assertEquals(a.width, b.width); assertEquals(a.height, b.height)
-        val src = File(raw, "sky_layer.agsl").readText()
-        val tops = Regex("""float cloudTop\(float si\) \{[^}]*?return ([^;]+);""").find(src)!!.groupValues[1]
-            .let { Regex("""\? ([0-9.]+)|: ([0-9.]+)$""").findAll(it.trim()).map { m -> (m.groupValues[1].ifEmpty { m.groupValues[2] }).toDouble() }.toList() }
-        assertEquals(8, tops.size)
-        val nx = 384; val ny = 192; val base = 7
-        for (i in 0 until 8) {
-            val x0 = (i % 2) * nx; val y0 = (i / 2) * ny
-            var minRow = ny; var minCol = nx; var maxCol = 0
-            for (y in 0 until ny) for (x in 0 until nx) {
-                if ((a.getPixel(x0 + x, y0 + y) ushr 24) > 8) { minRow = minOf(minRow, y); minCol = minOf(minCol, x); maxCol = maxOf(maxCol, x) }
-            }
-            assertTrue("cloud $i touches its sprite's sides ($minCol..$maxCol)", minCol >= 6 && maxCol <= nx - 7)
-            val reach = (ny - 1 - base - minRow).toDouble() / ny
-            assertTrue("cloud $i reaches $reach of its sprite; the shader assumes ${tops[i]}", tops[i] >= reach)
+    @Test fun everyCloudIsWholeAndWhereTheTableSays() {
+        val bytes = File(raw, "clouds.webp").readBytes()
+        val image = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        assertTrue("clouds.webp must decode", image != null)
+        assertTrue("small enough for any phone's GPU", image.width <= 2048 && image.height <= 2048)
+        val table = CloudTable.parse(File(raw, "cloud_atlas.txt").readText())
+        assertTrue(table.sprites.size >= 12)
+        for (kind in listOf(CloudTable.HUMILIS, CloudTable.MEDIOCRIS, CloudTable.CONGESTUS, CloudTable.CUMULONIMBUS)) {
+            assertTrue("no cloud of kind $kind", table.ofKind(kind).isNotEmpty())
+        }
+        table.sprites.forEachIndexed { i, s ->
+            assertTrue(s.levels.isNotEmpty())
+            assertEquals(s.w, s.levels[0][2]); assertEquals(s.h, s.levels[0][3])
+            s.levels.zipWithNext().forEach { (a, b) -> assertTrue("cloud $i: copies get smaller", b[2] < a[2]) }
+            for (l in s.levels) assertTrue("cloud $i outside the image", l[0] >= 0 && l[1] >= 0 && l[0] + l[2] <= image.width && l[1] + l[3] <= image.height)
+            if (s.cut) assertEquals("a cut cloud's base is its bottom", 0, s.base)
+            // The largest copy: opaque nowhere on its sides or top (nor its bottom unless cut).
+            val (x0, y0, w, h) = s.levels[0].toList()
+            fun a(x: Int, y: Int) = image.getPixel(x0 + x, y0 + y) ushr 24
+            val edge = ArrayList<Int>()
+            for (y in 0 until h) { edge += a(0, y); edge += a(w - 1, y) }
+            for (x in 0 until w) { edge += a(x, 0); if (!s.cut) edge += a(x, h - 1) }
+            val worst = edge.max()
+            assertTrue("cloud $i is cut by its picture (alpha $worst at an edge)", worst < 40)
         }
     }
 }

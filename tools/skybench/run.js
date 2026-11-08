@@ -9,18 +9,19 @@ const RAW = path.join(__dirname, '../../app/src/main/res/raw/');
   const p = await b.newPage();
   p.on('console', m => console.log('page:', m.text()));
   await p.setContent('<html><body></body></html>');
-  for (const f of ['atmo.js', 'scene.js', 'render.js']) await p.addScriptTag({ content: fs.readFileSync(path.join(__dirname, f), 'utf8') });
+  for (const f of ['atmo.js', 'scene.js', 'clouds.js', 'render.js']) await p.addScriptTag({ content: fs.readFileSync(path.join(__dirname, f), 'utf8') });
   // The catalogue's bright stars (app/src/main/res/raw/stars.bin: count, then RA, Dec, V, K).
   const sb = fs.readFileSync(RAW + 'stars.bin'); const n = sb.readInt32BE(0); const stars = [];
   for (let i = 0; i < n; i++) { const o = 4 + i * 14; stars.push([sb.readFloatBE(o), sb.readFloatBE(o + 4), sb.readFloatBE(o + 8), sb.readInt16BE(o + 12)]); }
   await p.evaluate((st) => { window.STARS = st; }, stars);
-  // The baked clouds (app/src/main/res/raw/clouds_a.png, clouds_b.png), or a scratch copy given as CLOUDS_DIR.
+  // The clouds (app/src/main/res/raw/clouds.webp, cloud_atlas.txt), or a scratch copy given as CLOUDS_DIR.
   const cdir = process.env.CLOUDS_DIR || RAW;
-  const urls = ['clouds_a.png', 'clouds_b.png'].map(f => 'data:image/png;base64,' + fs.readFileSync(path.join(cdir, f)).toString('base64'));
-  await p.evaluate(async ([ua, ub]) => {
+  const urls = ['clouds.webp'].map(f => 'data:image/webp;base64,' + fs.readFileSync(path.join(cdir, f)).toString('base64'));
+  const table = fs.readFileSync(path.join(cdir, 'cloud_atlas.txt'), 'utf8');
+  await p.evaluate(async ([u, table]) => {
     const load = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
-    window.CLOUDS = { a: await load(ua), b: await load(ub) };
-  }, urls);
+    window.CLOUDS = { image: await load(u), table: Clouds.parse(table) };
+  }, [...urls, table]);
   const src = { common: fs.readFileSync(RAW + 'sky_common.agsl', 'utf8'), sky: fs.readFileSync(RAW + 'sky_layer.agsl', 'utf8'), land: fs.readFileSync(RAW + 'land_layer.agsl', 'utf8') };
   for (const sc of scenes) {
     try {

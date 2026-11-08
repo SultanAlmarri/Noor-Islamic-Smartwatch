@@ -122,7 +122,9 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                             for (i in 0 until N) {
                                 val u = i / (N - 1f)
                                 val t = (if (left) u else 1 - u) / width
-                                a[i] = if (t >= 1f) 0f else ((1 - t).pow(0.7f) * (0.75f + 0.25f * n1.at(u * 14f))).coerceIn(0f, 1f)
+                                // Its tip sinks smoothly into the water (0.9.9: it ended in a cliff, cut straight).
+                                val s = 1 - t; val tip = (s / 0.4f).coerceAtMost(1f).let { it * it * (3 - 2 * it) }
+                                a[i] = if (t >= 1f) 0f else (s.pow(0.7f) * tip * (0.75f + 0.25f * n1.at(u * 14f))).coerceIn(0f, 1f)
                             }
                         }
                         a

@@ -33,15 +33,38 @@ internal class SkyView(scene: SkyScene, val w: Float, val h: Float, val density:
     }
 }
 
-/** The weather of a day at a place: how much cumulus, how much high cirrus, and a seed for their shapes. */
-internal class Weather(val cumulus: Float, val cirrus: Float, val seedX: Float, val seedY: Float) {
+/**
+ * The weather of a day at a place (0.9.9): which clouds, how many, how much high cirrus, and a seed for their shapes.
+ * [regime]: 0 clear, 1 fair-weather cumulus, 2 scattered cumulus, 3 towering cumulus with a thunderstorm far off,
+ * 4 altocumulus, 5 stratocumulus, 6 high cloud only. Chosen from the day and the place, more often clear or high over
+ * the desert, more cumulus and storms over hills and mountains. [cumulus] is kept for the land's cloud shadows.
+ */
+internal class Weather(
+    val cumulus: Float, val cirrus: Float, val seedX: Float, val seedY: Float,
+    val regime: Int = 1, val clouds: Int = 14,
+) {
     companion object {
+        private val WEIGHTS = mapOf(
+            //                 clear fair  scat  tower alto  strato high
+            Terrain.DUNES to floatArrayOf(0.20f, 0.26f, 0.10f, 0.05f, 0.14f, 0.03f, 0.22f),
+            Terrain.HILLS to floatArrayOf(0.06f, 0.24f, 0.24f, 0.12f, 0.10f, 0.14f, 0.10f),
+            Terrain.MOUNTAINS to floatArrayOf(0.05f, 0.20f, 0.24f, 0.20f, 0.10f, 0.11f, 0.10f),
+            Terrain.SEA to floatArrayOf(0.05f, 0.30f, 0.24f, 0.10f, 0.08f, 0.15f, 0.08f),
+        )
+
         fun of(seed: Long, terrain: Terrain): Weather {
             val r = java.util.Random(seed xor 0x2545F4914F6CDD1DL)
-            // Over the desert, fewer and smaller cumulus; most days some cirrus.
-            val cu = if (terrain == Terrain.DUNES) 0.10f + 0.28f * r.nextFloat() else 0.22f + 0.40f * r.nextFloat()
-            val ci = if (r.nextFloat() < 0.2f) 0f else 0.2f + 0.7f * r.nextFloat()
-            return Weather(cu, ci, r.nextFloat() * 40f, r.nextFloat() * 40f)
+            val w = WEIGHTS.getValue(terrain)
+            var pick = r.nextFloat() * w.sum(); var regime = 0
+            while (regime < w.size - 1 && pick > w[regime]) { pick -= w[regime]; regime++ }
+            return of(regime, r)
+        }
+
+        fun of(regime: Int, r: java.util.Random = java.util.Random(7)): Weather {
+            val n = when (regime) { 0, 6 -> 0; 1 -> 28 + r.nextInt(9); 2 -> 22 + r.nextInt(9); 3 -> 18 + r.nextInt(8); 4 -> 14 + r.nextInt(6); else -> 18 + r.nextInt(8) }
+            val cover = when (regime) { 0, 6 -> 0f; 1 -> 0.28f; 2 -> 0.45f; 3 -> 0.5f; 4 -> 0.15f; else -> 0.55f }
+            val ci = when (regime) { 6 -> 0.75f + 0.25f * r.nextFloat(); 0 -> 0.15f * r.nextFloat(); 4 -> 0.3f; else -> if (r.nextFloat() < 0.35f) 0f else 0.15f + 0.5f * r.nextFloat() }
+            return Weather(cover, ci, r.nextFloat() * 40f, r.nextFloat() * 40f, regime, n)
         }
     }
 }
