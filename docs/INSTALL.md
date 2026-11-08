@@ -44,8 +44,11 @@ the watch: `adb -s <the watch's address:port from that list> install Noor-watch.
 3. Tiles: swipe to the end of the tiles → **+** → **Prayer times** and/or **Noor** (Qibla, tasbih, calendar).
 4. Complications: long-press the watch face → **Customise** → a complication slot → **Noor** → Next prayer, Hijri
    date, Qibla or Tasbih.
-5. Watch face (Wear OS 6): on the phone, Watch tab → **Use the Noor watch face**. The watch opens Noor's face setup;
-   confirm the permission on the watch once. Your other watch faces are not changed.
+5. Watch face (Wear OS 6): on the phone, Watch tab → Noor watch face: choose a design (Horizon, Dial, Minimal or the
+   original) and a colour, then **Show on my watch**. The first time, the watch opens Noor's face screen: confirm the
+   permission once. Wear OS lets an app switch the watch face for you only once; if it has already done so (or you
+   declined), touch and hold your watch face and choose **Noor**. After that, every change from the phone appears on the
+   watch at once. Your other watch faces are not changed.
 
 Once Noor is published on Google Play, step "Noor on the watch" becomes a single button on the phone that opens the
 Play Store on the watch, where one tap installs it; no computer needed.
