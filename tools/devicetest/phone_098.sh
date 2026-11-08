@@ -53,15 +53,18 @@ system_locale() {
   adb shell am broadcast -a com.noor.smartwatch.debug.SYSTEM_LOCALE --es locale "$1" -n $HOOK >/dev/null; sleep 6
   log "system language now: $(adb shell getprop persist.sys.locale | tr -d '\r') / $(adb shell cmd activity get-config 2>/dev/null | grep -o 'config: [^ ]* [^ ]*' | head -1) / $(adb logcat -d -s NoorE2E:I | grep SYSTEM_LOCALE | tail -1)"
 }
+# Other apps' notifications (the system's, a language download) are snoozed for a while, so Noor's is in view.
+snooze_others() {
+  adb shell dumpsys notification --noredact | grep -oE "key=[0-9]+\|[^|]+\|[^ ]+" | sed 's/^key=//; s/:$//' | grep -v "com.noor.smartwatch" | sort -u |
+    while read -r k; do adb shell "cmd notification snooze --for 900000 '$k'" >/dev/null 2>&1; done
+}
 notification() {
   adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; sleep 6
   adb shell am broadcast -a com.noor.smartwatch.debug.STATUS -n $HOOK >/dev/null; sleep 4
   adb shell input keyevent KEYCODE_HOME; sleep 2
+  snooze_others
   adb shell cmd statusbar expand-notifications; sleep 4
   shot "$1"; shade_text "$1"
-  # Other notifications (the system's) can push Noor's below the fold: scroll the shade and photograph again.
-  adb shell input swipe 540 2000 540 900 600; sleep 2
-  shot "$1_scrolled"
   adb shell cmd statusbar collapse; sleep 1
 }
 
