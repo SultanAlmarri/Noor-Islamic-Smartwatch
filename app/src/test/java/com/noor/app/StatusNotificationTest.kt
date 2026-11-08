@@ -66,13 +66,14 @@ class StatusNotificationTest {
         assertEquals("+15:21", a.countdown(asr, f))
         assertEquals(day(15, 44, 0).plusMillis(500), a.refreshAt)
         assertEquals("Maghrib", StatusNotification.content(config, base, day(15, 44, 0).plusMillis(500), arabic = false).prayer)
-        // The second before Maghrib, the moment of it, and the end of its 15 minutes.
+        // The second before Maghrib, the moment of it, and the end of its 30 minutes (0.9.9; 15 before).
         assertEquals("\u221200:01", StatusNotification.content(config, base, day(17, 39, 59), false).countdown(day(17, 39, 59), f))
         StatusNotification.content(config, base, day(17, 40, 0), false).let {
             assertEquals("Maghrib", it.prayer); assertTrue(it.elapsed); assertEquals("+00:00", it.countdown(day(17, 40, 0), f))
-            assertEquals(day(17, 55, 0).plusMillis(500), it.refreshAt)
+            assertEquals(day(18, 10, 0).plusMillis(500), it.refreshAt)
         }
-        assertEquals("Isha", StatusNotification.content(config, base, day(17, 55, 1), false).prayer)
+        assertEquals("Maghrib", StatusNotification.content(config, base, day(18, 9, 59), false).prayer)
+        assertEquals("Isha", StatusNotification.content(config, base, day(18, 10, 1), false).prayer)
         // Turned off in Settings: straight to the next prayer.
         assertEquals("Isha", StatusNotification.content(config, base.copy(elapsedAfterPrayer = false), day(17, 41, 0), false).prayer)
         // The notification and the home screen say the same thing at every moment of two days, across midnight.

@@ -407,6 +407,9 @@ What was found and done:
   lightning, rain, rain shafts and virga (`Weather`, `CloudField`, `CloudLayer.kt`).
 - **Grey boxes**: the text-readability limit dimmed any cloud behind the text to grey; clouds now fade out below the
   text instead.
+- **Time since each prayer**: 30 minutes after every prayer, Shuruq and Maghrib included (the owner's choice; 0.9.8
+  had Maghrib 15 and Shuruq 20), on the home screen and in the notification; it still ends earlier if the next prayer
+  comes first, and Settings → Time since each prayer still turns it off.
 - **Scenery**: hills soft (groves, meadows, round tree crowns near) instead of blocky noise; mountains shaded and
   snowed by altitude (no vertical bands); a plain beach of dry and wet sand; the headland slopes into the sea; gentler
   crest rims; sea glitter sparkles rather than a white blot; land and sea lit flat and grey under an overcast.

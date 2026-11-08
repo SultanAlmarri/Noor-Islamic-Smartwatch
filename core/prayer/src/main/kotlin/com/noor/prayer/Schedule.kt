@@ -51,20 +51,11 @@ data class Countdown(
 
 object Countdowns {
     /**
-     * How long the time since a prayer is shown (0.9.8, longer than 0.9.7's): the wait between the Adhan and the iqama
-     * in most mosques (about 20 minutes; Fajr 20 to 25, Maghrib 5 to 10) plus the congregational prayer itself, so the
-     * "+" lasts while people are praying: Fajr, Dhuhr, Asr and Isha 30 minutes, Maghrib 15. Shuruq 20: the time after
-     * sunrise when prayer is avoided, until the Sun is "a spear's length" high, when Duha begins. Ends earlier if the next
-     * prayer comes first.
+     * How long the time since a prayer is shown: 30 minutes after every prayer, Shuruq and Maghrib included (0.9.9, the
+     * owner's choice; 0.9.8 had Maghrib 15 and Shuruq 20). Long enough for the wait between the Adhan and the iqama and
+     * the congregational prayer itself. Ends earlier if the next prayer comes first.
      */
-    fun sinceWindow(p: Prayer): Duration = Duration.ofMinutes(when (p) {
-        Prayer.FAJR -> 30
-        Prayer.SHURUQ -> 20
-        Prayer.DHUHR -> 30
-        Prayer.ASR -> 30
-        Prayer.MAGHRIB -> 15
-        Prayer.ISHA -> 30
-    })
+    fun sinceWindow(@Suppress("UNUSED_PARAMETER") p: Prayer): Duration = Duration.ofMinutes(30)
 
     /** [showElapsed] false: always the countdown to the next prayer (the user's choice in Settings). */
     fun of(state: ScheduleState, now: Instant, showElapsed: Boolean = true): Countdown {

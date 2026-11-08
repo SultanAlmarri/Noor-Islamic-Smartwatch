@@ -31,9 +31,9 @@ class CountdownTest {
         assertEquals(Prayer.MAGHRIB, c.event.prayer); assertTrue(c.elapsed); assertEquals(Duration.ZERO, c.duration)
         // 7 minutes later: + 7:00.
         c = Countdowns.of(dubai.state(maghrib.plusSeconds(420)), maghrib.plusSeconds(420))
-        assertTrue(c.elapsed); assertEquals(Duration.ofMinutes(7), c.duration); assertEquals(maghrib.plus(Duration.ofMinutes(15)), c.changesAt)
-        // After its 15 minutes: − to Isha.
-        val t = maghrib.plus(Duration.ofMinutes(15))
+        assertTrue(c.elapsed); assertEquals(Duration.ofMinutes(7), c.duration); assertEquals(maghrib.plus(Duration.ofMinutes(30)), c.changesAt)
+        // After its 30 minutes: − to Isha.
+        val t = maghrib.plus(Duration.ofMinutes(30))
         c = Countdowns.of(dubai.state(t), t)
         assertEquals(Prayer.ISHA, c.event.prayer); assertFalse(c.elapsed); assertEquals(Duration.between(t, at(Prayer.ISHA)), c.duration)
     }
@@ -72,7 +72,8 @@ class CountdownTest {
     }
 
     @Test fun periodsCoverTheIqamaAndThePrayer() {
-        assertEquals(listOf(30L, 20L, 30L, 30L, 15L, 30L), Prayer.entries.map { Countdowns.sinceWindow(it).toMinutes() })
+        // 0.9.9: 30 minutes after every prayer, Shuruq and Maghrib included (the owner's choice).
+        assertEquals(listOf(30L, 30L, 30L, 30L, 30L, 30L), Prayer.entries.map { Countdowns.sinceWindow(it).toMinutes() })
     }
 
     @Test fun aNextPrayerArrivingEarlyEndsThePeriod() {
