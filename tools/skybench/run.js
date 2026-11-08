@@ -10,6 +10,10 @@ const RAW = path.join(__dirname, '../../app/src/main/res/raw/');
   p.on('console', m => console.log('page:', m.text()));
   await p.setContent('<html><body></body></html>');
   for (const f of ['atmo.js', 'scene.js', 'render.js']) await p.addScriptTag({ content: fs.readFileSync(path.join(__dirname, f), 'utf8') });
+  // The catalogue's bright stars (app/src/main/res/raw/stars.bin: count, then RA, Dec, V, K).
+  const sb = fs.readFileSync(RAW + 'stars.bin'); const n = sb.readInt32BE(0); const stars = [];
+  for (let i = 0; i < n; i++) { const o = 4 + i * 14; stars.push([sb.readFloatBE(o), sb.readFloatBE(o + 4), sb.readFloatBE(o + 8), sb.readInt16BE(o + 12)]); }
+  await p.evaluate((st) => { window.STARS = st; }, stars);
   const src = { common: fs.readFileSync(RAW + 'sky_common.agsl', 'utf8'), sky: fs.readFileSync(RAW + 'sky_layer.agsl', 'utf8'), land: fs.readFileSync(RAW + 'land_layer.agsl', 'utf8') };
   for (const sc of scenes) {
     try {

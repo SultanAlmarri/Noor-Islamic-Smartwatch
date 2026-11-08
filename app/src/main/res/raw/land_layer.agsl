@@ -76,6 +76,9 @@ float edgeDetail(float x, int layer) {
     return s * s * (0.6 + 0.45 * float(layer)) * uDp;
 }
 
+// A thin silver edge along the crests nearest the moon.
+float rimBandMoon(float below) { return exp(-max(below, 0.0) / 1.2); }
+
 float3 skyAt(float x, float altDeg) {
     float v = pow(sat(altDeg / 90.0), 1.0 / uLutPow);
     float2 p = float2(sat(x / uSize.x) * (uLutSize.x - 1.0) + 0.5, v * (uLutSize.y - 1.0) + 0.5);
@@ -218,6 +221,17 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     float rimNear = exp(-abs(fc.x - uSunPos.x) / (uSize.x * 0.22));
     lit += uSunGround * rimBand * back * rimNear * 1.6 * shadow;
 
+    // Moonlight (0.9.8): by the light of a high, full moon the land shows its shapes in silver-blue, from the moon's side.
+    float mvis = uMoonL.z * uNight * uMoonL.w;
+    if (mvis > 0.001) {
+        float maz = (uMoonL.x / uSize.x - 0.5) * uFov;
+        float malt = radians(uAltTop * pow(sat((uHorizon - uMoonL.y) / uHorizon), uAltPow));
+        float dam = maz - az;
+        float3 Lm = float3(sin(dam) * cos(malt), sin(malt), cos(dam) * cos(malt));
+        float3 moonlight = float3(0.050, 0.062, 0.095) * mvis;
+        lit += albedo * moonlight * (max(dot(n, Lm), 0.0) * 1.4 + 0.30) * shadow;
+        lit += moonlight * rimBandMoon(below) * 0.6 * exp(-abs(fc.x - uMoonL.x) / (uSize.x * 0.3));
+    }
     float3 c = tone(lit);
     // Haze: the far land takes the colour of the air at the horizon, blue light first.
     float3 air = skyAt(fc.x, 0.6 + 2.0 * (1.0 - depth));

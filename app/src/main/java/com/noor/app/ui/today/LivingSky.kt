@@ -135,6 +135,9 @@ data class SkyScene(
     val seed: Long = 0L,
     /** The lie of the land: fixed for a place, so home always looks like home. */
     val landSeed: Long = 0L,
+    /** Where the user is (degrees): the night sky shows the stars as they stand there. */
+    val latitude: Double = if (southernHemisphere) -30.0 else 30.0,
+    val longitude: Double = 0.0,
 ) {
     /** (fraction of the day, elevation) pairs, computed once. */
     val samples: List<Pair<Double, Double>> = path.samples
@@ -432,7 +435,7 @@ internal fun LivingSky(
         }
     }
     val gpuInputs: () -> GpuSkyInputs? = {
-        if (skyView != null && look != null && skyLight != null) GpuSkyInputs(scene, skyView, look, skyLight, weather, landProfile, page, skyView.cloudTopY - 8 * densityValue) else null
+        if (skyView != null && look != null && skyLight != null) GpuSkyInputs(scene, skyView, look, skyLight, weather, landProfile, page, skyView.cloudTopY - 8 * densityValue, scene.instantAt(display)) else null
     }
     val skyImage = remember(skyLight, skyView) { if (shaders == null && skyLight != null && skyView != null) screenSky(skyLight, skyView) else null }
 

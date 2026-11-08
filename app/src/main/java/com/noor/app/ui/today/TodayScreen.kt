@@ -302,6 +302,7 @@ private fun SkyHeader(
         SkyScene(
             path, events, minute, next, hijriDay = hijriDay, southernHemisphere = place.point.latitude < 0,
             terrain = terrainFor(u.settings.scenery, place.countryCode, place.point.elevationM), seed = landSeed * 1_000_003L + today.toEpochDay(), landSeed = landSeed,
+            latitude = place.point.latitude, longitude = place.point.longitude,
         )
     }
     val current by rememberUpdatedState(scene)

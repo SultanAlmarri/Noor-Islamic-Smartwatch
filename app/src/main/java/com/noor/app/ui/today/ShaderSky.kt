@@ -50,7 +50,9 @@ internal class SkyShaders private constructor(val sky: RuntimeShader, val land: 
 
         private const val SKY_HEAD = """
 uniform shader skyLut;
+uniform shader starTex;
 float4 lutAt(float2 p) { return float4(skyLut.eval(p)); }
+float4 starAt(float2 p) { return float4(starTex.eval(p)); }
 """
         private const val LAND_HEAD = """
 uniform shader skyLut;
@@ -132,6 +134,8 @@ internal fun Modifier.reducedLayer(scale: Float, block: GraphicsLayerScope.() ->
 internal class GpuSkyInputs(
     val scene: SkyScene, val view: SkyView, val look: SkyLook, val light: SkyLight, val weather: Weather, val land: LandProfile,
     val page: Color, val textBottom: Float,
+    /** The moment shown (now, or where the Sun has been drawn to): where the stars stand. */
+    val shownAt: java.time.Instant = scene.now,
 )
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -141,6 +145,8 @@ internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time:
     val scale = SkyQuality.skyScale(density, quality)
     val paint = remember { Paint() }
     val lutCache = remember { LutShaderCache() }
+    val res = androidx.compose.ui.platform.LocalContext.current.resources
+    val starCache = remember { StarShaderCache(res) }
     Box(Modifier.fillMaxSize().reducedLayer(scale) { translationY = parallax() * 0.5f }.drawBehind {
         val i = inputs() ?: return@drawBehind
         if (!drawContext.canvas.nativeCanvas.isHardwareAccelerated) return@drawBehind
@@ -169,7 +175,14 @@ internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time:
         sh.u("uMilky", look.milkyWay)
         sh.u("uWind", t * 0.02f)
         sh.u("uTextBottom", i.textBottom * s)
+        // The real night sky: the celestial and galactic axes for this place and moment, and the catalogue's stars.
+        if (look.night > 0f) {
+            val fr = NightSky.frame(i.shownAt, i.scene.latitude, i.scene.longitude, v.rtl)
+            sh.u3("uCelX", fr.celX); sh.u3("uCelY", fr.celY); sh.u3("uCelZ", fr.celZ); sh.u3("uGalN", fr.galN); sh.u3("uGalC", fr.galC)
+        }
+        sh.u("uMoonIllum", look.moonIllumination)
         sh.setInputBuffer("skyLut", lutCache.shaderFor(i.light))
+        sh.setInputBuffer("starTex", starCache.shaderFor(i, size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1), s))
         paint.shader = sh
         drawIntoCanvas { it.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint) }
     })
@@ -234,6 +247,32 @@ internal class LutShaderCache {
     }
 }
 
+/**
+ * The catalogue's stars drawn for the moment shown, at the sky layer's size (0.9.8). Redrawn when the sky turns by
+ * half a degree (two minutes) or the layout changes; two bitmaps alternate, so the one being shown is never redrawn.
+ * In daylight the shader gets an empty one.
+ */
+internal class StarShaderCache(private val res: Resources) {
+    private var key: List<Any>? = null
+    private var shader: BitmapShader? = null
+    private val bitmaps = arrayOfNulls<Bitmap>(2)
+    private var turn = 0
+    private val empty by lazy { BitmapShader(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP) }
+
+    fun shaderFor(i: GpuSkyInputs, w: Int, h: Int, s: Float): BitmapShader {
+        if (i.look.night <= 0f) return empty
+        val v = i.view
+        val step = Math.floorDiv(i.shownAt.epochSecond, 120L)
+        val k = listOf(step, w, h, i.scene.latitude, i.scene.longitude, v.horizonY * s, v.fov, v.rtl)
+        shader?.let { if (k == key) return it }
+        turn = 1 - turn
+        val bmp = bitmaps[turn]?.takeIf { it.width == w && it.height == h } ?: Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bitmaps[turn] = it }
+        NightSky.drawStars(bmp, NightSky.stars(res), java.time.Instant.ofEpochSecond(step * 120L + 60L), i.scene.latitude, i.scene.longitude,
+            v.horizonY * s, v.fov, SkyView.ALT_TOP, SkyView.ALT_POW, v.density * s, v.rtl)
+        return BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).also { shader = it; key = k }
+    }
+}
+
 internal class RidgeShaderCache {
     private var key: LandProfile? = null
     private var shader: BitmapShader? = null
@@ -262,4 +301,6 @@ private fun RuntimeShader.u(name: String, vararg v: Float) {
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 private fun RuntimeShader.u3(name: String, c: DoubleArray, k: Double = 1.0) = u(name, (c[0] * k).toFloat(), (c[1] * k).toFloat(), (c[2] * k).toFloat())
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun RuntimeShader.u3(name: String, c: FloatArray) = u(name, c[0], c[1], c[2])
 

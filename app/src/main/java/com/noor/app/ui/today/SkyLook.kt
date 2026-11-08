@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  * The sky is seen through a wide lens: [FOV] across the screen, the horizon at [SceneLayout.horizon], the top of the
  * header [ALT_TOP] degrees up, more of the height given to the low sky where the colours of dawn and dusk are.
  */
-internal class SkyView(scene: SkyScene, val w: Float, val h: Float, val density: Float, layout: SceneLayout, rtl: Boolean) {
+internal class SkyView(scene: SkyScene, val w: Float, val h: Float, val density: Float, layout: SceneLayout, val rtl: Boolean) {
     val horizonY = h * layout.horizon
     val arcTopY = h * layout.arcTop
     val cloudTopY = h * layout.cloudTop

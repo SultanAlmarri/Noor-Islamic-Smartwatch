@@ -15,6 +15,8 @@ uniform sampler2D tLut; uniform vec2 tLutSize;
 vec4 lutAt(vec2 p) { return texture(tLut, p / tLutSize); }
 uniform sampler2D tRidge; uniform vec2 tRidgeSize;
 vec4 ridgeTex(vec2 p) { return texture(tRidge, p / tRidgeSize); }
+uniform sampler2D tStars; uniform vec2 tStarsSize;
+vec4 starAt(vec2 p) { return texture(tStars, p / tStarsSize); }
 `;
   const FOOTER = `
 out vec4 fragColor;
@@ -41,7 +43,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     return t;
   }
 
-  function draw(canvas, fs, uniforms, lut, ridge) {
+  function draw(canvas, fs, uniforms, lut, ridge, stars) {
     const gl = canvas.getContext('webgl2', { premultipliedAlpha: true, preserveDrawingBuffer: true, alpha: true });
     const pr = program(gl, fs);
     gl.useProgram(pr);
@@ -52,6 +54,9 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     gl.uniform1i(gl.getUniformLocation(pr, 'tLut'), 0); gl.uniform2f(gl.getUniformLocation(pr, 'tLutSize'), lut.w, lut.h);
     tex(gl, 1, ridge.w, ridge.h, ridge.data, true);
     gl.uniform1i(gl.getUniformLocation(pr, 'tRidge'), 1); gl.uniform2f(gl.getUniformLocation(pr, 'tRidgeSize'), ridge.w, ridge.h);
+    const st = stars || { w: 1, h: 1, data: new Uint8Array(4) };
+    tex(gl, 2, st.w, st.h, st.data, true);
+    gl.uniform1i(gl.getUniformLocation(pr, 'tStars'), 2); gl.uniform2f(gl.getUniformLocation(pr, 'tStarsSize'), st.w, st.h);
     for (const [k, v] of Object.entries(uniforms)) {
       const l = gl.getUniformLocation(pr, k); if (l === null) continue;
       const a = Array.isArray(v) ? v : [v];
@@ -114,7 +119,40 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       uAmbTop: fr.ambTop.map((x, i) => x + nightAmb[i]), uAmbLow: fr.ambHor.map((x, i) => x + nightAmb[i] * 1.5),
       uNight: night, uTime: cfg.time || 0, uWeather: weather, uWind: wind,
     };
+    // The real night sky (port of NightSky.kt): the moment, sidereal time, the view frame.
+    const D2R = Math.PI / 180;
+    const [yy, mm, ddn] = cfg.date.split('-').map(Number);
+    const atMs = Date.UTC(yy, mm - 1, ddn) + (f * 24 - cfg.place.tz) * 3600e3;
+    const jd = atMs / 86400000 + 2440587.5, dd0 = jd - 2451545, T = dd0 / 36525;
+    const gmst = ((280.46061837 + 360.98564736629 * dd0 + 0.000387933 * T * T - T * T * T / 38710000) % 360 + 360) % 360;
+    const lst = gmst + cfg.place.lon, lat = cfg.place.lat, a0 = lat < 0 ? 0 : 180;
+    const view = (ra, dec) => { const h = (lst - ra) * D2R, d = dec * D2R, phi = lat * D2R;
+      const up = Math.sin(phi) * Math.sin(d) + Math.cos(phi) * Math.cos(d) * Math.cos(h);
+      const north = Math.cos(phi) * Math.sin(d) - Math.sin(phi) * Math.cos(d) * Math.cos(h);
+      const east = -Math.cos(d) * Math.sin(h);
+      return [east * Math.cos(a0 * D2R) - north * Math.sin(a0 * D2R), up, east * Math.sin(a0 * D2R) + north * Math.cos(a0 * D2R)]; };
+    const starC = document.createElement('canvas'); starC.width = SW; starC.height = SH;
+    const sg = starC.getContext('2d');
+    for (const st of (window.STARS || [])) {
+      const v = view(st[0], st[1]); const alt = Math.asin(Math.max(-1, Math.min(1, v[1]))) / D2R;
+      if (alt < 0.5 || alt >= altTop) continue;
+      const az = Math.atan2(v[0], v[2]); if (Math.abs(az) > fov / 2 + 0.05) continue;
+      const x = SW * (0.5 + az / fov), y = hy * s - hy * s * Math.pow(alt / altTop, 1 / altPow);
+      const air = Math.pow(Math.max(0, Math.min(1, (alt - 0.5) / 12)), 0.7);
+      const flux = Math.min(4, Math.pow(10, -0.4 * (st[2] - 1))) * air;
+      const a = Math.min(1, 0.12 + 0.60 * Math.sqrt(flux)); const r = (0.35 + 0.50 * Math.pow(flux, 0.4)) * dp * s;
+      if (a < 0.04) continue;
+      const tK = st[3] / 100; let R, G, B;
+      if (tK <= 66) { R = 255; G = 99.47 * Math.log(tK) - 161.12; B = tK <= 19 ? 0 : 138.52 * Math.log(tK - 10) - 305.04; } else { R = 329.7 * Math.pow(tK - 60, -0.1332); G = 288.12 * Math.pow(tK - 60, -0.0755); B = 255; }
+      const c = (x) => Math.round(Math.max(0, Math.min(255, x)) * 0.45 + 255 * 0.55);
+      const gr = sg.createRadialGradient(x, y, 0, x, y, r * 2.4);
+      gr.addColorStop(0, `rgba(${c(R)},${c(G)},${c(B)},${a})`); gr.addColorStop(0.32, `rgba(${c(R)},${c(G)},${c(B)},${a * 0.35})`); gr.addColorStop(1, `rgba(${c(R)},${c(G)},${c(B)},0)`);
+      sg.fillStyle = gr; sg.beginPath(); sg.arc(x, y, r * 2.4, 0, 2 * Math.PI); sg.fill();
+    }
+    const starsTex = { w: SW, h: SH, data: new Uint8Array(sg.getImageData(0, 0, SW, SH).data.buffer) };
     const skyU = Object.assign({}, common, {
+      uCelX: view(0, 0), uCelY: view(90, 0), uCelZ: view(0, 90), uGalN: view(192.85948, 27.12825), uGalC: view(266.40499, -28.93617),
+      uMoonIllum: (1 - Math.cos(phase)) / 2,
       uSize: [SW, SH], uDp: dp * s, uHorizon: hy * s, uAltTop: altTop, uAltPow: altPow,
       uSunPos: [sunX * s, sunY * s], uSunDir: sd, uSunDisc: sunDisc, uSunGlow: fr.sunGlow, uSunCloud: fr.sunCloud, uSunHigh: fr.sunHigh,
       uCloudTop: (arcTop - 8 * dp) * s, uMoon: [mx * s, my * s, 10 * dp * s, moonVis], uMoonLight: moonLight,
@@ -153,7 +191,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
 
     const skyC = document.createElement('canvas'); skyC.width = SW; skyC.height = SH;
     const t0 = performance.now();
-    draw(skyC, PRELUDE + src.common + src.sky + FOOTER, skyU, lut, ridge);
+    draw(skyC, PRELUDE + src.common + src.sky + FOOTER, skyU, lut, ridge, starsTex);
     const t1 = performance.now();
     const landC = document.createElement('canvas'); landC.width = W; landC.height = H;
     draw(landC, PRELUDE + src.common + src.land + FOOTER, landU, lut, ridge);

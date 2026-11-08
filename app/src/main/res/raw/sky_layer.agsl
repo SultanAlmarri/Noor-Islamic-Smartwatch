@@ -28,6 +28,14 @@ uniform float3 uMoonLight; // direction of sunlight on the moon (moon frame)
 uniform float uMilky;      // Milky Way strength
 uniform float uWind;       // drift of the clouds so far, km
 uniform float uTextBottom; // the text written on the sky ends here, px
+// The real night sky (0.9.8), in view space: the celestial axes (the faint stars turn with them), the galactic pole and
+// centre (the Milky Way), how much of the moon is lit, and the bright stars of the catalogue drawn into starAt().
+uniform float3 uCelX;
+uniform float3 uCelY;
+uniform float3 uCelZ;
+uniform float3 uGalN;
+uniform float3 uGalC;
+uniform float uMoonIllum;
 
 float altAt(float y) {
     float t = sat((uHorizon - y) / uHorizon);
@@ -46,51 +54,79 @@ float3 skyAt(float x, float altDeg) {
     return lutAt(p).rgb;
 }
 
-// Stars on a jittered grid, two sizes, twinkling; thinning towards the horizon where the air is thick.
-float3 stars(float2 fc, float alt) {
+// The faint stars (0.9.8): thousands, fixed on the celestial sphere so they turn with the night, many faint and few
+// bright; they twinkle more near the horizon, where the air is thick, and fade there; a bright moon washes the faintest out.
+float3 faintStars(float3 v, float alt, float moonWash) {
+    float3 c = float3(dot(v, uCelX), dot(v, uCelY), dot(v, uCelZ));
+    float pxPerRad = uSize.x / uFov;
     float3 acc = float3(0.0);
-    float cell = 6.0 * uDp;
     for (int k = 0; k < 2; k++) {
-        float sc = k == 0 ? cell : cell * 2.7;
-        float2 g = fc / sc + (k == 0 ? float2(0.0) : float2(31.7, 11.3));
-        float2 id = floor(g);
-        float2 h = hash22(id);
-        float pick = hash12(id + 7.13);
-        float keep = k == 0 ? 0.30 : 0.55;
+        float K = k == 0 ? 150.0 : 70.0;
+        float3 g = c * K + (k == 0 ? float3(0.0) : float3(17.3, 5.1, 9.7));
+        float3 id = floor(g);
+        float pick = hash12(id.xy + id.z * 7.31);
+        float keep = k == 0 ? 0.30 : 0.10;
         if (pick < keep) {
-            float2 c = (id + 0.15 + 0.7 * h) * sc;
-            float d = length(fc - c) / uDp;
-            float b = pow(hash12(id + 3.7), k == 0 ? 3.0 : 5.0) * (k == 0 ? 0.55 : 1.5);
-            float tw = 0.72 + 0.28 * sin(uTime * (1.5 + 3.0 * h.x) + 6.283 * h.y);
-            float r = k == 0 ? 0.55 : 0.75;
-            float s = exp(-d * d / (r * r)) * b * tw;
-            float3 tint = mix(float3(0.80, 0.86, 1.0), float3(1.0, 0.92, 0.80), hash12(id + 1.9));
-            acc += tint * s;
+            float3 h = float3(hash12(id.xy * 1.7 + id.z), hash12(id.yz * 2.3 + id.x), hash12(id.zx * 0.9 + id.y));
+            float3 sp = id + 0.25 + 0.5 * h;
+            float dPx = length(g - sp) / K * pxPerRad / uDp;   // dp from the star
+            float m = hash12(id.xy * 3.1 + id.z * 1.3);
+            float b = k == 0 ? pow(m, 6.0) * 0.40 : pow(m, 4.0) * 0.55;
+            float scint = 0.25 + 0.55 * (1.0 - smoothstep(10.0, 40.0, alt));
+            float tw = 1.0 - scint * (0.5 + 0.5 * sin(uTime * (2.0 + 5.0 * h.x) + 6.283 * h.y));
+            float r = k == 0 ? 0.40 : 0.5;
+            float sh = exp(-dPx * dPx / (r * r)) * b * tw;
+            float3 tint = mix(float3(0.78, 0.86, 1.0), float3(1.0, 0.88, 0.72), pow(hash12(id.xy + 1.9 + id.z), 1.5));
+            acc += tint * sh * (1.0 - moonWash * (k == 0 ? 0.85 : 0.55));
         }
     }
-    return acc * smoothstep(1.0, 16.0, alt);
+    return acc * smoothstep(1.0, 14.0, alt);
 }
 
-// The Milky Way: a soft band across the sky with dark dust lanes.
-float3 milkyWay(float2 fc, float alt) {
-    float2 p = fc / uDp;
-    float2 dir = normalize(float2(1.0, -0.42));
-    float2 c = float2(uSize.x * 0.55, uHorizon * 0.40) / uDp;
-    float2 rel = p - c;
-    float along = dot(rel, dir);
-    float across = dot(rel, float2(-dir.y, dir.x));
-    float wob = (vnoise(float2(along * 0.012, 3.0)) - 0.5) * 30.0;
-    float w = 34.0 + 10.0 * vnoise(float2(along * 0.02, 9.0));
-    float band = exp(-pow((across - wob) / w, 2.0));
-    float clumps = fbm4(p * 0.035, float4(1.0, 1.0, 1.0, 0.6));
-    float lanes = smoothstep(0.42, 0.68, fbm4(p * 0.05 + float2(5.2, 1.3), float4(1.0, 1.0, 0.8, 0.0)));
-    float core = exp(-pow((across - wob) / (w * 0.35), 2.0));
-    float glow = band * (0.45 + 0.75 * clumps) * (1.0 - 0.65 * lanes * core);
-    float3 col = mix(float3(0.55, 0.62, 0.85), float3(0.95, 0.88, 0.80), core * 0.6);
-    // A fine dust of faint stars along it.
-    float2 id = floor(p * 0.9);
-    float dust = step(0.82, hash12(id)) * hash12(id + 2.3) * band;
-    return (col * glow * 0.085 + float3(dust * 0.10)) * smoothstep(4.0, 22.0, alt);
+// The Milky Way (0.9.8), where it really is: brightness from galactic latitude and longitude, brightest and widest
+// towards the centre in Sagittarius, with star clouds, the Great Rift of dust along its middle and a warm central bulge.
+float3 milkyWay(float3 v, float alt) {
+    float sb = clamp(dot(v, uGalN), -1.0, 1.0);
+    float b = asin(sb);
+    float3 c0 = normalize(uGalC - uGalN * dot(uGalC, uGalN));
+    float3 c1 = cross(uGalN, c0);
+    float3 p = v - uGalN * sb;
+    float l = atan(dot(p, c1), dot(p, c0));            // 0 at the centre, ±π opposite
+    float lc = abs(l);
+    float width = radians(6.0) + radians(8.0) * exp(-lc * lc / 0.9);
+    float band = exp(-(b / width) * (b / width));
+    float halo = exp(-abs(b) / radians(20.0));
+    float bulge = exp(-(l * l / 0.05 + b * b / 0.02));
+    float towardsCentre = 0.28 + 0.72 * exp(-lc * lc / 1.3);
+    // Noise in even, undistorted coordinates along the band (degrees), so the star clouds are clumps, not swirls.
+    float2 gq = float2(l * cos(b), b) * 57.3;
+    float clouds = fbm4(gq * 0.11 + float2(3.0, 1.0), float4(1.0, 1.0, 0.8, 0.6));
+    float fine = fbm4(gq * 0.35 + float2(7.0, 2.0), float4(1.0, 0.8, 0.6, 0.0));
+    // The Great Rift: dark dust along the plane, from Cygnus to Sagittarius.
+    float rift = smoothstep(0.46, 0.66, fbm4(gq * float2(0.06, 0.24) + float2(11.0, 4.0), float4(1.0, 1.0, 0.6, 0.0)))
+        * exp(-(b / radians(4.0)) * (b / radians(4.0))) * (1.0 - smoothstep(1.2, 2.2, lc));
+    float glow = (band * (0.35 + 0.9 * clouds * clouds + 0.3 * fine) + halo * 0.08) * towardsCentre * (1.0 - 0.85 * rift) + bulge * 1.2 * (1.0 - 0.5 * rift);
+    float3 col = mix(float3(0.62, 0.70, 0.95), float3(1.0, 0.86, 0.68), sat(bulge * 1.5 + 0.25 * exp(-lc * lc / 0.6)));
+    return col * glow * 0.20 * smoothstep(3.0, 20.0, alt);
+}
+
+// A shooting star now and then on a dark night: a short bright streak that fades as it falls.
+float3 meteor(float2 fc) {
+    float period = 23.0;
+    float n = floor(uTime / period);
+    float t = (uTime - n * period) / 0.9;              // lasts 0.9 s
+    if (t > 1.0 || hash11(n * 3.7 + 1.0) > 0.45) return float3(0.0);
+    float2 start = float2(hash11(n * 5.1) * uSize.x, (0.08 + 0.35 * hash11(n * 7.9)) * uHorizon);
+    float ang = radians(200.0 + 50.0 * hash11(n * 2.3)) * (hash11(n * 1.1) > 0.5 ? 1.0 : -1.0);
+    float2 dir = float2(cos(ang), abs(sin(ang)));
+    float len = (60.0 + 80.0 * hash11(n * 4.4)) * uDp;
+    float2 head = start + dir * len * t;
+    float2 rel = fc - head;
+    float along = dot(rel, -dir);
+    float across = abs(dot(rel, float2(-dir.y, dir.x)));
+    float trail = sat(1.0 - along / (len * 0.45)) * step(0.0, along);
+    float s = exp(-across * across / (0.5 * uDp * uDp)) * trail * (1.0 - t) * smoothstep(0.0, 0.15, t);
+    return float3(0.85, 0.92, 1.0) * s * 0.9;
 }
 
 // Moonlight scattered round the moon at night.
@@ -251,8 +287,12 @@ float4 cumulusSprites(float2 fc, float3 v, float3 sunL, float3 sky) {
                     float3 c = uSunCloud * (light * 1.7 + rim * 12.0 + under)
                         + mix(uAmbLow * 0.85, uAmbTop * 1.5, lift) * (0.55 + 0.45 * light);
                     float3 cd = mix(tone(c), sky, 0.06 + 0.50 * depth * depth);
-                    // At night a cloud is a faint veil over the stars.
-                    a *= 1.0 - 0.55 * uNight;
+                    // At night (0.9.8): moonlit, silver towards the moon, dark against the stars it hides.
+                    float moonB = uMoon.w * uMoonIllum * uNight;
+                    float towardMoon = exp(-length(fc - uMoon.xy) / (uSize.x * 0.35));
+                    float3 moonlit = float3(0.42, 0.46, 0.56) * (0.30 + 0.70 * light + 1.2 * towardMoon * exp(-d * 1.5)) * moonB;
+                    cd = mix(cd, moonlit + float3(0.025, 0.032, 0.055) * (0.6 + 0.4 * light), uNight);
+                    a *= 1.0 - 0.15 * uNight;
                     col = mix(col, cd, a);
                     alpha = alpha + a * (1.0 - alpha);
                 }
@@ -268,10 +308,18 @@ float4 render(float2 fc) {
     float3 sky = skyAt(fc.x, max(alt, 0.0));
     float3 col = sky;
 
-    // Night: the Milky Way, then the stars.
+    // Night (0.9.8): moonlight in the sky, the airglow low down on a dark night, the Milky Way where it really is, the
+    // faint stars on the turning celestial sphere, the catalogue's bright stars, now and then a shooting star.
+    float moonBright = uMoon.w * uMoonIllum * uNight;
     if (uNight > 0.0) {
-        if (uMilky > 0.0) col += milkyWay(fc, alt) * uMilky;
-        col += stars(fc, alt) * uNight;
+        float dMoon = length(fc - uMoon.xy) / uSize.x;
+        col += float3(0.020, 0.032, 0.060) * moonBright * (0.55 + 0.9 * exp(-dMoon * 2.2)) * smoothstep(-2.0, 25.0, alt + 20.0);
+        col += float3(0.012, 0.030, 0.020) * exp(-pow((alt - 11.0) / 8.0, 2.0)) * uNight * (1.0 - moonBright);
+        if (uMilky > 0.0) col += milkyWay(v, alt) * uMilky * (1.0 - 0.75 * moonBright);
+        col += faintStars(v, alt, moonBright) * uNight;
+        float4 bright = starAt(fc);
+        col += bright.rgb * uNight * (1.0 - 0.35 * moonBright);
+        col += meteor(fc) * smoothstep(0.7, 1.0, uNight) * (1.0 - moonBright);
     }
 
     // The moon, behind every cloud.
