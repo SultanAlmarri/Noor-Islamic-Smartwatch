@@ -1,13 +1,14 @@
 name: Phone screens on real Android (emulator)
 
-# What changed in a phone release, photographed on an Android 15 emulator (see tools/devicetest/phone_097.sh): the
+# What changed in a phone release, photographed on an Android 15 emulator (tools/devicetest/phone_098.sh: the
+# notification's digits on a phone set to Arabic, Arabic screens; tools/devicetest/phone_097.sh): the
 # countdown before and after a prayer (home screen and notification), choosing a location with the satellite map, the
 # Qibla accuracy box at its limit, the full-screen Adhan. Pictures and recordings are published as a pre-release asset.
 
 on:
   push:
-    branches: [ 'adhan/**', 'phone/**' ]
-    paths: [ 'app/**', 'core/**', 'shared/**', 'tools/devicetest/phone_097.sh', '.github/workflows/phone-preview.yml' ]
+    branches: [ 'adhan/**', 'phone/**', 'noor/**' ]
+    paths: [ 'app/**', 'core/**', 'shared/**', 'tools/devicetest/phone_097.sh', 'tools/devicetest/phone_098.sh', '.github/workflows/phone-preview.yml' ]
   workflow_dispatch:
 
 permissions:
@@ -34,7 +35,7 @@ jobs:
       - name: Build the debug app
         run: ./gradlew :app:assembleDebug --stacktrace
 
-      - name: Countdown, notification, location and map, Qibla, Adhan screen
+      - name: Notification digits and Arabic screens (0.9.8); countdown, location and map, Qibla, Adhan screen (0.9.7)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -44,7 +45,9 @@ jobs:
           ram-size: 4096M
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
-          script: timeout 3000 bash tools/devicetest/phone_097.sh app/build/outputs/apk/debug/app-debug.apk phone-preview || true
+          script: |
+            timeout 1500 bash tools/devicetest/phone_098.sh app/build/outputs/apk/debug/app-debug.apk phone-preview/098 || true
+            timeout 3000 bash tools/devicetest/phone_097.sh app/build/outputs/apk/debug/app-debug.apk phone-preview || true
 
       - uses: actions/upload-artifact@v4
         if: always()

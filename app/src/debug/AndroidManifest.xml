@@ -12,6 +12,7 @@
                 <action android:name="com.noor.smartwatch.debug.DUMP" />
                 <action android:name="com.noor.smartwatch.debug.CITY" />
                 <action android:name="com.noor.smartwatch.debug.STATUS" />
+                <action android:name="com.noor.smartwatch.debug.LANG" />
             </intent-filter>
         </receiver>
     </application>

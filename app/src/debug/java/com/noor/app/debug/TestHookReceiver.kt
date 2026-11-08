@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
  *   the actual scheduled path fire, exactly as at a prayer time.
  * - DUMP: writes the alert history to logcat (tag NoorE2E), one line per alert.
  * - CITY: a chosen city by id (e.g. dxb, ist), onboarding done; used by tools/devicetest/home_sky.sh.
+ * - LANG: Noor's own language (en, ar, or the system's) and digits (western, arabic), whatever the phone's; for
+ *   tools/devicetest/phone_098.sh (Noor in English on a phone set to Arabic).
  * - STATUS: turns the persistent prayer notification on and logs the moments its countdown changes next
  *   (STATUS done next=<epoch ms> prayer=<P> since=<epoch ms or -1>), for tools/devicetest/phone_097.sh.
  */
@@ -50,6 +52,13 @@ class TestHookReceiver : BroadcastReceiver() {
                         val cfg = app.container.alertConfig()
                         val st = cfg?.state(java.time.Instant.now())
                         Log.i(TAG, "STATUS done next=${st?.next?.at?.toEpochMilli()} prayer=${st?.next?.prayer}")
+                    }
+                    "com.noor.smartwatch.debug.LANG" -> {
+                        val repo = app.container.settings
+                        repo.setLanguage(when (intent.getStringExtra("lang")) { "ar" -> com.noor.app.data.Language.ARABIC; "en" -> com.noor.app.data.Language.ENGLISH; else -> com.noor.app.data.Language.SYSTEM })
+                        repo.setNumerals(if (intent.getStringExtra("numerals") == "arabic") com.noor.app.data.Numerals.ARABIC_INDIC else com.noor.app.data.Numerals.WESTERN)
+                        com.noor.app.notify.StatusNotification.refresh(app)
+                        Log.i(TAG, "LANG done ${intent.getStringExtra("lang")} ${intent.getStringExtra("numerals")}")
                     }
                     "com.noor.smartwatch.debug.DUMP" -> AlertLog.all(app).forEach { r ->
                         Log.i(TAG, "RECORD prayer=${r.prayer} test=${r.test} outcome=${r.outcome} playedMs=${r.playedMs} " +
