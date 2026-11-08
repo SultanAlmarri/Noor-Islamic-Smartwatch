@@ -13,7 +13,8 @@ adb() { timeout 120 "$(type -P adb)" "$@"; }
 shot() { adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes)"; }
 hook() { adb shell am broadcast -a "com.noor.smartwatch.debug.$1" "${@:2}" -n $HOOK >/dev/null; }
 state() { hook FACE_STATE; sleep 2; adb logcat -d -s NoorWatchTest:I | tail -1 | tee -a "$OUT/steps.txt"; }
-home() { adb shell input keyevent KEYCODE_HOME; sleep 1; adb shell input keyevent KEYCODE_WAKEUP; sleep "${1:-4}"; }
+# The watch face itself (on Wear OS the HOME key toggles between the face and the app list).
+home() { adb shell input keyevent KEYCODE_WAKEUP; adb shell am start -a android.intent.action.MAIN -c android.intent.category.HOME >/dev/null 2>&1; sleep "${1:-4}"; }
 
 timeout 1500 "$(type -P adb)" logcat -v time > "$OUT/logcat.txt" 2>&1 &
 adb shell settings put system screen_off_timeout 1800000 >/dev/null 2>&1

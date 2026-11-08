@@ -65,7 +65,12 @@ class FacePush internal constructor(
     private val slots: FaceSlots?,
     private val catalogue: Catalogue,
 ) {
-    constructor(context: Context) : this(context, systemSlots(context), Catalogue.of(context))
+    /**
+     * Always on the application context: Watch Face Push binds to a system service, which a broadcast receiver's
+     * context may not do, and the manager keeps the first context it was made with (a Wear OS 6 emulator showed every
+     * later call failing, the face screen included, after one from a receiver).
+     */
+    constructor(context: Context) : this(context.applicationContext, systemSlots(context.applicationContext), Catalogue.of(context.applicationContext))
 
     /** The faces this build carries: ids, validation tokens, the build number, and how to read each APK. */
     class Catalogue(val ids: List<String>, val tokens: List<String>, val build: Long, val open: (String) -> java.io.InputStream?) {
