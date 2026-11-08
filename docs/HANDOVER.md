@@ -319,11 +319,18 @@ results, and the compass near metal.
 What the owner asked, and what was done:
 
 - **Notification digits** (the owner's photo: Noor in English, the phone in Arabic, the countdown in Arabic-Indic
-  digits). Android's Chronometer writes its digits in the phone's language and cannot be told otherwise. Now, when the
-  phone's digits differ from Noor's, Noor writes the countdown itself (`StatusTicker`: once a second, only while the
-  screen is on; nothing runs with the screen off), and uses the Chronometer as before when they agree. Tested for
-  every combination of phone and Noor digits (`StatusNotificationTest`), and photographed on an Android 15 emulator
-  set to Arabic (`phone_098.sh`).
+  digits). Three causes, all fixed: (1) Android's Chronometer writes its digits in the phone's language and cannot be
+  told otherwise; now, when the phone's digits differ from Noor's, Noor writes the countdown itself (`StatusTicker`:
+  once a second, only while the screen is on). (2) To know the phone's language Noor must ask Android
+  (`LocaleManager`): on Android 13+ the language chosen in Noor is applied to its whole process, so the process's own
+  configuration said "English" on an Arabic phone (found on the emulator: Noor in Arabic on an English phone showed
+  Western digits). (3) Noor's formatter wrote numbers in the process's default locale and only ever converted Western
+  digits to Arabic-Indic, never back (found on the emulator: "−٣:٠٤:٢٣" with Noor in English on an Arabic phone); every
+  formatted number, on the phone and on the watch, is now normalised to the chosen digits. Tests: every combination of
+  phone and Noor digits (`StatusNotificationTest`), the formatter under ar-SA, ar-EG, fa-IR and en-US default locales
+  (`FormatterTest`, `WearTextTest`), and Android 15 emulator photographs and logs (`phone_098.sh`). The emulator's
+  language switch is not always complete (sometimes the status bar stays half English), so the decisive check is the
+  owner's phone.
 - **"Next prayer" twice** in the expanded notification: the header line Android draws already says it; the layout's
   own caption is gone (the design is otherwise unchanged).
 - **Time since each prayer** (the "+" after a prayer): longer, and now with a switch (Settings → Time since each
@@ -365,3 +372,11 @@ Evidence: unit and Robolectric tests (counts below), software renders in `app/bu
 `home-sky.yml` (Android 14/15), `phone-preview.yml` (`phone_098.sh`, Android 15) and `watch-face.yml` (Wear OS 6.0
 emulator: the watch app installs the face, makes it active and switches designs in place; photographs) runs, published
 to the `home-sky-preview`, `phone-preview` and `watch-face-preview` pre-releases.
+
+Tests at 0.9.8: `core/prayer` 101 (1 skipped by design), `alerts` 14, `app` 53, `wear` 29; all pass.
+
+Still needs the owner's devices: the notification's digits on the owner's phone in Arabic (the emulator's language
+switch is not always complete), the Noor face on a real watch (it is installed, activated, filled with Noor's data
+and switched between designs on a Wear OS 6.0 emulator; Samsung's One UI 8 Watch may differ), the face's ring and
+seconds over a full day, the phone editor's "Show on my watch" over Bluetooth, and the new clouds and night sky on a
+real phone's GPU.

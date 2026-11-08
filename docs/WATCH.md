@@ -57,10 +57,13 @@ the `watch-face-preview` pre-release): Wear OS adds the Horizon face by itself w
 watch app makes it the active face (after the permission); Noor's complications fill it (next prayer and countdown,
 the prayer ring, the Hijri date; on the Dial the Qibla bearing and the battery); every switch between designs and
 colours (eight in a row, and the original) appears on the watch in place; opening the face screen again does not ask
-again. The emulator also found four faults that Google's validator does not catch, all fixed and now checked at
-build time where possible: a complication fallback type not among a slot's supported types (Wear OS then refuses the
-whole face), `max()` in an expression (WFF has none: the ring silently disappeared), Watch Face Push called from a
-broadcast receiver (the manager then fails for every later call), and the Hijri date too long for its space.
+again. The emulator also found faults that Google's validator does not catch, all fixed (the first two now checked
+at build time): a complication fallback type not among a slot's supported types (Wear OS then refuses the whole face,
+even when the user picks it), `max()` in an expression (WFF has no `min`/`max`: the element silently disappears), a
+complication's drawing clipped to its bounding box (the ring round the edge needs the whole face as its box; found
+with diagnostic builds), Watch Face Push called from a broadcast receiver (the manager then fails for every later
+call), and the Hijri date too long for its space. The emulator's one activation attempt failed before the slot fix
+("unknown error") and succeeded after it.
 
 **Building.** `tools/watchface/noor_face.py` draws the designs (XML, the dunes, hands, a digits-only subset of IBM Plex
 Sans Arabic Light, the picker previews) into `tools/watchface/faces/<id>/res`, committed, and the phone editor's
