@@ -136,6 +136,8 @@ internal fun Modifier.reducedLayer(scale: Float, block: GraphicsLayerScope.() ->
 internal class GpuSkyInputs(
     val scene: SkyScene, val view: SkyView, val look: SkyLook, val light: SkyLight, val weather: Weather, val land: LandProfile,
     val page: Color, val textBottom: Float,
+    /** The weather at the moment shown (0.9.9). */
+    val state: Weather.State,
     /** The moment shown (now, or where the Sun has been drawn to): where the stars stand. */
     val shownAt: java.time.Instant = scene.now,
 )
@@ -170,7 +172,8 @@ internal fun GpuSkyLayer(shaders: SkyShaders, inputs: () -> GpuSkyInputs?, time:
         sh.u3("uAmbTop", l.ambTop); sh.u3("uAmbLow", l.ambLow)
         sh.u("uNight", look.night)
         sh.u("uTime", t)
-        sh.u("uWeather", i.weather.cumulus, i.weather.cirrus, i.weather.seedX, i.weather.seedY)
+        sh.u("uWeather", i.state.cumulus, i.state.cirrus, i.weather.seedX, i.weather.seedY)
+        sh.u("uWx", i.state.overcast, i.state.layer, i.state.rain, 0f)
         sh.u("uCloudTop", v.cloudTopY * s)
         sh.u("uMoon", look.moonX * s, look.moonY * s, 10f * v.density * s, look.moonVisibility)
         sh.u("uMoonLight", look.moonLight[0], look.moonLight[1], look.moonLight[2])
@@ -228,7 +231,8 @@ private fun DrawScope.drawLand(sh: RuntimeShader, paint: Paint, i: GpuSkyInputs,
     sh.u("uMist", look.mist)
     sh.u("uNight", look.night)
     sh.u("uTime", t)
-    sh.u("uWeather", i.weather.cumulus, i.weather.cirrus, i.weather.seedX, i.weather.seedY)
+    sh.u("uWeather", i.state.cumulus * (1f - i.state.overcast), i.state.cirrus, i.weather.seedX, i.weather.seedY)
+    sh.u("uWx", i.state.overcast, i.state.layer, i.state.rain, 0f)
     sh.u("uWind", t * 0.02f)
     sh.u("uLutSize", Atmosphere.NX.toFloat(), Atmosphere.NY.toFloat()); sh.u("uLutPow", Atmosphere.LUT_POW.toFloat())
     sh.u("uSeed", (i.scene.landSeed % 97).toFloat())

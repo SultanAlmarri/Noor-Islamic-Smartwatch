@@ -49,7 +49,7 @@ SPECS = {
 }
 
 # The largest copy of each kind, px wide: no larger than the app ever draws it on a large phone.
-MAX_W = {"humilis": 176, "mediocris": 256, "congestus": 320, "cumulonimbus": 400, "fractus": 144, "row": 512}
+MAX_W = {"humilis": 176, "mediocris": 256, "congestus": 320, "cumulonimbus": 400, "fractus": 144, "row": 512, "stratocumulus": 448}
 ATLAS_W = 2048
 
 

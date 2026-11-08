@@ -418,6 +418,8 @@ internal fun LivingSky(
     val capAlt = skyView?.let { it.altitudeAt(it.cloudTopY - 8 * densityValue) } ?: 90.0
     val skyLight = rememberSkyLight(look, skyView, capAlt)
     val weather = remember(scene.seed, scene.terrain) { Weather.of(scene.seed, scene.terrain) }
+    // The weather at the moment shown: it changes through the day, and as the Sun is dragged through it.
+    val weatherNow = weather.at(display)
     val landProfile = remember(scene.landSeed, scene.terrain) { LandProfile.of(scene.landSeed, scene.terrain) }
     // The layers' own clocks (seconds), each layer redrawn only when its clock moves: the clouds' about 15 times a
     // second (they move less than a fifth of a dp per tick, so it looks continuous); the GPU sky's as often at night
@@ -445,7 +447,7 @@ internal fun LivingSky(
         }
     }
     val gpuInputs: () -> GpuSkyInputs? = {
-        if (skyView != null && look != null && skyLight != null) GpuSkyInputs(scene, skyView, look, skyLight, weather, landProfile, page, skyView.cloudTopY - 8 * densityValue, scene.instantAt(display)) else null
+        if (skyView != null && look != null && skyLight != null) GpuSkyInputs(scene, skyView, look, skyLight, weather, landProfile, page, skyView.cloudTopY - 8 * densityValue, weatherNow, scene.instantAt(display)) else null
     }
     val skyImage = remember(skyLight, skyView) { if (shaders == null && skyLight != null && skyView != null) screenSky(skyLight, skyView) else null }
 
@@ -562,6 +564,9 @@ internal fun LivingSky(
                 drawLand(shapes, light, horizonColor, mid, zenith, page, soil, g.x(display), w)
             }
         })
+
+        // Rain falling here (0.9.9), in front of the land.
+        RainLayer(gpuInputs, ambient)
 
         // 5 · Over the land: the night part of the path, the prayers on it, and the birds.
         Box(Modifier.fillMaxSize().drawWithCache {

@@ -100,6 +100,10 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const cover = cfg.cover ?? (cfg.dunes ? 0.18 + 0.15 * rnd(1) : 0.28 + 0.22 * rnd(1));
     const cirrus = cfg.cirrus ?? (0.25 + 0.6 * rnd(2));
     const weather = [cover, cirrus, (rnd(3) * 40) % 40, (rnd(4) * 40) % 40];
+    // The weather of the day (SkyLook.kt Weather) and of this moment: cfg.weatherType 0 clear … 7 mixed; cfg.wx overrides.
+    const wDay = Clouds.weather(cfg.weatherType ?? 1, weather[2], weather[3], cirrus);
+    const wNow = Object.assign(Clouds.weatherAt(wDay, f), cfg.wx || {});
+    weather[0] = wNow.cumulus; weather[1] = wNow.cirrus;
     const night = 1 - smooth(-14, -6, el);
     const hijriDay = cfg.hijriDay ?? 14;
     const age = (((hijriDay - 1) + 0.5) / 29.53);
@@ -117,7 +121,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const common = {
       uFov: fov, uLutSize: [nx, ny], uLutPow: lutPow, uSunEl: el, uSunGround: fr.sunGround,
       uAmbTop: fr.ambTop.map((x, i) => x + nightAmb[i]), uAmbLow: fr.ambHor.map((x, i) => x + nightAmb[i] * 1.5),
-      uNight: night, uTime: cfg.time || 0, uWeather: weather, uWind: wind,
+      uNight: night, uTime: cfg.time || 0, uWeather: weather, uWind: wind, uWx: [wNow.overcast, wNow.layer, wNow.rain, 0],
     };
     // The real night sky (port of NightSky.kt): the moment, sidereal time, the view frame.
     const D2R = Math.PI / 180;
@@ -179,7 +183,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const morning = f < dd.noonF;
     const nightish = night;
     const mist = morning ? 0.85 * smooth(0, 1, 1 - Math.abs(el + 1) / 13) + 0.18 * nightish : 0.22 * nightish + 0.12 * smooth(0, 1, 1 - Math.abs(el - 1) / 10);
-    const landU = Object.assign({}, common, {
+    const landU = Object.assign({}, common, { uWeather: [wNow.cumulus * (1 - wNow.overcast), wNow.cirrus, weather[2], weather[3]] }, {
       uSize: [W, H], uDp: dp, uHorizon: hy, uBaseA: base.slice(0, 4), uBaseB: base[4], uAmpA: amp.slice(0, 4), uAmpB: amp[4],
       uDistA: dists.slice(0, 4), uDistB: dists[4], uRidgeN: N, uDunes: dunes ? 1 : 0, uSunPos: [sunX, sunY],
       uPage: page, uMist: mist, uSeed: (cfg.landSeed || 7) % 97, uSunrise: [xOf(dd.ev.SHURUQ), xOf(dd.ev.MAGHRIB)],
@@ -207,17 +211,16 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     g.drawImage(skyC, 0, 0, W, H);
     // The clouds (CloudField.kt), at full resolution over the sky.
     const t3 = performance.now();
-    if (window.CLOUDS && cfg.clouds !== 0) {
-      const cl = window.CLOUDS; window.DEBUG_CLOUDS = !!cfg.debugClouds; window.CLOUD_TUNE = cfg.cloudTune || null;
-      const draws = Clouds.layout(cl.table, {
-        w: W, h: H, horizonY: hy, dp, fov, time: cfg.time || 0,
-        weather: { regime: cfg.regime ?? 2, clouds: cfg.clouds ?? 14, seedX: weather[2], seedY: weather[3] },
+    if (window.CLOUDS) {
+      const cl = window.CLOUDS; window.DEBUG_CLOUDS = !!cfg.debugClouds;
+      const laid = Clouds.layout(cl.table, {
+        w: W, h: H, horizonY: hy, dp, fov, time: cfg.time || 0, weather: wDay, state: wNow,
         sunAz, sunEl: el, light: { sunCloud: fr.sunCloud, ambTop: common.uAmbTop, ambLow: common.uAmbLow },
         lut: fr.lut, night, moonLight: moonVis * ((1 - Math.cos(phase)) / 2) * night,
       }, Atmo.tone);
       const textBottom = arcTop - 16 * dp;
-      g.drawImage(Clouds.draw(W, H, draws, cl.image, textBottom - 6 * dp, textBottom + 34 * dp), 0, 0);
-      window.LAST_CLOUDS = draws;
+      g.drawImage(Clouds.draw(W, H, laid, cl.image, textBottom - 6 * dp, textBottom + 34 * dp, dp, night), 0, 0);
+      window.LAST_CLOUDS = laid.draws;
     }
     const t4 = performance.now();
     // Sun path above the horizon (behind the land): dashed, gold where the day has passed.
@@ -230,6 +233,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     g.lineWidth = 1.6 * dp; g.strokeStyle = `rgba(255,237,194,${0.95 * pathA})`; g.stroke(path);
     g.restore(); g.restore();
     g.drawImage(landC, 0, lift);
+    Clouds.rain(g, W, H, wNow.rain, cfg.time || 0, dp, night);
     // Prayer marks: in the sky, or on the skyline when the Sun is down.
     const skyline = (x) => { let m = 1e9; for (let l = 0; l < 5; l++) { const h = rid[l][Math.round(Math.max(0, Math.min(1, x / W)) * (N - 1))]; m = Math.min(m, base[l] - amp[l] * h); } return m; };
     const next = cfg.next || 'ASR';
@@ -258,7 +262,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       g.font = `600 ${28 * dp}px sans-serif`; g.fillText(cfg.title || 'Asr  ·  3:28 PM', W / 2, (cfg.topDp + 92) * dp);
       g.font = `300 ${68 * dp}px sans-serif`; g.fillText(cfg.countdown || '1:52:07', W / 2, (cfg.topDp + 168) * dp);
     }
-    return { url: out.toDataURL('image/png'), ms: [t1 - t0, t2 - t1, t4 - t3], el, night, exposure: fr.exposure, clouds: (window.LAST_CLOUDS || []).length };
+    return { url: out.toDataURL('image/png'), ms: [t1 - t0, t2 - t1, t4 - t3], el, night, exposure: fr.exposure, clouds: (window.LAST_CLOUDS || []).length, wx: wNow };
   };
   function smooth(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
 })();

@@ -36,6 +36,7 @@ uniform float3 uCelZ;
 uniform float3 uGalN;
 uniform float3 uGalC;
 uniform float uMoonIllum;
+uniform float4 uWx;        // the weather of the moment (0.9.9): overcast, layer of cloud, rain here, -
 
 float altAt(float y) {
     float t = sat((uHorizon - y) / uHorizon);
@@ -181,6 +182,54 @@ float4 banks(float3 v) {
     return float4(c, a * 0.85);
 }
 
+// Cellular noise for a layer of cloud: rounded cells parted by narrow, branching gaps (the gaps are where the noise
+// crosses its middle), as the underside of stratocumulus.
+float cellsOf(float2 p, float fine) {
+    float s = 0.0;
+    s += 0.6 * abs(vnoise(p) * 2.0 - 1.0);
+    s += 0.28 * abs(vnoise(ROT * p * 2.1 + float2(5.2, 1.3)) * 2.0 - 1.0);
+    s += 0.12 * fine * abs(vnoise(ROT * p * 4.3 + float2(1.7, 9.2)) * 2.0 - 1.0);
+    return s / (0.88 + 0.12 * fine);
+}
+
+// A layer of stratocumulus (0.9.9): rolls and cells of cloud on a sheet 2 km up, seen from below in perspective — large
+// and soft overhead, packed into rows towards the horizon; grey underneath where thick, bright at the thin edges and
+// towards the Sun, gaps of blue between.
+float4 cloudLayer(float3 v) {
+    float amount = smoothstep(0.08, 0.3, uWx.y) * uWx.y;
+    if (amount <= 0.001 || v.y < 0.003) return float4(0.0);
+    float t = shellDistance(v.y, 2.0);
+    float2 p = float2(v.x, v.z) * t + float2(uWind, 0.0);
+    float far = sat(t / 80.0);
+    float2 q = p * float2(0.30, 0.45) + uWeather.zw * 0.9;
+    float broad = vnoise(q * 0.18 + float2(3.0, 1.0));
+    float cells = sqrt(cellsOf(q, 1.0 - far)) * 0.8 + broad * 0.2;
+    float edge = 0.95 - amount * 0.7;
+    float thick = sat((cells - edge) * 3.0);
+    float a = smoothstep(edge - 0.03, edge + 0.12, cells) * (1.0 - smoothstep(150.0, 260.0, t));
+    float mu = dot(v, uSunDir);
+    float sun = (0.12 + 1.1 * hg(mu, 0.55)) * (1.0 - 0.75 * thick) * (1.0 - 0.8 * uWx.x);
+    float3 c = uAmbTop * (1.6 - 0.8 * thick) + uAmbLow * 0.5 + uSunCloud * sun;
+    return float4(c, a * 0.97);
+}
+
+// An overcast (0.9.9): a grey deck of stratus 1.4 km up over the whole sky, thicker and thinner in broad patches, a
+// little brighter where the Sun is behind it; darker overhead, paler towards the horizon where it is seen edge-on.
+float4 overcastDeck(float3 v) {
+    if (uWx.x <= 0.001) return float4(0.0);
+    float t = shellDistance(max(v.y, 0.003), 1.4);
+    float2 p = float2(v.x, v.z) * t + float2(uWind * 0.8, 0.0);
+    float n = fbm4(p * float2(0.045, 0.07) + uWeather.wz * 0.6, float4(1.0, 0.8, 0.5, 0.25));
+    float thick = sat(uWx.x * 1.35 - 0.25 + (n - 0.5) * 0.9 + 0.2 * smoothstep(20.0, 120.0, t));
+    float a = smoothstep(0.02, 0.5, thick);
+    float mu = dot(v, uSunDir);
+    // Neutral grey: the light of the whole sky, mixed through the cloud.
+    float amb = luma(uAmbTop * 1.4 + uAmbLow * 0.8);
+    float overhead = 1.0 - 0.35 * smoothstep(0.05, 0.6, v.y);
+    float3 c = float3(amb) * float3(0.97, 0.99, 1.03) * (1.1 - 0.55 * thick) * overhead + uSunCloud * (0.04 + 0.6 * hg(mu, 0.6)) * (1.0 - 0.85 * thick);
+    return float4(c, a);
+}
+
 float4 render(float2 fc) {
     float alt = altAt(fc.y);
     float3 v = viewDir(fc);
@@ -215,6 +264,18 @@ float4 render(float2 fc) {
     if (ciA > 0.0) col = mix(col, tone(ci.rgb), ciA);
     float4 bk = banks(v);
     if (bk.a > 0.0) col = mix(col, mix(tone(bk.rgb), sky, 0.35), bk.a);
+    float4 ly = cloudLayer(v);
+    if (ly.a > 0.0) {
+        float far = 1.0 - exp(-shellDistance(max(v.y, 0.004), 2.0) / 70.0);
+        col = mix(col, mix(tone(ly.rgb), sky, 0.08 + 0.6 * far), ly.a);
+    }
+    float4 dk = overcastDeck(v);
+    if (dk.a > 0.0) {
+        float3 dc = tone(dk.rgb);
+        col = mix(col, dc, dk.a);
+    }
+    // Rain greys the air.
+    if (uWx.z > 0.0) col = mix(col, float3(luma(col)) * 0.92, 0.35 * uWx.z);
 
     // Text written on the sky stays readable (as the atmosphere table is): small text above gets 4.5:1, the large
     // countdown just above the text's bottom 3:1, and below it the limit lifts gradually. The Sun is not held to it.
@@ -231,7 +292,7 @@ float4 render(float2 fc) {
     float r = length(sd);
     float above = smoothstep(uHorizon + 0.5 * uDp, uHorizon - 0.5 * uDp, fc.y);
     float rd = 7.5;
-    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above * (1.0 - 0.6 * ciA);
+    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above * (1.0 - 0.6 * ciA) * (1.0 - 0.97 * dk.a) * (1.0 - 0.9 * ly.a);
     if (disc > 0.0) {
         // The Sun adds light to the sky behind it: never darker than the sky, so it cannot turn black at the horizon.
         float limb = 1.0 - 0.45 * (1.0 - sqrt(sat(1.0 - (r / rd) * (r / rd))));
@@ -245,7 +306,7 @@ float4 render(float2 fc) {
     if (sunVis > 0.0) {
         float3 gc = tone(uSunGlow);
         float wide = 0.22 * exp(-r / 55.0) * mix(1.0, 0.4, smoothstep(-10.0, 30.0, textAbove));
-        float g = (0.55 * exp(-max(r - rd, 0.0) / 9.0) + wide) * sunVis;
+        float g = (0.55 * exp(-max(r - rd, 0.0) / 9.0) + wide) * sunVis * (1.0 - 0.85 * dk.a) * (1.0 - 0.5 * ly.a);
         col = 1.0 - (1.0 - col) * (1.0 - gc * g);
     }
 

@@ -27,7 +27,7 @@ const RAW = path.join(__dirname, '../../app/src/main/res/raw/');
     try {
       const r = await p.evaluate(([cfg, src]) => window.renderFrame(cfg, src), [sc, src]);
       fs.writeFileSync(path.join(outDir, sc.name + '.png'), Buffer.from(r.url.split(',')[1], 'base64'));
-      console.log(sc.name, 'el', r.el.toFixed(1), 'night', r.night.toFixed(2), 'ms', r.ms.map(x => x.toFixed(0)).join('/'));
+      console.log(sc.name, 'el', r.el.toFixed(1), 'night', r.night.toFixed(2), 'ms', r.ms.map(x => x.toFixed(0)).join('/'), 'clouds', r.clouds, r.wx ? Object.entries(r.wx).map(([k, v]) => k + ' ' + v.toFixed(2)).join(' ') : '');
     } catch (e) { console.log('FAIL', sc.name, e.message); }
   }
   await b.close();
