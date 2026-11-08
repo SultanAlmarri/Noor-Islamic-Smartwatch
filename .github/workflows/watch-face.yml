@@ -39,10 +39,15 @@ jobs:
         timeout-minutes: 20
         run: |
           SDK=$ANDROID_HOME; BIN=$SDK/cmdline-tools/latest/bin; ADB=$SDK/platform-tools/adb
-          yes | $BIN/sdkmanager --licenses >/dev/null || true
-          $BIN/sdkmanager "emulator" "platform-tools" "system-images;android-36;android-wear-signed;x86_64" | tail -2
-          $BIN/avdmanager list device -c | grep -i wear || true
-          echo no | $BIN/avdmanager create avd -n wear6 -k "system-images;android-36;android-wear-signed;x86_64" -d wearos_large_round --force
+          export ANDROID_AVD_HOME=$HOME/.android/avd; mkdir -p $ANDROID_AVD_HOME
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> $GITHUB_ENV
+          yes | $BIN/sdkmanager --licenses > licenses.log 2>&1 || true
+          $BIN/sdkmanager --install "emulator" "platform-tools" "system-images;android-36;android-wear-signed;x86_64" > sdk.log 2>&1 || { tail -40 sdk.log; exit 1; }
+          grep -iE "error|warning|license" sdk.log | tail -10 || true
+          ls -la $SDK/system-images/android-36/android-wear-signed/x86_64/ | head
+          echo no | $BIN/avdmanager create avd -n wear6 -k "system-images;android-36;android-wear-signed;x86_64" -d wearos_large_round --force 2>&1 | tail -20
+          ls -la $ANDROID_AVD_HOME
+          $SDK/emulator/emulator -list-avds
           nohup $SDK/emulator/emulator -avd wear6 -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel on > emulator.log 2>&1 &
           sleep 20; tail -20 emulator.log
           timeout 300 $ADB wait-for-device || { echo "emulator did not appear"; tail -60 emulator.log; exit 1; }
