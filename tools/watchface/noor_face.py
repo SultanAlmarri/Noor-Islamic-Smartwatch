@@ -73,9 +73,6 @@ def ring(radius, thickness, color, ambient_alpha=0):
             f'<Stroke color="{color}" thickness="{thickness}"/></Arc></PartDraw>')
 
 
-DEBUG_DESIGN = None
-DEBUG_EXPR = {"dial": "200", "minimal": "360 * ([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN])"}
-
 def progress(radius, thickness, accent):
     """The interval to the next prayer, from Noor's ranged complication: fills clockwise from the top."""
     d = radius * 2
@@ -85,7 +82,7 @@ def progress(radius, thickness, accent):
             "clamp([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN], 1, 1000000), 0, 1)")
     return (f'<PartDraw x="0" y="0" width="{W}" height="{H}"><Variant mode="AMBIENT" target="alpha" value="110"/>'
             f'<Arc centerX="{C}" centerY="{C}" width="{d}" height="{d}" startAngle="0" endAngle="1">'
-            f'<Transform target="endAngle" value="{DEBUG_EXPR.get(DEBUG_DESIGN, "clamp(360 * " + frac + ", 1, 360)")}"/>'
+            f'<Transform target="endAngle" value="clamp(360 * {frac}, 1, 360)"/>'
             f'<Stroke color="{argb(accent)}" thickness="{thickness}" cap="ROUND"/></Arc></PartDraw>'
             # The bright head of the ring.
             f'<Group name="head" x="0" y="0" width="{W}" height="{H}" pivotX="0.5" pivotY="0.5">'
@@ -102,13 +99,7 @@ def next_prayer_slot(design, accent, title_y, line_y, ring_r, ring_t):
         short = text(40, line_y, W - 80, 44, "%s  ·  %s", ["[COMPLICATION.TITLE]", "[COMPLICATION.TEXT]"], 30, a, weight="MEDIUM", ambient_alpha=200)
     else:
         body = (text(60, title_y, W - 120, 40, "%s", ["[COMPLICATION.TITLE]"], 32, a, weight="MEDIUM", ambient_alpha=200)
-                + text(60, line_y, W - 120, 36, "%s", ["[COMPLICATION.TEXT]"], 27, CREAM, ambient_alpha=200)
-                + ((text(20, 150, 140, 30, "V%s", ["[COMPLICATION.RANGED_VALUE_VALUE]"], 20, "#FFFF6060")
-                    + text(20, 180, 140, 30, "N%s", ["[COMPLICATION.RANGED_VALUE_MIN]"], 20, "#FF60FF60")
-                    + text(20, 210, 140, 30, "X%s", ["[COMPLICATION.RANGED_VALUE_MAX]"], 20, "#FF6060FF")
-                    + text(300, 150, 140, 30, "S%s", ["[SECONDS_IN_DAY]"], 20, "#FFFFFF60")) if design == "horizon" else "")
-                + (f'<PartDraw x="0" y="0" width="{W}" height="{H}"><Arc centerX="{C}" centerY="{C}" width="300" height="300" startAngle="0" endAngle="120">'
-                   f'<Stroke color="#FF60FF60" thickness="6"/></Arc></PartDraw>' if design == "minimal" else ""))
+                + text(60, line_y, W - 120, 36, "%s", ["[COMPLICATION.TEXT]"], 27, CREAM, ambient_alpha=200))
         short = (text(60, title_y, W - 120, 40, "%s", ["[COMPLICATION.TITLE]"], 32, a, weight="MEDIUM", ambient_alpha=200)
                  + text(60, line_y, W - 120, 36, "%s", ["[COMPLICATION.TEXT]"], 27, CREAM, ambient_alpha=200))
     return (f'<ComplicationSlot slotId="0" x="0" y="0" width="{W}" height="{H}" displayName="slot_next" '
@@ -116,7 +107,9 @@ def next_prayer_slot(design, accent, title_y, line_y, ring_r, ring_t):
             # The system's fallback type must be one of the slot's supported types, or Wear OS refuses the whole face
             # (it cannot be made active, not even by the user): seen on a Wear OS 6 emulator; the validator accepts it.
             f'<DefaultProviderPolicy defaultSystemProvider="EMPTY" defaultSystemProviderType="SHORT_TEXT" primaryProvider="{NEXT}" primaryProviderType="RANGED_VALUE"/>'
-            f'<BoundingBox x="90" y="{title_y - 6}" width="{W - 180}" height="{line_y - title_y + 50}"/>'
+            # The whole face: Wear OS clips what a complication draws to its bounding box, and the ring runs round the
+            # edge (a Wear OS 6 emulator drew no ring with a box round the text only). A tap anywhere opens Noor.
+            f'<BoundingBox x="0" y="0" width="{W}" height="{H}"/>'
             f'<Complication type="RANGED_VALUE">{progress(ring_r, ring_t, accent)}{body}</Complication>'
             f'<Complication type="SHORT_TEXT">{short}</Complication>'
             f'</ComplicationSlot>')
@@ -207,41 +200,34 @@ def hands(accent):
 
 
 def scene(design, accent):
-    global DEBUG_DESIGN
-    DEBUG_DESIGN = design
     parts = [background(design, accent)]
-    if design == "dial":
-        parts.append(f'<PartDraw x="0" y="0" width="{W}" height="{H}"><Arc centerX="{C}" centerY="{C}" width="340" height="340" startAngle="0" endAngle="1">'
-                     f'<Transform target="endAngle" value="200"/><Stroke color="#FFFF4040" thickness="6"/></Arc></PartDraw>')
-    if design == "minimal":
-        parts.append(f'<Group name="rot" x="0" y="0" width="{W}" height="{H}" pivotX="0.5" pivotY="0.5"><Transform target="angle" value="90"/>'
-                     f'<PartDraw x="{n(C - 8)}" y="20" width="16" height="16"><Ellipse x="0" y="0" width="16" height="16"><Fill color="#FFFF4040"/></Ellipse></PartDraw></Group>')
     if design == "horizon":
         parts += [
             f'<PartImage x="0" y="{H - 132}" width="{W}" height="132"><Image resource="dunes"/><Variant mode="AMBIENT" target="alpha" value="0"/></PartImage>',
             ring(214, 6, "#2EF4EEE2"),
+            next_prayer_slot(design, accent, 282, 322, 214, 6),
             hijri_slot(74, 22, argb(accent)),
             gregorian(108, 22),
             digital_time(140, 140, 118),
-            next_prayer_slot(design, accent, 282, 322, 214, 6),
             seconds_dot(214, "#FFFFFF"),
         ]
     elif design == "dial":
         parts += [
             ticks(accent),
             ring(192, 4, "#24F4EEE2"),
+            # The next prayer first: its box is the whole face, so the others go on top to keep their own taps.
+            next_prayer_slot(design, accent, 286, 322, 192, 5),
             hijri_slot(98, 20, argb(accent)),
             side_slot(2, 62, 190, QIBLA, "SHORT_TEXT", "EMPTY", "slot_left", accent),
             side_slot(3, W - 62 - 96, 190, None, None, "WATCH_BATTERY", "slot_right", accent),
-            next_prayer_slot(design, accent, 286, 322, 192, 5),
             hands(accent),
         ]
     else:
         parts += [
             ring(218, 3, "#22F4EEE2"),
+            next_prayer_slot(design, accent, 312, 312, 218, 3),
             hijri_slot(98, 22, MIST),
             digital_time(130, 170, 150),
-            next_prayer_slot(design, accent, 312, 312, 218, 3),
             seconds_dot(218, argb(accent)),
         ]
     return "".join(parts)
