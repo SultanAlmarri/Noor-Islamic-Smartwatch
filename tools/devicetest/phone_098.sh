@@ -59,6 +59,9 @@ notification() {
   adb shell input keyevent KEYCODE_HOME; sleep 2
   adb shell cmd statusbar expand-notifications; sleep 4
   shot "$1"; shade_text "$1"
+  # Other notifications (the system's) can push Noor's below the fold: scroll the shade and photograph again.
+  adb shell input swipe 540 2000 540 900 600; sleep 2
+  shot "$1_scrolled"
   adb shell cmd statusbar collapse; sleep 1
 }
 
