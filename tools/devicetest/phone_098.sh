@@ -40,7 +40,7 @@ PY
 }
 shot() { no_anr; adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes)"; }
 # The notification's text as Android holds it (uiautomator), for the record.
-shade_text() { adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/$1.xml" >/dev/null 2>&1
+shade_text() { adb shell rm -f /sdcard/ui.xml; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/$1.xml" >/dev/null 2>&1
   python3 - "$OUT/$1.xml" <<'PY' | tee -a "$OUT/steps.txt"
 import re, sys
 x = open(sys.argv[1], encoding='utf-8').read()
@@ -68,6 +68,7 @@ adb shell svc power stayon true
 adb install -r -g "$APK" | tail -1
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
 adb shell pm grant $PKG android.permission.CHANGE_CONFIGURATION 2>&1 | tee -a "$OUT/steps.txt"
+adb shell appops set $PKG WRITE_SETTINGS allow
 adb shell settings put global hidden_api_policy 1
 timeout 3000 "$(type -P adb)" logcat -v time > "$OUT/logcat.txt" 2>&1 &
 adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city dxb -n $HOOK >/dev/null; sleep 2

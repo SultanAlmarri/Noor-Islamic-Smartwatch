@@ -58,6 +58,11 @@ class TestHookReceiver : BroadcastReceiver() {
                         val repo = app.container.settings
                         repo.setLanguage(when (intent.getStringExtra("lang")) { "ar" -> com.noor.app.data.Language.ARABIC; "en" -> com.noor.app.data.Language.ENGLISH; else -> com.noor.app.data.Language.SYSTEM })
                         repo.setNumerals(if (intent.getStringExtra("numerals") == "arabic") com.noor.app.data.Numerals.ARABIC_INDIC else com.noor.app.data.Numerals.WESTERN)
+                        // As Settings does it: the app's own language for its screens (per-app language).
+                        val tags = when (intent.getStringExtra("lang")) { "ar" -> "ar"; "en" -> "en"; else -> "" }
+                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(androidx.core.os.LocaleListCompat.forLanguageTags(tags))
+                        }
                         com.noor.app.notify.StatusNotification.refresh(app)
                         Log.i(TAG, "LANG done ${intent.getStringExtra("lang")} ${intent.getStringExtra("numerals")}")
                     }
