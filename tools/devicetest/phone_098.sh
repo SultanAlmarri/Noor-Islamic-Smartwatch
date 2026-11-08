@@ -50,7 +50,7 @@ PY
 }
 system_locale() {
   # As Settings does it, without restarting Android (a restart loses the emulator in CI).
-  adb shell am broadcast -a com.noor.smartwatch.debug.SYSTEM_LOCALE --es locale "$1" -n $HOOK >/dev/null; sleep 6
+  adb shell am broadcast -a com.noor.smartwatch.debug.SYSTEM_LOCALE --es locale "$1" -n $HOOK >/dev/null; sleep 25
   log "system language now: $(adb shell getprop persist.sys.locale | tr -d '\r') / $(adb shell cmd activity get-config 2>/dev/null | grep -o 'config: [^ ]* [^ ]*' | head -1) / $(adb logcat -d -s NoorE2E:I | grep SYSTEM_LOCALE | tail -1)"
 }
 # Other apps' notifications (the system's, a language download) are snoozed for a while, so Noor's is in view.
@@ -65,6 +65,7 @@ notification() {
   snooze_others
   adb shell cmd statusbar expand-notifications; sleep 4
   shot "$1"; shade_text "$1"
+  adb logcat -d -s NoorStatus:D | grep "countdown digits" | tail -1 | tee -a "$OUT/steps.txt"
   adb shell cmd statusbar collapse; sleep 1
 }
 

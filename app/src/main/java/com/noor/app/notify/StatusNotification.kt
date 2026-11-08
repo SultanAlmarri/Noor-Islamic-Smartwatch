@@ -109,6 +109,7 @@ object StatusNotification {
         val now = Instant.now()
         val c = content(config, s, now, arabic)
         val drawn = !systemDigitsMatch(app, s.numerals)
+        android.util.Log.d("NoorStatus", "countdown digits: phone ${systemLocale(app).toLanguageTag()}, Noor ${s.numerals}: ${if (drawn) "drawn by Noor" else "Android's Chronometer"}")
         val f = Formatter(arabic, s.numerals, s.timeFormat)
         runCatching { nm.notify(ID, build(ctx, app, c, now, if (drawn) f else null)) }
         if (drawn) {
