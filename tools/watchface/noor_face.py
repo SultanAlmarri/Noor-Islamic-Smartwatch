@@ -73,6 +73,9 @@ def ring(radius, thickness, color, ambient_alpha=0):
             f'<Stroke color="{color}" thickness="{thickness}"/></Arc></PartDraw>')
 
 
+DEBUG_DESIGN = None
+DEBUG_EXPR = {"dial": "200", "minimal": "360 * ([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN])"}
+
 def progress(radius, thickness, accent):
     """The interval to the next prayer, from Noor's ranged complication: fills clockwise from the top."""
     d = radius * 2
@@ -82,7 +85,7 @@ def progress(radius, thickness, accent):
             "clamp([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN], 1, 1000000), 0, 1)")
     return (f'<PartDraw x="0" y="0" width="{W}" height="{H}"><Variant mode="AMBIENT" target="alpha" value="110"/>'
             f'<Arc centerX="{C}" centerY="{C}" width="{d}" height="{d}" startAngle="0" endAngle="1">'
-            f'<Transform target="endAngle" value="clamp(360 * {frac}, 1, 360)"/>'
+            f'<Transform target="endAngle" value="{DEBUG_EXPR.get(DEBUG_DESIGN, "clamp(360 * " + frac + ", 1, 360)")}"/>'
             f'<Stroke color="{argb(accent)}" thickness="{thickness}" cap="ROUND"/></Arc></PartDraw>'
             # The bright head of the ring.
             f'<Group name="head" x="0" y="0" width="{W}" height="{H}" pivotX="0.5" pivotY="0.5">'
@@ -99,7 +102,8 @@ def next_prayer_slot(design, accent, title_y, line_y, ring_r, ring_t):
         short = text(40, line_y, W - 80, 44, "%s  ·  %s", ["[COMPLICATION.TITLE]", "[COMPLICATION.TEXT]"], 30, a, weight="MEDIUM", ambient_alpha=200)
     else:
         body = (text(60, title_y, W - 120, 40, "%s", ["[COMPLICATION.TITLE]"], 32, a, weight="MEDIUM", ambient_alpha=200)
-                + text(60, line_y, W - 120, 36, "%s", ["[COMPLICATION.TEXT]"], 27, CREAM, ambient_alpha=200))
+                + text(60, line_y, W - 120, 36, "%s", ["[COMPLICATION.TEXT]"], 27, CREAM, ambient_alpha=200)
+                + (text(20, 360, W - 40, 30, "v %s min %s max %s", ["round([COMPLICATION.RANGED_VALUE_VALUE])", "round([COMPLICATION.RANGED_VALUE_MIN])", "round([COMPLICATION.RANGED_VALUE_MAX])"], 20, "#FFFF6060") if design == "horizon" else ""))
         short = (text(60, title_y, W - 120, 40, "%s", ["[COMPLICATION.TITLE]"], 32, a, weight="MEDIUM", ambient_alpha=200)
                  + text(60, line_y, W - 120, 36, "%s", ["[COMPLICATION.TEXT]"], 27, CREAM, ambient_alpha=200))
     return (f'<ComplicationSlot slotId="0" x="0" y="0" width="{W}" height="{H}" displayName="slot_next" '
@@ -198,6 +202,8 @@ def hands(accent):
 
 
 def scene(design, accent):
+    global DEBUG_DESIGN
+    DEBUG_DESIGN = design
     parts = [background(design, accent)]
     if design == "horizon":
         parts += [
