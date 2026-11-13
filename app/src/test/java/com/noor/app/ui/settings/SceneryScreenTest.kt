@@ -48,14 +48,22 @@ class SceneryScreenTest {
         rule.waitUntil(10_000) { rule.onAllNodesWithText("Automatic").fetchSemanticsNodes().isNotEmpty() }
         rule.onAllNodesWithText("Dunes, for Dubai", substring = true).onFirst().assertExists()
         shot("75_scenery_en")
-        rule.onAllNodesWithText("Mountains").onFirst().performClick()
+        // 1.0: the six sceneries of the real sky.
+        assertEquals(com.noor.app.sky.Biome.DUNES, com.noor.app.sky.Biome.of(Scenery.AUTO, "AE", 5.0, 25.2))
+        assertEquals(com.noor.app.sky.Biome.OCEAN, com.noor.app.sky.Biome.of(Scenery.AUTO, "MV", 2.0, 4.2))
+        assertEquals(com.noor.app.sky.Biome.ARCTIC, com.noor.app.sky.Biome.of(Scenery.AUTO, "NO", 10.0, 69.6))
+        assertEquals(com.noor.app.sky.Biome.SAVANNA, com.noor.app.sky.Biome.of(Scenery.AUTO, "KE", 1700.0, -1.3))
+        assertEquals(com.noor.app.sky.Biome.RAINFOREST, com.noor.app.sky.Biome.of(Scenery.AUTO, "GB", 30.0, 51.5))
+        assertEquals(com.noor.app.sky.Biome.CANYON, com.noor.app.sky.Biome.of(Scenery.AUTO, "YE".let { "AF" }, 1800.0, 34.5))
+        assertEquals(com.noor.app.sky.Biome.RAINFOREST, com.noor.app.sky.Biome.of(Scenery.HILLS, "AE", 5.0, 25.2))
+        rule.onAllNodesWithText("Red rock").onFirst().performClick()
         // The choice is saved on the view model's scope (DataStore writes on its own thread): let the main looper run.
         for (i in 0 until 200) {
-            if (runBlocking { app.container.settings.current().scenery } == Scenery.MOUNTAINS) break
+            if (runBlocking { app.container.settings.current().scenery } == Scenery.CANYON) break
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(25)
         }
-        assertEquals(Scenery.MOUNTAINS, runBlocking { app.container.settings.current().scenery })
-        shot("76_scenery_mountains_en")
+        assertEquals(Scenery.CANYON, runBlocking { app.container.settings.current().scenery })
+        shot("76_scenery_canyon_en")
     }
 
     private fun shot(name: String) {

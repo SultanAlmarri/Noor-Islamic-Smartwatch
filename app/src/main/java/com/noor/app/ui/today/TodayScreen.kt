@@ -104,6 +104,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.graphics.luminance
+import com.noor.app.sky.Biome
+import com.noor.app.sky.RealSky
+import com.noor.app.sky.RealSkyBridge
+import com.noor.app.sky.RealSkyLayer
+import com.noor.app.sky.RealSkySetup
 import com.noor.app.R
 import com.noor.app.data.ResolvedDay
 import com.noor.app.ui.components.NoorMotion
@@ -210,9 +216,24 @@ fun TodayContent(
 
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
     val home = HomeLayout.of(maxHeight, top, contentPadding.calculateBottomPadding())
+    // The real sky (1.0): the whole screen is the window. The scene is drawn behind everything by its own renderer;
+    // the day's times lie on frosted glass over its lower part. Where it cannot run, the 0.9 sky fills the header.
+    val skyContext = androidx.compose.ui.platform.LocalContext.current
+    val realSky = RealSky.usable(skyContext, u.settings.skyGraphics) && RealSky.unusable.intValue == 0
+    val bridge = remember { RealSkyBridge() }
+    val pagePx = with(LocalDensity.current) { Triple(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), home.heroHeight.toPx()) }
+    val glassRadius = with(LocalDensity.current) { 28.dp.toPx() }
+    val pageColor = NoorTheme.colors.background
+    val realSetup = if (realSky) remember(bridge, u.settings.scenery, u.place, pagePx, pageColor) {
+        RealSkySetup(
+            bridge, Biome.of(u.settings.scenery, u.place.countryCode, u.place.point.elevationM, u.place.point.latitude),
+            pagePx.first, pagePx.second, pagePx.third, glassRadius, pageColor.luminance() > 0.5f, floatArrayOf(pageColor.red, pageColor.green, pageColor.blue),
+        )
+    } else null
+    if (realSky) RealSkyLayer(Modifier.fillMaxSize().graphicsLayer { translationY = -scroll.value.toFloat() }) { bridge.frame.value?.invoke() }
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         val todayDay = remember(today, u.settings, u.place, u.profile) { dayFor(today)?.day }
-        SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime)
+        SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup)
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -286,6 +307,7 @@ fun TodayContent(
 private fun SkyHeader(
     u: TodayUi, f: Formatter, todayDay: PrayerDay?, top: Dp, heroHeight: Dp, scroll: ScrollState,
     onOpenLocation: () -> Unit, onRefresh: () -> Unit, previewScrub: Double?, previewSkyTime: Float?,
+    real: RealSkySetup? = null,
 ) {
     val st = u.state ?: return
     val place = u.place ?: return
@@ -403,7 +425,7 @@ private fun SkyHeader(
         LivingSky(
             scene, layout, display = display, scrubbing = scrubbing || intro, page = c.background, description = desc,
             modifier = Modifier.fillMaxSize(), parallax = { scroll.value.toFloat() }, stillTime = previewSkyTime,
-            opening = { opening.value },
+            opening = { opening.value }, real = real,
         )
 
         Column(
@@ -587,6 +609,9 @@ internal fun terrainFor(s: com.noor.app.data.Scenery, countryCode: String?, elev
     com.noor.app.data.Scenery.HILLS -> Terrain.HILLS
     com.noor.app.data.Scenery.MOUNTAINS -> Terrain.MOUNTAINS
     com.noor.app.data.Scenery.SEA -> Terrain.SEA
+    // The real sky's sceneries (1.0), where the 0.9 sky still draws: the nearest of its own four.
+    com.noor.app.data.Scenery.RAINFOREST, com.noor.app.data.Scenery.SAVANNA -> Terrain.HILLS
+    com.noor.app.data.Scenery.ARCTIC, com.noor.app.data.Scenery.CANYON -> Terrain.MOUNTAINS
 }
 
 /** "−1:10:34" before a prayer, "+04:12" after it (0.9.7): a true minus sign, the same in both languages, as in the notification. */

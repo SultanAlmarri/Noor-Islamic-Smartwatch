@@ -334,6 +334,9 @@ internal fun LivingSky(
     /** The opening's progress, 0 → 1 (1 when there is none): the scene fades in from the page, the land rises a
      *  little, the clouds run fast and settle to their real drift, and the path and its prayers draw themselves. */
     opening: () -> Float = { 1f },
+    /** The real sky (1.0) draws the scene itself, behind the whole screen: here only the path and the prayers are
+     *  drawn, over it. */
+    real: com.noor.app.sky.RealSkySetup? = null,
 ) {
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val ambient = LocalAmbientMotion.current
@@ -383,7 +386,7 @@ internal fun LivingSky(
     // Held as Any: the shader class exists only on Android 13 and later.
     val context = LocalContext.current
     val quality = remember { SkyQuality.load(context) }.let { SkyQuality.level.intValue.coerceAtLeast(0) }
-    val built: Any? = remember { if (Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
+    val built: Any? = remember(real != null) { if (real == null && Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
     val shaders: Any? = built
     // Frames are watched while the Sun is dragged (not during the opening): if the GPU sky keeps the phone under about
     // 22 frames a second for three seconds, it is drawn at a lower resolution (SkyQuality). The first second of a drag
@@ -416,7 +419,7 @@ internal fun LivingSky(
     }
     val look = skyView?.let { SkyLook.at(scene, it, display) }
     val capAlt = skyView?.let { it.altitudeAt(it.cloudTopY - 8 * densityValue) } ?: 90.0
-    val skyLight = rememberSkyLight(look, skyView, capAlt)
+    val skyLight = if (real != null) null else rememberSkyLight(look, skyView, capAlt)
     val weather = remember(scene.seed, scene.terrain) { Weather.of(scene.seed, scene.terrain) }
     // The weather at the moment shown: it changes through the day, and as the Sun is dragged through it.
     val weatherNow = weather.at(display)
@@ -453,11 +456,28 @@ internal fun LivingSky(
     }
     val skyImage = remember(skyLight, skyView) { if (shaders == null && skyLight != null && skyView != null) screenSky(skyLight, skyView) else null }
 
+    if (real != null) {
+        // The real sky: hand the renderer everything this moment's picture needs (it is told only when that changes).
+        val year = remember(scene.now, scene.southernHemisphere) { com.noor.app.sky.SkyDirector.yearPhase(scene.now, scene.southernHemisphere) }
+        val wx = remember(scene.seed, real.biome, (year * 24).toInt()) { com.noor.app.sky.SkyDirector.weather(scene.seed, real.biome, year) }
+        val frame: () -> com.noor.app.sky.RealSkyFrame? = {
+            val v = skyView; val l = look
+            if (v == null || l == null || real.w <= 0f) null else {
+                val o = opening()
+                com.noor.app.sky.RealSkyFrame.of(
+                    scene, v, l, real.biome, wx, year, display, scene.instantAt(display), real.w, real.h,
+                    textBottom = v.cloudTopY - 8 * densityValue, panelTop = real.panelTop, panelRadius = real.radius, lightGlass = real.lightGlass, tint = real.tint,
+                    fade = smoothstep(0f, 0.38f, o), busy = scrubbing || o < 1f, still = !ambient, lapse = OpeningSky.cloudLapse(o),
+                )
+            }
+        }
+        androidx.compose.runtime.SideEffect { real.bridge.frame.value = frame }
+    }
     Box(modifier.clipToBounds().onSizeChanged { heightPx[0] = it.height.toFloat(); sizePx = it }.semantics { contentDescription = description }
         .graphicsLayer { alpha = smoothstep(0f, 0.38f, opening()) }) {
-        if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuSkyLayer(shaders as SkyShaders, gpuInputs, { skySeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax, quality)
+        if (real == null && shaders != null && Build.VERSION.SDK_INT >= 33) GpuSkyLayer(shaders as SkyShaders, gpuInputs, { skySeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax, quality)
         // 1 · Sky, warm air round a low Sun, stars, the moon. Farthest away, so it lags most when the page scrolls.
-        if (shaders == null) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
+        if (real == null && shaders == null) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
             val w = size.width; val h = size.height
             val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
             // The clock is read only when there is something to move, so a daytime sky is not redrawn for nothing.
@@ -506,7 +526,7 @@ internal fun LivingSky(
         }
 
         // 2 · Clouds (0.9.9): the same on every phone, drifting with the wind (still when animations are off).
-        CloudLayer(gpuInputs, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
+        if (real == null) CloudLayer(gpuInputs, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
 
         // 3 · The Sun's rays and halo, the sun path above the horizon, and the Sun. The path is built once per size.
         Box(Modifier.fillMaxSize().drawWithCache {
@@ -523,7 +543,7 @@ internal fun LivingSky(
                 val sun = Offset(g.x(shownF), g.y(sunEl))
                 // The Sun fades as it sinks below the horizon (no sudden switch at sunrise or sunset). On the GPU the
                 // shader draws the Sun itself.
-                val up = if (shaders != null) 0f else smoothstep(-2.5f, 0.5f, sunEl.toFloat())
+                val up = if (shaders != null || real != null) 0f else smoothstep(-2.5f, 0.5f, sunEl.toFloat())
                 if (up > 0f) clipRect(0f, 0f, w, hy + 2.dp.toPx()) {
                     // Long, faint rays, turning slowly; longer and warmer when the Sun is low.
                     val rays = 14
@@ -555,7 +575,8 @@ internal fun LivingSky(
         })
 
         // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
-        if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
+        if (real != null) Unit
+        else if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
         else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
             val (riseX, setX) = sunriseSunsetX(scene, SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl))
@@ -568,7 +589,7 @@ internal fun LivingSky(
         })
 
         // Rain falling here (0.9.9), in front of the land.
-        RainLayer(gpuInputs, ambient)
+        if (real == null) RainLayer(gpuInputs, ambient)
 
         // 5 · Over the land: the night part of the path, the prayers on it, and the birds.
         Box(Modifier.fillMaxSize().drawWithCache {

@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
  *   the actual scheduled path fire, exactly as at a prayer time.
  * - DUMP: writes the alert history to logcat (tag NoorE2E), one line per alert.
  * - CITY: a chosen city by id (e.g. dxb, ist), onboarding done; used by tools/devicetest/home_sky.sh.
+ * - SKY: the home scenery and the sky's quality by name (Scenery, SkyGraphics); used by tools/devicetest/real_sky.sh.
  * - LANG: Noor's own language (en, ar, or the system's) and digits (western, arabic), whatever the phone's; for
  *   tools/devicetest/phone_098.sh (Noor in English on a phone set to Arabic).
  * - SYSTEM_LOCALE: the phone's language (e.g. ar-SA), without a restart.
@@ -46,6 +47,13 @@ class TestHookReceiver : BroadcastReceiver() {
                         // The emulator's software GPU is slow: keep the GPU sky at full quality so it is what gets photographed.
                         app.getSharedPreferences("noor_ui", 0).edit().putBoolean("sky_quality_locked", true).putInt("sky_quality", 0).commit()
                         Log.i(TAG, "CITY done ${intent.getStringExtra("city")}")
+                    }
+                    "com.noor.smartwatch.debug.SKY" -> {
+                        // The real sky (1.0): a scenery and a quality by name, for tools/devicetest/real_sky.sh.
+                        val repo = app.container.settings
+                        intent.getStringExtra("scenery")?.let { n -> com.noor.app.data.Scenery.entries.firstOrNull { it.name == n }?.let { repo.setScenery(it) } }
+                        intent.getStringExtra("graphics")?.let { n -> com.noor.app.data.SkyGraphics.entries.firstOrNull { it.name == n }?.let { repo.setSkyGraphics(it) } }
+                        Log.i(TAG, "SKY done ${intent.getStringExtra("scenery")} ${intent.getStringExtra("graphics")}")
                     }
                     "com.noor.smartwatch.debug.STATUS" -> {
                         app.container.settings.setStatusNotification(true)

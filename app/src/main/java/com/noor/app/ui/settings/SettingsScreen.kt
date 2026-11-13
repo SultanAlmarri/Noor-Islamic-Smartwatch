@@ -176,7 +176,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         // 0.9.8: the landscape under the home screen's sky.
         run {
             val place = com.noor.app.data.PrayerProvider.place(s)
-            val t = com.noor.app.ui.today.terrainFor(s.scenery, place?.countryCode, place?.point?.elevationM)
+            val t = com.noor.app.sky.Biome.of(s.scenery, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
             val name = stringResource(sceneryName(t))
             add(Row(R.string.settings_display, Icons.Rounded.Landscape, stringResource(R.string.scenery_title),
                 if (s.scenery == com.noor.app.data.Scenery.AUTO) stringResource(R.string.scenery_auto_short, name) else name,

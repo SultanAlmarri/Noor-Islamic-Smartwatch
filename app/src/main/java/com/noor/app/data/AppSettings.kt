@@ -13,7 +13,16 @@ enum class TimeFormat { H12, H24 }
 /** SUN: light from sunrise until Maghrib, dark through the night, following the prayer times of the current place. */
 enum class ThemeMode { SUN, SYSTEM, DARK, LIGHT }
 /** The landscape under the home screen's sky (0.9.8): chosen by place, or one the user prefers. */
-enum class Scenery { AUTO, DUNES, HILLS, MOUNTAINS, SEA }
+/**
+ * The home screen's scenery. Since the real sky (1.0) there are six: [DUNES], [RAINFOREST], [ARCTIC], [SEA] (the open
+ * ocean), [SAVANNA] and [CANYON]. [HILLS] and [MOUNTAINS] are the 0.9 names, kept so an earlier choice still means
+ * something (hills show the rainforest, mountains the red rock); the 0.9 sky, where it is still used, draws the
+ * nearest of its own four.
+ */
+enum class Scenery { AUTO, DUNES, HILLS, MOUNTAINS, SEA, RAINFOREST, ARCTIC, SAVANNA, CANYON }
+
+/** How the home sky is drawn (1.0): the real sky at a quality tier, chosen automatically or fixed, or the 0.9 sky. */
+enum class SkyGraphics { AUTO, ULTRA, HIGH, MEDIUM, LOW, CLASSIC }
 
 /** The last position the app knows about (or the city chosen by hand). Kept so the app works offline and after restarts. */
 data class KnownLocation(
@@ -69,4 +78,5 @@ data class AppSettings(
     /** After a prayer's time: "+" time since it for a while (default), or straight to the next prayer's "−" (0.9.8). */
     val elapsedAfterPrayer: Boolean = true,
     val scenery: Scenery = Scenery.AUTO,
+    val skyGraphics: SkyGraphics = SkyGraphics.AUTO,
 )
