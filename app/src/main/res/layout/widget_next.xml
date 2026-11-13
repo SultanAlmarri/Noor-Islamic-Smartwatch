@@ -54,7 +54,7 @@
                 android:layout_marginStart="8dp" />
         </LinearLayout>
 
-        <!-- The countdown (0.9.13). Where the phone writes Noor's digits, Android ticks it every second (a Chronometer, so Noor
+        <!-- The countdown (0.9.13, 0.9.14). Where the phone writes Noor's digits, Android ticks it every second (a Chronometer, so Noor
              need not run); otherwise Noor writes it in its own digits, to the minute. Home screens ignore fonts packed in an
              app (they build widgets in a restricted mode), so the digits cannot be redrawn by a font: 0.9.11 tried that. -->
         <FrameLayout
@@ -74,6 +74,38 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:visibility="gone" />
+            <!-- 0.9.14 (Android 12 and later): hours and minutes as a picture Noor draws each minute in its own digits and
+                 font, then the seconds through a window onto a wheel of Noor's digits that Android turns every second (an
+                 AnalogClock whose second hand is the wheel; tools/widget/SecondsWheel.java). -->
+            <LinearLayout
+                android:id="@+id/widget_count_row"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layoutDirection="ltr"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/widget_count_main"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@null" />
+
+                <FrameLayout
+                    android:id="@+id/widget_count_window"
+                    android:layout_width="@dimen/noor_count_window"
+                    android:layout_height="@dimen/noor_count_height">
+
+                    <AnalogClock
+                        android:id="@+id/widget_count_wheel"
+                        android:layout_width="@dimen/noor_count_wheel"
+                        android:layout_height="@dimen/noor_count_wheel"
+                        android:layout_gravity="top|center_horizontal"
+                        android:dial="@drawable/noor_wheel_blank"
+                        android:hand_hour="@drawable/noor_wheel_blank"
+                        android:hand_minute="@drawable/noor_wheel_blank" />
+                </FrameLayout>
+            </LinearLayout>
         </FrameLayout>
     </LinearLayout>
 </FrameLayout>

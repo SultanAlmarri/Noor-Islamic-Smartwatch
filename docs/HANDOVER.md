@@ -484,3 +484,20 @@ Evidence: `WidgetsTest` (the owner's case simulated: phone writes Arabic-Indic, 
 digits on all three widgets, "−1:26" a minute later, next update half a second after the minute turns; matching digits
 → Android's ticking countdown; Noor Arabic-Indic on a Western phone → "+٠:١٣"); pictures `90_widget_*_minutes.png`.
 Not yet seen on the owner's phone after the fix. Tests at 0.9.13: `app` 59, all pass (other modules unchanged).
+## 19. Real-time seconds in Noor's digits on the widgets (0.9.14, 13 November 2026, phone only)
+
+The owner asked for the widgets' seconds in real time, and the numerals always Noor's, whatever the phone's language.
+Android's digital clocks cannot do both on a phone whose language writes other digits (above), so the seconds are now
+a wheel of Noor's digits turned by an AnalogClock's second hand, seen through a one-label window, and the hours and
+minutes a picture Noor draws each minute (partial update, sky pictures untouched). Details and limits:
+[DESIGN.md](DESIGN.md#home-screen-widgets-0910-0911-0913-0914). Android 12 or later; older phones keep 0.9.13.
+
+The wheel's drawables are generated: `java tools/widget/SecondsWheel.java` from the repository root (JDK 17) rewrites
+`res/drawable/noor_sec_*`, `noor_wheel_*` and `res/values/noor_wheel.xml` (change the size or font there, not by hand).
+
+Evidence: `WidgetsTest` draws widgets and reads the second shown in the window against the real clock (counting up
+after Asr, down before it, Western and Arabic-Indic digits, and the owner's case: phone writing Arabic-Indic, Noor
+Western), checks the picture of "−1:27" / "+13" pixel for pixel, the minute's update (armed at the minute, partial,
+picture untouched), and the old-Android fallbacks. Not yet seen on a real phone: whether Samsung's home screen turns an
+AnalogClock's second hand once a second (Android's default) as the emulator-free tests assume, and how the wheel looks.
+Tests at 0.9.14: `app` 59, all pass (other modules unchanged).

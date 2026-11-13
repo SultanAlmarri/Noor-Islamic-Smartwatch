@@ -117,7 +117,7 @@ the sky shader once a second by day (15 times at night, for the twinkling stars)
 in the background, and stop entirely under "Remove animations". While the Sun is dragged or during the opening, both
 layers redraw every frame.
 
-## Home-screen widgets (0.9.10, 0.9.11, 0.9.13)
+## Home-screen widgets (0.9.10, 0.9.11, 0.9.13, 0.9.14)
 
 Three widgets, each in Noor's language and digits, opening Noor when tapped (`widget/Widgets.kt`, `widget/WidgetSky.kt`):
 
@@ -129,23 +129,40 @@ Three widgets, each in Noor's language and digits, opening Noor when tapped (`wi
   and the next prayer, place, date and countdown.
 
 They say exactly what the home screen and the notification say (`StatusNotification.content`): − before a prayer, +
-for 30 minutes after it, then the next. The countdown (0.9.13): only Android can tick seconds on a home screen without
-Noor running, so it is a Chronometer, and Android writes its digits in the phone's language. Where those are the digits
-chosen in Noor, the widgets show it: "−1:23:45" before a prayer, "+13:00" after it, as on the home screen, in the
-phone's light font. Where they are not (a phone in Arabic with Noor in Western digits, or the reverse), Noor writes the
-countdown itself in its own digits, to the minute ("−1:23", "+0:13", the home screen's bright part), and updates it as
-each minute turns while the phone is awake. Choosing the same digits in the phone's settings as in Noor brings the
-seconds back.
+for 30 minutes after it, then the next.
 
-0.9.11 tried to keep the seconds everywhere by setting the Chronometer in fonts that drew any digits as Noor's (and
-left the seconds of a bright copy blank, for two shades). It worked in tests, but a real home screen ignores fonts
-packed in an app: Android builds widgets for the home screen in a restricted mode in which a TextView does not load an
-app's font resources. On the owner's Samsung phone (Arabic, Noor in Western digits) the countdown showed the phone's
-Arabic-Indic digits and its seconds as "...". The fonts and their builder were removed in 0.9.13, and the countdown is
-never cut short with "…". The pictures are drawn with the ordinary Canvas, off the main thread. Updates come at each prayer, at the end of a "+" period, at midnight, every 15
-minutes for the picture, and when the place, times or settings change — all by non-waking alarms, so a sleeping phone
-is never woken for a widget (`WidgetsTest`).
+**The countdown (0.9.14)** reads as on the home screen, "−1:23:45" before a prayer and "+13:05" after it, "−1:23" bright
+and ":45" quieter, in Noor's Plex Light and **Noor's digits whatever the phone's language**, and its seconds change
+every second without Noor running. On a home screen only Android itself can change a widget every second, and its
+digital clocks (Chronometer, TextClock) write the phone's digits; fonts packed in an app are ignored there (Android
+builds widgets in a restricted mode in which a TextView does not load an app's fonts). So:
 
+- the part before the seconds ("−1:23" and the quiet ":") is a picture Noor draws in its own font and digits
+  (`widget/CountPicture.kt`), updated as each minute turns: a partial update that leaves the sky pictures alone, by a
+  non-waking alarm, so only while the phone is awake (the only time a widget is seen);
+- the seconds are a wheel of the 60 labels "00"–"59" in Noor's digits and font (vector drawables made by
+  `tools/widget/SecondsWheel.java` from Plex Light), set as the second hand of an `AnalogClock`, which Android turns
+  one step (6°) a second on the real clock. The widget shows it through a window the size of one label at the top of
+  the wheel (855 dp across), where the label for this second stands upright; its neighbours are outside the window.
+  "Down" wheels count down, "up" wheels count up; the clock is shifted by whole seconds (its time zone, a pure offset)
+  so the wheel lands on the countdown's own second, rounded down as the home screen counts (`Widgets.wheelFor`).
+
+Android rounds the clock to the nearest second when it reads the time between its ticks, so in the half second after
+the widget is set or shown its seconds can be one ahead, until the next tick. The minute's picture changes a few
+hundredths of a second after the minute turns. Android 12 or later is needed (an AnalogClock's second hand); before
+that, the widgets show Android's ticking countdown where the phone writes Noor's digits, otherwise Noor's countdown to
+the minute (0.9.13).
+
+History: 0.9.11 set Android's Chronometer in fonts that drew any digits as Noor's; it passed the tests, but on the
+owner's Samsung phone (Arabic, Noor in Western digits) the countdown showed the phone's Arabic-Indic digits and its
+seconds as "...", because the home screen ignored the fonts. 0.9.13 fell back to Noor's digits to the minute there; the
+owner wanted the seconds in real time and Noor's digits always, which 0.9.14 does.
+
+The pictures are drawn with the ordinary Canvas, off the main thread. Updates come at each prayer, at the end of a "+"
+period, at midnight, every 15 minutes for the picture, each minute for the countdown, and when the place, times or
+settings change, all by non-waking alarms, so a sleeping phone is never woken for a widget (`WidgetsTest`, which also
+draws a widget and reads which second its window shows against the real clock, counting up and down, in both sets of
+digits).
 ## Appearance
 
 Night (ink and gold), Day (warm paper, ink, deeper gold), System, and **Follow the sun** (the default): light from
