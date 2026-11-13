@@ -16,3 +16,4 @@ captures/
 !signing/noor-watchface-dev.keystore
 __pycache__/
 .kotlin/
+tools/sky3d/out/

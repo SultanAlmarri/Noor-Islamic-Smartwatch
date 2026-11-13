@@ -42,7 +42,12 @@ timeout 2600 "$(type -P adb)" logcat -v time > "$OUT/logcat.txt" 2>&1 &
 alive() { [ "$(adb get-state 2>/dev/null)" = "device" ]; }
 
 animations() { for k in animator_duration_scale transition_animation_scale window_animation_scale; do adb shell settings put global $k "$1"; done; }
-city() { adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city "$1" -n $HOOK >/dev/null; sleep 2; }
+# Since 0.10 the home screen draws the real sky (tools/devicetest/real_sky.sh photographs that one); this test is of
+# the 0.9 sky, which remains the fallback, so it is chosen by name ("Classic") each time a city is set.
+city() {
+  adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city "$1" -n $HOOK >/dev/null; sleep 2
+  adb shell am broadcast -a com.noor.smartwatch.debug.SKY --es graphics CLASSIC -n $HOOK >/dev/null; sleep 1
+}
 # setclock MMDDhhmmYYYY.ss in UTC
 setclock() { adb shell "date -u $1" >/dev/null; }
 launch() { adb shell am force-stop $PKG; sleep 1; adb shell am start -W -n $ACT >/dev/null; }

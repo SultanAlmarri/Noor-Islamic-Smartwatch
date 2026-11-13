@@ -43,30 +43,44 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.noor.app.R
 import com.noor.app.data.PrayerProvider
 import com.noor.app.data.Scenery
+import com.noor.app.data.SkyGraphics
+import com.noor.app.sky.Biome
 import com.noor.app.ui.adhan.BackHeader
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.theme.NoorTheme
-import com.noor.app.ui.today.Terrain
-import com.noor.app.ui.today.terrainFor
 
-/** The picture and the names of each landscape. */
-internal fun sceneryImage(t: Terrain): Int = when (t) {
-    Terrain.DUNES -> R.drawable.scenery_dunes
-    Terrain.HILLS -> R.drawable.scenery_hills
-    Terrain.MOUNTAINS -> R.drawable.scenery_mountains
-    Terrain.SEA -> R.drawable.scenery_sea
+/** The picture and the name of each scenery. */
+internal fun sceneryImage(b: Biome): Int = when (b) {
+    Biome.DUNES -> R.drawable.scenery_real_dunes
+    Biome.RAINFOREST -> R.drawable.scenery_real_pnw
+    Biome.ARCTIC -> R.drawable.scenery_real_arctic
+    Biome.OCEAN -> R.drawable.scenery_real_ocean
+    Biome.SAVANNA -> R.drawable.scenery_real_savanna
+    Biome.CANYON -> R.drawable.scenery_real_canyon
 }
 
-internal fun sceneryName(t: Terrain): Int = when (t) {
-    Terrain.DUNES -> R.string.scenery_dunes
-    Terrain.HILLS -> R.string.scenery_hills
-    Terrain.MOUNTAINS -> R.string.scenery_mountains
-    Terrain.SEA -> R.string.scenery_sea
+internal fun sceneryName(b: Biome): Int = when (b) {
+    Biome.DUNES -> R.string.scenery_dunes
+    Biome.RAINFOREST -> R.string.scenery_rainforest
+    Biome.ARCTIC -> R.string.scenery_arctic
+    Biome.OCEAN -> R.string.scenery_ocean
+    Biome.SAVANNA -> R.string.scenery_savanna
+    Biome.CANYON -> R.string.scenery_canyon
+}
+
+internal fun graphicsName(g: SkyGraphics): Int = when (g) {
+    SkyGraphics.AUTO -> R.string.sky_graphics_auto
+    SkyGraphics.ULTRA -> R.string.sky_graphics_ultra
+    SkyGraphics.HIGH -> R.string.sky_graphics_high
+    SkyGraphics.MEDIUM -> R.string.sky_graphics_medium
+    SkyGraphics.LOW -> R.string.sky_graphics_low
+    SkyGraphics.CLASSIC -> R.string.sky_graphics_classic
 }
 
 /**
- * Home scenery (0.9.8): the landscape under the home screen's sky. "Automatic" chooses it from the place (desert,
- * hills, high mountains, a small island's sea); or the user keeps the one they love, wherever they are.
+ * Home scenery (0.9.8; six sceneries since the real sky, 0.10): the landscape under the home screen's sky. "Automatic"
+ * chooses it from the place; or the user keeps the one they love, wherever they are. Below, how finely the sky is
+ * drawn: automatic by default, or fixed, or the earlier sky.
  */
 @Composable
 fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: SettingsViewModel = viewModel()) {
@@ -74,7 +88,8 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
     val c = NoorTheme.colors
     val ar = isArabicUi()
     val place = PrayerProvider.place(s)
-    val auto = terrainFor(Scenery.AUTO, place?.countryCode, place?.point?.elevationM)
+    val auto = Biome.of(Scenery.AUTO, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
+    val chosen = Biome.of(s.scenery, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
     val placeName = place?.let { if (ar) it.nameAr ?: it.nameEn else it.nameEn }
     Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) {
         BackHeader(stringResource(R.string.scenery_title), onBack)
@@ -86,18 +101,41 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
             selected = s.scenery == Scenery.AUTO, wide = true,
         ) { vm.setScenery(Scenery.AUTO) }
         Spacer(Modifier.height(12.dp))
-        val choices = listOf(Scenery.DUNES to Terrain.DUNES, Scenery.HILLS to Terrain.HILLS, Scenery.MOUNTAINS to Terrain.MOUNTAINS, Scenery.SEA to Terrain.SEA)
+        val choices = listOf(
+            Scenery.DUNES to Biome.DUNES, Scenery.RAINFOREST to Biome.RAINFOREST, Scenery.ARCTIC to Biome.ARCTIC,
+            Scenery.SEA to Biome.OCEAN, Scenery.SAVANNA to Biome.SAVANNA, Scenery.CANYON to Biome.CANYON,
+        )
         choices.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                row.forEach { (sc, t) ->
+                row.forEach { (sc, b) ->
                     Box(Modifier.weight(1f)) {
-                        SceneryCard(sceneryImage(t), stringResource(sceneryName(t)), null, s.scenery == sc, wide = false) { vm.setScenery(sc) }
+                        SceneryCard(sceneryImage(b), stringResource(sceneryName(b)), null, s.scenery != Scenery.AUTO && chosen == b, wide = false) { vm.setScenery(sc) }
                     }
                 }
             }
         }
         Text(stringResource(R.string.scenery_note), style = MaterialTheme.typography.bodySmall, color = c.textMuted,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+
+        // How finely the sky is drawn.
+        Text(stringResource(R.string.sky_graphics_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary,
+            modifier = Modifier.padding(start = 4.dp, top = 14.dp, bottom = 2.dp))
+        Text(stringResource(R.string.sky_graphics_note), style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        val shape = RoundedCornerShape(18.dp)
+        Column(Modifier.fillMaxWidth().padding(top = 6.dp).clip(shape).border(0.5.dp, c.separator, shape).background(c.surface)) {
+            SkyGraphics.entries.forEach { g ->
+                val on = s.skyGraphics == g
+                Row(
+                    Modifier.fillMaxWidth().semantics { role = Role.RadioButton; selected = on }.clickable { vm.setSkyGraphics(g) }
+                        .padding(horizontal = 16.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(graphicsName(g)), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary, modifier = Modifier.weight(1f))
+                    if (on) Icon(Icons.Rounded.Check, null, tint = c.gold, modifier = Modifier.size(20.dp))
+                }
+            }
+        }
         Spacer(Modifier.height(24.dp))
     }
 }

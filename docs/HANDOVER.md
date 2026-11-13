@@ -501,3 +501,111 @@ Western), checks the picture of "−1:27" / "+13" pixel for pixel, the minute's 
 picture untouched), and the old-Android fallbacks. Not yet seen on a real phone: whether Samsung's home screen turns an
 AnalogClock's second hand once a second (Android's default) as the emulator-free tests assume, and how the wheel looks.
 Tests at 0.9.14: `app` 59, all pass (other modules unchanged).
+
+## 20. The real sky (0.10.0, 14 November 2026, phone only)
+
+The owner's brief (evening of 13 November): "When someone opens Noor, they should see a real place through a window,
+at this moment, with a sky more beautiful than they expected." The 0.9 clouds looked flat to him. He asked for
+something real and breathtaking, never cartoonish, changing through the day, the night and the year by itself, and
+answering to touch; the clouds matter most, and sunrise and sunset must take the breath away. His decisions: a fixed
+camera; quality tiers, automatic by default; six sceneries as different as possible, the Pacific Northwest among them
+(his favourite); seasons by date and hemisphere; invented "Showcase" weather by default, with real local weather
+possible later; Sun, moon and stars true to place and time; only distant birds, nothing man-made; graphics only (no
+sound, no live wallpaper yet). Claude Fable 5.2 worked through the night as the maintainer of the home screen's
+graphics, free to set CLAUDE.md's rules aside where that clearly made the graphics better, except four: prayer
+times and their tests, honest reports, the signing keys, `legacy/`.
+
+**What was built.** A 3D renderer for the home screen, described in [DESIGN.md](DESIGN.md#the-real-sky-010): volumetric
+clouds lit by the real Sun and moon, a physical atmosphere, six 3D sceneries with seasons, a weather director, the
+real stars and aurora, the whole screen as the window with the day's times on frosted glass, a breath of wind on
+touch. The 0.9 sky is untouched and is the fallback ("Classic").
+
+| What | Where |
+|---|---|
+| Shaders (GLSL ES 3.00), shared by the phone and the design bench | `app/src/main/assets/sky/` |
+| Renderer: its own thread, EGL, passes, caches, tiers | `app/src/main/java/com/noor/app/sky/RealSkyEngine.kt`, `RealSky.kt` |
+| The moment as the renderer needs it; the weather director | `RealSkyFrame.kt` (`SkyDirector`, `SkyState`, `RealSkyFrame`) |
+| Where it joins the home screen | `LivingSky.kt` (`real` parameter), `TodayScreen.kt` (`RealSkyLayer` behind the page) |
+| Settings → Home scenery: six sceneries, Sky quality | `SceneryScreen.kt`, `AppSettings.kt` (`Scenery`, `SkyGraphics`) |
+| Design bench (the same shaders in a browser) | `tools/sky3d/` |
+| Pictures on an Android emulator | `tools/devicetest/real_sky.sh`, `.github/workflows/real-sky.yml` (pre-release `real-sky-preview`) |
+| Tests | `app/src/test/java/com/noor/app/sky/SkyDirectorTest.kt`, `SceneryScreenTest.kt` |
+
+**Decisions, and why**
+
+- *A renderer of our own in OpenGL ES 3.0*, not more AGSL: volumetric clouds need 3D textures, several render
+  targets and float buffers, and AGSL refuses programs of that size (section 11). ES 3.0 is on nearly every phone
+  since 2014; where float render targets are missing the 0.9 sky is used.
+- *The camera never moves* (the owner's decision), which is what makes it affordable: the land is found in 3D once
+  and only relit; one cloud pixel in sixteen is redone per update; the clear sky is drawn small.
+- *The Sun is drawn where the day's path puts it* (0.9's chart), and the direction through the camera lights the
+  scene; its colour comes from its true elevation. By day its light falls from the side (where it rose in the morning,
+  where it will set in the afternoon), so land and clouds are modelled by light and shade.
+- *0.10.0, not 1.0*: nothing of it has been seen on a phone yet.
+- *Old scenery choices carry over*: Hills → rainforest, Mountains → red rock, Sea → open ocean, Dunes → dunes;
+  Automatic picks by place (Arctic above 60° latitude, dunes in arid countries, ocean on islands, savanna on
+  grasslands, red rock for rock or high ground, otherwise the rainforest).
+- *Real local weather is not built.* It would plug in at `SkyDirector.at`, which returns the `SkyState` everything
+  else draws from.
+
+**Rules of CLAUDE.md set aside** (as the brief allowed), and why
+
+- Rule 5 ("change only what the task needs", the home screen and the scenery screen as they were): the home screen
+  is recomposed (scene behind the whole page, times on glass) and Settings → Home scenery now offers six sceneries
+  and a quality choice. That was the task.
+- The 0.9 guarantee of 4.5:1 for bare white text on the sky does not hold over the real sky: the limits behind the
+  text are 0.34 and 0.50 with a deeper letter shadow, because a sky dimmed further looked dull. The guarantee and its
+  tests still stand for the classic sky.
+- Kept: prayer times and their tests (not touched), honest reporting, the keys, `legacy/`, nature-only scenery
+  (rule 10), Palestine (rule 9), no scraping, no unlicensed assets (the renderer ships no pictures or recordings at
+  all: every texture is computed on the phone; the six scenery cards in Settings are renders of our own shaders).
+
+**Found on the way**
+
+- `SkyDirector.weather` seeded `java.util.Random` with neighbouring numbers for neighbouring days, which gives nearly
+  the same first values: every day of a week got the same kind of weather. The seed is scrambled first now.
+- Rays that skim flat ground or water ran out of steps in the land pass and left a strip of sky showing through the
+  land (canyon, savanna), and the foot of a far mountain missing. The shortest step now grows with distance.
+- Bright scenes were clipped to one tone by the glass; it now dims in proportion.
+- On this PC `avdmanager` writes sizes in Arabic-Indic digits into an emulator's `config.ini` (the Windows locale),
+  which the emulator cannot read; they have to be rewritten in Western digits.
+
+**The owner's PC and emulators.** An Android emulator cannot run on the owner's PC as it is: hardware
+virtualisation is switched off in its BIOS ("Virtualization Enabled In Firmware: No"), and without it the emulator
+does not start the system. The emulator and an Android 14 system image were installed under the SDK
+(`emulator`, `system-images;android-34;default;x86_64`) for a later session: with "SVM Mode" enabled in the BIOS,
+an emulator with `-gpu host` would draw the real sky with the PC's own graphics card (far closer to a phone than
+GitHub's software GPU).
+
+**How it was tested**
+
+- *By eye, in the design bench* (`tools/sky3d`): the phone's own shader files in Chromium (WebGL 2) on the owner's
+  PC (a Radeon RX 6900 XT): every scenery at many moments from Fajr to deep night, the director's own weather for
+  the coming days in Dubai, storms, rain, overcast, dust, mist, the seasons, both themes, Arabic mirroring, the three
+  lower tiers, with the header's text drawn in to judge how it reads. That card is many times faster than any phone:
+  the bench shows the look, not the speed.
+- *Unit tests*: `app` 67 (the 59 of 0.9.14 and 8 new in `SkyDirectorTest`), all pass; `core/prayer` 105, `alerts`
+  16, `wear` 29, unchanged and passing. Both release APKs build.
+- *On Android* (GitHub's Android 14 emulator, whose GPU is software, 360x800, Low tier): the renderer compiled every
+  shader, built itself, drew the dunes' land, kept it and loaded it from the cache on the next start, and showed the
+  scene inside the Today screen with the times on glass (log: "Real sky built", "Land drawn", "Land from the cache",
+  "Real sky shown: dunes"; one screenshot, at dusk). A picture takes that emulator about ten minutes (five for the
+  land, the rest mostly the clouds), and the Android system around it struggles meanwhile: later screenshots of the
+  same run were black. Earlier in the night the old home-sky test, which closes the app after 20 seconds, did so three
+  times before a first picture: the three-starts guard switched to the 0.9 sky, as designed.
+
+**Not tested: any phone.** Unknown until the owner opens it: the speed, the battery use and warmth, the look on a
+real screen, whether a real phone's GPU driver (Adreno, Mali, Xclipse) accepts every shader (if one does not, the 0.9
+sky is shown), the first start's wait while the shaders are compiled (later starts use the cache), the breath of wind
+and dragging the Sun over the new scene, TalkBack, Arabic and the light theme on a device.
+
+**Open work**
+
+1. The owner's phone first. `adb logcat -s NoorRealSky` shows the GPU, the tier, how long the land and each picture
+   took ("Picture: scene N ms, finish N ms"): tune the tiers (`RealSky.Tier`, `RealSky.guess`) from that.
+2. Real local weather as an option (at `SkyDirector.at`).
+3. Ideas not built: a long press that fast-forwards the day; each prayer's own sky sign; rainbows, Sun dogs, meteor
+   showers on their dates; the widgets and the notification still use the 0.9 pictures.
+4. Known weak spots: the foregrounds under the glass are plain (the rainforest's bluff, the savanna's grass); cloud
+   edges show a fine stipple, coarser at the Low tier; the emulator pictures are too few and too small to judge
+   anything but that it runs.
