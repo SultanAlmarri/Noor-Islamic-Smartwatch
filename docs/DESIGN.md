@@ -117,7 +117,7 @@ the sky shader once a second by day (15 times at night, for the twinkling stars)
 in the background, and stop entirely under "Remove animations". While the Sun is dragged or during the opening, both
 layers redraw every frame.
 
-## Home-screen widgets (0.9.10, 0.9.11)
+## Home-screen widgets (0.9.10, 0.9.11, 0.9.13)
 
 Three widgets, each in Noor's language and digits, opening Noor when tapped (`widget/Widgets.kt`, `widget/WidgetSky.kt`):
 
@@ -129,13 +129,20 @@ Three widgets, each in Noor's language and digits, opening Noor when tapped (`wi
   and the next prayer, place, date and countdown.
 
 They say exactly what the home screen and the notification say (`StatusNotification.content`): − before a prayer, +
-for 30 minutes after it, then the next. The countdown is the home screen's (0.9.11): "−1:23:45" before a prayer,
-"+13:00" after it, hours, minutes and seconds, "−1:23" bright and ":45" quieter, in Plex Light. Only Android can tick
-seconds on a home screen without Noor running, so it is a Chronometer, and Android writes its digits in the phone's
-language; the widgets set it in fonts made from Plex (`tools/widget/count_fonts.py`) that draw any digits Android writes
-as the digits chosen in Noor, a pair for each choice. Each pair is a quieter copy with, laid over it, a bright copy whose
-font draws the last ":ss" blank (a contextual substitution), which gives the two shades. The pictures are drawn with the
-ordinary Canvas, off the main thread. Updates come at each prayer, at the end of a "+" period, at midnight, every 15
+for 30 minutes after it, then the next. The countdown (0.9.13): only Android can tick seconds on a home screen without
+Noor running, so it is a Chronometer, and Android writes its digits in the phone's language. Where those are the digits
+chosen in Noor, the widgets show it: "−1:23:45" before a prayer, "+13:00" after it, as on the home screen, in the
+phone's light font. Where they are not (a phone in Arabic with Noor in Western digits, or the reverse), Noor writes the
+countdown itself in its own digits, to the minute ("−1:23", "+0:13", the home screen's bright part), and updates it as
+each minute turns while the phone is awake. Choosing the same digits in the phone's settings as in Noor brings the
+seconds back.
+
+0.9.11 tried to keep the seconds everywhere by setting the Chronometer in fonts that drew any digits as Noor's (and
+left the seconds of a bright copy blank, for two shades). It worked in tests, but a real home screen ignores fonts
+packed in an app: Android builds widgets for the home screen in a restricted mode in which a TextView does not load an
+app's font resources. On the owner's Samsung phone (Arabic, Noor in Western digits) the countdown showed the phone's
+Arabic-Indic digits and its seconds as "...". The fonts and their builder were removed in 0.9.13, and the countdown is
+never cut short with "…". The pictures are drawn with the ordinary Canvas, off the main thread. Updates come at each prayer, at the end of a "+" period, at midnight, every 15
 minutes for the picture, and when the place, times or settings change — all by non-waking alarms, so a sleeping phone
 is never woken for a widget (`WidgetsTest`).
 

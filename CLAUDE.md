@@ -14,8 +14,8 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: **0.9.12** for both apps (phone versionCode 21, watch 17; 0.9.7 and 0.9.9–0.9.11 changed only the
-phone). Everything is on `main`. The work branches `sky/096`, `sky/097`, `phone/097`, `adhan/097`, `noor/098` and
+Current version: phone **0.9.13** (versionCode 22), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11 and
+0.9.13 changed only the phone. Everything is on `main`. The work branches `sky/096`, `sky/097`, `phone/097`, `adhan/097`, `noor/098` and
 `noor/099` are fully merged;
 `probe/emu37` and `adhan/097-repro` hold only abandoned Android 17 emulator experiments (that image does not run
 reliably on GitHub's machines). All of them can be deleted (a cloud session is not allowed to delete branches).

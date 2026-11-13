@@ -65,9 +65,9 @@ class WidgetsTest {
             val v = shadow.getViewFor(id)
             assertTrue("prayer: ${text(v, R.id.widget_prayer)}", text(v, R.id.widget_prayer) in names)
             assertTrue(text(v, R.id.widget_time).matches(Regex("\\d{1,2}:\\d{2} [AP]M")))
-            // The countdown ticks as the home screen's does: Android's own seconds, Noor's digits (Western here).
-            for (c in Widgets.COUNT_LATIN) assertEquals(View.VISIBLE, v.findViewById<View>(c).visibility)
-            for (c in Widgets.COUNT_ARABIC) assertEquals(View.GONE, v.findViewById<View>(c).visibility)
+            // The phone writes Noor's digits (Western here): the countdown ticks as the home screen's does, Android's own seconds.
+            assertEquals(View.VISIBLE, v.findViewById<View>(R.id.widget_countdown).visibility)
+            assertEquals(View.GONE, v.findViewById<View>(R.id.widget_countdown_text).visibility)
             assertNotNull((v.findViewById<android.widget.ImageView>(R.id.widget_sky).drawable))
         }
         // At 15:50 the widgets count the time since Asr, as the home screen does.
@@ -110,39 +110,41 @@ class WidgetsTest {
         // seconds; before a prayer Android writes "−h:mm:ss" with a true minus sign, as the home screen does.
         fun count(v: View, id: Int) = v.findViewById<android.widget.Chronometer>(id)
         val nv = shadow.getViewFor(next)
-        for (id in Widgets.COUNT_LATIN) {
-            val c = count(nv, id)
+        count(nv, R.id.widget_countdown).let { c ->
             assertEquals("+%s", c.format)
             assertTrue("counting since Asr: ${c.text}", c.text.toString().matches(Regex("\\+1[23]:\\d{2}")))
         }
-        // It ticks by itself, every second, as the home screen's does: on a screen, five seconds later both copies (the
-        // quieter one and the bright one) read five seconds more, with no update from Noor.
+        // It ticks by itself, every second, as the home screen's does: on a screen, five seconds later it reads five
+        // seconds more, with no update from Noor.
         fun seconds(t: CharSequence) = t.toString().trim('+', '\u2212').split(':').fold(0) { acc, part -> acc * 60 + part.toInt() } *
             (if (t.startsWith("\u2212")) -1 else 1)
         Thread.sleep(1500)   // Noor's own update after the settings above (half a second later) is done first
         val screen = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
         screen.setContentView(nv)
         shadowOf(android.os.Looper.getMainLooper()).idle()
-        val start = Widgets.COUNT_LATIN.map { seconds(count(nv, it).text) }
+        val start = seconds(count(nv, R.id.widget_countdown).text)
         for (k in 1..5) {
             shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1))
-            for ((i, id) in Widgets.COUNT_LATIN.withIndex()) assertEquals("ticking: ${count(nv, id).text}", start[i] + k, seconds(count(nv, id).text))
+            assertEquals("ticking: ${count(nv, R.id.widget_countdown).text}", start + k, seconds(count(nv, R.id.widget_countdown).text))
         }
 
-        // Arabic-Indic digits chosen in Noor: the pair drawn in Arabic digits, whatever digits the phone writes.
+        // Arabic-Indic digits chosen in Noor, on a phone that writes Western ones: a home screen ignores fonts packed in
+        // an app, so Android's countdown cannot be redrawn in Noor's digits (0.9.11 tried). Noor writes it, to the minute:
+        // 13 minutes since Asr.
         repo.setLanguage(com.noor.app.data.Language.ENGLISH)
         repo.setNumerals(com.noor.app.data.Numerals.ARABIC_INDIC)
         Widgets.refresh(app, at)
         for (id in listOf(next, today, sky)) {
             val v = shadow.getViewFor(id)
-            for (c in Widgets.COUNT_ARABIC) assertEquals(View.VISIBLE, v.findViewById<View>(c).visibility)
-            for (c in Widgets.COUNT_LATIN) assertEquals(View.GONE, v.findViewById<View>(c).visibility)
+            assertEquals(View.GONE, v.findViewById<View>(R.id.widget_countdown).visibility)
+            assertEquals(View.VISIBLE, v.findViewById<View>(R.id.widget_countdown_text).visibility)
+            assertEquals("+\u0660:\u0661\u0663", text(v, R.id.widget_countdown_text))
         }
-        // The next update: no more often than the picture or the prayer needs (Android ticks the seconds itself).
+        // The next update: when that minute changes (non-waking), not before.
         val a = shadowOf(app.getSystemService(AlarmManager::class.java)).scheduledAlarms
             .single { shadowOf(it.operation).savedIntent.component?.className == WidgetRefreshReceiver::class.java.name }
         assertEquals(AlarmManager.RTC, a.type)
-        assertTrue(a.triggerAtTime <= at.plusSeconds(15 * 60).toEpochMilli())
+        assertEquals(at.plusSeconds(60).plusMillis(500).toEpochMilli(), a.triggerAtTime)
         picture("widget_next_arabic_digits", next, 180 to 84)
 
         // Before a prayer: at 14:10, "−1:27:00" to Asr (15:37), with the home screen's true minus sign.
@@ -152,9 +154,32 @@ class WidgetsTest {
         Widgets.refresh(app, before)
         val bv = shadow.getViewFor(next)
         assertEquals("Asr", text(bv, R.id.widget_prayer))
-        for (id in Widgets.COUNT_LATIN) assertEquals("\u22121:27:00", count(bv, id).text.toString())
+        assertEquals("\u22121:27:00", count(bv, R.id.widget_countdown).text.toString())
         picture("widget_next_before", next, 180 to 84); picture("widget_today_before", today, 340 to 170); picture("widget_sky_before", sky, 340 to 170)
+
+        // The owner's phone (13 November 2026): the phone in Arabic (Android writes Arabic-Indic digits), Noor in
+        // Western digits. Noor writes the countdown in Western digits, to the minute, never Android's.
+        com.noor.app.notify.StatusNotification.systemZeroDigit = { '\u0660' }
+        Widgets.refresh(app, before)
+        for (id in listOf(next, today, sky)) {
+            val v = shadow.getViewFor(id)
+            assertEquals(View.GONE, v.findViewById<View>(R.id.widget_countdown).visibility)
+            assertEquals("\u22121:27", text(v, R.id.widget_countdown_text))
+        }
+        picture("widget_next_minutes", next, 180 to 84); picture("widget_today_minutes", today, 340 to 170)
+        // A minute on: still the minute written by Noor, one less.
+        Widgets.refresh(app, before.plusSeconds(60))
+        assertEquals("\u22121:26", text(shadow.getViewFor(next), R.id.widget_countdown_text))
+        // Phone and Noor both Arabic-Indic: Android's ticking countdown again.
+        repo.setNumerals(com.noor.app.data.Numerals.ARABIC_INDIC)
+        Widgets.refresh(app, before)
+        assertEquals(View.VISIBLE, shadow.getViewFor(next).findViewById<View>(R.id.widget_countdown).visibility)
     }
 
-    @After fun realClock() { Widgets.clock = java.time.Instant::now }
+    @After fun realClock() {
+        Widgets.clock = java.time.Instant::now
+        com.noor.app.notify.StatusNotification.systemZeroDigit = saved
+    }
+
+    private val saved = com.noor.app.notify.StatusNotification.systemZeroDigit
 }

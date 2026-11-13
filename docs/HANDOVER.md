@@ -467,3 +467,20 @@ seen on a phone or watch: that the reminder arrives on time on a real device and
 Also fixed for building on Windows: `tools/watchface/build_pushed_face.py` now finds `apksigner.bat`.
 
 Tests at 0.9.12 (run on the owner's PC): `core/prayer` 105 (1 skipped by design), `alerts` 16, `app` 59, `wear` 29; all pass.
+## 18. Widget countdown on a real phone (0.9.13, 13 November 2026, phone only)
+
+The owner's first look at the widgets on his Samsung phone (Arabic phone, Noor in English with Western digits): the
+countdown showed the phone's Arabic-Indic digits ("−١:٤٤") and its seconds as "...", so it looked stuck. Cause: a home
+screen builds widgets in a restricted mode in which a TextView does not load an app's font resources, so 0.9.11's
+countdown fonts (which drew any digits as Noor's and blanked the seconds of a bright copy) were never used outside the
+Robolectric tests; the "..." was the text being cut short. Fix: where the phone writes Noor's digits, Android's
+Chronometer ticks the seconds as before (one copy, the phone's light font); otherwise Noor writes the countdown in its
+own digits to the minute ("−1:44", "+0:13") and updates it as each minute turns (non-waking alarm, so only while the
+phone is awake), as 0.9.10 did but in the home screen's h:mm form. The countdown is never ellipsized. The fonts and
+`tools/widget/count_fonts.py` are removed. To get ticking seconds back on such a phone, the owner can choose the same
+digits in Noor as the phone uses (or set the phone's numbers to Western, where One UI offers it).
+
+Evidence: `WidgetsTest` (the owner's case simulated: phone writes Arabic-Indic, Noor Western → "−1:27" in Western
+digits on all three widgets, "−1:26" a minute later, next update half a second after the minute turns; matching digits
+→ Android's ticking countdown; Noor Arabic-Indic on a Western phone → "+٠:١٣"); pictures `90_widget_*_minutes.png`.
+Not yet seen on the owner's phone after the fix. Tests at 0.9.13: `app` 59, all pass (other modules unchanged).
