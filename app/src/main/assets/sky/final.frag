@@ -6,7 +6,7 @@ uniform sampler2D tBlur;
 uniform vec4 uText;       // bottom of the text written on the sky (px from the top); 0 = none
 uniform vec4 uPanel;      // top of the glass (px from the top; beyond the view = none), corner radius (px), tint 0..1, 1 = light glass
 uniform vec3 uPanelTint;  // the glass's own colour (display)
-uniform float uFade;      // 0 = not yet shown (the page's colour) .. 1 = fully shown
+uniform float uFade;      // 0 = not yet shown (the waiting sky and the page's colour) .. 1 = fully shown
 uniform vec4 uCloudA, uCloudB, uCloudC;
 out vec4 o;
 
@@ -112,6 +112,7 @@ void main() {
 
     vec3 s = srgb(d);
     s += (ign(gl_FragCoord.xy + float(uFrame % 64) * 5.588) - 0.5) / 255.0 * 1.2;
-    // The scene comes in out of the page's own colour.
-    o = vec4(mix(uPanelTint, s, uFade), 1.0);
+    // The scene comes in out of what stood there while it was being made ready: a dusky sky (RealSky.WAITING_SKY)
+    // above, the page's own colour where the glass will be.
+    o = vec4(mix(mix(vec3(0.149, 0.208, 0.361), uPanelTint, inPanel), s, uFade), 1.0);
 }

@@ -567,6 +567,10 @@ touch. The 0.9 sky is untouched and is the fallback ("Classic").
 - Rays that skim flat ground or water ran out of steps in the land pass and left a strip of sky showing through the
   land (canyon, savanna), and the foot of a far mountain missing. The shortest step now grows with distance.
 - Bright scenes were clipped to one tone by the glass; it now dims in proportion.
+- In the light theme the white text on the sky would have stood on the cream page for the seconds before the
+  scene's first picture: a dusky "waiting sky" now holds its place.
+- An overcast day showed blue gaps once heaped clouds stood on flat bases (the noise that shapes them is read in
+  columns): where much of the sky is covered the gaps now fill in.
 - On this PC `avdmanager` writes sizes in Arabic-Indic digits into an emulator's `config.ini` (the Windows locale),
   which the emulator cannot read; they have to be rewritten in Western digits.
 

@@ -132,6 +132,11 @@ internal object SkyDirector {
         val after = smooth(-1f, -7f, el) * (1f - s.storm) * (1f - smooth(0.35f, 0.6f, s.overcast))
         cover *= 1f - 0.45f * after
         kind += (min(kind, 0.42f) - kind) * after
+        // A sky with nothing in it shows nothing of the day's light: even the clearest day keeps a few small heaped
+        // clouds through its warm hours, and a wisp of high cloud.
+        val warm = smooth(4f, 14f, el)
+        cover = max(cover, warm * (0.27f + 0.07f * day(13)))
+        cirrus = max(cirrus, smooth(-2f, 8f, el) * (0.20f + 0.15f * day(14)))
         // Deep night belongs to the stars, unless a storm is on.
         val calm = night * (1f - s.storm)
         cover *= 1f - 0.55f * calm

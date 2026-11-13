@@ -162,7 +162,8 @@ on it are drawn over the scene as before.
   mixed), weighted by scenery and season, evolving hour by hour, then arranges it as a landscape photographer hopes
   to find it: cloud to catch the colour at sunrise and sunset with room left for the Sun, the day's heaped clouds
   sinking once the Sun has gone (the afterglow belongs to the middle and high clouds), mostly clear deep nights for
-  the stars, drama now and then. Rain (snow, where snow lies), mist in the low ground, dust on a desert storm day,
+  the stars, drama now and then; even the clearest day keeps a few small heaped clouds through its warm hours and a
+  wisp of high cloud (a sky with nothing in it shows nothing of the day's light). Rain (snow, where snow lies), mist in the low ground, dust on a desert storm day,
   lightning in a storm, wet ground after rain; under an overcast the sky closes whole, lighter along the horizon. (The user's real local weather is not shown; the director is where it would plug in.)
 - **True to the place and the time**: the Sun and the moon (its real phase, its seas, earthshine), the 1,600
   catalogue stars and the Milky Way where they stand for the user's latitude, longitude and moment, as in 0.9.8, now
@@ -206,6 +207,11 @@ sea, moss, snow).
 (the default: guessed from the phone's GPU and memory, and stepped down by itself if pictures take too long), or
 Classic (the 0.9 sky). A tier sets the size of the cloud buffers and of the picture, how coarse the cloud march is and
 how often things are redrawn. Compiled shader programs are cached, so later starts are quick.
+
+**Until the first picture.** The renderer needs a moment to start (the land of the scenery, the first clouds), and
+several seconds the very first time on a phone, while its GPU driver compiles the shaders (kept afterwards). Until
+then a still, dusky sky (`RealSky.WAITING_SKY`) holds the scene's place above the page, so the white text written on
+the sky reads in either theme; the scene then comes in out of that same colour.
 
 **When it cannot run.** It needs OpenGL ES 3.0 with float render targets and a real GPU (a software one, as in an
 emulator, needs minutes for a picture; unless a quality is named in Settings). Without them, or if a shader is

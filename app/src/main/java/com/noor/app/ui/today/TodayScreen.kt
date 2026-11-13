@@ -232,7 +232,15 @@ fun TodayContent(
             pagePx.first, pagePx.second, pagePx.third, glassRadius, pageColor.luminance() > 0.5f, floatArrayOf(pageColor.red, pageColor.green, pageColor.blue),
         )
     } else null
-    if (realSky) RealSkyLayer(Modifier.fillMaxSize().graphicsLayer { translationY = -scroll.value.toFloat() }) { bridge.frame.value?.invoke() }
+    if (realSky) {
+        // Until the scene's first picture (a moment; longer the very first time, while the phone prepares its
+        // shaders) a still, dusky sky holds its place over the page, so the white text written on the sky reads in
+        // either theme. The renderer brings the scene in out of these same colours (final.frag).
+        Box(Modifier.fillMaxSize().graphicsLayer { translationY = -scroll.value.toFloat() }.background(RealSky.WAITING_SKY)) {
+            Box(Modifier.fillMaxSize().padding(top = home.heroHeight).background(pageColor, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)))
+        }
+        RealSkyLayer(Modifier.fillMaxSize().graphicsLayer { translationY = -scroll.value.toFloat() }) { bridge.frame.value?.invoke() }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         val todayDay = remember(today, u.settings, u.place, u.profile) { dayFor(today)?.day }
         SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup)

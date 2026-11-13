@@ -115,6 +115,9 @@ object RealSky {
     val unusable = mutableIntStateOf(-1)
     /** The quality chosen in Settings. */
     @Volatile var graphics: SkyGraphics = SkyGraphics.AUTO
+
+    /** The sky that holds the scene's place until its first picture; `final.frag` fades in from the same colour. */
+    val WAITING_SKY = androidx.compose.ui.graphics.Color(0xFF26355C)
     @Volatile private var engine: RealSkyEngine? = null
     /** Tests and previews have no GPU. */
     @Volatile var forceOff = false
