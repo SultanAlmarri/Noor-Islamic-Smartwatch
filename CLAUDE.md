@@ -14,8 +14,8 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.9.14** (versionCode 23), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
-0.9.13 and 0.9.14 changed only the phone. Everything is on `main`. The work branches `sky/096`, `sky/097`, `phone/097`, `adhan/097`, `noor/098` and
+Current version: phone **0.10.0** (versionCode 24), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
+0.9.13, 0.9.14 and 0.10.0 changed only the phone. Everything is on `main`. The work branches `sky/096`, `sky/097`, `phone/097`, `adhan/097`, `noor/098` and
 `noor/099` are fully merged;
 `probe/emu37` and `adhan/097-repro` hold only abandoned Android 17 emulator experiments (that image does not run
 reliably on GitHub's machines). All of them can be deleted (a cloud session is not allowed to delete branches).
@@ -76,14 +76,15 @@ JDK 17 in `%USERPROFILE%\.jdks\temurin-17` (listed in `~/.gradle/gradle.properti
 | Path | What |
 |---|---|
 | `core/prayer` | Prayer engine (NREL SPA port), 12 calculation profiles, Hijri date, schedule, `WatchConfig`/`WatchReport` (phone↔watch formats), `LocalSetup` (watch's own setup), Qibla geodesy, tasbih, Islamic calendar, flags |
-| `app` | Phone app (Jetpack Compose, Material 3). Home = `ui/today/` (`TodayScreen.kt`, `LivingSky.kt`, `HomeSky.kt`) |
+| `app` | Phone app (Jetpack Compose, Material 3). Home = `ui/today/` (`TodayScreen.kt`, `LivingSky.kt`, `HomeSky.kt`); its scene since 0.10 = `sky/` (the real sky's renderer) with shaders in `app/src/main/assets/sky` |
 | `wear` | Watch app (Compose for Wear OS M3, tiles, complications, Watch Face Push) |
 | `alerts`, `shared` | Android libraries used by both apps |
 | `legacy/` | Frozen watch face v1.3.2: source and APK. **Read-only** |
+| `tools/sky3d` | The real sky's design bench: the phone's own shaders in a web page (WebGL 2) |
 | `tools/` | Watch-face packaging and validation, sound pipeline, gazetteer, world places and time-zone map builders (`tools/geo`), SPA table generators, device tests, verification |
 | `accuracy/` | Official IACAD datasets, research tools, the blind test (scored monthly by a GitHub workflow) |
 | `docs/` | `HANDOVER.md`, `ARCHITECTURE.md`, `DESIGN.md`, `WATCH.md`, `ALERTS.md`, `SOUNDS.md`, `AUTHORITIES.md`, `PRAYER_ACCURACY.md`, `INSTALL.md` |
-| `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `device-alerts.yml` (the real alarm → Adhan path on Android 14/15 emulators), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` (verified Adhan downloads), `discover-sounds.yml` (Commons research list) |
+| `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `device-alerts.yml` (the real alarm → Adhan path on Android 14/15 emulators), `real-sky.yml` (the real sky on an Android 14 emulator), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` (verified Adhan downloads), `discover-sounds.yml` (Commons research list) |
 
 ## Build and test
 
@@ -124,6 +125,31 @@ watch-face packaging step). Point Gradle at the SDK with `ANDROID_HOME` or with 
   confirm on Android with `.github/workflows/home-sky.yml` (Android 14 and 15 emulators; pictures also go to the
   `home-sky-preview` pre-release, since workflow artifacts cannot be downloaded from a Claude Code cloud session).
   The emulators draw with a software GPU: faithful pictures, but slow, so stills are taken with animations off.
+
+### The real sky (0.10): the home screen's 3D renderer
+
+Read `docs/DESIGN.md` ("The real sky (0.10)") and `docs/HANDOVER.md` section 20 first.
+
+- Shaders: `app/src/main/assets/sky/*` (GLSL ES 3.00: `common.glsl`, `atmosphere.glsl`, `clouds.glsl`, `land.glsl`
+  and one `land_<scenery>.glsl`, and a `.frag` per pass). Renderer: `app/src/main/java/com/noor/app/sky/`
+  (`RealSkyEngine.kt` the passes, `RealSky.kt` tiers and fallbacks, `RealSkyFrame.kt` the moment and the weather
+  director). The 0.9 sky (`LivingSky.kt` and the AGSL shaders above) is the fallback: keep it working.
+- Look at changes in the design bench, which runs the same files: serve the repository root with
+  `python tools/sky3d/serve.py` (port 8765), open `/tools/sky3d/index.html`, wait for "ready", then drive it from
+  the console: `bench.set({biome: 'dunes', tod: 0.72, cover: 0.4, kind: 0.42}).settle()`, `bench.sheet('x.jpg',
+  [...])` (contact sheets in `tools/sky3d/out`, git-ignored), `bench.thumb(...)` (the scenery cards of Settings,
+  `res/drawable-nodpi/scenery_real_*.webp`). `bench.set` merges: give every tile of a sheet a full set of values.
+  The bench's pass order must stay the same as `RealSkyEngine.frame`.
+- A uniform is set by name in both (`RealSkyFrame.fill` and `bench.js`): add it in both.
+- Pitfalls met: `half` is a reserved word in GLSL ES; the camera must stay above the land it stands on (a dune
+  raised over the eye turns the whole picture one colour); the land pass must reach grazing rays (its shortest step
+  grows with distance); `java.util.Random` gives neighbouring seeds nearly the same first numbers (scramble the
+  seed); a land shader's cost is paid once per scenery, a cloud or scene shader's on every picture.
+- On an emulator (`real-sky.yml`, `tools/devicetest/real_sky.sh`) the GPU is software: a picture takes minutes,
+  so it uses a 360x800 screen, the Low tier and long waits. Its log lines (`NoorRealSky`) say how long each stage
+  took. An emulator cannot run on the owner's PC until "SVM Mode" is enabled in its BIOS (HANDOVER.md section 20).
+- `SkyDirectorTest` locks the weather director (bounds, smoothness through the day, the hour of colour, night) and
+  that Kotlin's camera is the shaders' camera.
 
 ## Delivery workflow (how every change has reached the owner so far)
 

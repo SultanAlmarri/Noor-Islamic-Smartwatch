@@ -6,7 +6,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 **Install:** [latest development build](https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/tag/dev-latest)
 · [step-by-step guide](docs/INSTALL.md)
 
-## Status (13 November 2026, version 0.9.14)
+## Status (14 November 2026, version 0.10.0)
 
 | Part | State |
 |---|---|
@@ -18,6 +18,7 @@ prayer-time engine tuned to Dubai's official IACAD timetable.
 | Blind accuracy test | Predictions for Dec 2026 – Jun 2027 frozen; scored monthly against IACAD (`accuracy/blind/`) |
 | Adhan and prayer alerts (`alerts`) | 0.9.12: an optional reminder 5–30 minutes before each prayer ("Asr in 15 minutes"). 0.9: the Adhan now plays like an alarm (also on vibrate), never fails silently (default Adhan, then a backup Adhan played by Android itself), and every alert is recorded in Alert history; tested on Android 14 and 15 emulators with Noor closed, screen off and Doze. Built and tested on the computer: per-prayer Adhan/short/sound/imported/notification/silent, phone/watch/both, gradual volume, Do Not Disturb choice, exact alarms, 18 licensed Adhan recordings from 9 countries and 14 original sounds, a library with search, regions, favourites and previews, and "Random from favourites" (0.9.5) ([ALERTS.md](docs/ALERTS.md), [SOUNDS.md](docs/SOUNDS.md)) |
 | Home screen (0.9.2; 0.9.8: the real night sky for the place and moment, volumetric cumulus relit for the Sun and moon, Dunes / Hills / Mountains / Sea scenery chosen in Settings or by place) | All six times visible without scrolling on small, common and large phones; the sky takes the rest. The sun path stays in the sky and sets behind the land; Fajr and Isha sit on the skyline; stars thin out towards the horizon; moonlit night clouds; Earth's shadow and the Belt of Venus at dawn and dusk; a 0.9 s opening time-lapse. Since 0.8.0: a living natural scene under the real sky: drifting clouds lit by the time of day, dunes or hills by country, mist at dawn, stars, Milky Way and moon at night, birds at dawn and dusk; drag the sun along its path through the day. Every other screen unchanged ([DESIGN.md](docs/DESIGN.md#the-home-screen)) |
+| The real sky (0.10.0, phone) | The home screen is a real place seen through a window: a 3D renderer of its own (OpenGL ES 3) draws volumetric clouds lit by the real Sun and moon, a physical sky, six 3D sceneries (Arabian dunes, Pacific Northwest rainforest, Arctic with aurora, open ocean, savanna, red rock canyon) with seasons, invented "Showcase" weather, the real stars; the day's times lie on frosted glass; a tap sends a breath of wind. Quality tiers, automatic by default; the 0.9 sky is the fallback ("Classic"). **Not yet seen on a phone**: designed in a WebGL bench that runs the same shaders, unit-tested, compiled and started on an Android emulator ([DESIGN.md](docs/DESIGN.md#the-real-sky-010), [HANDOVER.md](docs/HANDOVER.md) section 20) |
 | Design (0.6.0) | Living-sky Today screen (real sky colour and sun path), Follow-the-sun appearance, redesigned Qibla, Adhan, Watch, Settings and onboarding, watch app in the same family; WCAG AA contrast checked by tests ([DESIGN.md](docs/DESIGN.md)) |
 | Persistent notification (0.9.3) | Optional (Settings → Notification bar): next prayer, its time, a live countdown with seconds, the Hijri date and the place. 0.9.8: always Noor's digits (even on a phone set to another language), "Next prayer" said once, time since each prayer 30 min (Maghrib 15, Shuruq 20) with a switch |
 | Home-screen widgets (0.9.10; 0.9.14) | Next prayer, Today's prayers and Noor sky, over the home sky of the moment. The countdown is the home screen's, in Noor's digits and font whatever the phone's language, its seconds changing every second (a wheel of Noor's digits turned by Android's clock, Android 12+; 0.9.14). Tested on the computer; the 0.9.11 version was seen on the owner's Samsung phone, this one not yet ([DESIGN.md](docs/DESIGN.md#home-screen-widgets-0910-0911-0913-0914)) |
@@ -38,6 +39,7 @@ Working on the project with Claude Code: start with [`CLAUDE.md`](CLAUDE.md) and
 | `wear` | Watch app: Compose for Wear OS (Material 3) with navigation, tiles (ProtoLayout Material 3), complication data sources, Ongoing Activity, Watch Face Push |
 | `legacy/` | Frozen copy of the working watch face v1.3.2 and its APK |
 | `tools/watchface/` | Packages the watch face for Watch Face Push and validates it with Google's validator |
+| `tools/sky3d/` | The design bench of the real sky: a web page that runs the phone's own sky shaders (`app/src/main/assets/sky`) in WebGL 2 |
 | `tools/sounds/` | Generates the alert sounds, fetches and verifies the licensed Adhan recordings, builds the sound library |
 | `accuracy/` | Official IACAD datasets, research tools, blind test |
 | `signing/` | Public development keys (see its README); no release key is stored here |

@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 13 November 2026 (version 0.9.12: reminders before prayers, see ALERTS.md).
+Living document: each development phase adds its section. Last updated 14 November 2026 (phone 0.10.0: the real sky, see below and DESIGN.md; watch 0.9.12).
 
 ## Modules
 
@@ -178,8 +178,26 @@ Full description: `DESIGN.md`.
   (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
+## The real sky (0.10, phone)
+
+The home screen's scene is drawn by a renderer of its own (`com.noor.app.sky`), not by Compose: a `TextureView`
+behind the Today page, an OpenGL ES 3.0 context on one render thread (`RealSkyEngine`), and the shaders in
+`app/src/main/assets/sky` (GLSL ES 3.00; `tools/sky3d` runs the same files in a browser). Compose only tells it the
+moment: `LivingSky` builds a `RealSkyFrame` (camera, where the Sun and moon are drawn and where their light falls
+from, the weather from `SkyDirector`, the season, where the text and the glass are) and hands it over through
+`RealSkyBridge`; the renderer never calls back into Compose. The sun path, the prayers' marks and the birds are still
+Compose, drawn over it. Passes, tiers, caches and fallbacks: [DESIGN.md](DESIGN.md#the-real-sky-010).
+
+- It is used when `RealSky.usable` says so: the setting (Settings → Home scenery → Sky quality) is not "Classic",
+  the phone has OpenGL ES 3, and this version has not failed to start three times (`noor_ui` preferences:
+  `real_sky_attempts`, `real_sky_failed_for`). Otherwise `LivingSky` draws the 0.9 sky exactly as before.
+- Nothing is shipped as a picture: the cloud noise, the land and the sky are computed on the phone. Compiled
+  programs (`cache/sky-programs`) and, on slow GPUs, the drawn land (`cache/sky-land`) are kept between starts.
+- It reads no sensors and no network, and stores nothing but those caches and the tier it stepped down to.
+
 ## Known limitations (0.9.7)
 
+- The real sky (0.10) has not been run on a phone: its speed, its battery use and its look on a real screen and a real phone GPU driver are unknown. The emulators draw it with a software GPU (minutes per picture).
 - 0.9.7's Adhan changes for Android 17 are checked on Android 14 and 15 emulators with a real scheduled alarm; the
   Android 17 emulator image does not run reliably on GitHub's machines, so Android 17 needs the owner's phone.
 - The map's imagery and gestures, and the phone's geocoder, are checked in software and on an emulator only.

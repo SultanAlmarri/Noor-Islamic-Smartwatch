@@ -53,6 +53,13 @@ void main() {
     // behind it needs (a sunlit cloud when there are clouds, the sky itself when it is clear). Shapes and colours
     // keep their relations; only then is anything still too bright eased down.
     float lim = textLimit(vp.y);
+    // The Sun itself is never dimmed: at midday it stands just under the text, and a dimmed Sun is a smudge. Its
+    // disc and the glare close round it keep their light; the letters' own shadow carries them there.
+    if (lim < 1.0 && uSunEl > -2.0) {
+        vec3 sp = viewPoint(uSunDir);
+        vec2 ds = (vp - sp.xy) / (0.075 * uView.x);
+        lim = mix(lim, 1.0, exp(-dot(ds, ds)) * step(0.0, sp.z) * smoothstep(-2.0, 1.0, uSunEl));
+    }
     if (lim < 1.0) {
         float clouds = saturate(uCloudA.x * 1.5 + uCloudB.x * 0.9 + uCloudC.y * 0.4 + uCloudC.z * 0.5);
         float sunlit = luma(toneLinear(mSunCloud() + mAmbTop()));
@@ -74,8 +81,12 @@ void main() {
             // Light glass: dark ink must read on it, so it never falls below a bright haze. The scene behind it is
             // lifted whole (its light and shade keep their relations), not only its dark parts.
             const float floorL = 0.60;
-            g = mix(vec3(floorL + 0.04), vec3(1.0), g);
-            g = mix(g, tint, uPanel.z * 0.6);
+            float l0 = luma(g);
+            float l1 = floorL + 0.02 + (0.98 - floorL) * saturate((l0 - 0.06) / 0.62);
+            // Its colours keep their hue, much paler: frosted, not painted.
+            g = mix(g * (l1 / max(l0, 1e-3)), vec3(l1), 0.62);
+            g = min(g, vec3(1.0));
+            g = mix(g, tint, uPanel.z * 0.3);
             float l = luma(g);
             if (l < floorL) g = mix(g, vec3(1.0), (floorL - l) / max(1.0 - l, 1e-3));
         } else {

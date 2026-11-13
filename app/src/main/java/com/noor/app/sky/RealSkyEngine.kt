@@ -401,12 +401,15 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         delete(tSky, tCloud, tScene, tG, tB4, tB8a, tB8b)
         delete(tex["tSky"], tex["tCloudA"], tex["tCloudB"], tex["tScene"], tex["tG0"], tex["tG1"], tex["tG2"], b4, b8a, b8b)
         tex["tSky"] = hdr(ceil(w / 8f).toInt(), ceil(h / 8f).toInt()).also { tSky = target(it) }
-        val cw = ceil(w * tier.cloudScale).toInt(); val ch = ceil(h * tier.cloudScale).toInt()
+        // On a very fine screen (QHD and beyond) the scene is drawn as for a 2400-pixel-high one and enlarged: the eye
+        // cannot tell, and the GPU draws a third fewer pixels.
+        val fine = min(1f, 2400f / max(h, 1))
+        val cw = ceil(w * tier.cloudScale * fine).toInt(); val ch = ceil(h * tier.cloudScale * fine).toInt()
         val ca = hdr(cw, ch); val cb = hdr(cw, ch)
         tex["tCloudA"] = ca; tex["tCloudB"] = cb
         tCloud = target(ca, cb)
         GLES30.glClearColor(0f, 0f, 0f, 1f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
-        val sw = ceil(w * tier.sceneScale).toInt(); val sh = ceil(h * tier.sceneScale).toInt()
+        val sw = ceil(w * tier.sceneScale * fine).toInt(); val sh = ceil(h * tier.sceneScale * fine).toInt()
         tex["tScene"] = hdr(sw, sh).also { tScene = target(it) }
         val g0 = ldr(sw, sh, GLES30.GL_NEAREST); val g1 = ldr(sw, sh, GLES30.GL_NEAREST); val g2 = ldr(sw, sh, GLES30.GL_NEAREST)
         tex["tG0"] = g0; tex["tG1"] = g1; tex["tG2"] = g2

@@ -15,9 +15,11 @@ float volcano(vec2 p) {
     if (r > 1.3) return 0.0;
     float cone = pow(max(1.0 - r, 0.0), 1.45);
     // A broad, broken summit (an old crater's rim), not a point.
-    cone = min(cone, 0.86 + 0.10 * nA(p / 2300.0 + 0.4) - 0.5 * sq(max(cone - 0.86, 0.0)));
+    // (The mountain is far: its shapes are read from the noise's coarser levels, or every pixel of it would face a
+    // different way and its snow would look like gravel.)
+    cone = min(cone, 0.86 + 0.10 * textureLod(tNoise2D, p / 2300.0 + 0.4, 2.5).r - 0.5 * sq(max(cone - 0.86, 0.0)));
     // Ribs of rock and the glaciers' valleys between them run down from it; a lesser peak stands on one shoulder.
-    float rib = (nA(p / 2900.0 + 0.13) - 0.5) * 1.3 + (nB(p / 1100.0 + 0.6) - 0.5) * 0.25;
+    float rib = (textureLod(tNoise2D, p / 2900.0 + 0.13, 2.5).r - 0.5) * 1.3 + (textureLod(tNoise2D, p / 1100.0 + 0.6, 3.5).g - 0.5) * 0.25;
     float h = cone + rib * 0.42 * cone * (1.0 - cone) * 2.0;
     h += 0.16 * exp(-sq(length(p - c - vec2(-2900.0, -1700.0)) / 1700.0));
     h += 0.07 * exp(-sq(length(p - c - vec2(3300.0, -900.0)) / 1300.0));
@@ -132,8 +134,9 @@ void landMat(vec3 p, inout vec3 n, float t, bool isObj, out vec3 alb, out float 
     }
     float steep = 1.0 - smoothstep(0.5, 0.8, n.y);
     // Above the trees: dark volcanic rock, then snow and ice down to a line that drops in winter.
-    vec3 rock = mix(vec3(0.085, 0.078, 0.075), vec3(0.15, 0.13, 0.12), nB(p.xz / 300.0));
-    float line = mix(2050.0, 1150.0, uLand.z) + (nA(p.xz / 1900.0) - 0.5) * 700.0;
+    float fl = clamp(log2(t / 1200.0), 0.0, 6.0);
+    vec3 rock = mix(vec3(0.085, 0.078, 0.075), vec3(0.15, 0.13, 0.12), textureLod(tNoise2D, p.xz / 300.0, fl + 1.0).g);
+    float line = mix(2050.0, 1150.0, uLand.z) + (textureLod(tNoise2D, p.xz / 1900.0, max(fl - 1.5, 0.0)).r - 0.5) * 700.0;
     float snow = smoothstep(line - 150.0, line + 250.0, p.y) * (1.0 - 0.6 * smoothstep(0.55, 0.8, steep) * (1.0 - smoothstep(3000.0, 4000.0, p.y)));
     vec3 bare = mix(rock, vec3(0.90, 0.92, 0.95), snow);
     alb = mix(bare, green, f);

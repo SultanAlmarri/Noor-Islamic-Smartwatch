@@ -5,8 +5,9 @@
 #   tools/devicetest/real_sky.sh <debug apk> <output dir> [graphics tier, default LOW]
 #
 # The emulator draws with SwiftShader (a software GPU): the pictures are what the renderer draws, the speed is not that
-# of a phone (a picture that a phone draws in milliseconds takes it seconds), so the lowest tier is used by default and
-# each picture waits until the renderer says it has been shown. The renderer's log lines are saved (real_sky_log.txt).
+# of a phone (a picture that a phone draws in milliseconds takes it minutes), so the lowest tier is used by default and
+# each picture waits until the renderer says it has been shown. The renderer's log lines are saved (real_sky_log.txt):
+# they say how long each stage took.
 set -u
 APK="$1"; OUT="$2"; TIER="${3:-LOW}"
 PKG=com.noor.smartwatch
@@ -24,7 +25,8 @@ adb shell settings put global auto_time_zone 0
 adb shell settings put system screen_off_timeout 1800000
 adb shell svc power stayon true
 # The software GPU draws every pixel on the CPU (the land of one scenery took it five minutes at 720x1600, and the
-# system gave up): a small screen of the same shape, with the same layout, keeps each picture to a minute or two.
+# system gave up; at 360x800 a picture still takes it about ten minutes, most of them in the clouds): a small screen
+# of the same shape, with the same layout.
 adb shell wm size "${WM_SIZE:-360x800}"; adb shell wm density "${WM_DENSITY:-140}"
 adb shell wm size | tee -a "$OUT/steps.txt"
 adb install -r -g "$APK" | tail -1
@@ -34,7 +36,18 @@ for k in animator_duration_scale transition_animation_scale window_animation_sca
 adb shell settings put secure anr_show_background 0 >/dev/null 2>&1
 
 setclock() { adb shell "date -u $1" >/dev/null; }
-shot() { adb exec-out screencap -p > "$OUT/$1.png"; log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes)"; }
+# (A picture of a few kilobytes is a black screen: the system was still catching its breath after minutes of drawing
+# on the CPU. Wake it and try again.)
+shot() {
+  local i
+  for i in 1 2 3 4; do
+    adb shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1; sleep 4
+    adb exec-out screencap -p > "$OUT/$1.png"
+    [ "$(stat -c %s "$OUT/$1.png")" -gt 12000 ] && break
+    sleep 25
+  done
+  log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes)"
+}
 # Waits (up to $1 seconds) until the renderer has shown a picture since the last launch.
 shown() {
   local n=0
