@@ -280,6 +280,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private var landRow = 0              // the land is drawn a band of rows at a time; -1 = done
     private var landBand = 0             // rows in the next band: tuned to this GPU as the land is drawn
     private var landDir: File? = null
+    private var stagesLogged = 0
     private var stillDrawn: RealSkyFrame? = null   // with animations off: the moment that is on the screen now
     private var landFile: File? = null   // where this land is kept once drawn, if drawing it is slow on this phone
     private var cloudFrame = 0
@@ -589,6 +590,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         val cloudDue = now - lastCloud >= (if (scrubbing || cloudFill > 0) 0 else tier.cloudEveryMs)
         if (cloudDue) {
             val n = if (f.still) cloudFill else if (!shown) min(cloudFill, 4) else 1
+            val began = SystemClock.uptimeMillis()
             for (i in 0 until max(1, n)) {
                 ui["uFrame"] = cloudFrame
                 use(progs.getValue("cloud"), tCloud, mapOf("uAmort" to 16)); draw()
@@ -596,6 +598,8 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
                 if (cloudFill > 0) cloudFill--
             }
             lastCloud = now
+            // The first pictures of a start say how long each part takes on this GPU (once, in the log).
+            if (stagesLogged < 3 && n > 1) { GLES30.glFinish(); Log.i(TAG, "Clouds: $n updates, ${SystemClock.uptimeMillis() - began} ms") }
         }
 
         val ready = landRow < 0 && cloudFill <= 0
@@ -609,7 +613,11 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         fade = min(f.fade, ramp)
         u["uFade"] = floatArrayOf(fade)
 
+        val timed = stagesLogged < 3
+        val t1 = SystemClock.uptimeMillis()
         use(progs.getValue("scene"), tScene); draw()
+        if (timed) GLES30.glFinish()
+        val t2 = SystemClock.uptimeMillis()
         if (f.night > 0.05f && starCount > 0) {
             use(progs.getValue("stars"), tScene)
             GLES30.glEnable(GLES30.GL_BLEND); GLES30.glBlendFunc(GLES30.GL_ONE, GLES30.GL_ONE)
@@ -625,6 +633,11 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         use(blur, tB8b, mapOf("tSrc" to b8a!!, "uMode" to 1, "uDir" to floatArrayOf(1.6f / b8a!!.w, 0f))); draw()
         use(blur, tB8a, mapOf("tSrc" to b8b!!, "uMode" to 1, "uDir" to floatArrayOf(0f, 1.6f / b8a!!.h))); draw()
         use(progs.getValue("final"), null); draw()
+        if (timed) {
+            GLES30.glFinish()
+            stagesLogged++
+            Log.i(TAG, "Picture: scene ${t2 - t1} ms, finish ${SystemClock.uptimeMillis() - t2} ms (${tex.getValue("tScene").w}x${tex.getValue("tScene").h}, tier ${tier.name})")
+        }
         if (f.still && fade >= 1f) stillDrawn = f
         return true
     }

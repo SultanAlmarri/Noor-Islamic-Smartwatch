@@ -46,9 +46,10 @@ jobs:
       - name: Each scenery through the day
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          # A push photographs a few moments of each scenery; run the workflow by hand for the whole day.
-          SCENERIES: ${{ inputs.sceneries || 'DUNES RAINFOREST ARCTIC SEA SAVANNA CANYON' }}
-          TIMES: ${{ inputs.times || '0235:sunrise 0700:midday 1338:sunset' }}
+          # A push photographs two moments of two sceneries (the software GPU needs minutes for each); run the
+          # workflow by hand for every scenery and the whole day.
+          SCENERIES: ${{ inputs.sceneries || 'DUNES RAINFOREST' }}
+          TIMES: ${{ inputs.times || '0700:midday 1338:sunset' }}
         with:
           api-level: 34
           target: google_apis
