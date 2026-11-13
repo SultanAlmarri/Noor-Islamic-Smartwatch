@@ -97,7 +97,8 @@ void main() {
                 float lit = midCover(xz + normalize(L.xz + 1e-5) * 0.35, mlod);
                 float thick = c * mix(0.55, 1.0, uCloudB.y);
                 float path = (MID_TOP - MID_BASE) / max(rd.y, 0.08);
-                float alpha = 1.0 - exp(-thick * path * 2.2);
+                // (Far off, the layer thins into the haze rather than closing into a white band on the horizon.)
+                float alpha = (1.0 - exp(-thick * path * 2.2)) * exp(-tm * 0.006);
                 float od = (thick * 2.4 + max(lit - c, 0.0) * 5.0) * mix(1.0, 0.45, saturate(L.y * 2.0));
                 float e = cloudLight(od, mu);
                 float w = T * alpha;

@@ -61,26 +61,34 @@ void main() {
     vec3 ro = vec3(0.0, uCam.z, 0.0);
     o0 = vec4(0.0); o1 = vec4(0.5, 1.0, 0.5, 1.0); o2 = vec4(1.0, 1.0, 0.0, 0.0);
 
-    float t = 0.3;
+    float tw = rd.y < 0.0 ? (ro.y - landWater()) / -rd.y : 1e9;
+    if (tw < 0.0) tw = 1e9;
+    float t = 0.3, tPrev = 0.3;
     bool hit = false;
-    for (int i = 0; i < 420; i++) {
+    for (int i = 0; i < 480; i++) {
         vec3 p = ro + rd * t;
-        float d = sceneD(p, t);
+        float hgt = p.y - landH(p.xz, t);
+        float od = landObj(p);
+        float d = min(hgt * LAND_STEP, od);
         if (d < 0.0006 * t) { hit = true; break; }
-        t += max(d, 0.0022 * t + 0.01);
-        if (t > FAR || (rd.y > 0.0 && p.y > LAND_TOP)) break;
+        tPrev = t;
+        // The shortest step grows with distance (nothing thin stands far away; beside a tree it stays fine): a ray
+        // that skims a plain or the water for a long way still arrives, at the ground's next rise or at the
+        // mountains beyond. (Without this such rays gave up, and a strip of sky showed through the land.)
+        float stride = od < 4.0 ? 0.0022 : mix(0.0022, mix(0.010, 0.013, smoothstep(3000.0, 9000.0, t)), smoothstep(15.0, 150.0, t));
+        t += max(d, stride * t + 0.01);
+        // (Nothing is looked for under the water, nor above the highest land.)
+        if (t > FAR || t > tw + 1.0 || (rd.y > 0.0 && p.y > LAND_TOP)) break;
     }
     if (hit) {
         // Close in on the surface.
-        float a = t - max(0.0025 * t, 0.05), b = t;
-        for (int i = 0; i < 7; i++) {
+        float a = max(tPrev, t - max(0.014 * t, 0.05)), b = t;
+        for (int i = 0; i < 9; i++) {
             float m = 0.5 * (a + b);
             if (sceneD(ro + rd * m, m) < 0.0) b = m; else a = m;
         }
         t = 0.5 * (a + b);
     }
-    float tw = rd.y < 0.0 ? (ro.y - landWater()) / -rd.y : 1e9;
-    if (tw < 0.0) tw = 1e9;
     if (!hit && rd.y < -1e-4 && tw > FAR) {
         // Beyond the furthest relief the ground runs on, level, to the horizon.
         t = min(ro.y / -rd.y, 4.0e5);

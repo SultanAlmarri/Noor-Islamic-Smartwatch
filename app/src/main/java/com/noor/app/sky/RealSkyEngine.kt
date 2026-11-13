@@ -127,10 +127,11 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         progs.clear(); tex.clear()
         tTrans = null; tMeter = null; tSky = null; tCloud = null; tScene = null; tG = null; tB4 = null; tB8a = null; tB8b = null
         b4 = null; b8a = null; b8b = null
-        sizedFor = ""; landKey = ""; lightKey = ""; starVao = 0; starCount = 0
+        sizedFor = ""; landKey = ""; lightKey = ""; starVao = 0; starCount = 0; stillDrawn = null
     }
 
     private fun bindSurface() {
+        stillDrawn = null       // a new surface is empty: whatever was on the old one is drawn again
         if (eglSurface != EGL14.EGL_NO_SURFACE) {
             EGL14.eglMakeCurrent(display, pbuffer, pbuffer, context)
             EGL14.eglDestroySurface(display, eglSurface)
@@ -279,6 +280,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private var landRow = 0              // the land is drawn a band of rows at a time; -1 = done
     private var landBand = 0             // rows in the next band: tuned to this GPU as the land is drawn
     private var landDir: File? = null
+    private var stillDrawn: RealSkyFrame? = null   // with animations off: the moment that is on the screen now
     private var landFile: File? = null   // where this land is kept once drawn, if drawing it is slow on this phone
     private var cloudFrame = 0
     private var cloudFill = 0            // cloud updates still owed before every pixel is fresh
@@ -581,10 +583,12 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         // The clouds: one pixel in sixteen per update; all sixteen updates at once when the weather has jumped.
         val ck = f.cloudKey()
         if (ck != cloudKey) { cloudKey = ck; cloudFill = 16 }
+        // With animations off nothing moves between one moment and the next: each new moment is drawn whole, once.
+        if (f.still && f !== stillDrawn) cloudFill = 16
         val scrubbing = busyNow
         val cloudDue = now - lastCloud >= (if (scrubbing || cloudFill > 0) 0 else tier.cloudEveryMs)
         if (cloudDue) {
-            val n = if (!shown) min(cloudFill, 4) else 1
+            val n = if (f.still) cloudFill else if (!shown) min(cloudFill, 4) else 1
             for (i in 0 until max(1, n)) {
                 ui["uFrame"] = cloudFrame
                 use(progs.getValue("cloud"), tCloud, mapOf("uAmort" to 16)); draw()
@@ -621,6 +625,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         use(blur, tB8b, mapOf("tSrc" to b8a!!, "uMode" to 1, "uDir" to floatArrayOf(1.6f / b8a!!.w, 0f))); draw()
         use(blur, tB8a, mapOf("tSrc" to b8b!!, "uMode" to 1, "uDir" to floatArrayOf(0f, 1.6f / b8a!!.h))); draw()
         use(progs.getValue("final"), null); draw()
+        if (f.still && fade >= 1f) stillDrawn = f
         return true
     }
 
@@ -645,6 +650,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             try {
                 if (!glReady || (!firstShown && !attempting)) { attempting = true; RealSky.beginAttempt(app) }
                 if (!glReady) initGl()
+                if (f.still && f === stillDrawn && sizedFor == "$surfaceW x $surfaceH ${tier.name}") {
+                    synchronized(lock) { runCatching { lock.wait(250) } }
+                    continue
+                }
                 val t0 = SystemClock.uptimeMillis()
                 if (frame(f, t0)) {
                     // Now and then, how long a picture really takes (the GPU finished): a phone that cannot keep up

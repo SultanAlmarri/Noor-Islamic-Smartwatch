@@ -10,8 +10,8 @@ float groundH(vec2 p) {
     float d = length(p);
     float h = (nA(p / 2100.0 + 0.2) - 0.5) * 22.0 + (nB(p / 340.0) - 0.5) * 3.4 + (nA(p / 47.0) - 0.5) * 0.7;
     // Low hills and lone rocks at the edge of the plain (not where the Sun rises and sets).
-    float far = smoothstep(4500.0, 9000.0, d);
-    h += far * sunGap(p) * pow(nA(p / 8200.0 + 0.37), 3.0) * 520.0;
+    float far = smoothstep(3500.0, 8000.0, d);
+    h += far * sunGap(p) * (pow(nA(p / 8200.0 + 0.37), 2.2) * 560.0 + 40.0 * nB(p / 2600.0));
     return h * smoothstep(0.0, 60.0, d);
 }
 float landH(vec2 p, float t) { return groundH(p); }

@@ -313,7 +313,10 @@ void main() {
         } else {
             float ndl = saturate(dot(n, L));
             // Skylight from above, the warmer light of the horizon from the side, and light thrown back up by the ground.
-            vec3 skyAmb = mix(ambLow, ambTop, saturate(n.y * 0.6 + 0.4)) * open;
+            // (With the Sun low the land would be a black shape against the bright sky; it is given what the eye, and
+            // a careful photograph, find in it then: the glowing sky fills its shade.)
+            float fill = 1.0 + 1.3 * smoothstep(16.0, 2.0, uSunEl);
+            vec3 skyAmb = mix(ambLow, ambTop, saturate(n.y * 0.6 + 0.4)) * open * fill;
             vec3 bounce = alb * light * saturate(L.y) * 0.18 * saturate(0.6 - 0.5 * n.y);
             vec3 direct = light * ndl * sh;
             land = alb * (direct + skyAmb + bounce);
@@ -322,8 +325,8 @@ void main() {
             if (kind < 2.5 && kind > 1.5) {
                 // Sand: a sheen towards the Sun, and grains that flash.
                 land += light * sh * 0.10 * pow(saturate(dot(n, hv)), 14.0);
-                float spark = step(0.992, hash12(floor(p.xz * (t < 60.0 ? 90.0 : 30.0)) + floor(uTime * 1.5) * 0.37));
-                land += light * sh * spark * pow(saturate(dot(n, hv)), 6.0) * 1.2 * saturate(1.0 - t / 180.0);
+                float spark = step(0.9985, hash12(floor(p.xz * (t < 60.0 ? 90.0 : 30.0)) + floor(uTime * 1.5) * 0.37));
+                land += light * sh * spark * pow(saturate(dot(n, hv)), 10.0) * 0.8 * saturate(1.0 - t / 120.0);
             } else if (kind < 4.5 && kind > 2.5) {
                 // Snow and ice: light gets into them, so their shade is never dead; ice shines.
                 land += alb * light * 0.10 * (1.0 - ndl) * shCloud;
@@ -360,9 +363,12 @@ void main() {
         float ya = uCam.z * 0.001, yb = max(p.y, 0.0) * 0.001;
         const float HH = 1.3;
         float layer = abs(yb - ya) > 1e-3 ? HH / (yb - ya) * (exp(-ya / HH) - exp(-yb / HH)) : exp(-ya / HH);
-        float fog = 1.0 - exp(-tk * (0.006 + (0.020 + 0.024 * (uHaze - 1.0) + 0.06 * uAir.w) * layer));
+        float fog = 1.0 - exp(-tk * (0.006 + (0.022 + 0.024 * (uHaze - 1.0) + 0.06 * uAir.w + 0.02 * uAir.x) * layer));
         float glow = pow(saturate(dot(rd, uSunDir)), 8.0);
-        land = mix(land, hazeCol * (1.0 + 0.35 * glow), fog);
+        // (The air's own light in front of far land is a little bluer and dimmer than the sky behind it, where the
+        // eye looks through the whole atmosphere: so ridge stands out from ridge, and all of them from the sky.)
+        vec3 airCol = mix(hazeCol * (1.0 + 0.35 * glow), mix(ambLow, ambTop, 0.6), 0.26) * 0.93;
+        land = mix(land, airCol, min(fog, 0.92) * 0.95);
         if (uAir.x > 0.005) {
             const float hf = 16.0;
             float y0 = max(min(uCam.z, p.y), 0.0), y1 = max(max(uCam.z, p.y), 0.0);

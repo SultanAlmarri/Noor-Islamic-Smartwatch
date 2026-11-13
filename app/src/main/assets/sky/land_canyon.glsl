@@ -38,8 +38,9 @@ float landH(vec2 p, float t) {
     h = max(h, mesa(p, vec2(540.0, 1100.0), vec2(210.0, 300.0), 190.0, 0.67));
     // Far tablelands along the horizon (open where the Sun rises and sets).
     float far = smoothstep(5000.0, 9000.0, d);
-    float table = smoothstep(0.50, 0.56, nA(p / 14000.0 + 0.61)) * (0.7 + 0.3 * smoothstep(0.45, 0.5, nB(p / 5200.0)));
-    h += far * sunGap(p) * table * 330.0;
+    // (Most of the horizon is theirs: step behind step of them, of different heights, blue with distance.)
+    float table = smoothstep(0.40, 0.46, nA(p / 14000.0 + 0.61)) * (0.45 + 0.30 * smoothstep(0.45, 0.5, nB(p / 5200.0)) + 0.25 * smoothstep(0.52, 0.56, nA(p / 6100.0 + 0.2)));
+    h += far * sunGap(p) * table * 360.0;
     return h * smoothstep(0.0, 40.0, d);
 }
 

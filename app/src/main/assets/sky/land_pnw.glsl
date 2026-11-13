@@ -10,14 +10,18 @@ float landWater() { return 0.0; }
 
 // The volcano: a broad cone, steeper towards the top, with shoulders and gullies.
 float volcano(vec2 p) {
-    vec2 c = vec2(900.0, 38000.0);
+    vec2 c = vec2(700.0, 31000.0);
     float r = length(p - c) / 9800.0;
     if (r > 1.3) return 0.0;
-    float cone = pow(max(1.0 - r, 0.0), 1.5);
-    float a = atan(p.x - c.x, p.y - c.y);
-    float gully = (nA(vec2(a * 0.9, r * 1.6) + 0.3) - 0.5) * 0.20 * smoothstep(1.0, 0.25, r) * smoothstep(0.0, 0.2, r);
-    float shoulder = 0.08 * exp(-sq((r - 0.42) / 0.12)) * (0.5 + nB(vec2(a * 0.5, 0.2)));
-    return 4400.0 * max(cone + gully * cone + shoulder, 0.0);
+    float cone = pow(max(1.0 - r, 0.0), 1.45);
+    // A broad, broken summit (an old crater's rim), not a point.
+    cone = min(cone, 0.86 + 0.10 * nA(p / 2300.0 + 0.4) - 0.5 * sq(max(cone - 0.86, 0.0)));
+    // Ribs of rock and the glaciers' valleys between them run down from it; a lesser peak stands on one shoulder.
+    float rib = (nA(p / 2900.0 + 0.13) - 0.5) * 1.3 + (nB(p / 1100.0 + 0.6) - 0.5) * 0.25;
+    float h = cone + rib * 0.42 * cone * (1.0 - cone) * 2.0;
+    h += 0.16 * exp(-sq(length(p - c - vec2(-2900.0, -1700.0)) / 1700.0));
+    h += 0.07 * exp(-sq(length(p - c - vec2(3300.0, -900.0)) / 1300.0));
+    return 4400.0 * max(h, 0.0);
 }
 
 // How far inland a place is from the shore of the inlet (m): negative on the water.
@@ -36,11 +40,16 @@ float groundH(vec2 p) {
     float shore = inland(p);
     // Hills climbing from the shore: low spurs near, real ridges further back and further off.
     float ridges = nA(p / 4600.0 + 0.6) * 0.6 + nB(p / 1500.0 + 0.1) * 0.4;
-    float reach = 0.45 + 1.0 * smoothstep(800.0, 12000.0, d);
-    float h = (26.0 + 900.0 * ridges * reach) * smoothstep(0.0, 700.0 + 0.1 * d, shore);
-    h = mix(-30.0, h, smoothstep(-70.0, 30.0, shore)) + (shore > 0.0 ? shore * 0.035 : 0.0);
-    // Open towards sunrise and sunset beyond the near spurs.
-    h = mix(h, min(h, 10.0), (1.0 - sunGap(p)) * smoothstep(700.0, 1900.0, d));
+    // (They stay foothills: the mountain behind them is the one that stands up.)
+    float reach = 250.0 + 620.0 * smoothstep(2500.0, 16000.0, d);
+    float h = (26.0 + reach * ridges) * smoothstep(0.0, 700.0 + 0.1 * d, shore);
+    h = mix(-30.0, h, smoothstep(-70.0, 30.0, shore)) + (shore > 0.0 ? shore * 0.012 : 0.0);
+    // Open towards sunrise and sunset beyond the near spurs: the far headlands run down to the water there, long
+    // and low, the way real ones do.
+    float off = abs(abs(atan(p.x, p.y)) - uGapAz);
+    float far = smoothstep(700.0, 1900.0, d);
+    h *= mix(1.0, pow(smoothstep(0.02, 0.30, off), 0.8), far);
+    h = mix(h, min(h, 10.0), (1.0 - sunGap(p)) * far);
     h = max(h, volcano(p));
     // The bluff we stand on, falling to a shingle beach.
     float fall = smoothstep(40.0, 190.0, p.y);
@@ -51,7 +60,7 @@ float groundH(vec2 p) {
 
 // How much forest stands at a place, 0..1: none on the beach, on the snow or the bare rock.
 float forest(vec2 p, float g) {
-    return smoothstep(2.5, 9.0, g) * (1.0 - smoothstep(1250.0, 1650.0, g + (nB(p / 800.0) - 0.5) * 500.0));
+    return smoothstep(2.5, 9.0, g) * (1.0 - smoothstep(1050.0, 1750.0, g + (nB(p / 800.0) - 0.5) * 500.0 + (nA(p / 3100.0 + 0.3) - 0.5) * 1100.0));
 }
 
 float landH(vec2 p, float t) {
