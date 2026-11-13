@@ -62,7 +62,8 @@ float lowDensity(vec3 p, float lod, bool fine) {
     if (hf > 1.0) return 0.0;
     gCloudHf = hf;
     // A flat base, rounding towards the top; under the tropopause a thunderstorm spreads into an anvil.
-    float crown = 1.0 - pow(hf, mix(1.15, 1.5, smoothstep(0.55, 0.9, wm.y)));
+    // (A sheet is a slab, whole through most of its depth; a heap narrows all the way up.)
+    float crown = 1.0 - pow(hf, mix(2.6, mix(1.15, 1.5, smoothstep(0.55, 0.9, wm.y)), smoothstep(0.10, 0.36, wm.y)));
     float anvil = uCloudB.w * smoothstep(0.8, 1.0, wm.y) * smoothstep(0.70, 0.88, hf) * (1.0 - smoothstep(0.95, 1.0, hf));
     // A cloud is a heap: as tall as its ground is wide. Where clouds are few they are small, so they stay low
     // (the height a heap reaches goes with how far inside its outline a place is, not with how much sky is covered).
@@ -76,7 +77,11 @@ float lowDensity(vec3 p, float lod, bool fine) {
     vec4 n = textureLod(tNoise3D, qs * (1.0 / span) + vec3(0.0, uTime * 0.0006, 0.0), lod);
     float fbm = n.g * 0.625 + n.b * 0.25 + n.a * 0.125;
     // The volume's values crowd between 0.58 and 0.86; spread them over 0..1 so that coverage means what it says.
-    float base = saturate((remap(n.r, fbm - 1.0, 1.0, 0.0, 1.0) - 0.58) / 0.28);
+    float raw = (remap(n.r, fbm - 1.0, 1.0, 0.0, 1.0) - 0.58) / 0.28;
+    float base = saturate(raw);
+    // Under an overcast the gaps close too: where much of the sky is covered, the places between the heaps fill in
+    // (thinner there, so the sheet has light and dark in it), until at full cover no blue is left.
+    base = mix(base, saturate(raw * 0.35 + 0.75), smoothstep(0.55, 0.95, wm.x));
     // How far inside the cloud this point is (in units of the noise): positive within.
     float inside = base - (1.0 - c);
     // Sheets are soft and wide; heaped clouds have firm edges.
@@ -137,10 +142,11 @@ float cloudLight(float od, float mu) {
     return direct + once + many;
 }
 
-// The middle clouds (altocumulus in flocks or rows, or an altostratus veil): thickness 0..1 at a place, seen from below.
-float midCover(vec2 xz, float lod) {
+// The middle clouds (altocumulus in flocks or rows, or an altostratus veil) at a place, seen from below: how whole
+// the layer is there (x, 0..1) and how thick (y, 0..1: each cloudlet swells towards its middle, and is mottled).
+vec2 midCover(vec2 xz, float lod) {
     float amt = uCloudB.x;
-    if (amt < 0.01) return 0.0;
+    if (amt < 0.01) return vec2(0.0);
     vec2 q = xz + uWind.zw;
     float form = uCloudB.y;
     vec2 so = uCloudC.x * vec2(0.71, 0.13);
@@ -152,7 +158,10 @@ float midCover(vec2 xz, float lod) {
     float pattern = mix(cells, mix(cells, soft, 0.75), smoothstep(0.6, 1.0, form));
     float field = smoothstep(0.50 - 0.45 * amt, 0.78 - 0.45 * amt, big);
     float thresh = mix(0.62, 0.30, amt) - 0.18 * smoothstep(0.6, 1.0, form);
-    return field * smoothstep(thresh, thresh + mix(0.22, 0.45, form), pattern);
+    float edge = mix(0.22, 0.45, form);
+    float fine = textureLod(tNoise2D, st / 1.7 + 0.61, lod + 1.5).g;
+    float tk = saturate((pattern - thresh) / (edge + 0.30)) * (0.70 + 0.60 * fine);
+    return field * vec2(smoothstep(thresh, thresh + edge, pattern), tk);
 }
 
 // High ice clouds: fibres drawn out by the wind (cirrus), or a thin veil (cirrostratus). Thickness 0..1.

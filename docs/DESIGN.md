@@ -136,7 +136,8 @@ on it are drawn over the scene as before.
   near the Sun, their crevices darker than their crests, their bases lit from beneath at sunset. Heaped clouds stand
   on flat, level bases and are heaps (as tall as their ground is wide; where cloud is sparse it stays low), towers
   are mountains of cloud on wider ground, a thunderstorm spreads an anvil; a sheet of stratus covers the sky. Middle
-  clouds (altocumulus in flocks or rows, altostratus) and high ice clouds (cirrus streaks, a cirrostratus veil with
+  clouds (altocumulus in flocks or rows, each cloudlet with a lit side and its own shade; altostratus) and high ice
+  clouds (cirrus streaks, a cirrostratus veil with
   its 22° ring) are each lit by the Sun as it stands at their own height, so high cloud glows after the low cloud has
   gone dark. Clouds throw shadows on the land and are mirrored in water.
 - **One Sun, one air.** The 0.9.6 atmosphere (air, haze, ozone, the Earth's shadow) now runs on the GPU in linear

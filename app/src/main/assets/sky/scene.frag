@@ -227,7 +227,9 @@ void main() {
     if (uSunEl > -3.0) {
         float th = acos(clamp(mu, -1.0, 1.0));
         vec3 sc = mSunDisc() / 2500.0;
-        col += sc * (2.6 * exp(-th / 0.016) * sunShows + 0.36 * exp(-th / 0.07) * (0.3 + 0.7 * sunShows) + 0.06 * exp(-th / 0.22)) * smoothstep(-3.0, 0.0, uSunEl);
+        // (Low in the sky its light comes through much more air, which glows round it: a fuller halo at sunrise and sunset.)
+        float low = smoothstep(9.0, 0.5, uSunEl);
+        col += sc * (2.6 * exp(-th / 0.016) * sunShows + 0.36 * (1.0 + 1.6 * low) * exp(-th / 0.07) * (0.3 + 0.7 * sunShows) + 0.06 * (1.0 + 0.8 * low) * exp(-th / 0.22)) * smoothstep(-3.0, 0.0, uSunEl);
     }
 
     // High ice clouds, lit long after the ground has gone dark.

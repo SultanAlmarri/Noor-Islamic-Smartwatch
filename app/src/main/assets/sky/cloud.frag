@@ -94,18 +94,25 @@ void main() {
             vec2 xz = pw.xz;
             // How many texels of the cell pattern one pixel covers there (its tile is 6.3 km across 256 texels).
             float mlod = max(log2(tm / uCam.x * (uView.x / uRes.x) / max(rd.y, 0.05) / 0.0246) - 0.5, 0.0);
-            float c = midCover(xz, mlod);
+            vec2 m = midCover(xz, mlod);
+            float c = m.x;
             if (c > 0.002) {
-                float lit = midCover(xz + normalize(L.xz + 1e-5) * 0.35, mlod);
-                float thick = c * mix(0.55, 1.0, uCloudB.y);
+                // Towards the Sun, is the layer thicker or thinner? A cloudlet's side that faces the light is bright;
+                // behind its own swelling it lies in shade. (With the Sun low the layer is lit from beneath, which is
+                // the side we see: this is what gives a mackerel sky its relief at sunrise and sunset.)
+                vec2 ml = midCover(xz + normalize(L.xz + 1e-5) * 0.50, mlod);
+                float slope = ml.y - m.y;
+                float thick = c * mix(0.55, 1.0, uCloudB.y) * (0.55 + 0.75 * m.y);
                 float path = (MID_TOP - MID_BASE) / max(rd.y, 0.08);
                 // (Far off, the layer thins into the haze rather than closing into a white band on the horizon.)
                 float alpha = (1.0 - exp(-thick * path * 2.2)) * exp(-tm * 0.006);
-                float od = (thick * 2.4 + max(lit - c, 0.0) * 5.0) * mix(1.0, 0.45, saturate(L.y * 2.0));
-                float e = cloudLight(od, mu);
+                float od = (thick * 2.0 + max(slope, 0.0) * 9.0) * mix(1.0, 0.45, saturate(L.y * 2.0));
+                float e = cloudLight(od, mu) * mix(0.42, 1.22, saturate(0.5 - slope * 9.0));
+                // By day the layer is lit from above and seen from below: its thick middles are grey.
+                e *= mix(1.0, 0.60, saturate(m.y) * saturate(L.y * 3.0));
                 float w = T * alpha;
                 sunHigh += w * e;
-                amb += w * mix(0.55, 0.9, 1.0 - thick);
+                amb += w * mix(0.50, 0.9, 1.0 - saturate(thick));
                 aer += w * (1.0 - exp(-tm * 0.012 * uHaze));
                 dist += w * tm;
                 wsum += w;
