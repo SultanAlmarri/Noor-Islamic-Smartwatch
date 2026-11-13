@@ -231,6 +231,16 @@
     <string name="adhan_dnd_on">مفعّل: يعمل الأذان مثل المنبّه، ويبقى إعداد «عدم الإزعاج» الخاص بالمنبّهات ساريًا.</string>
     <string name="adhan_dnd_off">متوقف: عندما يكون الهاتف صامتًا أو على الاهتزاز أو في «عدم الإزعاج» يصلك إشعار صامت بدلًا من الأذان.</string>
     <string name="adhan_volume_note">يعمل الأذان بمستوى صوت المنبّه، فيُسمع حتى لو كان صوت الوسائط مكتومًا.</string>
+    <string name="adhan_reminder">تذكير قبل كل صلاة</string>
+    <string name="adhan_reminder_off">إيقاف</string>
+    <plurals name="adhan_reminder_value">
+        <item quantity="zero">قبل %1$s دقيقة</item>
+        <item quantity="one">قبل دقيقة واحدة</item>
+        <item quantity="two">قبل دقيقتين</item>
+        <item quantity="few">قبل %1$s دقائق</item>
+        <item quantity="many">قبل %1$s دقيقة</item>
+        <item quantity="other">قبل %1$s دقيقة</item>
+    </plurals>
     <string name="adhan_library_section">المكتبة</string>
     <string name="adhan_library">مكتبة الأذان</string>
     <string name="adhan_library_desc">أذانات: %1$s · أصوات تنبيه: %2$s، مع مصادرها وتراخيصها</string>

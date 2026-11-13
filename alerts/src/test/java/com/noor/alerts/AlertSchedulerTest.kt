@@ -75,6 +75,58 @@ class AlertSchedulerTest {
         assertEquals(0, AlertScheduler.reschedule(app).count)
     }
 
+    @Test fun remindersAreArmedBesideTheAlertsAndCancelledWhenTurnedOff() = runBlocking {
+        val am = shadowOf(app.getSystemService(AlarmManager::class.java))
+        val s = AlertSettings(enabled = true, reminderMinutes = 15)
+        app.config = dubai.copy(alerts = s)
+        // The status counts the prayer alerts only; the reminders are extra alarms 15 minutes ahead of each.
+        assertEquals(5, AlertScheduler.reschedule(app).count)
+        assertEquals(10, am.scheduledAlarms.size)
+        val now = Instant.now()
+        val expected = (AlertPlanner.plan(app.config!!, s, AlertDevice.PHONE, now).map { it.at.toEpochMilli() } +
+            AlertPlanner.reminders(app.config!!, s, AlertDevice.PHONE, now).map { it.remindAt.toEpochMilli() }).sorted()
+        assertEquals(expected, am.scheduledAlarms.map { it.triggerAtTime }.sorted())
+        // Reminder off: only the alerts stay. Alerts moved to the watch: nothing on the phone.
+        app.config = dubai.copy(alerts = s.copy(reminderMinutes = 0))
+        AlertScheduler.reschedule(app)
+        assertEquals(5, am.scheduledAlarms.size)
+        app.config = dubai.copy(alerts = s)
+        AlertScheduler.reschedule(app)
+        app.config = dubai.copy(alerts = s.copy(device = AlertDevice.WATCH))
+        AlertScheduler.reschedule(app)
+        assertEquals(0, am.scheduledAlarms.size)
+    }
+
+    @Test fun aReminderSaysWhatIsComingAndLeavesWhenThePrayerComes() {
+        val nm = shadowOf(app.getSystemService(NotificationManager::class.java))
+        val settings = AlertSettings(enabled = true, reminderMinutes = 15)
+        val date = LocalDate.of(2026, 11, 4) // a Wednesday
+        val asr = dubai.day(date).instant(Prayer.ASR)!!
+        AlertNotifications.postReminder(app, dubai, com.noor.prayer.alerts.DueReminder(Prayer.ASR, date, asr, 15))
+        val n = nm.allNotifications.single()
+        assertEquals(AlertNotifications.CHANNEL_REMIND, n.channelId)
+        assertEquals("Asr in 15 minutes", n.extras.getString("android.title"))
+        assertTrue(n.extras.getString("android.text")!!.endsWith("Dubai"))
+        // When the prayer itself is called, its reminder is taken away.
+        AlertDispatcher.dispatch(app, dubai, settings, Prayer.ASR, date, asr,
+            settings.alert(Prayer.ASR).copy(mode = com.noor.prayer.alerts.AlertMode.NOTIFICATION), test = false)
+        assertTrue(nm.allNotifications.none { it.channelId == AlertNotifications.CHANNEL_REMIND })
+        app.getSystemService(NotificationManager::class.java).cancelAll()
+
+        AlertNotifications.postReminder(app, dubai, com.noor.prayer.alerts.DueReminder(Prayer.ISHA, date, dubai.day(date).instant(Prayer.ISHA)!!, 1))
+        assertEquals("Isha in 1 minute", nm.allNotifications.single().extras.getString("android.title"))
+        app.getSystemService(NotificationManager::class.java).cancelAll()
+        AlertNotifications.postReminder(app, dubai, com.noor.prayer.alerts.DueReminder(Prayer.SHURUQ, date, dubai.day(date).instant(Prayer.SHURUQ)!!, 10))
+        assertEquals("Fajr time ends in 10 minutes", nm.allNotifications.single().extras.getString("android.title"))
+        app.getSystemService(NotificationManager::class.java).cancelAll()
+
+        // Arabic, with Arabic-Indic digits as chosen in Noor.
+        val ar = dubai.copy(language = "ar", arabicDigits = true)
+        AlertNotifications.postReminder(app, ar, com.noor.prayer.alerts.DueReminder(Prayer.ASR, date, asr, 15))
+        val t = nm.allNotifications.single().extras.getString("android.title")!!
+        assertTrue(t, t.contains("العصر") && t.endsWith("بعد ١٥ دقيقة"))
+    }
+
     @Test fun usesInexactAlarmsWhenExactOnesAreNotAllowed() = runBlocking {
         org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(false)
         try {

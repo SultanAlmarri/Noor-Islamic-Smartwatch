@@ -28,4 +28,13 @@
     <string name="noor_alert_failed">The sound could not be played on this phone. Open Noor › Adhan › Alert history for details.</string>
     <string name="noor_channel_backup">Adhan (backup)</string>
     <string name="noor_channel_backup_desc">Used only when Android does not let Noor start the Adhan: Android itself then plays a short Adhan with this notification.</string>
+    <string name="noor_channel_remind">Prayer reminders</string>
+    <string name="noor_channel_remind_desc">A reminder a few minutes before each prayer, if you turned it on in Noor. Uses your notification sound and follows Do Not Disturb.</string>
+    <!-- 0.9.9: "Asr in 15 minutes"; %2$s is noor_remind_minutes. -->
+    <string name="noor_remind_title">%1$s in %2$s</string>
+    <string name="noor_remind_title_sunrise">Fajr time ends in %1$s</string>
+    <plurals name="noor_remind_minutes">
+        <item quantity="one">%1$s minute</item>
+        <item quantity="other">%1$s minutes</item>
+    </plurals>
 </resources>

@@ -118,4 +118,73 @@ class AlertPlannerTest {
         assertEquals(s, back.alerts)
         assertEquals(null, WatchConfig.decode(dubai.encode())!!.alerts)
     }
+
+    // ---- 0.9.9: reminders before prayers ----
+
+    @Test fun reminderSettingRoundTripsAndOldSettingsAreUnchanged() {
+        assertEquals(0, on.reminderMinutes)
+        assertFalse(on.encode().contains("pre="), "settings without a reminder encode exactly as before")
+        val s = on.copy(reminderMinutes = 15)
+        assertEquals(s, AlertSettings.decode(s.encode()))
+        assertEquals(s, WatchConfig.decode(dubai.copy(alerts = s).encode())!!.alerts)
+        // Only the offered lead times are accepted; anything else is no reminder.
+        assertEquals(0, AlertSettings.decode("v=1;on=1;pre=7").reminderMinutes)
+        assertEquals(0, AlertSettings.decode("v=1;on=1;pre=-5").reminderMinutes)
+        assertEquals(0, AlertSettings.decode("v=1;on=1;pre=x").reminderMinutes)
+        assertEquals(30, AlertSettings.decode("v=1;on=1;pre=30").reminderMinutes)
+    }
+
+    @Test fun remindersComeBeforeEachAlertingPrayerOnTheAlertingDevice() {
+        val now = at(2026, 11, 4, 3, 0)
+        assertTrue(AlertPlanner.reminders(dubai, on, AlertDevice.PHONE, now).isEmpty(), "off by default")
+        val s = on.copy(reminderMinutes = 15)
+        val plan = AlertPlanner.plan(dubai, s, AlertDevice.PHONE, now)
+        val rem = AlertPlanner.reminders(dubai, s, AlertDevice.PHONE, now)
+        // The same prayers, at the same times, as the alerts themselves; each 15 minutes ahead.
+        assertEquals(plan.map { it.prayer to it.at }, rem.map { it.prayer to it.at })
+        assertTrue(rem.all { Duration.between(it.remindAt, it.at) == Duration.ofMinutes(15) })
+        assertEquals(5, rem.size) // sunrise is off by default
+        // Only on the device that alerts.
+        assertTrue(AlertPlanner.reminders(dubai, s.copy(device = AlertDevice.WATCH), AlertDevice.PHONE, now).isEmpty())
+        assertEquals(rem, AlertPlanner.reminders(dubai, s.copy(device = AlertDevice.BOTH), AlertDevice.WATCH, now))
+        assertTrue(AlertPlanner.reminders(dubai, s.copy(enabled = false), AlertDevice.PHONE, now).isEmpty())
+        // A prayer whose alert is off has no reminder either.
+        val noAsr = s.with(Prayer.ASR, s.alert(Prayer.ASR).copy(enabled = false))
+        assertFalse(AlertPlanner.reminders(dubai, noAsr, AlertDevice.PHONE, now).any { it.prayer == Prayer.ASR })
+        // Once a reminder's moment has passed, that prayer's next reminder is tomorrow's.
+        val asr = rem.first { it.prayer == Prayer.ASR }
+        val next = AlertPlanner.reminders(dubai, s, AlertDevice.PHONE, asr.remindAt.plusSeconds(60)).first { it.prayer == Prayer.ASR }
+        assertEquals(asr.date.plusDays(1), next.date)
+    }
+
+    @Test fun aReminderNeverComesBeforeThePreviousPrayer() {
+        // Maghrib 30 minutes later and Isha 30 earlier (the largest personal offsets): about 20 minutes apart.
+        val squeezed = dubai.copy(profileId = Profiles.MWL.id, offsets = mapOf(Prayer.MAGHRIB to 30, Prayer.ISHA to -30))
+        val day = squeezed.day(LocalDate.of(2026, 11, 4))
+        val gap = Duration.between(day.instant(Prayer.MAGHRIB)!!, day.instant(Prayer.ISHA)!!)
+        assertTrue(gap < Duration.ofMinutes(30), "test set-up: the gap is $gap")
+        val now = at(2026, 11, 4, 12, 0)
+        val r30 = AlertPlanner.reminders(squeezed, on.copy(reminderMinutes = 30), AlertDevice.PHONE, now)
+        assertFalse(r30.any { it.prayer == Prayer.ISHA && it.date == day.date }, "Isha's reminder would come before Maghrib")
+        assertTrue(r30.any { it.prayer == Prayer.MAGHRIB })
+        // With a lead shorter than the gap it is there.
+        assertTrue(AlertPlanner.reminders(squeezed, on.copy(reminderMinutes = 10), AlertDevice.PHONE, now).any { it.prayer == Prayer.ISHA && it.date == day.date })
+    }
+
+    @Test fun aFiringReminderIsRecheckedAndStatesTheMinutesLeft() {
+        val s = on.copy(reminderMinutes = 10)
+        val r = AlertPlanner.reminders(dubai, s, AlertDevice.PHONE, at(2026, 11, 4, 3, 0)).first { it.prayer == Prayer.ASR }
+        fun fire(now: java.time.Instant, settings: AlertSettings = s) = AlertPlanner.onRemind(dubai, settings, AlertDevice.PHONE, Prayer.ASR, r.date, now)
+        assertEquals(10, fire(r.remindAt)!!.minutesLeft)
+        assertEquals(r.at, fire(r.remindAt)!!.at)
+        // A little late (deep sleep): it says how long is really left.
+        assertEquals(7, fire(r.remindAt.plusSeconds(180))!!.minutesLeft)
+        // Under a minute before the prayer: the Adhan itself is about to come, so no reminder.
+        assertEquals(null, fire(r.at.minusSeconds(30)))
+        // Fired well before its moment (the times moved later), turned off, or alerts off: nothing.
+        assertEquals(null, fire(r.remindAt.minus(Duration.ofMinutes(5))))
+        assertEquals(null, fire(r.remindAt, s.copy(reminderMinutes = 0)))
+        assertEquals(null, fire(r.remindAt, s.copy(enabled = false)))
+        assertEquals(null, fire(r.remindAt, s.with(Prayer.ASR, s.alert(Prayer.ASR).copy(enabled = false))))
+    }
 }

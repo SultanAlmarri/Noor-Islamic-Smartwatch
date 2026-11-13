@@ -14,8 +14,26 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: **0.9.6** for both apps (versionCode 15). Everything is on `main`. The 0.9.6 work branch `sky/096` is
-fully merged and can be deleted (a cloud session is not allowed to delete branches).
+Current version: **0.9.12** for both apps (phone versionCode 21, watch 17; 0.9.7 and 0.9.9–0.9.11 changed only the
+phone). Everything is on `main`. The work branches `sky/096`, `sky/097`, `phone/097`, `adhan/097`, `noor/098` and
+`noor/099` are fully merged;
+`probe/emu37` and `adhan/097-repro` hold only abandoned Android 17 emulator experiments (that image does not run
+reliably on GitHub's machines). All of them can be deleted (a cloud session is not allowed to delete branches).
+
+Development also happens on the owner's Windows PC (Claude Code desktop, checkout in `ProjectMinhad\Noor`). There:
+JDK 17 in `%USERPROFILE%\.jdks\temurin-17` (listed in `~/.gradle/gradle.properties` as
+`org.gradle.java.installations.paths`), the SDK in `%LOCALAPPDATA%\Android\Sdk` (`local.properties`), and Python
+3.12 (embeddable, standard library only) in `%LOCALAPPDATA%\Programs\Python\py312-embed`, which must come first on
+`PATH` so `python3` is not the Microsoft Store stub. Found on 13 November 2026, needed for Gradle to run there:
+- Set `JAVA_HOME` to the Temurin 17 above for the Gradle run (the PC's default `JAVA_HOME` is Corretto 21), and set
+  `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\Users\Public`; without both, Gradle stops at once with
+  "Unable to establish loopback connection".
+- `local.properties` must use forward slashes (`sdk.dir=C:/Users/.../Android/Sdk`): single backslashes are dropped
+  when the file is read ("The filename, directory name, or volume label syntax is incorrect").
+- Add `-Pkotlin.compiler.execution.strategy=in-process`: the Kotlin compile daemon cannot be reached there either
+  (it falls back by itself, but with long stack traces).
+- In the Claude Code desktop app, Gradle needs to run outside the command sandbox, and `gradlew.bat` is called with its
+  full path and `-p <project>` from `cmd /c`.
 
 ## The owner
 

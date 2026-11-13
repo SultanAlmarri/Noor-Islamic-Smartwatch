@@ -231,6 +231,13 @@
     <string name="adhan_dnd_on">On: the Adhan plays like an alarm clock. Your Do Not Disturb setting for alarms still applies.</string>
     <string name="adhan_dnd_off">Off: when the phone is silent, on vibrate or in Do Not Disturb, you get a silent notification instead.</string>
     <string name="adhan_volume_note">The Adhan plays on your alarm volume, so it is heard even when media is muted.</string>
+    <!-- 0.9.9: reminder before each prayer -->
+    <string name="adhan_reminder">Reminder before each prayer</string>
+    <string name="adhan_reminder_off">Off</string>
+    <plurals name="adhan_reminder_value">
+        <item quantity="one">%1$s minute before</item>
+        <item quantity="other">%1$s minutes before</item>
+    </plurals>
     <string name="adhan_library_section">Library</string>
     <string name="adhan_library">Adhan library</string>
     <string name="adhan_library_desc">%1$s Adhans and %2$s alert sounds, with their sources and licences</string>

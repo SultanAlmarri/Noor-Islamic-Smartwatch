@@ -131,7 +131,8 @@ From his briefs (paraphrased). **Do not start any of this during the handover.**
 | Complete Adhan system: library, separate Fajr choices, custom sounds | Done; awaiting device test |
 | Premium Apple-inspired design | 0.6.0 (all screens) plus 0.8.0 (home) |
 | **Watch-face customisation studio**: live preview editor for positions, sizes, fonts, colours, themes, profiles and AOD, keeping the v1.3.2 fonts, colours and icons; no fake controls | **Not started.** The README calls it the "next stage". Watch Face Format is declarative, so check what is genuinely possible before promising anything |
-| Pre-prayer reminders, quiet hours, Jumu'ah reminders, mosque-timetable comparison, weekly timetable view | Not built (from the first brief; Jumu'ah is shown on Fridays) |
+| Pre-prayer reminders | Built in 0.9.12 (section 17) |
+| Quiet hours, Jumu'ah reminders, mosque-timetable comparison, weekly timetable view | Not built (from the first brief; Jumu'ah is shown on Fridays) |
 | Real-device testing on the Galaxy Watch 5 Pro and a phone | **Not done.** Checklists: `docs/WATCH.md` ("Needs a real watch"), `docs/ALERTS.md`, `docs/ARCHITECTURE.md` (limitations) |
 | Commercial release on Google Play and the Galaxy Store | Not started: needs a private upload key with Play App Signing (never in the repo), a privacy policy, a store listing and a distribution plan |
 
@@ -210,9 +211,8 @@ Owner decisions: scenery stays artistic and offline (no weather service); build 
 licensed sources and explore ways to obtain more (famous reciters need permission from rights holders); Claude Code
 runs every test it can and guides the owner, in simple steps, through tests that need his phone.
 
-Open owner action: GitHub's default branch is still the old `phase-1-foundation`, and repository settings cannot be
-changed from a Claude Code cloud session. Until it is set to `main` (github.com → the repository → Settings → General →
-Default branch), the monthly blind test does not run on its schedule.
+Owner action, done: GitHub's default branch is now `main` (checked 8 November 2026), so the monthly blind test runs
+on its schedule (first scoring due once IACAD publishes December 2026).
 
 Growing the Adhan library further (needs the owner):
 
@@ -447,3 +447,23 @@ per-minute updates of 0.9.10's fallback are gone. `WidgetsTest` checks the text 
 no update from Noor, the pair shown for each choice of digits and the next update, and saves pictures of each state. The fonts' shaping was checked with HarfBuzz. Not yet seen on a real launcher: whether
 every launcher applies a widget's own fonts is the thing to look at on the phone (if one did not, the countdown would
 still tick, but in the system font and the phone's digits, with the seconds bright).
+
+## 17. Reminder before each prayer (0.9.12, 13 November 2026)
+
+Started on the owner's PC after 0.9.8 and left unsaved there; saved, moved onto 0.9.11 and finished in the first
+session on the PC. Adhan tab → **Reminder before each prayer**: Off (default), 5, 10, 15, 20 or 30 minutes. A
+notification "Asr in 15 minutes" (before sunrise "Fajr time ends in 10 minutes"), with the time and the place, in
+Noor's language and digits, for every prayer whose alert is on, on the device that alerts; it goes away when the
+prayer begins. It uses the device's notification sound and Do Not Disturb, not the alarm stream. Never before the
+previous prayer has begun; re-checked when it fires, like the Adhan. The watch acts on it from 0.9.12 (both apps
+moved to 0.9.12; earlier watches ignore the setting). Details: [ALERTS.md](ALERTS.md).
+
+Evidence: `AlertPlannerTest` (4 new: setting round trip and old settings unchanged, which prayers and when, never
+before the previous prayer, re-check and minutes left) and `AlertSchedulerTest` (2 new, Robolectric: alarms armed
+beside the Adhan alarms and cancelled when off or moved to the watch; the notification's channel, English and Arabic
+titles with Arabic-Indic digits, singular minute, the sunrise wording, removed when the prayer is called). Not yet
+seen on a phone or watch: that the reminder arrives on time on a real device and how it looks in the shade.
+
+Also fixed for building on Windows: `tools/watchface/build_pushed_face.py` now finds `apksigner.bat`.
+
+Tests at 0.9.12 (run on the owner's PC): `core/prayer` 105 (1 skipped by design), `alerts` 16, `app` 59, `wear` 29; all pass.

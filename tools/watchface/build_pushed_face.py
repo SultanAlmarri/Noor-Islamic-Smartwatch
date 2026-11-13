@@ -55,6 +55,9 @@ def manifest(variant):
 
 
 def run(cmd, **kw):
+    # On Windows the SDK's apksigner (and other script tools) are .bat files; aapt2 and zipalign are .exe and found as-is.
+    if os.name == 'nt' and not os.path.splitext(cmd[0])[1] and os.path.exists(cmd[0] + '.bat'):
+        cmd = [cmd[0] + '.bat'] + list(cmd[1:])
     r = subprocess.run(cmd, capture_output=True, text=True, **kw)
     if r.returncode != 0:
         sys.stderr.write(r.stdout + r.stderr)

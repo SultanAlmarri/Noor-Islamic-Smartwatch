@@ -9,6 +9,7 @@ import com.noor.prayer.Prayer
 import com.noor.prayer.WatchConfig
 import com.noor.prayer.alerts.AlertPlanner
 import com.noor.prayer.alerts.PlannedAlert
+import com.noor.prayer.alerts.PlannedReminder
 import java.time.Instant
 import java.time.LocalDate
 
@@ -23,6 +24,10 @@ object AlertScheduler {
     private const val REQUEST_BASE = 7100
     const val ACTION_FIRE = "com.noor.alerts.FIRE"
     const val ACTION_TEST = "com.noor.alerts.TEST"
+    /** 0.9.9: a reminder before a prayer. */
+    const val ACTION_REMIND = "com.noor.alerts.REMIND"
+    /** Reminder alarms use request codes REQUEST_BASE + 20 + prayer (the test alarm uses + 50). */
+    private const val REMINDER_OFFSET = 20
     const val EXTRA_PRAYER = "prayer"
     const val EXTRA_DATE = "date"
     const val EXTRA_AT = "at"
@@ -38,10 +43,15 @@ object AlertScheduler {
     suspend fun reschedule(context: Context): ScheduleStatus {
         val host = context.alertHost
         val config = runCatching { host?.alertConfig() }.getOrNull()
-        return apply(context, config, host?.let { config?.alerts?.let { a -> AlertPlanner.plan(config, a, it.alertDevice, Instant.now()) } }.orEmpty())
+        val now = Instant.now()
+        val alerts = config?.alerts
+        val plan = if (host != null && alerts != null) AlertPlanner.plan(config, alerts, host.alertDevice, now) else emptyList()
+        val reminders = if (host != null && alerts != null) AlertPlanner.reminders(config, alerts, host.alertDevice, now) else emptyList()
+        return apply(context, config, plan, reminders)
     }
 
-    internal fun apply(context: Context, config: WatchConfig?, plan: List<PlannedAlert>): ScheduleStatus {
+    internal fun apply(context: Context, config: WatchConfig?, plan: List<PlannedAlert>, reminders: List<PlannedReminder> = emptyList()): ScheduleStatus {
+        applyReminders(context, reminders)
         val am = context.getSystemService(AlarmManager::class.java)
         val exact = canScheduleExact(context)
         val byPrayer = plan.associateBy { it.prayer }
@@ -78,6 +88,34 @@ object AlertScheduler {
             // The exact-alarm permission was revoked between the check and the call.
             runCatching { am?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi) }
         }
+    }
+
+    /**
+     * 0.9.9: one reminder alarm per prayer (its next reminder). Plain exact alarms, not alarm-clock ones: a reminder
+     * only posts a notification (Android plays its sound), and Android's "next alarm" should stay the Adhan itself.
+     */
+    private fun applyReminders(context: Context, reminders: List<PlannedReminder>) {
+        val am = context.getSystemService(AlarmManager::class.java)
+        val exact = canScheduleExact(context)
+        val byPrayer = reminders.associateBy { it.prayer }
+        for (p in Prayer.entries) {
+            val r = byPrayer[p]
+            if (r == null) {
+                reminderPending(context, p, null, PendingIntent.FLAG_NO_CREATE)?.let { pi -> am?.cancel(pi); pi.cancel() }
+                continue
+            }
+            val pi = reminderPending(context, p, r, PendingIntent.FLAG_UPDATE_CURRENT) ?: continue
+            val at = r.remindAt.toEpochMilli()
+            runCatching {
+                if (exact) am?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi) else am?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            }.onFailure { runCatching { am?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi) } }
+        }
+    }
+
+    private fun reminderPending(context: Context, p: Prayer, r: PlannedReminder?, flag: Int): PendingIntent? {
+        val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_REMIND).putExtra(EXTRA_PRAYER, p.name)
+        if (r != null) intent.putExtra(EXTRA_DATE, r.date.toString()).putExtra(EXTRA_AT, r.at.toEpochMilli())
+        return PendingIntent.getBroadcast(context, REQUEST_BASE + REMINDER_OFFSET + p.ordinal, intent, flag or PendingIntent.FLAG_IMMUTABLE)
     }
 
     private fun pending(context: Context, p: Prayer, planned: PlannedAlert?, flag: Int): PendingIntent? {

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,6 +93,7 @@ fun AdhanScreen(
     val f = Formatter(ar, s.numerals, s.timeFormat)
     val context = LocalContext.current
     var gradualDialog by remember { mutableStateOf(false) }
+    var reminderDialog by remember { mutableStateOf(false) }
 
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
@@ -153,6 +156,10 @@ fun AdhanScreen(
                     PrayerAlertRow(p, a.alert(p), summary(a.alert(p), p, vm.library, custom, ar), f,
                         onOpen = { onOpenPrayer(p) }, onToggle = { on -> vm.setPrayer(p) { it.copy(enabled = on) } })
                 }
+                // 0.9.9: a reminder a few minutes before every prayer that alerts.
+                SettingsDivider()
+                SettingsItem(Icons.Rounded.Schedule, stringResource(R.string.adhan_reminder), reminderLabel(a.reminderMinutes, f),
+                    onClick = { reminderDialog = true })
             }
 
             SettingsSection(stringResource(R.string.adhan_sound_section)) {
@@ -185,7 +192,16 @@ fun AdhanScreen(
             listOf(0, 5, 10, 20, 30, 60).map { it to if (it == 0) stringResource(R.string.adhan_gradual_off) else stringResource(R.string.adhan_gradual_value, f.number(it)) },
             a.gradualSeconds, onSelect = vm::setGradual, onDismiss = { gradualDialog = false })
     }
+    if (reminderDialog) {
+        ChoiceDialog(stringResource(R.string.adhan_reminder),
+            AlertSettings.REMINDER_CHOICES.map { it to reminderLabel(it, f) },
+            a.reminderMinutes, onSelect = vm::setReminder, onDismiss = { reminderDialog = false })
+    }
 }
+
+@Composable
+private fun reminderLabel(minutes: Int, f: Formatter): String =
+    if (minutes == 0) stringResource(R.string.adhan_reminder_off) else pluralStringResource(R.plurals.adhan_reminder_value, minutes, f.number(minutes))
 
 @Composable
 private fun SectionLabel(text: String) {

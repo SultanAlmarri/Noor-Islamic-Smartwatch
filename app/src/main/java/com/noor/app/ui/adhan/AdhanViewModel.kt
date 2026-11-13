@@ -136,6 +136,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun setEnabled(on: Boolean) = update { it.copy(enabled = on) }
     fun setDevice(d: AlertDevice) = update { it.copy(device = d) }
     fun setGradual(seconds: Int) = update { it.copy(gradualSeconds = seconds) }
+    fun setReminder(minutes: Int) = update { it.copy(reminderMinutes = minutes.takeIf { m -> m in AlertSettings.REMINDER_CHOICES } ?: 0) }
     /** The switch reads "Play in silent mode and Do Not Disturb": on = play like an alarm (the default). */
     fun setPlayInSilentMode(on: Boolean) = update { it.copy(quietWhenSilent = !on) }
     fun setPrayer(p: Prayer, change: (PrayerAlert) -> PrayerAlert) = update { s -> s.with(p, change(s.alert(p))) }

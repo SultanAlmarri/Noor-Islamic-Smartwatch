@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 7 November 2026 (version 0.9.6).
+Living document: each development phase adds its section. Last updated 13 November 2026 (version 0.9.12: reminders before prayers, see ALERTS.md).
 
 ## Modules
 

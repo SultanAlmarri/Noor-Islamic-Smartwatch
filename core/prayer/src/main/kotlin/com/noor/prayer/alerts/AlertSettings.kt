@@ -65,6 +65,11 @@ data class AlertSettings(
     val quietWhenSilent: Boolean = false,
     /** Favourite Adhan recordings (library ids), in the order chosen. "Random from favourites" rotates through them. */
     val favourites: List<String> = emptyList(),
+    /**
+     * 0.9.9: minutes before each prayer for a reminder notification ("Asr in 15 minutes"), 0 = none. One of
+     * [REMINDER_CHOICES]. A reminder comes for every prayer that alerts on the device, on that device only.
+     */
+    val reminderMinutes: Int = 0,
 ) {
     fun alert(p: Prayer): PrayerAlert = (perPrayer[p] ?: DEFAULTS.getValue(p)).normalized(p)
 
@@ -79,6 +84,8 @@ data class AlertSettings(
         // "dnd" is the 0.5–0.8 field ("play in Do Not Disturb"), still written so watches on those versions behave the same.
         add("grad=$gradualSeconds"); add("dnd=${if (quietWhenSilent) 0 else 1}"); add("quiet=${if (quietWhenSilent) 1 else 0}")
         if (favourites.isNotEmpty()) add("fav=" + favourites.joinToString(","))
+        // Written only when set, so settings without a reminder encode exactly as before (watches up to 0.9.8 ignore it).
+        if (reminderMinutes > 0) add("pre=$reminderMinutes")
         Prayer.entries.forEach { p ->
             val a = alert(p)
             add("${p.name}=${if (a.enabled) 1 else 0},${a.mode.name},${a.soundId ?: ""},${a.volumePercent},${if (a.vibrate) 1 else 0},${a.maxSeconds}")
@@ -87,6 +94,9 @@ data class AlertSettings(
 
     companion object {
         const val VERSION = 1
+
+        /** The reminder lead times offered, in minutes (0 = off). Short enough to end before the next prayer anywhere. */
+        val REMINDER_CHOICES = listOf(0, 5, 10, 15, 20, 30)
 
         val DEFAULTS: Map<Prayer, PrayerAlert> = Prayer.entries.associateWith { p ->
             when (p) {
@@ -121,6 +131,7 @@ data class AlertSettings(
                 // the main reason Adhans did not sound, so it is not carried over. Only an explicit "quiet" choice is kept.
                 quietWhenSilent = m["quiet"] == "1",
                 favourites = m["fav"]?.split(',')?.filter { SoundIds.isValid(it) && !SoundIds.isCustom(it) }?.distinct().orEmpty(),
+                reminderMinutes = m["pre"]?.toIntOrNull()?.takeIf { it in REMINDER_CHOICES } ?: 0,
             )
         }
     }

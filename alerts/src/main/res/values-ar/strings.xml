@@ -28,4 +28,16 @@
     <string name="noor_alert_failed">تعذّر تشغيل الصوت على هذا الهاتف. افتح نور › الأذان › سجل التنبيهات للتفاصيل.</string>
     <string name="noor_channel_backup">الأذان (احتياطي)</string>
     <string name="noor_channel_backup_desc">يُستخدم فقط إذا لم يسمح أندرويد لنور بتشغيل الأذان: عندها يشغّل أندرويد نفسه أذانًا مختصرًا مع هذا الإشعار.</string>
+    <string name="noor_channel_remind">التذكير بالصلاة</string>
+    <string name="noor_channel_remind_desc">تذكير قبل كل صلاة ببضع دقائق إذا فعّلته في نور. يستخدم صوت الإشعارات ويتبع وضع عدم الإزعاج.</string>
+    <string name="noor_remind_title">%1$s بعد %2$s</string>
+    <string name="noor_remind_title_sunrise">ينتهي وقت الفجر بعد %1$s</string>
+    <plurals name="noor_remind_minutes">
+        <item quantity="zero">%1$s دقيقة</item>
+        <item quantity="one">دقيقة واحدة</item>
+        <item quantity="two">دقيقتين</item>
+        <item quantity="few">%1$s دقائق</item>
+        <item quantity="many">%1$s دقيقة</item>
+        <item quantity="other">%1$s دقيقة</item>
+    </plurals>
 </resources>

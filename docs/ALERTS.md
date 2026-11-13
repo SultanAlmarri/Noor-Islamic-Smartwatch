@@ -13,6 +13,7 @@ and what has and has not been verified.
 | Per prayer: type | Prayer page | Adhan (full), Short Adhan, Sound, My sound, Notification, Silent. Sunrise never offers the Adhan. |
 | Per prayer: sound | Prayer page | Fajr lists Fajr Adhans first; a Fajr Adhan is never offered for other prayers. Choosing a non-Fajr Adhan for Fajr shows a note. |
 | Per prayer: volume, vibration, stop after | Prayer page | Volume is a percentage of the alarm volume on a perceptual curve. Stop after 30 s, 1, 2 or 3 min, or play to the end (with a short fade). |
+| Reminder before each prayer (0.9.12) | Adhan tab | Off (default), 5, 10, 15, 20 or 30 minutes before. A notification such as "Asr in 15 minutes" (before sunrise: "Fajr time ends in 10 minutes") with the prayer's time and the place, on its own channel `noor_reminder` (the device's notification sound; follows Do Not Disturb like any notification). It comes for every prayer whose alert is on, on the device that alerts (both with "Both"), and disappears when the prayer begins. |
 | Gradual volume | Adhan tab | Off, 5, 10 (default), 20, 30 or 60 seconds. |
 | Play in silent mode and Do Not Disturb | Adhan tab | **On by default since 0.9**: the Adhan plays on the alarm stream like an alarm clock, whether the phone is on vibrate, silent or not; under Do Not Disturb the system's own rule for alarms decides (if that rule blocks alarms, Noor says so instead of "playing" silently). Off: while the device is silent, on vibrate or in Do Not Disturb, the alert becomes a silent notification (vibrate-only when the ringer is on vibrate). Up to 0.8 this was off by default, which silenced the Adhan on every phone kept on vibrate: the main cause of "the notification comes but no Adhan". |
 | Test this alert | Prayer page, Alert history | Arms a real alarm 10 s ahead and runs the whole path (alarm → receiver → player service → notification). This is the way to check alerts on a device. |
@@ -40,6 +41,14 @@ wear          AlertSection (permissions on the watch), ReceivedSounds
 - **Firing.** The receiver re-checks the alarm against current times and choices: on time → alert; more than 10 minutes
   late (device off or in deep sleep) → a quiet "the time began at …" notification instead of a late Adhan; moved,
   turned off or moved to the other device → nothing.
+- **Reminders (0.9.12).** `AlertPlanner.reminders` gives each alerting prayer's next reminder; `AlertScheduler` arms
+  one plain exact alarm per prayer for it (not an alarm-clock alarm, so Android's "next alarm" stays the Adhan; inexact
+  without the exact-alarm permission), re-armed with the prayer alarms. A reminder that would come before the previous
+  prayer has begun (short gaps at high latitudes or with large personal offsets) is left out. When it fires,
+  `AlertPlanner.onRemind` re-checks it: turned off, times moved later, or under a minute left → nothing; a little
+  late → it states the minutes really left. Reminders are not recorded in Alert history (they are only a
+  notification). Stored as `pre=<minutes>` in `AlertSettings`, written only when set, so watches up to 0.9.11 ignore
+  it and settings without a reminder encode exactly as before.
 - **Never silently failing (0.9).** Every alert ends in one recorded outcome (`AlertLog`, shown as Alert history). If
   the chosen sound cannot be played, Noor's default short Adhan plays instead and the notification says so. If Android
   refuses to let Noor start its player at all (Android 12+ forbids starting it from the background without the

@@ -32,6 +32,9 @@ object AlertNotifications {
      * when Android refuses to let Noor start its player (no exact-alarm permission), so the prayer is still heard.
      */
     const val CHANNEL_BACKUP = "noor_adhan_backup"
+    /** 0.9.9: reminders before a prayer. The system notification sound; follows Do Not Disturb like any notification. */
+    const val CHANNEL_REMIND = "noor_reminder"
+    private const val ID_REMIND_BASE = 4300
 
     const val ID_PLAYING = 4100
     /** Noor's gold, readable on light and dark notification shades. */
@@ -70,6 +73,34 @@ object AlertNotifications {
             enableVibration(true)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         })
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_REMIND, t.getString(R.string.noor_channel_remind), NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = t.getString(R.string.noor_channel_remind_desc)
+            setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+            enableVibration(true)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        })
+    }
+
+    internal fun reminderId(p: Prayer) = ID_REMIND_BASE + p.ordinal
+
+    /** 0.9.9: "Asr in 15 minutes", with the prayer's time and the place; it disappears by itself when the prayer begins. */
+    fun postReminder(context: Context, config: WatchConfig, due: com.noor.prayer.alerts.DueReminder) {
+        ensureChannels(context)
+        if (!canPost(context, CHANNEL_REMIND)) return
+        val text = AlertText(context, config)
+        val untilPrayer = (due.at.toEpochMilli() - System.currentTimeMillis()).coerceAtLeast(60_000L)
+        val n = base(context, CHANNEL_REMIND, text.reminderTitle(due.prayer, due.date, due.minutesLeft), text.body(due.prayer, due.at), due.at)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setTimeoutAfter(untilPrayer)
+            .build()
+        runCatching { NotificationManagerCompat.from(context).notify(reminderId(due.prayer), n) }
+    }
+
+    internal fun cancelReminder(context: Context, p: Prayer) {
+        runCatching { NotificationManagerCompat.from(context).cancel(reminderId(p)) }
     }
 
     /** The short Adhan bundled as a resource, so that Android's notification system can play it itself. */

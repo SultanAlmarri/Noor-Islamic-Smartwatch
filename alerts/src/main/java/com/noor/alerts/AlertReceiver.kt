@@ -30,18 +30,31 @@ class AlertReceiver : BroadcastReceiver() {
         val app = context.applicationContext
         val firedAt = System.currentTimeMillis()
         val pending = goAsync()
+        val reminder = intent.action == AlertScheduler.ACTION_REMIND
         alertScope.launch {
             try {
-                handle(app, intent, firedAt)
+                if (reminder) remind(app, intent, firedAt) else handle(app, intent, firedAt)
             } catch (e: Exception) {
                 Log.e(TAG, "Alert failed", e)
-                runCatching { AlertDispatcher.record(app, intent, firedAt, AlertOutcome.FAILED, detail = "${e.javaClass.simpleName}: ${e.message}") }
+                // A reminder is only a notification; the alert history is for the prayer alerts themselves.
+                if (!reminder) runCatching { AlertDispatcher.record(app, intent, firedAt, AlertOutcome.FAILED, detail = "${e.javaClass.simpleName}: ${e.message}") }
             } finally {
                 runCatching { AlertScheduler.reschedule(app) }
-                runCatching { app.alertHost?.onPrayerAlarm(app) }
+                if (!reminder) runCatching { app.alertHost?.onPrayerAlarm(app) }
                 pending.finish()
             }
         }
+    }
+
+    /** 0.9.9: a reminder before a prayer ("Asr in 15 minutes"), re-checked against the current times and choices. */
+    private suspend fun remind(context: Context, intent: Intent, firedAt: Long) {
+        val prayer = intent.getStringExtra(AlertScheduler.EXTRA_PRAYER)?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: return
+        val date = intent.getStringExtra(AlertScheduler.EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return
+        val host = context.alertHost ?: return
+        val config = host.alertConfig() ?: return
+        val alerts = config.alerts ?: return
+        val due = AlertPlanner.onRemind(config, alerts, host.alertDevice, prayer, date, Instant.ofEpochMilli(firedAt)) ?: return
+        AlertNotifications.postReminder(context, config, due)
     }
 
     private suspend fun handle(context: Context, intent: Intent, firedAt: Long) {
@@ -147,6 +160,8 @@ internal object AlertDispatcher {
     fun dispatch(context: Context, config: WatchConfig, alerts: AlertSettings, prayer: Prayer, date: LocalDate, at: Instant,
                  alert: PrayerAlert, test: Boolean, firedAtMs: Long = System.currentTimeMillis()) {
         AlertNotifications.ensureChannels(context)
+        // The prayer has come: its reminder has done its job.
+        AlertNotifications.cancelReminder(context, prayer)
         val text = AlertText(context, config)
         val title = text.title(prayer, date)
         val body = text.body(prayer, at)

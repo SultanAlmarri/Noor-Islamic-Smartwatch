@@ -43,5 +43,14 @@ internal class AlertText(context: Context, private val config: WatchConfig) {
     fun title(p: Prayer, date: LocalDate): String =
         if (p == Prayer.SHURUQ) string(R.string.noor_alert_title_sunrise) else string(R.string.noor_alert_title, prayer(p, date))
 
+    /** A whole number in the digits chosen in Noor. */
+    fun number(n: Int): String = n.toString().let { s -> if (config.arabicDigits) s.map { c -> if (c in '0'..'9') '٠' + (c - '0') else c }.joinToString("") else s }
+
+    /** 0.9.9: "Asr in 15 minutes", "Jumu’ah in 10 minutes"; before sunrise, "Fajr time ends in 15 minutes". */
+    fun reminderTitle(p: Prayer, date: LocalDate, minutes: Int): String {
+        val m = ctx.resources.getQuantityString(R.plurals.noor_remind_minutes, minutes, number(minutes))
+        return if (p == Prayer.SHURUQ) string(R.string.noor_remind_title_sunrise, m) else string(R.string.noor_remind_title, prayer(p, date), m)
+    }
+
     fun body(p: Prayer, at: Instant): String = listOf(time(at), place).filter { it.isNotBlank() }.joinToString(" · ")
 }
