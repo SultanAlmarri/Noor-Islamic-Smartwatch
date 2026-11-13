@@ -60,7 +60,10 @@ void landMat(vec3 p, inout vec3 n, float t, bool isObj, out vec3 alb, out float 
     alb = mix(sand, rock, isRock);
     kind = isRock > 0.5 ? K_ROCK : K_SAND;
     // A dusting of snow on whatever is level.
-    float snow = uLand.z * smoothstep(0.80, 0.93, n.y) * smoothstep(0.25, 0.6, nB(p.xz / 45.0) + uLand.z * 0.5);
-    if (snow > 0.5) { alb = mix(alb, vec3(0.86, 0.88, 0.92), snow); kind = K_SNOW; }
+    // (It thins out raggedly where the ground shows through, never along a clean edge.)
+    float lie = nB(p.xz / 45.0) * 0.55 + nA(p.xz / 9.0) * 0.30 + nG(p.xz / 2.1) * 0.15;
+    float snow = uLand.z * smoothstep(0.80, 0.93, n.y) * smoothstep(0.22, 0.62, lie + uLand.z * 0.5);
+    alb = mix(alb, vec3(0.86, 0.88, 0.92), snow);
+    if (snow > 0.5) kind = K_SNOW;
     open = mix(0.9, 0.6, steep);
 }

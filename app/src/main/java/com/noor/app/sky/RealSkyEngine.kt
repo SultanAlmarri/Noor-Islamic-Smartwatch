@@ -643,6 +643,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         if (timed) {
             GLES30.glFinish()
             stagesLogged++
+            // Anything the driver objected to on the way to this picture, for whoever reads the log of a phone on
+            // which it does not look right.
+            var err = GLES30.glGetError(); var n = 0
+            while (err != GLES30.GL_NO_ERROR && n++ < 8) { Log.w(TAG, "GL error 0x${err.toString(16)} by picture $stagesLogged"); err = GLES30.glGetError() }
             Log.i(TAG, "Picture: scene ${t2 - t1} ms, finish ${SystemClock.uptimeMillis() - t2} ms (${tex.getValue("tScene").w}x${tex.getValue("tScene").h}, tier ${tier.name})")
         }
         if (f.still && fade >= 1f) stillDrawn = f
