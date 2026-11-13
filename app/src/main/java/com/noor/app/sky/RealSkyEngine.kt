@@ -278,6 +278,8 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private var landKey = ""
     private var landRow = 0              // the land is drawn a band of rows at a time; -1 = done
     private var landBand = 0             // rows in the next band: tuned to this GPU as the land is drawn
+    private var landDir: File? = null
+    private var landFile: File? = null   // where this land is kept once drawn, if drawing it is slow on this phone
     private var cloudFrame = 0
     private var cloudFill = 0            // cloud updates still owed before every pixel is fresh
     private var cloudKey = ""
@@ -298,6 +300,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         Log.i(TAG, "GL: $rendererId")
         check(ext.contains("EXT_color_buffer_half_float") || ext.contains("EXT_color_buffer_float")) { "no float render targets" }
         binaryDir = File(app.cacheDir, "sky-programs").apply { mkdirs() }
+        landDir = File(app.cacheDir, "sky-land").apply { mkdirs() }
         tier = RealSky.tierFor(app, rendererId)
         val common = listOf("common.glsl")
         val air = listOf("common.glsl", "atmosphere.glsl")
@@ -441,6 +444,78 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     }
     private fun draw() = GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 3)
 
+    // ---- The drawn land, kept between starts ---------------------------------------------------------------------
+    //
+    // The land of a scenery is drawn once and never changes (the camera is fixed), so a phone whose GPU needs a while
+    // for it keeps the three pictures it consists of (what every pixel sees, its facing, its distance) in the cache
+    // directory. They are named by everything they depend on: the GPU, the shaders, the scenery and season, the size.
+
+    private fun landFileFor(f: RealSkyFrame, g: Target): File? {
+        val dir = landDir ?: return null
+        return runCatching {
+            val parts = listOf("common.glsl", "land.glsl", "land_${f.biome.id}.glsl", "gbuffer.frag").joinToString("\n") { src(it) }
+            val key = MessageDigest.getInstance("SHA-1").digest((rendererId + parts + f.landKey() + " ${g.w}x${g.h} $viewW $viewH").toByteArray())
+                .joinToString("") { "%02x".format(it) }
+            File(dir, "${f.biome.id}-$key.bin")
+        }.getOrNull()
+    }
+
+    private fun loadLand(file: File, g: Target): Boolean {
+        if (!file.exists()) return false
+        val ok = runCatching {
+            val n = g.w * g.h * 4
+            val buf = ByteBuffer.allocateDirect(n)
+            val chunk = ByteArray(1 shl 16)
+            java.util.zip.InflaterInputStream(file.inputStream().buffered(1 shl 16)).use { inp ->
+                for (name in listOf("tG0", "tG1", "tG2")) {
+                    buf.clear()
+                    var got = 0
+                    while (got < n) {
+                        val k = inp.read(chunk, 0, min(chunk.size, n - got))
+                        check(k > 0) { "short file" }
+                        buf.put(chunk, 0, k); got += k
+                    }
+                    buf.position(0)
+                    GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, tex.getValue(name).id)
+                    GLES30.glTexSubImage2D(GLES30.GL_TEXTURE_2D, 0, 0, 0, g.w, g.h, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buf)
+                }
+                check(inp.read() < 0) { "long file" }
+            }
+            GLES30.glGetError() == GLES30.GL_NO_ERROR
+        }.getOrDefault(false)
+        if (!ok) { file.delete(); while (GLES30.glGetError() != GLES30.GL_NO_ERROR) { } }
+        return ok
+    }
+
+    private fun saveLand(file: File, g: Target) {
+        runCatching {
+            val n = g.w * g.h * 4
+            val bufs = Array(3) { ByteBuffer.allocateDirect(n) }
+            GLES30.glBindFramebuffer(GLES30.GL_READ_FRAMEBUFFER, g.fbo)
+            for (i in 0..2) {
+                GLES30.glReadBuffer(GLES30.GL_COLOR_ATTACHMENT0 + i)
+                GLES30.glReadPixels(0, 0, g.w, g.h, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, bufs[i])
+            }
+            GLES30.glReadBuffer(GLES30.GL_COLOR_ATTACHMENT0)
+            if (GLES30.glGetError() != GLES30.GL_NO_ERROR) { while (GLES30.glGetError() != GLES30.GL_NO_ERROR) { }; return }
+            Thread({
+                runCatching {
+                    val tmp = File(file.path + ".tmp")
+                    java.util.zip.DeflaterOutputStream(tmp.outputStream().buffered(1 shl 16), java.util.zip.Deflater(java.util.zip.Deflater.BEST_SPEED)).use { o ->
+                        val chunk = ByteArray(1 shl 16)
+                        for (b in bufs) {
+                            b.position(0)
+                            while (b.hasRemaining()) { val k = min(chunk.size, b.remaining()); b.get(chunk, 0, k); o.write(chunk, 0, k) }
+                        }
+                    }
+                    if (!tmp.renameTo(file)) tmp.delete()
+                    // The newest few are enough (a scenery in its seasons, or a few sceneries).
+                    file.parentFile?.listFiles()?.sortedByDescending { it.lastModified() }?.drop(8)?.forEach { it.delete() }
+                }
+            }, "NoorSkyLandSave").apply { priority = Thread.MIN_PRIORITY }.start()
+        }
+    }
+
     // ---- A frame -----------------------------------------------------------------------------------------------
 
     /** Draws what is due; returns true if a new picture went to the screen. */
@@ -467,7 +542,14 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
         // The land: once per scenery, season and size, a band of rows per frame so the phone never stalls.
         val lkey = f.landKey() + sizedFor
-        if (lkey != landKey) { landKey = lkey; landRow = 0; shown = false; fade = 0f; ramp = 0f; landBegan = now }
+        if (lkey != landKey) {
+            landKey = lkey; landRow = 0; shown = false; fade = 0f; ramp = 0f; landBegan = now
+            landFile = landFileFor(f, tG!!)
+            if (landFile?.let { loadLand(it, tG!!) } == true) {
+                landRow = -1
+                Log.i(TAG, "Land from the cache: ${f.biome.id}, ${SystemClock.uptimeMillis() - now} ms")
+            }
+        }
         if (landRow >= 0) {
             val g = tG!!
             val name = "g_" + f.biome.id
@@ -487,7 +569,13 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             // a few frames, a slow one is never held by one long drawing (which some drivers do not forgive).
             val ms = (System.nanoTime() - began) / 1e6f
             landBand = (band * (20f / max(ms, 0.5f))).coerceIn(band * 0.4f, band * 3f).toInt().coerceIn(2, g.h)
-            if (landRow >= g.h) { landRow = -1; Log.i(TAG, "Land drawn: ${f.biome.id}, ${SystemClock.uptimeMillis() - landBegan} ms") }
+            if (landRow >= g.h) {
+                landRow = -1
+                val took = SystemClock.uptimeMillis() - landBegan
+                Log.i(TAG, "Land drawn: ${f.biome.id}, $took ms")
+                // A phone that needs a while for this keeps the result: its next starts show the scene at once.
+                if (took > 600) landFile?.let { saveLand(it, g) }
+            }
         }
 
         // The clouds: one pixel in sixteen per update; all sixteen updates at once when the weather has jumped.
@@ -513,7 +601,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         lastScene = now
         if (!shown) { shown = true }
         // It comes in out of the page's colour: with the opening when there is one, otherwise over a few frames.
-        ramp = min(1f, ramp + 0.10f)
+        ramp = if (f.still) 1f else min(1f, ramp + 0.10f)
         fade = min(f.fade, ramp)
         u["uFade"] = floatArrayOf(fade)
 

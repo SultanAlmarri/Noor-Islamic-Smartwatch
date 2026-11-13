@@ -139,7 +139,8 @@ vec4 cloudsAt(vec2 vp, vec3 hazeCol, vec3 ambLow, vec3 ambTop, float moonW) {
     vec4 cb = cloudTap(tCloudB, cuv);
     vec3 lightLow = mSunCloud() + mMoonLight() * moonW;
     vec3 lightMid = mSunMid() + mMoonLight() * moonW;
-    vec3 ambCloud = mix(ambLow, ambTop, 0.55) * 1.15;
+    // In twilight the whole glowing sky lights a cloud's shaded side: it is dusky against the afterglow, never black.
+    vec3 ambCloud = mix(ambLow, ambTop, 0.55) * (1.15 + 0.9 * smoothstep(5.0, -3.0, uSunEl) * (1.0 - 0.6 * uNight));
     vec3 c = ca.r * lightLow + ca.g * lightMid + ca.b * ambCloud;
     // Lightning inside the storm lights it from within.
     c += uSky.z * vec3(0.75, 0.8, 1.0) * ca.b * 3.0;

@@ -59,7 +59,7 @@ for sc in $SCENERIES; do
     SEEN=$(grep -c "Real sky shown" "$OUT/logcat.txt" 2>/dev/null || echo 0)
     adb shell am force-stop $PKG; sleep 1
     adb shell am start -W -n $ACT >/dev/null
-    shown "${WAIT:-300}"; r=$?
+    shown "${WAIT:-900}"; r=$?
     grep "NoorRealSky" "$OUT/logcat.txt" | tail -4 | tee -a "$OUT/steps.txt"
     sleep 6
     shot "real_${sc}_${hhmm}_${name}"

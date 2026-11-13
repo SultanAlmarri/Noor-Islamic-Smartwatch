@@ -87,7 +87,12 @@ internal object SkyDirector {
 
     /** The day's weather for a scenery: a [Weather] of the kind drawn for this day and place. */
     fun weather(seed: Long, biome: Biome, year: Float): Weather {
-        val r = java.util.Random(seed xor 0x5DEECE66DL)
+        // (Scrambled first: java.util.Random gives neighbouring seeds, which neighbouring days are, nearly the same
+        // first numbers, and every day of a week would get the same kind of weather.)
+        var z = seed + -0x61c8864680b583ebL
+        z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L
+        z = (z xor (z ushr 27)) * -0x6b2fb644ecceee15L
+        val r = java.util.Random(z xor (z ushr 31))
         val w = weights(biome, summer(year))
         var pick = r.nextFloat() * w.sum(); var type = 0
         while (type < w.size - 1 && pick > w[type]) { pick -= w[type]; type++ }
@@ -122,6 +127,11 @@ internal object SkyDirector {
         mid = max(mid, colour * (0.30f + 0.35f * day(3)))
         cirrus = max(cirrus, colour * (0.30f + 0.3f * day(4)))
         cover = cover + (min(cover, 0.42f) - cover) * colour
+        // Once the Sun has gone, the day's heaped clouds sink and thin (the ground no longer feeds them): the afterglow
+        // belongs to the middle and high clouds, which are still in sunlight.
+        val after = smooth(-1f, -7f, el) * (1f - s.storm) * (1f - smooth(0.35f, 0.6f, s.overcast))
+        cover *= 1f - 0.45f * after
+        kind += (min(kind, 0.42f) - kind) * after
         // Deep night belongs to the stars, unless a storm is on.
         val calm = night * (1f - s.storm)
         cover *= 1f - 0.55f * calm

@@ -28,7 +28,10 @@ vec2 weatherMap(vec2 xz) {
     cov *= mix(near, 1.0, max(smoothstep(0.75, 0.95, uCloudA.x), smoothstep(0.80, 0.95, uCloudA.y)));
     // A sheet is nearly whole; heaped clouds keep blue between them.
     float kind = clamp(uCloudA.y + (a.g - 0.5) * 0.55 + (big - 0.5) * 0.35, 0.0, 1.0);
-    return vec2(clamp(cov, 0.0, 1.0), kind);
+    cov = clamp(cov, 0.0, 1.0);
+    // Towers need wide ground to stand on: where cloud is sparse it stays low.
+    kind = min(kind, 0.25 + 0.9 * cov);
+    return vec2(cov, kind);
 }
 
 // How high the cloud tops stand above the base (km) for a kind of cloud.
@@ -59,11 +62,18 @@ float lowDensity(vec3 p, float lod, bool fine) {
     if (hf > 1.0) return 0.0;
     gCloudHf = hf;
     // A flat base, rounding towards the top; under the tropopause a thunderstorm spreads into an anvil.
-    float crown = 1.0 - pow(hf, mix(2.4, 1.4, smoothstep(0.3, 0.8, wm.y)));
+    float crown = 1.0 - pow(hf, mix(1.15, 1.5, smoothstep(0.55, 0.9, wm.y)));
     float anvil = uCloudB.w * smoothstep(0.8, 1.0, wm.y) * smoothstep(0.70, 0.88, hf) * (1.0 - smoothstep(0.95, 1.0, hf));
-    float c = saturate(wm.x * crown + anvil * 0.55);
+    // A cloud is a heap: as tall as its ground is wide. Where clouds are few they are small, so they stay low
+    // (the height a heap reaches goes with how far inside its outline a place is, not with how much sky is covered).
+    float c = saturate(wm.x - max(wm.x, 0.16 * top) * (1.0 - crown) + anvil * 0.55);
     vec3 q = cloudSpace(p);
-    vec4 n = textureLod(tNoise3D, q * (1.0 / 9.0) + vec3(0.0, uTime * 0.0006, 0.0), lod);
+    // A heaped cloud grows straight up from its base: its outline changes slowly with height (the noise that shapes
+    // it is read through a squeezed height), so bases are flat and level, and the cloud stands on them.
+    vec3 qs = vec3(q.x, uCloudA.z + a * 0.45, q.z);
+    // Towers stand on wider ground than fair-weather heaps.
+    float span = mix(12.0, 19.0, smoothstep(0.5, 0.95, uCloudA.y));
+    vec4 n = textureLod(tNoise3D, qs * (1.0 / span) + vec3(0.0, uTime * 0.0006, 0.0), lod);
     float fbm = n.g * 0.625 + n.b * 0.25 + n.a * 0.125;
     // The volume's values crowd between 0.58 and 0.86; spread them over 0..1 so that coverage means what it says.
     float base = saturate((remap(n.r, fbm - 1.0, 1.0, 0.0, 1.0) - 0.58) / 0.28);
@@ -90,7 +100,8 @@ float lowDensity(vec3 p, float lod, bool fine) {
         }
         // The base is never a clean cut: pockets reach up into it.
         float under = 1.0 - saturate(a / 0.28);
-        inside -= m * (eat + 0.30 * under);
+        // (Harder at the very rim, so no crumbs are left standing off the cloud.)
+        inside -= m * (eat * (1.0 + 0.9 * (1.0 - smoothstep(0.0, 0.14, inside))) + 0.30 * under);
         gCloudCav = m * max(1.0 - smoothstep(0.0, 0.45, inside), under * 0.8);
     } else {
         inside -= 0.5 * (eat + 0.30 * (1.0 - saturate(a / 0.28)));
@@ -154,7 +165,8 @@ float highCover(vec2 xz, float lod) {
     vec2 s = vec2(q.x * 0.22 + q.y * 0.10, q.y - q.x * 0.05) + w * 14.0;
     float fib = textureLod(tNoise2D, s / 15.0, lod).r * 0.55 + textureLod(tNoise2D, s / 5.1 + 0.4, lod + 1.5).g * 0.30 + textureLod(tNoise2D, s / 1.9 + 0.7, lod + 3.0).r * 0.15;
     float streaks = smoothstep(0.52 - 0.22 * amt, 0.86 - 0.20 * amt, fib) * smoothstep(0.62 - 0.5 * amt, 0.90 - 0.5 * amt, big * 0.6 + fib * 0.4);
-    float sheet = veil * (0.55 + 0.45 * textureLod(tNoise2D, q / 47.0 + 0.2, 0.0).g);
+    // The veil lies over parts of the sky, thinning away to nothing between.
+    float sheet = veil * 0.85 * smoothstep(0.30, 0.72, textureLod(tNoise2D, q / 140.0 + 0.2, 0.0).g * 0.7 + textureLod(tNoise2D, q / 47.0 + 0.6, 0.0).r * 0.3);
     return clamp(streaks * amt * 1.4 + sheet, 0.0, 1.0);
 }
 
