@@ -576,10 +576,11 @@ touch. The 0.9 sky is untouched and is the fallback ("Classic").
 
 **The owner's PC and emulators.** An Android emulator cannot run on the owner's PC as it is: hardware
 virtualisation is switched off in its BIOS ("Virtualization Enabled In Firmware: No"), and without it the emulator
-does not start the system. The emulator and an Android 14 system image were installed under the SDK
-(`emulator`, `system-images;android-34;default;x86_64`) for a later session: with "SVM Mode" enabled in the BIOS,
-an emulator with `-gpu host` would draw the real sky with the PC's own graphics card (far closer to a phone than
-GitHub's software GPU).
+does not start the system (it sat at "offline" using no CPU until it was stopped). The emulator and an Android 14
+system image were installed under the SDK (`emulator`, `system-images;android-34;default;x86_64`, about 2.6 GB) and
+left there for a later session; the virtual device made for the attempt was removed. With "SVM Mode" enabled in
+the BIOS, a device made with `avdmanager` and started with `-gpu host` would draw the real sky with the PC's own
+graphics card (far closer to a phone than GitHub's software GPU).
 
 **How it was tested**
 
@@ -590,13 +591,22 @@ GitHub's software GPU).
   the bench shows the look, not the speed.
 - *Unit tests*: `app` 67 (the 59 of 0.9.14 and 8 new in `SkyDirectorTest`), all pass; `core/prayer` 105, `alerts`
   16, `wear` 29, unchanged and passing. Both release APKs build.
-- *On Android* (GitHub's Android 14 emulator, whose GPU is software, 360x800, Low tier): the renderer compiled every
-  shader, built itself, drew the dunes' land, kept it and loaded it from the cache on the next start, and showed the
-  scene inside the Today screen with the times on glass (log: "Real sky built", "Land drawn", "Land from the cache",
-  "Real sky shown: dunes"; one screenshot, at dusk). A picture takes that emulator about ten minutes (five for the
-  land, the rest mostly the clouds), and the Android system around it struggles meanwhile: later screenshots of the
-  same run were black. Earlier in the night the old home-sky test, which closes the app after 20 seconds, did so three
-  times before a first picture: the three-starts guard switched to the 0.9 sky, as designed.
+- *On Android* (GitHub's Android 14 emulator, whose GPU is software, 360x800, Low tier, the dunes): the renderer
+  compiled every shader, built itself, drew the land, kept it and loaded it from the cache on the next start, and
+  showed the scene inside the Today screen with the times on glass, in the dark and the light theme (log: "Real sky
+  built", "Land drawn", "Land from the cache", "Real sky shown: dunes"; screenshots half an hour after sunrise with
+  its lit cloud bands, at midday, in the early afternoon, just after sunset and at dusk; the first two of the final
+  build). The log's timings say where that emulator's ten minutes per picture go: about 3.5 minutes in the land
+  and nearly 5 in the *first* drawing of the scene, which is its shader compiler at work; once compiled, the same
+  scene takes it 50 ms and sixteen cloud updates 40 ms. A real phone compiles in its GPU driver instead (and Noor
+  keeps the compiled programs), but how long that takes on a given phone is not known: the first start may show
+  the waiting sky for a while. The rainforest could not be photographed there: while that emulator compiled its
+  land shader the Android system around it gave up and restarted ("The system died"), as it had at a larger screen
+  size. Earlier in the night the old home-sky test, which closes the app after 20 seconds, did so three times before
+  a first picture: the three-starts guard switched to the 0.9 sky, as designed.
+- *GitHub's runs on `main`* (three pushes, the last `fb71184`): every test, both APKs, the watch face validation,
+  the Adhan on Android 14 and 15 emulators, and the 0.9 sky's emulator test (which now asks for "Classic") passed
+  each time; the download links carry the last build.
 
 **Not tested: any phone.** Unknown until the owner opens it: the speed, the battery use and warmth, the look on a
 real screen, whether a real phone's GPU driver (Adreno, Mali, Xclipse) accepts every shader (if one does not, the 0.9
