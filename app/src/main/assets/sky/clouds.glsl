@@ -86,7 +86,9 @@ float lowDensity(vec3 p, float lod, bool fine) {
     // already crossed some cloud, their average is enough.)
     float eat = mix(0.30, 0.26, smoothstep(0.1, 0.4, wm.y)) * (1.0 - smoothstep(0.05, 0.6, inside));
     if (fine) {
-        vec4 h = textureLod(tNoise3D, q * (1.0 / 2.3) + vec3(0.0, uTime * 0.004, 0.0), lod);
+        // (Far off, a pixel and a step of the march span many of these billows: only their average is read there,
+        // or distant clouds glitter.)
+        vec4 h = textureLod(tNoise3D, q * (1.0 / 2.3) + vec3(0.0, uTime * 0.004, 0.0), lod * 2.2 + 1.2 * smoothstep(0.0, 0.3, lod));
         // Cells of three sizes, each spread over 0..1: big billows, the lumps on them, the crumbs on those.
         float m1 = saturate((h.g - 0.28) / 0.50), m2 = saturate((h.b - 0.30) / 0.45), m3 = saturate((h.a - 0.32) / 0.40);
         float m = m1 * 0.55 + m2 * 0.30 + m3 * 0.15;

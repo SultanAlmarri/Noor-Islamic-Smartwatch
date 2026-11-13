@@ -20,20 +20,19 @@ float landH(vec2 p, float t) {
     float s = smoothstep(50.0, 420.0, d);
     // The great ridges, sinuous, running away to the left: their slip faces look towards the evening Sun.
     vec2 q = rot2(p, 0.92);
-    float warp = mix(200.0, 200.0 + (nA(p / 2300.0 + 0.13) - 0.5) * 620.0 + (nB(p / 700.0) - 0.5) * 70.0, s);
-    // The dune underfoot is the highest for a long way: the sand sea lies below us.
-    float size = mix(1.9, 0.6 + 0.85 * nA(p / 3900.0 + 0.5), smoothstep(80.0, 700.0, d));
+    float warp = mix(200.0, 200.0 + (nAs(p / 2300.0 + 0.13) - 0.5) * 520.0 + 46.0 * sin(q.x / 310.0 + 1.3) + 24.0 * sin(q.x / 131.0), s);
+    // The dune underfoot is the highest for a long way: the sand sea lies below us, its dunes of every size.
+    float size = mix(1.9, 0.55 + 1.05 * nAs(p / 3900.0 + 0.5), smoothstep(80.0, 700.0, d));
     float ph = (q.y + warp) / 440.0 + 0.38;
     float h = 32.0 * size * dune(ph);
     // Smaller dunes ride up their windward slopes at an angle.
     vec2 q2 = rot2(p, 0.25);
-    float warp2 = (nB(p / 340.0 + 0.7) - 0.5) * 70.0;
+    float warp2 = 30.0 * sin(q2.x / 97.0 + 0.4) + (nAs(p / 540.0 + 0.7) - 0.5) * 50.0;
     float onSlope = smoothstep(0.08, 0.35, fract(ph)) * (1.0 - smoothstep(0.60, 0.78, fract(ph)));
-    h += 3.4 * dune((q2.y + warp2) / 96.0) * onSlope * (0.3 + 0.7 * nA(p / 800.0));
-    h += (nA(p / 1700.0 + 0.3) - 0.5) * 10.0 * s;
+    h += 3.0 * dune((q2.y + warp2) / 96.0) * onSlope * (0.25 + 0.75 * nAs(p / 800.0));
     // Far away, star dunes stand on the horizon (not where the Sun rises and sets).
     float far = smoothstep(2200.0, 5200.0, d);
-    float star = pow(nA(p / 9000.0 + 0.21), 2.2) * 2.4;
+    float star = pow(nAs(p / 9000.0 + 0.21), 2.2) * 2.4;
     h += far * sunGap(p) * 170.0 * star * (0.6 + 0.4 * dune((q.y + warp) / 1900.0));
     return h;
 }
@@ -41,7 +40,7 @@ float landH(vec2 p, float t) {
 void landMat(vec3 p, inout vec3 n, float t, bool isObj, out vec3 alb, out float kind, out float open) {
     // Sand: warm gold, a little redder and darker in the troughs where the coarse grains gather.
     float v = nB(p.xz / 190.0) * 0.6 + nA(p.xz / 37.0) * 0.4;
-    alb = mix(vec3(0.50, 0.27, 0.12), vec3(0.60, 0.35, 0.165), v);
+    alb = mix(vec3(0.60, 0.34, 0.145), vec3(0.72, 0.45, 0.205), v);
     alb *= 0.94 + 0.12 * nG(p.xz / 3.1);
     // Wind ripples underfoot, across the wind; they fade with distance and on the steep slip faces.
     float near = 1.0 - smoothstep(8.0, 55.0, t);

@@ -9,6 +9,11 @@ float nA(vec2 p) { return textureLod(tNoise2D, p, 0.0).r; }
 float nB(vec2 p) { return textureLod(tNoise2D, p, 0.0).g; }
 float nC(vec2 p) { return textureLod(tNoise2D, p, 0.0).b; }
 float nG(vec2 p) { return textureLod(tNoise2D, p, 0.0).a; }
+// The same fields read smoothly (no creases where the tile's texels meet): for the large shapes of smooth things,
+// such as dunes and snow, whose facing the light shows every crease.
+vec2 smoothUv(vec2 p) { vec2 u = p * 256.0 + 0.5; vec2 i = floor(u), f = fract(u); f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0); return (i + f - 0.5) / 256.0; }
+float nAs(vec2 p) { return textureLod(tNoise2D, smoothUv(p), 0.0).r; }
+float nBs(vec2 p) { return textureLod(tNoise2D, smoothUv(p), 0.0).g; }
 vec2 rot2(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
 float smin(float a, float b, float k) { float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) - k * h * (1.0 - h); }
 float smax(float a, float b, float k) { return -smin(-a, -b, k); }

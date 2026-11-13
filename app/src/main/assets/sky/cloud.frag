@@ -45,18 +45,19 @@ void main() {
         float ds = (0.011 * t + 0.05) * uSteps;
         t += ds * jitter;
         // Long strides through clear air; on meeting a cloud, a step back and short steps through it.
+        // (The first steps back in are the finest: they find the cloud's edge, which is what the eye judges it by.)
         bool stride = true;
-        int clear = 0;
+        int clear = 0, fresh = 0;
         for (int i = 0; i < 160; i++) {
             if (t > tEnd || T < 0.012) break;
             float unit = clamp(0.011 * t + 0.05, 0.07, 2.4) * uSteps;
-            ds = unit * (stride ? 1.5 : 0.45);
+            ds = unit * (stride ? 1.5 : (fresh > 0 ? 0.18 : 0.45));
             vec3 pw = ro + rd * t;
             vec3 p = vec3(pw.x, length(pw) - RE, pw.z);
-            float lod = clamp(log2(ds / 0.10) * 0.6, 0.0, 3.0);
+            float lod = clamp(log2(unit * (stride ? 1.5 : 0.45) / 0.10) * 0.6, 0.0, 3.0);
             float d = lowDensity(p, lod, t < 80.0);
             if (d > 0.0) {
-                if (stride) { stride = false; clear = 0; t -= ds * 0.85; continue; }
+                if (stride) { stride = false; clear = 0; fresh = 8; t -= ds * 0.85; continue; }
                 clear = 0;
                 float hf = gCloudHf;
                 float cav = gCloudCav;
@@ -76,10 +77,11 @@ void main() {
                 dist += w * t;
                 wsum += w;
                 T *= exp(-st);
-            } else {
+            } else if (fresh == 0) {
                 clear++;
                 if (clear > 5 || gCloudHf <= 0.0) stride = true;
             }
+            if (fresh > 0) fresh--;
             t += ds;
         }
     }

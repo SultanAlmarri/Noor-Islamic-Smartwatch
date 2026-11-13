@@ -118,7 +118,7 @@ vec4 moonDisc(vec3 rd) {
     float lit = smoothstep(-0.05, 0.25, dot(n, normalize(uMoonLit.xyz)));
     float seas = texture(tNoise2D, q * 0.11 + 0.21).r * 0.6 + texture(tNoise2D, q * 0.27 + 0.6).g * 0.4;
     float alb = mix(0.62, 1.0, smoothstep(0.42, 0.58, seas)) * mix(0.82, 1.0, n.z);
-    vec3 col = vec3(1.0, 0.97, 0.90) * alb * (lit * (0.9 + 6.0 * uNight) + 0.02 * uNight);
+    vec3 col = vec3(1.0, 0.97, 0.90) * alb * (lit * (0.9 + 3.0 * uNight) + 0.02 * uNight);
     return vec4(col * edge * vis, edge * vis * lit);
 }
 
