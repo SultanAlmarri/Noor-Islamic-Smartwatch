@@ -11,7 +11,7 @@ canvas.width = W; canvas.height = H;
 const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: true });
 gl.getExtension('EXT_color_buffer_float'); gl.getExtension('EXT_color_buffer_half_float'); gl.getExtension('OES_texture_float_linear');
 const errors = [];
-const HEAD = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler3D;\n';
+const HEAD = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\nprecision highp sampler3D;\n';
 const INT_UNIFORMS = new Set(['uFrame', 'uAmort', 'uMode', 'uBiome']);
 
 const cache = {};
@@ -86,7 +86,7 @@ const P = {
 const BIOMES = [
   { id: 'dunes', eye: 62.8, focal: 1.15, water: [0.3, 0.2] },
   { id: 'pnw', eye: 28.0, focal: 1.15, water: [0.10, 0.15] },
-  { id: 'arctic', eye: 4.2, focal: 1.15, water: [0.08, 0.10] },
+  { id: 'arctic', eye: 14.5, focal: 1.15, water: [0.08, 0.10] },
   { id: 'ocean', eye: 9.0, focal: 1.15, water: [0.55, 0.25] },
   { id: 'savanna', eye: 2.3, focal: 1.15, water: [0.3, 0.2] },
   { id: 'canyon', eye: 3.0, focal: 1.15, water: [0.3, 0.2] },
@@ -148,12 +148,13 @@ function updateUniforms() {
   const moonVis = mel > 2 ? Math.min(1, 0.35 + 0.65 * night) * smooth(2, 8, mel) : 0;
   const illum = (1 - Math.cos(phase)) / 2;
   const sunLightEl = el <= 0 ? el : Math.max(drawnEl, Math.min(el, 50));
-  let light = dirAzEl(az, sunLightEl * DEG);
+  const side = Math.max(-1, Math.min(1, (f - 0.5) / 0.07)) * (P.rtl ? -1 : 1);
+  let light = dirAzEl(az + side * 62 * DEG * smooth(8, 40, el), sunLightEl * DEG);
   if (el < -6) light = moonVis > 0 ? moonDir : [0, 1, 0];
   Object.assign(u, {
     uView: [W, H], uTime: P.time, uFrame: G.frame,
     uCam: [P.focal * W, P.horizon * H, P.eye, P.rtl ? 1 : 0],
-    uGapAz: Math.atan(0.3024 / P.focal), uWater: [P.waterRough, P.waterClear, 0, 0],
+    uGapAz: Math.atan(0.3024 * W / Math.hypot(P.focal * W, P.horizon * H - 0.5 * H)), uWater: [P.waterRough, P.waterClear, 0, 0],
     uSunDir: drawn, uLightDir: light, uSunTrue: dirAzEl(az, el * DEG), uSunEl: el,
     uMoon: [...moonDir, illum], uMoonLit: [lx * Math.sin(pa), ly * Math.sin(pa), Math.cos(pa), moonVis],
     uNight: night, uHaze: P.haze,
@@ -166,8 +167,7 @@ function updateUniforms() {
     uText: [P.text ? P.textBottom * H : 0, 0, 0, 0],
     uPanel: [P.panel ? P.panelTop * H : H * 2, 30 * 2.625, P.panelTint, P.light],
     uPanelTint: P.light ? [0.965, 0.955, 0.935] : [0.027, 0.039, 0.078], uFade: 1,
-    uCelX: [1, 0, 0], uCelY: [0, 0.42, 0.9], uCelZ: [0, 0.9, -0.42], uGalN: norm([0.5, 0.3, -0.6]), uGalC: norm([0.35, 0.45, 0.82]),
-  });
+  }, celestial());
   const key = [el.toFixed(3), sx.toFixed(1), sy.toFixed(1), P.haze, P.hijriDay, P.rtl, P.focal, P.horizon].join();
   if (key !== G.lastLightKey) { G.lastLightKey = key; G.dirty.light = true; }
   if (P.haze !== G.lastHaze) { G.lastHaze = P.haze; G.dirty.trans = true; G.dirty.light = true; }
@@ -199,6 +199,58 @@ function use(prog, target, extra = {}) {
 }
 const draw = () => gl.drawArrays(gl.TRIANGLES, 0, 3);
 
+// The celestial axes in the view's frame for a place and a moment (NightSky.frame in the app).
+function celestial() {
+  const lon = 55.3, lat = P.lat;
+  const utcHours = (P.tod * 24 - lon / 15 + 24) % 24;
+  const d = (Date.UTC(2026, 0, 1) / 86400000 + 2440587.5 - 2451545.0) + (P.doy - 1) + utcHours / 24;
+  const lst = (((280.46061837 + 360.98564736629 * d) % 360) + 360) % 360 + lon;
+  const a0 = (P.rtl ? 0 : 180) * DEG, phi = lat * DEG;
+  const view = (ra, dec) => {
+    const h = (lst - ra) * DEG, dd = dec * DEG;
+    const up = Math.sin(phi) * Math.sin(dd) + Math.cos(phi) * Math.cos(dd) * Math.cos(h);
+    const north = Math.cos(phi) * Math.sin(dd) - Math.sin(phi) * Math.cos(dd) * Math.cos(h);
+    const east = -Math.cos(dd) * Math.sin(h);
+    const v = [east * Math.cos(a0) - north * Math.sin(a0), up, east * Math.sin(a0) + north * Math.cos(a0)];
+    return P.rtl ? [-v[0], v[1], v[2]] : v;
+  };
+  return { uCelX: view(0, 0), uCelY: view(90, 0), uCelZ: view(0, 90), uGalN: view(192.85948, 27.12825), uGalC: view(266.40499, -28.93617) };
+}
+
+async function loadStars() {
+  const dv = new DataView(await (await fetch('/app/src/main/res/raw/stars.bin')).arrayBuffer());
+  const n = dv.getInt32(0);
+  const data = new Float32Array(n * 7);
+  let o = 4;
+  for (let i = 0; i < n; i++) {
+    const ra = dv.getFloat32(o) * DEG, dec = dv.getFloat32(o + 4) * DEG, mag = dv.getFloat32(o + 8), k = dv.getInt16(o + 12) / 100; o += 14;
+    let r, g, b;
+    if (k <= 66) { r = 255; g = 99.47 * Math.log(k) - 161.12; b = k <= 19 ? 0 : 138.52 * Math.log(k - 10) - 305.04; }
+    else { r = 329.70 * Math.pow(k - 60, -0.1332); g = 288.12 * Math.pow(k - 60, -0.0755); b = 255; }
+    const c = x => (Math.min(255, Math.max(0, x)) * 0.45 + 255 * 0.55) / 255;
+    data.set([Math.cos(dec) * Math.cos(ra), Math.cos(dec) * Math.sin(ra), Math.sin(dec), mag, c(r), c(g), c(b)], i * 7);
+  }
+  const vao = gl.createVertexArray(), vbo = gl.createBuffer();
+  gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, vbo); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 28, 12);
+  gl.bindVertexArray(null);
+  G.stars = { vao, n };
+}
+
+async function starProgram() {
+  const vs = compile(gl.VERTEX_SHADER, HEAD + await src('stars.vert'), 'stars.vert');
+  const fs = compile(gl.FRAGMENT_SHADER, HEAD + await src('stars.frag'), 'stars.frag');
+  if (!vs || !fs) return null;
+  const p = gl.createProgram();
+  gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { errors.push('stars link: ' + gl.getProgramInfoLog(p)); return null; }
+  const uniforms = [];
+  const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); uniforms.push({ name: info.name.replace(/\[0\]$/, ''), type: info.type, loc: gl.getUniformLocation(p, info.name) }); }
+  return { p, uniforms, label: 'stars', ms: 0, chars: 0 };
+}
+
 async function init() {
   const p = G.progs;
   p.noise = await program('noise', ['noise.frag']);
@@ -210,6 +262,8 @@ async function init() {
   p.blur = await program('blur', ['common.glsl', 'blur.frag']);
   for (const b of BIOMES) p['g_' + b.id] = await program('g_' + b.id, ['common.glsl', 'land.glsl', 'land_' + b.id + '.glsl', 'gbuffer.frag']);
   p.final = await program('final', ['common.glsl', 'atmosphere.glsl', 'final.frag']);
+  p.stars = await starProgram();
+  await loadStars();
   if (errors.length) { document.getElementById('log').textContent = errors.join('\n'); return false; }
 
   // The cloud volume and the flat noise tile, built once.
@@ -287,6 +341,12 @@ function frame(amort = 16) {
   }
   use(p.cloud, G.fCloud, { uAmort: amort }); draw();
   use(p.scene, G.fScene); draw();
+  if (u.uNight > 0.05 && G.stars) {
+    use(p.stars, G.fScene);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+    gl.bindVertexArray(G.stars.vao); gl.drawArrays(gl.POINTS, 0, G.stars.n); gl.bindVertexArray(null);
+    gl.disable(gl.BLEND);
+  }
   use(p.blur, G.fB4, { tSrc: T.tScene, uMode: 0, uDir: [1 / T.tScene.w, 1 / T.tScene.h] }); draw();
   use(p.blur, G.fB8a, { tSrc: G.b4, uMode: 0, uDir: [1 / G.b4.w, 1 / G.b4.h] }); draw();
   use(p.blur, G.fB8b, { tSrc: G.b8a, uMode: 1, uDir: [1.6 / G.b8a.w, 0] }); draw();

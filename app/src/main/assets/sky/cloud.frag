@@ -90,9 +90,11 @@ void main() {
         if (tm < 260.0) {
             vec3 pw = ro + rd * tm;
             vec2 xz = pw.xz;
-            float c = midCover(xz);
+            // How many texels of the cell pattern one pixel covers there (its tile is 6.3 km across 256 texels).
+            float mlod = max(log2(tm / uCam.x * (uView.x / uRes.x) / max(rd.y, 0.05) / 0.0246) - 0.5, 0.0);
+            float c = midCover(xz, mlod);
             if (c > 0.002) {
-                float lit = midCover(xz + normalize(L.xz + 1e-5) * 0.35);
+                float lit = midCover(xz + normalize(L.xz + 1e-5) * 0.35, mlod);
                 float thick = c * mix(0.55, 1.0, uCloudB.y);
                 float path = (MID_TOP - MID_BASE) / max(rd.y, 0.08);
                 float alpha = 1.0 - exp(-thick * path * 2.2);

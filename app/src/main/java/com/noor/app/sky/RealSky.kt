@@ -28,7 +28,7 @@ enum class Biome(val id: String, val eye: Float, val focal: Float, val waterRoug
     /** The Pacific Northwest: tall firs, a sea inlet between forested ridges, a snow-capped volcano. */
     RAINFOREST("pnw", 28.0f, 1.15f, 0.10f, 0.15f, true),
     /** A frozen sea: floes, leads of dark water, icebergs, the aurora. */
-    ARCTIC("arctic", 4.2f, 1.15f, 0.08f, 0.10f, true),
+    ARCTIC("arctic", 14.5f, 1.15f, 0.08f, 0.10f, true),
     /** Nothing but the sea and the sky. */
     OCEAN("ocean", 9.0f, 1.15f, 0.55f, 0.25f, true),
     /** Grass to the horizon, a lone acacia. */
@@ -118,6 +118,16 @@ object RealSky {
     @Volatile private var engine: RealSkyEngine? = null
     /** Tests and previews have no GPU. */
     @Volatile var forceOff = false
+    /** When the sky was last touched (uptime, ms) and how many times: a touch sends a breath of wind through it. */
+    @Volatile internal var gustAt = 0L
+    @Volatile internal var gusts = 0
+
+    /** A touch on the sky: a breath of wind. The clouds slide on, the grass bends, the water ruffles; then it settles. */
+    fun gust() {
+        gustAt = android.os.SystemClock.uptimeMillis()
+        gusts++
+        engine?.wake()
+    }
 
     private fun version(context: Context): Long = runCatching {
         @Suppress("DEPRECATION") context.packageManager.getPackageInfo(context.packageName, 0).let { if (android.os.Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() }
@@ -179,14 +189,14 @@ object RealSky {
         val p = context.getSharedPreferences(PREFS, 0)
         val saved = p.getInt(K_TIER, -1)
         if (saved in Tier.entries.indices) return Tier.entries[saved]
-        return guess(context, renderer)
-    }
-
-    /** A first guess from the GPU's name and the phone's memory; the frame timer corrects it. */
-    internal fun guess(context: Context, renderer: String): Tier {
-        val r = renderer.lowercase()
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val mem = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }.totalMem / (1024.0 * 1024 * 1024)
+        return guess(renderer, mem)
+    }
+
+    /** A first guess from the GPU's name and the phone's memory (GB); the frame timer corrects it. */
+    internal fun guess(renderer: String, mem: Double): Tier {
+        val r = renderer.lowercase()
         fun num(prefix: String): Int = Regex("$prefix\\s*(?:\\(tm\\)\\s*)?(\\d{3,4})").find(r)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val adreno = num("adreno")
         val mali = Regex("mali-g(\\d{2,3})").find(r)?.groupValues?.get(1)?.toIntOrNull() ?: 0

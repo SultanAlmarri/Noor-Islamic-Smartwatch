@@ -83,6 +83,8 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
     fun setVisible(v: Boolean) { synchronized(lock) { visible = v; lock.notifyAll() } }
 
+    fun wake() { synchronized(lock) { lock.notifyAll() } }
+
     // ---- EGL ---------------------------------------------------------------------------------------------------
 
     private var display: EGLDisplay = EGL14.EGL_NO_DISPLAY
@@ -267,8 +269,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private var lastCloud = 0L
     private var lastSwap = 0L
     private var slowFrames = 0
+    private var busyNow = false
     private var timedFrames = 0
     private var fade = 0f
+    private var ramp = 0f
 
     private fun initGl() {
         val began = SystemClock.uptimeMillis()
@@ -425,7 +429,13 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     /** Draws what is due; returns true if a new picture went to the screen. */
     private fun frame(f: RealSkyFrame, now: Long): Boolean {
         sizeBuffers(surfaceW, surfaceH)
-        f.fill(u, ui, viewW.toFloat(), viewH.toFloat(), (now - epoch) / 1000f)
+        // A touch's breath of wind: strong at once, gone in a few seconds; the clouds keep the ground it gave them.
+        val gusts = RealSky.gusts
+        val age = (now - RealSky.gustAt) / 1000f
+        val gust = if (gusts > 0 && age < 8f && !f.still) kotlin.math.exp(-age / 1.4f) else 0f
+        val travel = if (gusts > 0 && !f.still) 0.45f * (gusts - 1) + 0.45f * (1f - kotlin.math.exp(-age / 1.4f)) else 0f
+        busyNow = f.busy || gust > 0.02f
+        f.fill(u, ui, viewW.toFloat(), viewH.toFloat(), (now - epoch) / 1000f, gust, travel)
         u["uCloudRes"] = floatArrayOf(tex.getValue("tCloudA").w.toFloat(), tex.getValue("tCloudA").h.toFloat())
         u["uSteps"] = floatArrayOf(tier.steps)
         ui["uFrame"] = cloudFrame
@@ -440,7 +450,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
         // The land: once per scenery, season and size, a band of rows per frame so the phone never stalls.
         val lkey = f.landKey() + sizedFor
-        if (lkey != landKey) { landKey = lkey; landRow = 0; shown = false; fade = 0f; landBegan = now }
+        if (lkey != landKey) { landKey = lkey; landRow = 0; shown = false; fade = 0f; ramp = 0f; landBegan = now }
         if (landRow >= 0) {
             val g = tG!!
             val name = "g_" + f.biome.id
@@ -458,7 +468,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         // The clouds: one pixel in sixteen per update; all sixteen updates at once when the weather has jumped.
         val ck = f.cloudKey()
         if (ck != cloudKey) { cloudKey = ck; cloudFill = 16 }
-        val scrubbing = f.busy
+        val scrubbing = busyNow
         val cloudDue = now - lastCloud >= (if (scrubbing || cloudFill > 0) 0 else tier.cloudEveryMs)
         if (cloudDue) {
             val n = if (!shown) min(cloudFill, 4) else 1
@@ -477,7 +487,9 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         if (!sceneDue) return false
         lastScene = now
         if (!shown) { shown = true }
-        fade = if (f.fade < 1f) f.fade else min(1f, fade + 0.12f)
+        // It comes in out of the page's colour: with the opening when there is one, otherwise over a few frames.
+        ramp = min(1f, ramp + 0.10f)
+        fade = min(f.fade, ramp)
         u["uFade"] = floatArrayOf(fade)
 
         use(progs.getValue("scene"), tScene); draw()
@@ -537,7 +549,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
                     lastSwap = SystemClock.uptimeMillis()
                 }
                 // Pace: as fast as the screen while something is being dragged or built, otherwise at the tier's rate.
-                val wait = if (f.busy || !shown || fade < 1f) 4L else tier.frameMs - (SystemClock.uptimeMillis() - t0)
+                val wait = if (busyNow || !shown || fade < 1f) 4L else tier.frameMs - (SystemClock.uptimeMillis() - t0)
                 if (wait > 0) synchronized(lock) { runCatching { lock.wait(wait) } }
             } catch (e: Throwable) {
                 Log.w(TAG, "Real sky failed; the 0.9 sky takes over", e)
@@ -556,6 +568,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
     companion object {
         private const val TAG = "NoorRealSky"
-        private const val HEAD = "#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler3D;\n"
+        // High precision everywhere: phone GPUs default 2D textures to low precision, which would crush linear light.
+        private const val HEAD = "#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\nprecision highp sampler3D;\n"
     }
 }

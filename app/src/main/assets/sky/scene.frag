@@ -46,14 +46,14 @@ vec3 faintStars(vec3 d, float alt) {
         vec2 id = floor(g);
         vec2 r = hash22(id + face * 37.0 + float(k) * 91.0);
         float m = hash12(id * 1.37 + face * 11.0 + float(k) * 7.0);
-        float keep = step(k == 0 ? 0.62 : 0.80, m);
+        float keep = step(k == 0 ? 0.90 : 0.86, m);
         vec2 dlt = fract(g) - (0.2 + 0.6 * r);
         float px = n * 2.0 / uCam.x * 0.55;            // one pixel, in cells
         float spot = exp(-dot(dlt, dlt) / (px * px * (k == 0 ? 1.6 : 0.9)));
         float mag = pow(hash12(id + 5.0 + face), 6.0);
         float tw = 0.75 + 0.25 * sin(uTime * (2.0 + 5.0 * r.x) + r.y * 40.0) * smoothstep(40.0, 5.0, alt);
         vec3 tint = mix(vec3(1.0, 0.86, 0.72), vec3(0.78, 0.86, 1.0), r.y);
-        sum += keep * spot * tw * tint * (k == 0 ? 0.10 + 0.55 * mag : 0.035 + 0.12 * mag);
+        sum += keep * spot * tw * tint * (k == 0 ? 0.035 + 0.75 * mag : 0.012 + 0.20 * mag);
     }
     return sum;
 }
@@ -70,10 +70,35 @@ vec3 milkyWay(vec3 d) {
     vec2 q = vec2(l * 3.0, b * 9.0);
     float clumps = texture(tNoise2D, q * 0.13 + 0.3).r * 0.6 + texture(tNoise2D, q * 0.41).g * 0.4;
     float dust = smoothstep(0.42, 0.62, texture(tNoise2D, vec2(l * 0.55, b * 2.6) + 0.17).g) * exp(-sq((b + 0.015) / (0.05 + 0.04 * cen)));
-    float glow = band * (0.30 + 1.0 * cen) * (0.55 + 0.9 * clumps) * (1.0 - 0.75 * dust);
+    float grain = 0.6 + 0.8 * texture(tNoise2D, q * 1.7 + 0.5).a * texture(tNoise2D, q * 0.9).b;
+    float glow = band * (0.30 + 1.0 * cen) * (0.45 + 1.1 * clumps * clumps) * (1.0 - 0.8 * dust) * grain;
     glow += 0.5 * exp(-sq(b / 0.09)) * exp(-sq(l / 0.22)) * (1.0 - 0.6 * dust);       // the bulge
     vec3 col = mix(vec3(0.62, 0.72, 1.0), vec3(1.0, 0.86, 0.68), cen * 0.8);
-    return col * glow * 0.085;
+    return col * glow * 0.050;
+}
+
+// The aurora: curtains of light a hundred kilometres up and more, folded along the far sky, green at their sharp
+// lower border and fading upward into red and violet, with fine rays along the field lines. They drift and pulse.
+vec3 aurora(vec3 rd) {
+    float s = uSky.x;
+    if (s <= 0.01 || rd.y < 0.03) return vec3(0.0);
+    vec3 col = vec3(0.0);
+    float jit = ign(gl_FragCoord.xy);
+    for (int i = 0; i < 20; i++) {
+        float h = 95.0 + (float(i) + jit) * 8.0;
+        vec2 p = rd.xz * (h / rd.y);
+        vec2 q = p * 0.0035 + vec2(uTime * 0.0035, uTime * 0.0011);
+        float w = texture(tNoise2D, q * 0.33 + 0.3).r;
+        float band = 1.0 - abs(texture(tNoise2D, vec2(q.x * 0.55 + w * 0.6, q.y * 0.13 + 0.2)).g * 2.0 - 1.0);
+        float fil = pow(band, 10.0);
+        float ray = 0.45 + 0.55 * texture(tNoise2D, vec2(q.x * 11.0 + w * 4.0, q.y * 1.1 + uTime * 0.01)).r;
+        float hk = (h - 95.0) / 160.0;
+        float profile = smoothstep(0.0, 0.05, hk) * exp(-hk * 3.4);
+        vec3 c = mix(vec3(0.16, 1.0, 0.42), vec3(0.55, 0.18, 0.80), smoothstep(0.22, 0.85, hk));
+        float where = smoothstep(180.0, 650.0, length(p)) * smoothstep(0.30, 0.62, w) * smoothstep(0.045, 0.16, rd.y);
+        col += c * fil * ray * profile * where;
+    }
+    return col * s * 0.30 * (0.75 + 0.25 * sin(uTime * 0.23));
 }
 
 // The moon as a lit sphere: its real phase, the grey seas, earthshine on the dark part.
@@ -131,7 +156,8 @@ uniform vec4 uWater;      // roughness of the water (0 glass .. 1 storm), its co
 // is: waves too small to be seen from there are left out, and only roughen the reflection (`rough`).
 vec2 waterSlope(vec2 q, float t, out float rough) {
     float wind = mix(0.25, 1.0, uWater.x);
-    float px = t / uCam.x;                          // metres across one pixel there
+    // Metres under one pixel there: seen at a grazing angle a pixel covers a long strip of water.
+    float px = t / uCam.x * mix(1.0, 3.2, smoothstep(0.25, 0.02, uCam.z / max(t, 1.0)));
     vec2 g = vec2(0.0);
     float lost = 0.0;
     for (int i = 0; i < 6; i++) {
@@ -141,7 +167,7 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
         float ang = 0.35 + fi * 1.13 + sin(fi * 2.7) * 0.5;
         vec2 dir = vec2(sin(ang * 0.55 - 0.2), cos(ang * 0.55 - 0.2));
         float amp = lambda * 0.016 * wind * (i == 0 ? 1.5 : 1.0);
-        float seen = saturate(lambda / (px * 5.0) - 0.6);
+        float seen = saturate(lambda / (px * 9.0) - 0.5);
         float ph = dot(q, dir) * k - uTime * sqrt(9.8 * k) + fi * 1.7;
         float c = cos(ph), s1 = sin(ph);
         g += dir * (k * amp * c * (1.0 + 0.5 * s1)) * seen;       // crests sharper than a sine's
@@ -174,6 +200,7 @@ void main() {
         float dark = uNight * uNight * (1.0 - 0.6 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
         col += milkyWay(rd) * smoothstep(0.55, 1.0, uNight) * clear * (1.0 - 0.7 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
         col += faintStars(rd, alt) * dark * clear;      // the catalogue's bright stars are drawn as points (stars.vert)
+        col += aurora(rd) * uNight * uNight;
     }
     vec4 moon = moonDisc(rd);
     col = col * (1.0 - moon.a * 0.85 * uNight) + moon.rgb;
@@ -206,7 +233,9 @@ void main() {
     float tH = sphereExitS(eye, rd, HIGH_ALT);
     if (rd.y > 0.003 && tH < 420.0) {
         vec3 pw = vec3(0.0, RE + eye, 0.0) + rd * tH;
-        float c = highCover(pw.xz);
+        // How many texels of the streak pattern a pixel covers there (its tile is 15 km across 256 texels).
+        float hlod = max(log2(tH / uCam.x * (uView.x / uRes.x) / max(rd.y, 0.04) / 0.0586), 0.0);
+        float c = highCover(pw.xz, hlod);
         if (c > 0.002) {
             float thin = 1.0 - exp(-c * 1.5 / max(rd.y, 0.10));
             float far = exp(-tH * 0.006 * uHaze);
@@ -235,7 +264,7 @@ void main() {
         float t = unpackDist(g2.xy);
         vec3 p = vec3(0.0, uCam.z, 0.0) + rd * t;
         vec3 L = uLightDir;
-        vec3 light = mSunGround() * 0.80 + mMoonLight() * moonW;
+        vec3 light = mSunGround() * 0.72 + mMoonLight() * moonW;
         // Shadows: the land's own (how high it stands towards the light) and the clouds'.
         float az = atan(L.x, L.z);
         float hz = mix(sq(g2.z), sq(g2.w), clamp(az / 0.30 * 0.5 + 0.5, 0.0, 1.0)) * 1.6 - 0.2;
@@ -250,7 +279,8 @@ void main() {
             float rough;
             vec2 sl = waterSlope(p.xz, t, rough);
             vec3 wn = normalize(vec3(-sl.x, 1.0, -sl.y));
-            vec3 R = reflect(rd, wn);
+            vec3 calm = normalize(vec3(-sl.x * 0.35, 1.0, -sl.y * 0.35));
+            vec3 R = reflect(rd, calm);
             R.y = abs(R.y) + 0.015;
             R = normalize(R);
             float fres = 0.02 + 0.98 * pow(1.0 - saturate(dot(-rd, wn)), 5.0);
@@ -302,8 +332,8 @@ void main() {
                     float fr = 0.03 + 0.6 * pow(1.0 - saturate(dot(-rd, n)), 4.0);
                     land = mix(land, skyDir(reflect(rd, n)), fr * 0.7);
                 }
-                float spark = step(0.994, hash12(floor(p.xz * (t < 40.0 ? 60.0 : 14.0)) + floor(uTime * 2.0) * 0.21));
-                land += light * sh * spark * 1.5 * saturate(1.0 - t / 400.0);
+                float spark = step(0.9975, hash12(floor(p.xz * (t < 40.0 ? 60.0 : 14.0)) + floor(uTime * 2.0) * 0.21));
+                land += light * sh * spark * 1.5 * saturate(1.0 - t / 250.0);
             } else if (kind > 4.5) {
                 // Leaves and grass: the Sun shines through them when it stands behind.
                 land += alb * light * sh * 0.55 * pow(toSun, 3.0) * (1.0 - ndl * 0.5);

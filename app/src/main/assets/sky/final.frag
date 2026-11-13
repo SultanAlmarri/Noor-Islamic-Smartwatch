@@ -6,7 +6,7 @@ uniform sampler2D tBlur;
 uniform vec4 uText;       // bottom of the text written on the sky (px from the top); 0 = none
 uniform vec4 uPanel;      // top of the glass (px from the top; beyond the view = none), corner radius (px), tint 0..1, 1 = light glass
 uniform vec3 uPanelTint;  // the glass's own colour (display)
-uniform float uFade;      // 0 = not yet shown .. 1 = fully shown
+uniform float uFade;      // 0 = not yet shown (the page's colour) .. 1 = fully shown
 uniform vec4 uCloudA, uCloudB, uCloudC;
 out vec4 o;
 
@@ -19,15 +19,16 @@ vec3 easeTo(vec3 c, float lim) {
     return c * (y / l);
 }
 
-// How bright the sky may be at a height of the view where text is written on it: small text needs 4.5:1 against
-// white (luminance 0.18), the large countdown just above the text's bottom 3:1 (0.30); below the text the limit
-// lifts over a short distance, so it reads as the natural darkening of the upper sky and not as a band.
+// How bright the sky may be at a height of the view where text is written on it. The letters carry a soft dark
+// shadow of their own (TodayScreen, SkyText), so the sky behind them need not be as dark as bare white text would
+// ask: at most 0.26 behind the small text (3.4:1 before the shadow), 0.40 behind the large countdown. Below the
+// text the limit lifts gradually, so it reads as the natural darkening of the upper sky and not as a band.
 float textLimit(float y) {
     float cap = uText.x;
     if (cap <= 0.0) return 1.0;
-    float span = 0.15 * uView.y;
-    if (y <= cap) return mix(0.30, 0.18, smoothstep(cap, cap - 0.9 * span, y));
-    return mix(0.30, 1.0, smoothstep(cap, cap + span, y));
+    float span = 0.12 * uView.y;
+    if (y <= cap) return mix(0.40, 0.26, smoothstep(cap, cap - 0.9 * span, y));
+    return mix(0.40, 1.0, smoothstep(cap, cap + span, y));
 }
 
 void main() {
@@ -57,7 +58,10 @@ void main() {
         float sunlit = luma(toneLinear(mSunCloud() + mAmbTop()));
         float clear = luma(toneLinear(mAmbTop() * 1.25 + mAmbLow() * 0.25));
         float ref = max(mix(clear, max(sunlit, clear), smoothstep(0.0, 0.3, clouds)), 1e-3);
-        d *= min(1.0, lim / ref * 1.15);
+        float k = min(1.0, lim / ref * 1.25);
+        d *= k;
+        // Dimmed warm light turns muddy; as the eye sees shade, it is cool. Lean the darkened part towards blue.
+        d = mix(d, luma(d) * vec3(0.88, 0.97, 1.16), 0.5 * (1.0 - k));
         d = easeTo(d, lim);
     }
 
@@ -83,5 +87,6 @@ void main() {
 
     vec3 s = srgb(d);
     s += (ign(gl_FragCoord.xy + float(uFrame % 64) * 5.588) - 0.5) / 255.0 * 1.2;
-    o = vec4(s * uFade, 1.0);
+    // The scene comes in out of the page's own colour.
+    o = vec4(mix(uPanelTint, s, uFade), 1.0);
 }

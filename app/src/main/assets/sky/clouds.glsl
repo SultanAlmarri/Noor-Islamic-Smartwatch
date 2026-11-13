@@ -22,6 +22,10 @@ vec2 weatherMap(vec2 xz) {
     float big = a.r * 0.7 + b.g * 0.3;                      // fields and gaps tens of kilometres across
     float cluster = uCloudB.z;
     float cov = uCloudA.x + (big - 0.5) * 2.2 * cluster * (0.35 + 0.65 * uCloudA.x);
+    // Heaped clouds keep their distance: seen from straight below, a cloud is a shapeless ceiling. They thin out as
+    // they drift in over the last kilometres (a sheet, or a storm, covers the whole sky all the same).
+    float near = smoothstep(2.6, 7.5, length(xz));
+    cov *= mix(near, 1.0, max(smoothstep(0.75, 0.95, uCloudA.x), smoothstep(0.80, 0.95, uCloudA.y)));
     // A sheet is nearly whole; heaped clouds keep blue between them.
     float kind = clamp(uCloudA.y + (a.g - 0.5) * 0.55 + (big - 0.5) * 0.35, 0.0, 1.0);
     return vec2(clamp(cov, 0.0, 1.0), kind);
@@ -121,17 +125,17 @@ float cloudLight(float od, float mu) {
 }
 
 // The middle clouds (altocumulus in flocks or rows, or an altostratus veil): thickness 0..1 at a place, seen from below.
-float midCover(vec2 xz) {
+float midCover(vec2 xz, float lod) {
     float amt = uCloudB.x;
     if (amt < 0.01) return 0.0;
     vec2 q = xz + uWind.zw;
     float form = uCloudB.y;
     vec2 so = uCloudC.x * vec2(0.71, 0.13);
-    float big = texture(tNoise2D, q / 83.0 + so).g * 0.6 + texture(tNoise2D, q / 31.0 + so.yx).r * 0.4;
-    // Rows: the cells drawn out across the wind.
-    vec2 st = vec2(q.x * mix(1.0, 0.36, smoothstep(0.25, 0.6, form)), q.y);
-    float cells = texture(tNoise2D, st / 6.3 + 0.37).b * 0.65 + texture(tNoise2D, st.yx / 3.7 + 0.11).b * 0.35;
-    float soft = texture(tNoise2D, q / 19.0 + 0.53).r;
+    float big = textureLod(tNoise2D, q / 83.0 + so, 0.0).g * 0.6 + textureLod(tNoise2D, q / 31.0 + so.yx, 0.0).r * 0.4;
+    // Rows: the cells drawn out across the wind. (Far off, where a pixel covers many cells, their average.)
+    vec2 st = vec2(q.x * mix(1.0, 0.55, smoothstep(0.25, 0.6, form)), q.y) + (big - 0.5) * 9.0;
+    float cells = textureLod(tNoise2D, st / 6.3 + 0.37, lod).b * 0.65 + textureLod(tNoise2D, st.yx / 3.7 + 0.11, lod + 0.8).b * 0.35;
+    float soft = textureLod(tNoise2D, q / 19.0 + 0.53, 0.0).r;
     float pattern = mix(cells, mix(cells, soft, 0.75), smoothstep(0.6, 1.0, form));
     float field = smoothstep(0.50 - 0.45 * amt, 0.78 - 0.45 * amt, big);
     float thresh = mix(0.62, 0.30, amt) - 0.18 * smoothstep(0.6, 1.0, form);
@@ -139,18 +143,18 @@ float midCover(vec2 xz) {
 }
 
 // High ice clouds: fibres drawn out by the wind (cirrus), or a thin veil (cirrostratus). Thickness 0..1.
-float highCover(vec2 xz) {
+float highCover(vec2 xz, float lod) {
     float amt = uCloudC.y, veil = uCloudC.z;
     if (amt + veil < 0.01) return 0.0;
     vec2 q = xz + uWind.zw * 1.6;
     vec2 so = uCloudC.x * vec2(0.29, 0.47);
-    float big = texture(tNoise2D, q / 190.0 + so).r;
+    float big = textureLod(tNoise2D, q / 190.0 + so, 0.0).r;
     // Warp, then stretch along the wind: long combed streaks with hooked ends.
-    vec2 w = vec2(texture(tNoise2D, q / 71.0 + 0.31).g, texture(tNoise2D, q / 71.0 + 0.77).r) - 0.5;
+    vec2 w = vec2(textureLod(tNoise2D, q / 71.0 + 0.31, 0.0).g, textureLod(tNoise2D, q / 71.0 + 0.77, 0.0).r) - 0.5;
     vec2 s = vec2(q.x * 0.22 + q.y * 0.10, q.y - q.x * 0.05) + w * 14.0;
-    float fib = texture(tNoise2D, s / 15.0).r * 0.55 + texture(tNoise2D, s / 5.1 + 0.4).g * 0.30 + texture(tNoise2D, s / 1.9 + 0.7).r * 0.15;
+    float fib = textureLod(tNoise2D, s / 15.0, lod).r * 0.55 + textureLod(tNoise2D, s / 5.1 + 0.4, lod + 1.5).g * 0.30 + textureLod(tNoise2D, s / 1.9 + 0.7, lod + 3.0).r * 0.15;
     float streaks = smoothstep(0.52 - 0.22 * amt, 0.86 - 0.20 * amt, fib) * smoothstep(0.62 - 0.5 * amt, 0.90 - 0.5 * amt, big * 0.6 + fib * 0.4);
-    float sheet = veil * (0.55 + 0.45 * texture(tNoise2D, q / 47.0 + 0.2).g);
+    float sheet = veil * (0.55 + 0.45 * textureLod(tNoise2D, q / 47.0 + 0.2, 0.0).g);
     return clamp(streaks * amt * 1.4 + sheet, 0.0, 1.0);
 }
 

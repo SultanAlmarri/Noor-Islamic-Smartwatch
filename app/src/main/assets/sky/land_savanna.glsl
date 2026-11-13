@@ -8,7 +8,7 @@ float landWater() { return -1.0e6; }
 
 float groundH(vec2 p) {
     float d = length(p);
-    float h = (nA(p / 2100.0 + 0.2) - 0.5) * 16.0 + (nB(p / 340.0) - 0.5) * 2.4;
+    float h = (nA(p / 2100.0 + 0.2) - 0.5) * 22.0 + (nB(p / 340.0) - 0.5) * 3.4 + (nA(p / 47.0) - 0.5) * 0.7;
     // Low hills and lone rocks at the edge of the plain (not where the Sun rises and sets).
     float far = smoothstep(4500.0, 9000.0, d);
     h += far * sunGap(p) * pow(nA(p / 8200.0 + 0.37), 3.0) * 520.0;
@@ -37,8 +37,8 @@ float acacia(vec3 p, float s, float seed) {
     float c = ellipsoid(p - vec3(-2.4, 7.0, 0.3), vec3(4.4, 0.75, 3.6));
     c = min(c, ellipsoid(p - vec3(2.9, 7.3, -0.3), vec3(4.6, 0.8, 3.8)));
     c = min(c, ellipsoid(p - vec3(0.4, 7.9, -0.8), vec3(3.6, 0.7, 3.2)));
-    vec2 q = p.xz * 0.21 + seed;
-    c += (0.5 - nC(q)) * 1.1 + (0.5 - nB(q * 3.1)) * 0.5 + abs(p.y - 7.3) * 0.12;
+    vec2 q = p.xz * 0.075 + seed;
+    c += (0.5 - nA(q * 2.3)) * 1.5 + (0.5 - nC(q)) * 0.5 + abs(p.y - 7.3) * 0.12;
     return min(d, c * 0.7) * s;
 }
 
@@ -73,12 +73,16 @@ void landMat(vec3 p, inout vec3 n, float t, bool isObj, out vec3 alb, out float 
         return;
     }
     // Grass in tussocks: gold in the dry season, green after the rains; bare red earth shows between.
-    float tuft = nA(p.xz / 4.3) * 0.5 + nG(p.xz / 1.1) * 0.5;
+    float tuft = nA(p.xz / 4.3) * 0.45 + nG(p.xz / 1.1) * 0.25 + nC(p.xz / 2.6) * 0.30;
     float patchy = nB(p.xz / 150.0) * 0.6 + nA(p.xz / 31.0) * 0.4;
-    vec3 dry = mix(vec3(0.36, 0.27, 0.10), vec3(0.50, 0.40, 0.17), tuft);
-    vec3 lush = mix(vec3(0.07, 0.13, 0.03), vec3(0.16, 0.25, 0.06), tuft);
+    vec3 dry = mix(vec3(0.24, 0.185, 0.085), vec3(0.47, 0.385, 0.20), smoothstep(0.25, 0.75, tuft));
+    dry = mix(dry, vec3(0.33, 0.30, 0.17), smoothstep(0.45, 0.7, nB(p.xz / 420.0 + 0.3)) * 0.6);
+    vec3 lush = mix(vec3(0.07, 0.105, 0.04), vec3(0.19, 0.24, 0.09), smoothstep(0.25, 0.75, tuft));
+    lush = mix(lush, dry, 0.25 + 0.3 * smoothstep(0.4, 0.7, nB(p.xz / 260.0 + 0.6)));
     alb = mix(dry, lush, saturate(green * 1.3 - 0.3 * patchy));
-    alb = mix(alb, vec3(0.30, 0.15, 0.08), smoothstep(0.62, 0.74, patchy) * 0.6 * (1.0 - 0.5 * green));
+    alb = mix(alb, vec3(0.30, 0.16, 0.09), smoothstep(0.58, 0.70, patchy) * 0.7 * (1.0 - 0.5 * green));
+    // Dark bushes dotted over the plain.
+    alb = mix(alb, vec3(0.05, 0.07, 0.03), smoothstep(0.80, 0.86, nC(p.xz / 37.0) * 0.7 + nA(p.xz / 11.0) * 0.3) * smoothstep(30.0, 90.0, t));
     float far = smoothstep(4500.0, 9000.0, t);
     alb = mix(alb, vec3(0.20, 0.17, 0.12), far * 0.6);
     // Tall grass stands rough: it catches low light.

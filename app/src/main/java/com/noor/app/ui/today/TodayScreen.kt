@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.gestures.detectTapGestures
 import com.noor.app.sky.Biome
 import com.noor.app.sky.RealSky
 import com.noor.app.sky.RealSkyBridge
@@ -220,6 +221,7 @@ fun TodayContent(
     // the day's times lie on frosted glass over its lower part. Where it cannot run, the 0.9 sky fills the header.
     val skyContext = androidx.compose.ui.platform.LocalContext.current
     val realSky = RealSky.usable(skyContext, u.settings.skyGraphics) && RealSky.unusable.intValue == 0
+    SkyText.real = realSky
     val bridge = remember { RealSkyBridge() }
     val pagePx = with(LocalDensity.current) { Triple(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), home.heroHeight.toPx()) }
     val glassRadius = with(LocalDensity.current) { 28.dp.toPx() }
@@ -419,6 +421,9 @@ private fun SkyHeader(
                 onDragEnd = { release() },
                 onDragCancel = { release() },
             ) { change, _ -> change.consume(); scrubTo(change.position.x, size.width.toFloat()) }
+        }.pointerInput(real != null) {
+            // The real sky answers a touch: a breath of wind runs through the scene.
+            if (real != null) detectTapGestures(onTap = { RealSky.gust() })
         },
     ) {
         val display = shown.value.toDouble()
@@ -599,7 +604,11 @@ internal object OpeningSky {
 
 /** A soft shadow under text on the sky, so white stays crisp on the palest noon sky. */
 private object SkyText {
-    val Shadow = androidx.compose.ui.graphics.Shadow(Color(0x40081530), Offset(0f, 1.5f), 10f)
+    /** Over the real sky (1.0) clouds may stand behind the text: its shadow is deeper there. */
+    var real = false
+    private val soft = androidx.compose.ui.graphics.Shadow(Color(0x40081530), Offset(0f, 1.5f), 10f)
+    private val deep = androidx.compose.ui.graphics.Shadow(Color(0x8C050A18), Offset(0f, 1.5f), 16f)
+    val Shadow get() = if (real) deep else soft
 }
 
 /** The landscape to draw: the user's choice, or the one that fits the place (0.9.8). */

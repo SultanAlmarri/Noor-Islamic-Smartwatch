@@ -24,9 +24,9 @@ float landH(vec2 p, float t) {
     float d = length(p);
     float summer = uLand.y;
     // The pack: plates of ice, split by leads; fewer and smaller in summer.
-    float plates = nA(p / 330.0 + 0.3) * 0.55 + nC(p / 140.0 + 0.1) * 0.45;
-    float lead = smoothstep(0.03, 0.0, abs(nB(p / 520.0 + 0.6) - 0.5));
-    float thr = mix(0.41, 0.60, summer);
+    float plates = nA(p / 900.0 + 0.3) * 0.62 + nC(p / 260.0 + 0.1) * 0.38;
+    float lead = smoothstep(0.05, 0.0, abs(nB(p / 1400.0 + 0.6) - 0.5));
+    float thr = mix(0.43, 0.60, summer);
     float ice = smoothstep(thr, thr + 0.012, plates) * (1.0 - lead * (0.7 + 0.3 * summer));
     // Near the shore the ice is fast and whole.
     ice = max(ice, 1.0 - smoothstep(30.0, 90.0, d));
@@ -44,8 +44,8 @@ float landH(vec2 p, float t) {
     float m = nA(p / 21000.0 + 0.27);
     float ridge = 1.0 - abs(nB(p / 6000.0 + 0.4) * 2.0 - 1.0);
     h += far * sunGap(p) * (pow(m, 2.0) * 900.0 + ridge * ridge * 260.0 * m);
-    // The snowbank we stand on.
-    h = max(h, 2.2 - d * 0.02 + drift * 0.6);
+    // The hummock of old ice we stand on, above the pack.
+    h = max(h, 11.0 * exp(-d * d / 3600.0) + 1.2 * (1.0 - smoothstep(60.0, 140.0, d)) + drift * 0.5 * (1.0 - smoothstep(60.0, 140.0, d)));
     return h;
 }
 
@@ -54,7 +54,7 @@ void landMat(vec3 p, inout vec3 n, float t, bool isObj, out vec3 alb, out float 
     float high = smoothstep(4.0, 9.0, p.y) * (1.0 - smoothstep(3000.0, 9000.0, t));
     // Snow on everything level; bare blue ice on the bergs' faces, bluer in their clefts.
     vec3 snow = vec3(0.86, 0.89, 0.93) * (0.94 + 0.08 * nB(p.xz / 5.0));
-    vec3 ice = mix(vec3(0.66, 0.82, 0.90), vec3(0.34, 0.60, 0.76), smoothstep(0.35, 0.75, nA(vec2(p.x + p.z, p.y * 1.5) / 90.0)));
+    vec3 ice = mix(vec3(0.70, 0.84, 0.92), vec3(0.42, 0.66, 0.80), smoothstep(0.3, 0.8, nA(vec2(p.x + p.z, p.y * 2.0) / 260.0)));
     float bare = steep * high;
     alb = mix(snow, ice, bare);
     kind = bare > 0.5 ? K_ICE : K_SNOW;

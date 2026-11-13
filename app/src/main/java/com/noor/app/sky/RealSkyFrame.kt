@@ -116,12 +116,12 @@ internal object SkyDirector {
         var mid = s.layer
         var cirrus = s.cirrus
         val veil = if (day(1) < 0.22f) 0.18f + 0.35f * day(2) else 0f
-        // The hour of colour: something for the low Sun to light from beneath, and room for the Sun itself.
-        if (s.overcast < 0.5f) {
-            mid = max(mid, low * (0.30f + 0.35f * day(3)))
-            cirrus = max(cirrus, low * (0.30f + 0.3f * day(4)))
-            cover = cover + (min(cover, 0.42f) - cover) * low
-        }
+        // The hour of colour: something for the low Sun to light from beneath, and room for the Sun itself (unless the
+        // day is overcast; eased in, so nothing switches).
+        val colour = low * (1f - smooth(0.35f, 0.6f, s.overcast))
+        mid = max(mid, colour * (0.30f + 0.35f * day(3)))
+        cirrus = max(cirrus, colour * (0.30f + 0.3f * day(4)))
+        cover = cover + (min(cover, 0.42f) - cover) * colour
         // Deep night belongs to the stars, unless a storm is on.
         val calm = night * (1f - s.storm)
         cover *= 1f - 0.55f * calm
@@ -219,14 +219,19 @@ internal class RealSkyFrame(
 
     fun cloudKey(): String = "${biome.id} ${seed.toInt()}"
 
-    /** Writes the uniforms every pass reads; [time] is the renderer's clock, seconds. */
-    fun fill(u: HashMap<String, FloatArray>, ui: HashMap<String, Int>, w: Float, h: Float, time: Float = 0f) {
+    /**
+     * Writes the uniforms every pass reads; [time] is the renderer's clock, seconds. [gust] (0..1) is a breath of wind
+     * from a touch, fading; [travel] how far (km) such breaths have carried the clouds so far.
+     */
+    fun fill(u: HashMap<String, FloatArray>, ui: HashMap<String, Int>, w: Float, h: Float, time: Float = 0f, gust: Float = 0f, travel: Float = 0f) {
         val t = if (still) 100f else time + lapse
         val s = state
         u["uView"] = floatArrayOf(w, h)
         u["uTime"] = floatArrayOf(t)
         u["uCam"] = floatArrayOf(focalPx, horizon, biome.eye, if (flip) 1f else 0f)
-        u["uGapAz"] = floatArrayOf(atan(0.3024f * w / focalPx))
+        // Where the Sun rises and sets on the horizon line, as an angle from the middle of the view (the land leaves
+        // a gap there): 30.24 % of the width from the middle, through this camera.
+        u["uGapAz"] = floatArrayOf(gapAzimuth(w, h, focalPx, horizon))
         u["uSunDir"] = sunDir; u["uLightDir"] = lightDir; u["uSunTrue"] = sunTrue
         u["uSunEl"] = floatArrayOf(sunEl)
         u["uMoon"] = moon; u["uMoonLit"] = moonLit
@@ -236,7 +241,7 @@ internal class RealSkyFrame(
         u["uCloudB"] = floatArrayOf(s.mid, s.midForm, s.cluster, s.storm)
         u["uCloudC"] = floatArrayOf(seed, s.cirrus, s.veil, s.showers)
         val wl = 0.006f + 0.016f * s.wind; val wm = 0.012f + 0.02f * s.wind
-        u["uWind"] = floatArrayOf(t * wl + hour * 9f, t * wl * 0.25f, t * wm + hour * 14f, t * wm * 0.2f)
+        u["uWind"] = floatArrayOf(t * wl + hour * 9f + travel, t * wl * 0.25f + travel * 0.2f, t * wm + hour * 14f + travel * 1.4f, t * wm * 0.2f)
         // Lightning: a flash or two every so often while a storm is on.
         val flash = if (s.storm > 0.3f && !still) {
             val k = (t * 0.9f).toInt()
@@ -245,8 +250,8 @@ internal class RealSkyFrame(
         } else 0f
         u["uSky"] = floatArrayOf(s.aurora, 0f, flash, 0f)
         u["uLand"] = floatArrayOf(biome.ordinal.toFloat(), s.season, s.snow, s.wet)
-        u["uAir"] = floatArrayOf(s.mist, s.rain, s.wind, s.dust)
-        u["uWater"] = floatArrayOf(s.waterRough, biome.waterClear, 0f, 0f)
+        u["uAir"] = floatArrayOf(s.mist, s.rain, (s.wind + 0.8f * gust).coerceAtMost(1f), s.dust)
+        u["uWater"] = floatArrayOf((s.waterRough + 0.22f * gust).coerceAtMost(1f), biome.waterClear, 0f, 0f)
         u["uTouch"] = floatArrayOf(0f, 0f, 1000f, 0f)
         u["uText"] = floatArrayOf(textBottom, 0f, 0f, 0f)
         u["uPanel"] = floatArrayOf(panelTop, panelRadius, if (lightGlass) 0.50f else 0.50f, if (lightGlass) 1f else 0f)
@@ -270,6 +275,10 @@ internal class RealSkyFrame(
             val c = cos(pitch); val s = sin(pitch)
             return floatArrayOf(dx, dy * c + dz * s, dz * c - dy * s)
         }
+
+        /** The angle from straight ahead at which the Sun rises and sets (see `sunGap` in land.glsl). */
+        fun gapAzimuth(w: Float, h: Float, focalPx: Float, horizon: Float): Float =
+            atan(0.3024f * w / sqrt(focalPx * focalPx + (horizon - 0.5f * h) * (horizon - 0.5f * h)))
 
         fun dirAzEl(az: Double, el: Double) = floatArrayOf((cos(el) * sin(az)).toFloat(), sin(el).toFloat(), (cos(el) * cos(az)).toFloat())
 
@@ -295,7 +304,13 @@ internal class RealSkyFrame(
             val lightEl = if (el <= 0) el else max(seenEl, min(el, 50.0))
             val moonUp = look.moonVisibility > 0f
             val moonDir = if (moonUp) ray(look.moonX, look.moonY, w, h, focalPx, horizon, flip) else floatArrayOf(0f, -0.2f, 0.98f)
-            val light = if (el >= -6.0) dirAzEl(az, lightEl * DEG) else if (moonUp) moonDir else floatArrayOf(0f, 1f, 0f)
+            // By day it falls from the side of the Sun's half of the sky (where it rose in the morning, where it will set
+            // in the afternoon), so the land and the clouds are modelled by it; as the Sun nears the horizon the light
+            // comes from the Sun as it is seen.
+            val half = ((display - scene.noonFraction) / 0.07).coerceIn(-1.0, 1.0) * (if (flip) -1 else 1)
+            val high = ((el - 8.0) / 32.0).coerceIn(0.0, 1.0).let { it * it * (3 - 2 * it) }
+            val lightAz = az + half * 62 * DEG * high
+            val light = if (el >= -6.0) dirAzEl(lightAz, lightEl * DEG) else if (moonUp) moonDir else floatArrayOf(0f, 1f, 0f)
             val state = SkyDirector.at(biome, weather, display, el, year, look.mist)
             val fr = NightSky.frame(shownAt, scene.latitude, scene.longitude, flip)
             // The stars are a real, unmirrored sky; the scene's own x runs the other way when it is mirrored.
