@@ -209,7 +209,7 @@ async function init() {
   p.scene = await program('scene', ['common.glsl', 'atmosphere.glsl', 'clouds.glsl', 'scene.frag']);
   p.blur = await program('blur', ['common.glsl', 'blur.frag']);
   for (const b of BIOMES) p['g_' + b.id] = await program('g_' + b.id, ['common.glsl', 'land.glsl', 'land_' + b.id + '.glsl', 'gbuffer.frag']);
-  p.final = await program('final', ['common.glsl', 'final.frag']);
+  p.final = await program('final', ['common.glsl', 'atmosphere.glsl', 'final.frag']);
   if (errors.length) { document.getElementById('log').textContent = errors.join('\n'); return false; }
 
   // The cloud volume and the flat noise tile, built once.

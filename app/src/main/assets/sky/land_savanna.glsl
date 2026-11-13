@@ -48,13 +48,15 @@ float landObj(vec3 p) {
     if (p.z > 80.0) {
         d = min(d, acacia(p - vec3(70.0, groundH(vec2(70.0, 190.0)), 190.0), 0.9, 0.71));
         d = min(d, acacia(p - vec3(-150.0, groundH(vec2(-150.0, 330.0)), 330.0), 1.15, 0.43));
-        // Scattered trees out on the plain.
-        vec2 id = floor(p.xz / 170.0);
-        float r = hash12(id + 3.7);
-        if (r > 0.62 && length(id) > 2.5) {
-            vec2 c = (id + 0.3 + 0.4 * hash22(id)) * 170.0;
-            d = min(d, acacia(p - vec3(c.x, groundH(c), c.y), 0.7 + 0.5 * r, r * 9.0));
-        } else d = min(d, 60.0);
+        // Scattered trees out on the plain (beyond them, nothing stands: rays stride on to the far hills).
+        if (p.z < 2600.0 && p.y < 40.0) {
+            vec2 id = floor(p.xz / 170.0);
+            float r = hash12(id + 3.7);
+            if (r > 0.62 && length(id) > 2.5) {
+                vec2 c = (id + 0.3 + 0.4 * hash22(id)) * 170.0;
+                d = min(d, acacia(p - vec3(c.x, groundH(c), c.y), 0.7 + 0.5 * r, r * 9.0));
+            } else d = min(d, 60.0);
+        } else d = min(d, max(p.z - 2500.0, p.y - 20.0) + 30.0);
     }
     return d;
 }

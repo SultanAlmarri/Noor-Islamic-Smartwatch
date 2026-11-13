@@ -1,12 +1,13 @@
-// What reaches the screen: the picture with a soft glow round its bright parts, through the filmic curve, kept dark
-// enough behind the text for white letters to read, with frosted glass under the day's times, and a fine grain so
-// slow gradients never show steps.
+// What reaches the screen: the picture with a soft glow round its bright parts, through the filmic curve, darkened
+// behind the text the way a photographer's graduated filter darkens a sky (so white letters read, and clouds keep
+// their shape), with frosted glass under the day's times, and a fine grain so slow gradients never show steps.
 uniform sampler2D tScene;
 uniform sampler2D tBlur;
 uniform vec4 uText;       // bottom of the text written on the sky (px from the top); 0 = none
 uniform vec4 uPanel;      // top of the glass (px from the top; beyond the view = none), corner radius (px), tint 0..1, 1 = light glass
 uniform vec3 uPanelTint;  // the glass's own colour (display)
 uniform float uFade;      // 0 = not yet shown .. 1 = fully shown
+uniform vec4 uCloudA, uCloudB, uCloudC;
 out vec4 o;
 
 // Relative luminance at most `lim`, bright parts eased down rather than cut (their shapes stay).
@@ -24,7 +25,7 @@ vec3 easeTo(vec3 c, float lim) {
 float textLimit(float y) {
     float cap = uText.x;
     if (cap <= 0.0) return 1.0;
-    float span = 0.085 * uView.y;
+    float span = 0.15 * uView.y;
     if (y <= cap) return mix(0.30, 0.18, smoothstep(cap, cap - 0.9 * span, y));
     return mix(0.30, 1.0, smoothstep(cap, cap + span, y));
 }
@@ -47,7 +48,18 @@ void main() {
     }
 
     vec3 d = toneLinear(c);
-    d = easeTo(d, textLimit(vp.y));
+    // The graduated filter: one smooth darkening towards the text, as strong as the brightest thing likely to stand
+    // behind it needs (a sunlit cloud when there are clouds, the sky itself when it is clear). Shapes and colours
+    // keep their relations; only then is anything still too bright eased down.
+    float lim = textLimit(vp.y);
+    if (lim < 1.0) {
+        float clouds = saturate(uCloudA.x * 1.5 + uCloudB.x * 0.9 + uCloudC.y * 0.4 + uCloudC.z * 0.5);
+        float sunlit = luma(toneLinear(mSunCloud() + mAmbTop()));
+        float clear = luma(toneLinear(mAmbTop() * 1.25 + mAmbLow() * 0.25));
+        float ref = max(mix(clear, max(sunlit, clear), smoothstep(0.0, 0.3, clouds)), 1e-3);
+        d *= min(1.0, lim / ref * 1.15);
+        d = easeTo(d, lim);
+    }
 
     if (inPanel > 0.0) {
         vec3 g = toneLinear(b);
@@ -56,15 +68,15 @@ void main() {
             // Light glass: dark ink must read on it, so it never falls below a bright haze.
             g = mix(g, tint, uPanel.z);
             float l = luma(g);
-            float floorL = 0.62;
+            const float floorL = 0.60;
             if (l < floorL) g = mix(g, vec3(1.0), (floorL - l) / max(1.0 - l, 1e-3));
         } else {
             // Dark glass: white letters must read on it.
-            g = easeTo(g, 0.20);
+            g = easeTo(g, 0.22);
             g = mix(g, tint, uPanel.z);
             g = easeTo(g, 0.105);
         }
-        // A hairline of light along the glass's upper edge.
+        // A hairline of light along the upper edge of the glass.
         float edge = smoothstep(2.5, 0.0, abs(vp.y - uPanel.x - 1.0)) * 0.10;
         d = mix(d, g + edge, inPanel);
     }

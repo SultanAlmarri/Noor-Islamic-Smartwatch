@@ -23,6 +23,8 @@ adb shell settings put global auto_time 0
 adb shell settings put global auto_time_zone 0
 adb shell settings put system screen_off_timeout 1800000
 adb shell svc power stayon true
+# The software GPU draws every pixel on the CPU: a smaller screen (same shape) keeps each picture to seconds.
+adb shell wm size "${WM_SIZE:-720x1600}"; adb shell wm density "${WM_DENSITY:-280}"
 adb shell wm size | tee -a "$OUT/steps.txt"
 adb install -r -g "$APK" | tail -1
 adb logcat -c
@@ -46,7 +48,7 @@ shown() {
 adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city dxb -n $HOOK >/dev/null; sleep 2
 
 # Dubai is UTC+4. 14 November 2026: Fajr 05:14, sunrise 06:30, noon 12:06, Asr 15:11, sunset 17:35, Isha 18:52.
-TIMES="0235:sunrise 0700:midday 1305:golden 1338:sunset 1356:dusk 1900:night"
+TIMES="${TIMES:-0235:sunrise 0700:midday 1305:golden 1338:sunset 1356:dusk 1900:night}"
 SCENERIES="${SCENERIES:-DUNES RAINFOREST ARCTIC SEA SAVANNA CANYON}"
 for sc in $SCENERIES; do
   adb shell am broadcast -a com.noor.smartwatch.debug.SKY --es scenery "$sc" --es graphics "$TIER" -n $HOOK >/dev/null; sleep 2
@@ -56,7 +58,8 @@ for sc in $SCENERIES; do
     SEEN=$(grep -c "Real sky shown" "$OUT/logcat.txt" 2>/dev/null || echo 0)
     adb shell am force-stop $PKG; sleep 1
     adb shell am start -W -n $ACT >/dev/null
-    shown 420; r=$?
+    shown "${WAIT:-300}"; r=$?
+    grep "NoorRealSky" "$OUT/logcat.txt" | tail -4 | tee -a "$OUT/steps.txt"
     sleep 6
     shot "real_${sc}_${hhmm}_${name}"
     [ $r -eq 1 ] && { log "the real sky is unavailable on this device"; break 2; }

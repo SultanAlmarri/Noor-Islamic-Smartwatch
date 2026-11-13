@@ -287,7 +287,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         progs["cloud"] = program("cloud", air + "clouds.glsl" + "cloud.frag")
         progs["scene"] = program("scene", air + "clouds.glsl" + "scene.frag")
         progs["blur"] = program("blur", common + "blur.frag")
-        progs["final"] = program("final", common + "final.frag")
+        progs["final"] = program("final", air + "final.frag")
         progs["stars"] = program("stars", listOf("stars.frag"), vertex = "stars.vert")
         buildNoise(if (tier.ordinal >= RealSky.Tier.MEDIUM.ordinal) 96 else 128)
         tex["tTrans"] = hdr(256, 64).also { tTrans = target(it) }

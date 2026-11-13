@@ -63,11 +63,11 @@ void main() {
 
     float t = 0.3;
     bool hit = false;
-    for (int i = 0; i < 360; i++) {
+    for (int i = 0; i < 420; i++) {
         vec3 p = ro + rd * t;
         float d = sceneD(p, t);
         if (d < 0.0006 * t) { hit = true; break; }
-        t += max(d, 0.0012 * t + 0.01);
+        t += max(d, 0.0022 * t + 0.01);
         if (t > FAR || (rd.y > 0.0 && p.y > LAND_TOP)) break;
     }
     if (hit) {

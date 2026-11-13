@@ -15,6 +15,9 @@ on:
       sceneries:
         description: Sceneries (Scenery names, space separated)
         default: DUNES RAINFOREST ARCTIC SEA SAVANNA CANYON
+      times:
+        description: Moments (UTC hhmm:name, space separated; Dubai is UTC+4)
+        default: 0235:sunrise 0700:midday 1305:golden 1338:sunset 1356:dusk 1900:night
 
 permissions:
   contents: write
@@ -43,7 +46,9 @@ jobs:
       - name: Each scenery through the day
         uses: reactivecircus/android-emulator-runner@v2
         env:
+          # A push photographs a few moments of each scenery; run the workflow by hand for the whole day.
           SCENERIES: ${{ inputs.sceneries || 'DUNES RAINFOREST ARCTIC SEA SAVANNA CANYON' }}
+          TIMES: ${{ inputs.times || '0235:sunrise 0700:midday 1338:sunset' }}
         with:
           api-level: 34
           target: google_apis

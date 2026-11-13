@@ -183,18 +183,23 @@ void main() {
         col += vec3(0.55, 0.66, 0.9) * uMoon.w * uMoonLit.w * uNight * (0.035 * pow(saturate(mm), 90.0) + 0.012 * pow(saturate(mm), 12.0));
     }
 
+    // The marched clouds, in the light of the moment (looked up first: the Sun's disc does not show through thick cloud).
+    vec3 hazeCol = skyAt(vec2(vp.x, min(vp.y, uCam.y - 0.012 * uView.y)));
+    vec4 cl = cloudsAt(vp, hazeCol, ambLow, ambTop, moonW);
+    float sunShows = smoothstep(0.02, 0.22, cl.a);
+
     // The Sun's disc, with a darker limb.
     float sunR = 0.0058;
     float sd = acos(clamp(mu, -1.0, 1.0)) / sunR;
     if (sd < 1.3 && uSunEl > -2.0) {
         float limb = 1.0 - 0.45 * (1.0 - sqrt(max(1.0 - sd * sd, 0.0)));
-        col += mSunDisc() * limb * smoothstep(1.0, 0.9, sd);
+        col += mSunDisc() * limb * smoothstep(1.0, 0.9, sd) * sunShows;
     }
     // Its glare: light scattered in the eye and the lens, tight round the disc and a wide soft bloom.
     if (uSunEl > -3.0) {
         float th = acos(clamp(mu, -1.0, 1.0));
         vec3 sc = mSunDisc() / 2500.0;
-        col += sc * (2.2 * exp(-th / 0.016) + 0.30 * exp(-th / 0.07) + 0.05 * exp(-th / 0.22)) * smoothstep(-3.0, 0.0, uSunEl);
+        col += sc * (2.6 * exp(-th / 0.016) * sunShows + 0.36 * exp(-th / 0.07) * (0.3 + 0.7 * sunShows) + 0.06 * exp(-th / 0.22)) * smoothstep(-3.0, 0.0, uSunEl);
     }
 
     // High ice clouds, lit long after the ground has gone dark.
@@ -216,9 +221,6 @@ void main() {
         }
     }
 
-    // The marched clouds, with the light of the moment.
-    vec3 hazeCol = skyAt(vec2(vp.x, min(vp.y, uCam.y - 0.012 * uView.y)));
-    vec4 cl = cloudsAt(vp, hazeCol, ambLow, ambTop, moonW);
     col = col * cl.a + cl.rgb;
 
     // The land and the water, relit from what was stored of them (gbuffer.frag).
@@ -319,14 +321,18 @@ void main() {
         }
 
         // The air between: far things fade into the colour of the sky behind them; mist lies in the low ground.
+        // Haze lies low (most of it in the first kilometre or two), so a far peak stands clear above a hazed foot.
         float tk = t * 0.001;
-        float fog = 1.0 - exp(-tk * (0.022 + 0.020 * (uHaze - 1.0) + 0.05 * uAir.w));
+        float ya = uCam.z * 0.001, yb = max(p.y, 0.0) * 0.001;
+        const float HH = 1.3;
+        float layer = abs(yb - ya) > 1e-3 ? HH / (yb - ya) * (exp(-ya / HH) - exp(-yb / HH)) : exp(-ya / HH);
+        float fog = 1.0 - exp(-tk * (0.006 + (0.020 + 0.024 * (uHaze - 1.0) + 0.06 * uAir.w) * layer));
         float glow = pow(saturate(dot(rd, uSunDir)), 8.0);
         land = mix(land, hazeCol * (1.0 + 0.35 * glow), fog);
         if (uAir.x > 0.005) {
-            const float hf = 26.0;
-            float y0 = min(uCam.z, p.y), y1 = max(uCam.z, p.y);
-            float od = uAir.x * 0.012 * hf * (exp(-y0 / hf) - exp(-y1 / hf)) / max(abs(rd.y), 0.004);
+            const float hf = 16.0;
+            float y0 = max(min(uCam.z, p.y), 0.0), y1 = max(max(uCam.z, p.y), 0.0);
+            float od = uAir.x * 0.0045 * min(hf * (exp(-y0 / hf) - exp(-y1 / hf)) / max(abs(rd.y), 1e-4), t);
             od *= 0.6 + 0.8 * texture(tNoise2D, p.xz / 900.0 + vec2(uTime * 0.0012, 0.0)).r;
             vec3 mistCol = mix(ambLow, ambTop, 0.4) * 1.1 + (mSunGround() * 0.22 + mMoonLight() * moonW * 0.3) * (0.4 + 1.6 * glow);
             land = mix(land, mistCol, 1.0 - exp(-od));
