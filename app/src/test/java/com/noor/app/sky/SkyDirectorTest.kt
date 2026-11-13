@@ -13,7 +13,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * The real sky (1.0), the parts that are plain arithmetic: the weather the director invents (always within what the
+ * The real sky (0.10), the parts that are plain arithmetic: the weather the director invents (always within what the
  * shaders expect, changing smoothly through the day, arranged for the hour of colour and for the stars, true to each
  * scenery and season), the camera (the same mapping as `viewRay` in assets/sky/common.glsl), where the light falls
  * from, and the quality tier guessed for a phone. What the pictures look like is checked on the design bench

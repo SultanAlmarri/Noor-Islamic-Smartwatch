@@ -343,10 +343,13 @@ void main() {
                     land *= 0.88 + 0.26 * gust * (0.3 + 0.7 * uAir.z) * saturate(1.0 - t / 1500.0);
                 }
             }
-            // Rain leaves the ground dark and shining.
+            // Rain leaves the ground darker, and shining where water stands on it (level places, in patches).
             if (uLand.w > 0.01) {
-                float fr = 0.04 + 0.5 * pow(1.0 - saturate(dot(-rd, n)), 5.0);
-                land = mix(land, land * 0.6 + skyDir(reflect(rd, n)) * fr, uLand.w * smoothstep(0.75, 0.98, n.y));
+                float level = smoothstep(0.80, 0.98, n.y);
+                float pool = smoothstep(0.52, 0.66, texture(tNoise2D, p.xz / 23.0 + 0.4).r) * level;
+                float fr = 0.03 + 0.30 * pow(1.0 - saturate(dot(-rd, n)), 5.0);
+                vec3 wetted = land * 0.72;
+                land = mix(land, mix(wetted, wetted * 0.8 + skyDir(reflect(rd, vec3(0.0, 1.0, 0.0))) * fr, pool), uLand.w * (0.5 + 0.5 * level));
             }
         }
 

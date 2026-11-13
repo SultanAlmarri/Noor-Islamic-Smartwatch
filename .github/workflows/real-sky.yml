@@ -1,6 +1,6 @@
 name: Real sky on real Android (emulator)
 
-# The real sky (1.0): the OpenGL ES 3 renderer on an Android emulator, each scenery photographed through the day.
+# The real sky (0.10): the OpenGL ES 3 renderer on an Android emulator, each scenery photographed through the day.
 # See tools/devicetest/real_sky.sh. The pictures are uploaded, and published as a pre-release asset.
 
 on:

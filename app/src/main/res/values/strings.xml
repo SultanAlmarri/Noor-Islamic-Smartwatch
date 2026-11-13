@@ -486,7 +486,7 @@
     <string name="scenery_hills">Hills</string>
     <string name="scenery_mountains">Mountains</string>
     <string name="scenery_sea">Sea</string>
-    <!-- 1.0: the real sky's six sceneries, and how finely it is drawn -->
+    <!-- 0.10: the real sky's six sceneries, and how finely it is drawn -->
     <string name="scenery_rainforest">Rainforest</string>
     <string name="scenery_arctic">Arctic</string>
     <string name="scenery_ocean">Ocean</string>

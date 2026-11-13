@@ -48,7 +48,7 @@ class SceneryScreenTest {
         rule.waitUntil(10_000) { rule.onAllNodesWithText("Automatic").fetchSemanticsNodes().isNotEmpty() }
         rule.onAllNodesWithText("Dunes, for Dubai", substring = true).onFirst().assertExists()
         shot("75_scenery_en")
-        // 1.0: the six sceneries of the real sky.
+        // 0.10: the six sceneries of the real sky.
         assertEquals(com.noor.app.sky.Biome.DUNES, com.noor.app.sky.Biome.of(Scenery.AUTO, "AE", 5.0, 25.2))
         assertEquals(com.noor.app.sky.Biome.OCEAN, com.noor.app.sky.Biome.of(Scenery.AUTO, "MV", 2.0, 4.2))
         assertEquals(com.noor.app.sky.Biome.ARCTIC, com.noor.app.sky.Biome.of(Scenery.AUTO, "NO", 10.0, 69.6))

@@ -19,7 +19,7 @@ import com.noor.app.data.Scenery
 import com.noor.app.data.SkyGraphics
 
 /**
- * The six sceneries of the real sky (1.0), as different from each other as land can be: sand, forest, ice, water,
+ * The six sceneries of the real sky (0.10), as different from each other as land can be: sand, forest, ice, water,
  * grass and rock. Each has its own camera (how high it stands, in metres) and its own water.
  */
 enum class Biome(val id: String, val eye: Float, val focal: Float, val waterRough: Float, val waterClear: Float, val hasWater: Boolean) {

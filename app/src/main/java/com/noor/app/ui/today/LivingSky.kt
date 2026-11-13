@@ -334,7 +334,7 @@ internal fun LivingSky(
     /** The opening's progress, 0 → 1 (1 when there is none): the scene fades in from the page, the land rises a
      *  little, the clouds run fast and settle to their real drift, and the path and its prayers draw themselves. */
     opening: () -> Float = { 1f },
-    /** The real sky (1.0) draws the scene itself, behind the whole screen: here only the path and the prayers are
+    /** The real sky (0.10) draws the scene itself, behind the whole screen: here only the path and the prayers are
      *  drawn, over it. */
     real: com.noor.app.sky.RealSkySetup? = null,
 ) {

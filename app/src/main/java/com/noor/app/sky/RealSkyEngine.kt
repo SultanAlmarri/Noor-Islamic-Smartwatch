@@ -24,7 +24,7 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * The real sky (1.0): a small 3D renderer of its own (OpenGL ES 3.0) for the home screen.
+ * The real sky (0.10): a small 3D renderer of its own (OpenGL ES 3.0) for the home screen.
  *
  * The camera never moves and the world changes slowly, which is what makes film-like clouds affordable on a phone:
  *
@@ -112,6 +112,22 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         // A one-pixel surface keeps the context usable while no view is attached.
         pbuffer = EGL14.eglCreatePbufferSurface(display, config, intArrayOf(EGL14.EGL_WIDTH, 1, EGL14.EGL_HEIGHT, 1, EGL14.EGL_NONE), 0)
         check(EGL14.eglMakeCurrent(display, pbuffer, pbuffer, context)) { "eglMakeCurrent" }
+    }
+
+    /** Forgets everything built in a context that is gone; the next frame builds it again. */
+    private fun releaseContext() {
+        runCatching {
+            EGL14.eglMakeCurrent(display, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
+            if (eglSurface != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(display, eglSurface)
+            if (pbuffer != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(display, pbuffer)
+            if (context != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(display, context)
+        }
+        eglSurface = EGL14.EGL_NO_SURFACE; pbuffer = EGL14.EGL_NO_SURFACE; context = EGL14.EGL_NO_CONTEXT
+        glReady = false
+        progs.clear(); tex.clear()
+        tTrans = null; tMeter = null; tSky = null; tCloud = null; tScene = null; tG = null; tB4 = null; tB8a = null; tB8b = null
+        b4 = null; b8a = null; b8b = null
+        sizedFor = ""; landKey = ""; lightKey = ""; starVao = 0; starCount = 0
     }
 
     private fun bindSurface() {
@@ -261,6 +277,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private var lightKey = ""
     private var landKey = ""
     private var landRow = 0              // the land is drawn a band of rows at a time; -1 = done
+    private var landBand = 0             // rows in the next band: tuned to this GPU as the land is drawn
     private var cloudFrame = 0
     private var cloudFill = 0            // cloud updates still owed before every pixel is fresh
     private var cloudKey = ""
@@ -455,13 +472,21 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             val g = tG!!
             val name = "g_" + f.biome.id
             val p = progs.getOrPut(name) { program(name, listOf("common.glsl", "land.glsl", "land_${f.biome.id}.glsl", "gbuffer.frag")) }
-            if (landRow == 0) { GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, g.fbo); GLES30.glClearColor(0f, 0f, 0f, 0f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT) }
-            val band = max(24, (g.h * tier.landBand).toInt())
+            if (landRow == 0) {
+                GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, g.fbo); GLES30.glClearColor(0f, 0f, 0f, 0f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+                landBand = max(4, (g.h * tier.landBand * 0.4f).toInt())
+            }
+            val band = min(landBand, g.h - landRow)
+            val began = System.nanoTime()
             // Rows are counted from the bottom in GL: the foreground first.
             use(p, g, mapOf("uTile" to floatArrayOf(landRow.toFloat(), (landRow + band).toFloat(), 0f, 0f)))
             draw()
             GLES30.glFinish()
             landRow += band
+            // Each band is timed and the next sized to take about a fiftieth of a second: a fast GPU has the land in
+            // a few frames, a slow one is never held by one long drawing (which some drivers do not forgive).
+            val ms = (System.nanoTime() - began) / 1e6f
+            landBand = (band * (20f / max(ms, 0.5f))).coerceIn(band * 0.4f, band * 3f).toInt().coerceIn(2, g.h)
             if (landRow >= g.h) { landRow = -1; Log.i(TAG, "Land drawn: ${f.biome.id}, ${SystemClock.uptimeMillis() - landBegan} ms") }
         }
 
@@ -538,7 +563,15 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
                     // steps down a tier by itself.
                     val measure = timedFrames++ % 20 == 5
                     if (measure) GLES30.glFinish()
-                    EGL14.eglSwapBuffers(display, eglSurface)
+                    if (!EGL14.eglSwapBuffers(display, eglSurface)) {
+                        // The surface went away under us (the view was removed), or the system took the context back
+                        // (a phone short of memory): bind again, rebuilding everything if the context is gone.
+                        val err = EGL14.eglGetError()
+                        Log.w(TAG, "swap failed: 0x${err.toString(16)}")
+                        if (err == EGL14.EGL_CONTEXT_LOST) { releaseContext(); initEgl() }
+                        synchronized(lock) { surfaceChanged = true }
+                        continue
+                    }
                     if (measure && shown && fade >= 1f) {
                         val ms = SystemClock.uptimeMillis() - t0
                         slowFrames = if (ms > 40) slowFrames + 1 else max(0, slowFrames - 1)

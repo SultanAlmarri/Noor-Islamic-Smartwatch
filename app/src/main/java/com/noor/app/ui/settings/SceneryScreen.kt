@@ -78,7 +78,7 @@ internal fun graphicsName(g: SkyGraphics): Int = when (g) {
 }
 
 /**
- * Home scenery (0.9.8; six sceneries since the real sky, 1.0): the landscape under the home screen's sky. "Automatic"
+ * Home scenery (0.9.8; six sceneries since the real sky, 0.10): the landscape under the home screen's sky. "Automatic"
  * chooses it from the place; or the user keeps the one they love, wherever they are. Below, how finely the sky is
  * drawn: automatic by default, or fixed, or the earlier sky.
  */

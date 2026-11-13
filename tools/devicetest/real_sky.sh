@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The real sky (1.0) on a real Android system (an emulator in CI): the OpenGL ES 3 renderer, its shaders compiled by
+# The real sky (0.10) on a real Android system (an emulator in CI): the OpenGL ES 3 renderer, its shaders compiled by
 # Android's own driver, photographed for each scenery at several times of day.
 #
 #   tools/devicetest/real_sky.sh <debug apk> <output dir> [graphics tier, default LOW]
@@ -14,7 +14,7 @@ ACT=$PKG/com.noor.app.MainActivity
 HOOK=$PKG/com.noor.app.debug.TestHookReceiver
 mkdir -p "$OUT"
 log() { echo "[real_sky $(date -u +%H:%M:%S)] $*" | tee -a "$OUT/steps.txt"; }
-adb() { timeout 60 "$(type -P adb)" "$@"; }
+adb() { timeout 120 "$(type -P adb)" "$@"; }
 
 log "start"
 adb wait-for-device
@@ -23,8 +23,9 @@ adb shell settings put global auto_time 0
 adb shell settings put global auto_time_zone 0
 adb shell settings put system screen_off_timeout 1800000
 adb shell svc power stayon true
-# The software GPU draws every pixel on the CPU: a smaller screen (same shape) keeps each picture to seconds.
-adb shell wm size "${WM_SIZE:-720x1600}"; adb shell wm density "${WM_DENSITY:-280}"
+# The software GPU draws every pixel on the CPU (the land of one scenery took it five minutes at 720x1600, and the
+# system gave up): a small screen of the same shape, with the same layout, keeps each picture to a minute or two.
+adb shell wm size "${WM_SIZE:-360x800}"; adb shell wm density "${WM_DENSITY:-140}"
 adb shell wm size | tee -a "$OUT/steps.txt"
 adb install -r -g "$APK" | tail -1
 adb logcat -c

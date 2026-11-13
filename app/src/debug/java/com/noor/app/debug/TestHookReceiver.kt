@@ -49,7 +49,7 @@ class TestHookReceiver : BroadcastReceiver() {
                         Log.i(TAG, "CITY done ${intent.getStringExtra("city")}")
                     }
                     "com.noor.smartwatch.debug.SKY" -> {
-                        // The real sky (1.0): a scenery and a quality by name, for tools/devicetest/real_sky.sh.
+                        // The real sky (0.10): a scenery and a quality by name, for tools/devicetest/real_sky.sh.
                         val repo = app.container.settings
                         intent.getStringExtra("scenery")?.let { n -> com.noor.app.data.Scenery.entries.firstOrNull { it.name == n }?.let { repo.setScenery(it) } }
                         intent.getStringExtra("graphics")?.let { n -> com.noor.app.data.SkyGraphics.entries.firstOrNull { it.name == n }?.let { repo.setSkyGraphics(it) } }

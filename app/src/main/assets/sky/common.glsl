@@ -1,4 +1,4 @@
-// Noor real sky (1.0): what every pass shares. GLSL ES 3.00; the design bench (tools/sky3d) compiles these very files.
+// Noor real sky (0.10): what every pass shares. GLSL ES 3.00; the design bench (tools/sky3d) compiles these very files.
 //
 // Space: x right, y up, z forward (into the picture), kilometres for the sky and the clouds, metres for the land.
 // The camera never moves: it stands uCam.z metres above the ground looking along +z, pitched so that the horizon

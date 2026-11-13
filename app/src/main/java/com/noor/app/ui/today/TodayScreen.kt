@@ -217,7 +217,7 @@ fun TodayContent(
 
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
     val home = HomeLayout.of(maxHeight, top, contentPadding.calculateBottomPadding())
-    // The real sky (1.0): the whole screen is the window. The scene is drawn behind everything by its own renderer;
+    // The real sky (0.10): the whole screen is the window. The scene is drawn behind everything by its own renderer;
     // the day's times lie on frosted glass over its lower part. Where it cannot run, the 0.9 sky fills the header.
     val skyContext = androidx.compose.ui.platform.LocalContext.current
     val realSky = RealSky.usable(skyContext, u.settings.skyGraphics) && RealSky.unusable.intValue == 0
@@ -604,7 +604,7 @@ internal object OpeningSky {
 
 /** A soft shadow under text on the sky, so white stays crisp on the palest noon sky. */
 private object SkyText {
-    /** Over the real sky (1.0) clouds may stand behind the text: its shadow is deeper there. */
+    /** Over the real sky (0.10) clouds may stand behind the text: its shadow is deeper there. */
     var real = false
     private val soft = androidx.compose.ui.graphics.Shadow(Color(0x40081530), Offset(0f, 1.5f), 10f)
     private val deep = androidx.compose.ui.graphics.Shadow(Color(0x8C050A18), Offset(0f, 1.5f), 16f)
@@ -618,7 +618,7 @@ internal fun terrainFor(s: com.noor.app.data.Scenery, countryCode: String?, elev
     com.noor.app.data.Scenery.HILLS -> Terrain.HILLS
     com.noor.app.data.Scenery.MOUNTAINS -> Terrain.MOUNTAINS
     com.noor.app.data.Scenery.SEA -> Terrain.SEA
-    // The real sky's sceneries (1.0), where the 0.9 sky still draws: the nearest of its own four.
+    // The real sky's sceneries (0.10), where the 0.9 sky still draws: the nearest of its own four.
     com.noor.app.data.Scenery.RAINFOREST, com.noor.app.data.Scenery.SAVANNA -> Terrain.HILLS
     com.noor.app.data.Scenery.ARCTIC, com.noor.app.data.Scenery.CANYON -> Terrain.MOUNTAINS
 }
