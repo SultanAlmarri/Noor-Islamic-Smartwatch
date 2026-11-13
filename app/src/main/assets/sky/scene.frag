@@ -382,19 +382,29 @@ void main() {
         col = land;
     }
 
-    // Rain here: fine streaks, slanted by the wind.
+    // Rain here: fine streaks, slanted by the wind. Where snow lies it is cold enough to fall as snow: soft flakes,
+    // drifting down slowly.
     if (uAir.y > 0.01) {
         vec2 rp = vp / uView.x;
         float streaks = 0.0;
+        bool snowing = uLand.z > 0.5;
         for (int i = 0; i < 3; i++) {
             float fi = float(i);
-            float sc = 26.0 + fi * 19.0;
-            vec2 q = vec2(rp.x * sc + rp.y * sc * (0.10 + 0.2 * uAir.z), rp.y * (2.2 - fi * 0.5) + uTime * (1.9 + fi * 0.6));
-            float r = hash12(floor(q) + fi * 17.0);
-            float x = abs(fract(q.x) - 0.5);
-            streaks += step(0.72, r) * smoothstep(0.06, 0.0, x) * smoothstep(0.0, 0.3, fract(q.y)) * smoothstep(1.0, 0.5, fract(q.y)) * (0.5 - fi * 0.12);
+            if (snowing) {
+                float sc = 30.0 + fi * 24.0;
+                vec2 q = vec2(rp.x * sc + 0.7 * sin(rp.y * 6.0 + uTime * 0.5 + fi * 2.1) + uTime * (0.15 + 0.5 * uAir.z), rp.y * sc - uTime * (1.0 + fi * 0.45));
+                vec2 cell = floor(q);
+                vec2 f = fract(q) - 0.5 - (hash22(cell + fi * 9.1) - 0.5) * 0.6;
+                streaks += step(0.78, hash12(cell + fi * 17.0)) * smoothstep(0.17, 0.05, length(f)) * (0.60 - fi * 0.13);
+            } else {
+                float sc = 26.0 + fi * 19.0;
+                vec2 q = vec2(rp.x * sc + rp.y * sc * (0.10 + 0.2 * uAir.z), rp.y * (2.2 - fi * 0.5) + uTime * (1.9 + fi * 0.6));
+                float r = hash12(floor(q) + fi * 17.0);
+                float x = abs(fract(q.x) - 0.5);
+                streaks += step(0.72, r) * smoothstep(0.06, 0.0, x) * smoothstep(0.0, 0.3, fract(q.y)) * smoothstep(1.0, 0.5, fract(q.y)) * (0.5 - fi * 0.12);
+            }
         }
-        col = mix(col, col + (ambTop + mSunGround() * 0.1) * 0.5, streaks * uAir.y);
+        col = mix(col, col + (ambTop + mSunGround() * 0.1) * (snowing ? 0.9 : 0.5), streaks * uAir.y);
         col = mix(col, hazeCol, uAir.y * 0.18);
     }
 

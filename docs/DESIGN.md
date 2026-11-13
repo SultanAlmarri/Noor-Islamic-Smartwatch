@@ -162,8 +162,8 @@ on it are drawn over the scene as before.
   mixed), weighted by scenery and season, evolving hour by hour, then arranges it as a landscape photographer hopes
   to find it: cloud to catch the colour at sunrise and sunset with room left for the Sun, the day's heaped clouds
   sinking once the Sun has gone (the afterglow belongs to the middle and high clouds), mostly clear deep nights for
-  the stars, drama now and then. Rain, mist in the low ground, dust on a desert storm day, lightning in a storm, wet
-  ground after rain. (The user's real local weather is not shown; the director is where it would plug in.)
+  the stars, drama now and then. Rain (snow, where snow lies), mist in the low ground, dust on a desert storm day,
+  lightning in a storm, wet ground after rain; under an overcast the sky closes whole, lighter along the horizon. (The user's real local weather is not shown; the director is where it would plug in.)
 - **True to the place and the time**: the Sun and the moon (its real phase, its seas, earthshine), the 1,600
   catalogue stars and the Milky Way where they stand for the user's latitude, longitude and moment, as in 0.9.8, now
   as points and a river of star dust in the 3D sky. The stars keep to the real, unmirrored sky in Arabic too.
@@ -207,8 +207,9 @@ sea, moss, snow).
 Classic (the 0.9 sky). A tier sets the size of the cloud buffers and of the picture, how coarse the cloud march is and
 how often things are redrawn. Compiled shader programs are cached, so later starts are quick.
 
-**When it cannot run.** It needs OpenGL ES 3.0 with float render targets. Without them, or if a shader is refused, the
-0.9 sky is used (for good, until the app is updated). A crash in a graphics driver cannot be caught, so each start is
+**When it cannot run.** It needs OpenGL ES 3.0 with float render targets and a real GPU (a software one, as in an
+emulator, needs minutes for a picture; unless a quality is named in Settings). Without them, or if a shader is
+refused, the 0.9 sky is used (for good, until the app is updated). A crash in a graphics driver cannot be caught, so each start is
 counted before the renderer is built and cleared when a picture is on screen: after three starts of a version that
 never got that far, the 0.9 sky is used. Leaving the home screen before the first picture does not count. A graphics
 context the system takes back (a phone short of memory) is rebuilt.

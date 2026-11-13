@@ -188,7 +188,9 @@ internal object SkyDirector {
             cover = cover.coerceIn(0f, 0.95f), kind = kind.coerceIn(0.05f, 1f), base = 1.25f + 0.5f * day(11), cluster = s.cluster,
             mid = mid.coerceIn(0f, 1f), midForm = (0.15f + 0.6f * day(12) + 0.35f * s.overcast).coerceIn(0f, 1f),
             cirrus = cirrus.coerceIn(0f, 1f), veil = veil * (1f - s.overcast), storm = storm, showers = showers, rain = rain,
-            haze = haze, mist = mist, dust = dust, wind = windy, season = season, snow = snow, wet = smooth(0.15f, 0.5f, rain),
+            haze = haze, mist = mist, dust = dust, wind = windy, season = season, snow = snow,
+            // (Where snow lies, what falls is snow: the ground is not wet.)
+            wet = smooth(0.15f, 0.5f, rain) * (1f - smooth(0.4f, 0.6f, snow)),
             aurora = aurora, waterRough = rough,
         )
     }

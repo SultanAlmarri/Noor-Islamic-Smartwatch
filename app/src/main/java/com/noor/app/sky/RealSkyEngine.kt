@@ -302,6 +302,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         rendererId = (GLES30.glGetString(GLES30.GL_RENDERER) ?: "") + "|" + (GLES30.glGetString(GLES30.GL_VERSION) ?: "")
         Log.i(TAG, "GL: $rendererId")
         check(ext.contains("EXT_color_buffer_half_float") || ext.contains("EXT_color_buffer_float")) { "no float render targets" }
+        // A GPU that is really the CPU (emulators, a phone without a working graphics driver) needs minutes for one
+        // picture: left to choose, Noor draws the 0.9 sky there. (Naming a quality in Settings still asks for this
+        // one, which is how the emulator test photographs it.)
+        check(RealSky.graphics != com.noor.app.data.SkyGraphics.AUTO || !Regex("swiftshader|llvmpipe|softpipe|software").containsMatchIn(rendererId.lowercase())) { "software GPU" }
         binaryDir = File(app.cacheDir, "sky-programs").apply { mkdirs() }
         landDir = File(app.cacheDir, "sky-land").apply { mkdirs() }
         tier = RealSky.tierFor(app, rendererId)
