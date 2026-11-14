@@ -151,7 +151,8 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   running away into the distance, the open sea coming in on it, and the mountains of Musandam far across the water,
   from the Copernicus elevation model), **Green hills** (the Diablo Range above a reservoir in spring, from the USGS
   elevation model, oaks, a meadow of scanned grass and flowers; it took the savanna's place in 0.11) and **Red
-  rock** (buttes and mesas over a desert floor, scanned rock and ground). Only nature: nothing man-made, no people.
+  rock** (Monument Valley from the USGS elevation model: Mitchell Mesa, Merrick Butte and the Mittens over the
+  valley floor, scanned rock, earth and brush). Only nature: nothing man-made, no people.
   What each is made of and where its data comes from: `tools/scenery/sources/`.
 - **Natural skylines, exact times.** A scenery is never cut open for the Sun (the owner's decision: "what I don't
   like is cutting mountains in order to have the sunrise and set on the ground"): a range runs unbroken, a forest
