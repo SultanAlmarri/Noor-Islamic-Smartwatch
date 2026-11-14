@@ -540,7 +540,8 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         }
         if (lw.glow[0] > 0.004f && g0 == null && "gl" !in b.missing) all = false
         if (lw.glow[1] > 0.004f && g1 == null && "gr" !in b.missing) all = false
-        val first = t.firstOrNull { it != null } ?: g0 ?: g1 ?: return all && b.lit != null
+        // (A set with no shading pictures at all is simply unlit; nothing waits for it.)
+        val first = t.firstOrNull { it != null } ?: g0 ?: g1 ?: return all
         if (have <= 1e-4f && total > 1e-3f && b.lit != null) return false      // none of the Suns yet: the last mix stays
         val k = if (have > 1e-4f) total / have else 0f
         val w = FloatArray(5) { if (t[it] != null) lw.w[it] * k else 0f }
@@ -585,7 +586,8 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
      */
     private fun layer(i: Int, id: String?, amount: Float, f: RealSkyFrame, now: Long, dt: Float, instant: Boolean): Boolean {
         val slot = slots[i]
-        val wanted = id?.let { bakedSet("clouds/$it", false) }
+        // (A set whose pictures cannot be read is as good as no set: nothing waits for it.)
+        val wanted = id?.let { bakedSet("clouds/$it", false) }?.takeIf { "a" !in it.missing }
         var waiting = false
         if (wanted != null && wanted !== slot.cur) {
             if (setReady(wanted, f.cloudLight, f.flip, now)) {

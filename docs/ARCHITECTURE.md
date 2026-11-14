@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 14 November 2026 (phone 0.10.0: the real sky, see below and DESIGN.md; watch 0.9.12).
+Living document: each development phase adds its section. Last updated 14 November 2026 (phone 0.11.0: the real sky from path-traced pictures, see below and DESIGN.md; watch 0.9.12).
 
 ## Modules
 
@@ -178,26 +178,29 @@ Full description: `DESIGN.md`.
   (timings, the ambient-motion switch), `ScreenTitle`, `PillButton`, grouped-list rows (`settings/SettingsComponents`).
 - `ThemeMode.SUN` follows Shuruq and Maghrib at the current place (`MainActivity.rememberDaylight`).
 
-## The real sky (0.10, phone)
+## The real sky (0.11, phone)
 
 The home screen's scene is drawn by a renderer of its own (`com.noor.app.sky`), not by Compose: a `TextureView`
-behind the Today page, an OpenGL ES 3.0 context on one render thread (`RealSkyEngine`), and the shaders in
-`app/src/main/assets/sky` (GLSL ES 3.00; `tools/sky3d` runs the same files in a browser). Compose only tells it the
-moment: `LivingSky` builds a `RealSkyFrame` (camera, where the Sun and moon are drawn and where their light falls
-from, the weather from `SkyDirector`, the season, where the text and the glass are) and hands it over through
-`RealSkyBridge`; the renderer never calls back into Compose. The sun path, the prayers' marks and the birds are still
-Compose, drawn over it. Passes, tiers, caches and fallbacks: [DESIGN.md](DESIGN.md#the-real-sky-010).
+behind the Today page, an OpenGL ES 3.0 context on one render thread (`RealSkyEngine`), the shaders in
+`app/src/main/assets/sky2` (GLSL ES 3.00; `tools/sky3d` runs the same files in a browser), and pictures: the land of
+each scenery (`assets/sky2/land/<id>`), twelve sets of clouds (`assets/sky2/clouds/<id>`), the Milky Way and the Moon
+(`assets/sky2/night`). The pictures are made on a workstation by a path tracer (`tools/scenery`, Blender Cycles) and
+only put together on the phone. Compose tells the renderer the moment: `LivingSky` builds a `RealSkyFrame` (camera,
+where the Sun and Moon are drawn, which rendered Suns light the land and the clouds now (`LightWeights`), the weather
+and its cloud sets from `SkyDirector`, where the text and the glass are) and hands it over through `RealSkyBridge`;
+the renderer never calls back into Compose. The sun path and the prayers' marks are still Compose, drawn over it.
+Passes, tiers and fallbacks: [DESIGN.md](DESIGN.md#the-real-sky-011).
 
 - It is used when `RealSky.usable` says so: the setting (Settings → Home scenery → Sky quality) is not "Classic",
   the phone has OpenGL ES 3, and this version has not failed to start three times (`noor_ui` preferences:
   `real_sky_attempts`, `real_sky_failed_for`). Otherwise `LivingSky` draws the 0.9 sky exactly as before.
-- Nothing is shipped as a picture: the cloud noise, the land and the sky are computed on the phone. Compiled
-  programs (`cache/sky-programs`) and, on slow GPUs, the drawn land (`cache/sky-land`) are kept between starts.
-- It reads no sensors and no network, and stores nothing but those caches and the tier it stepped down to.
+- Pictures are read from the APK's assets on a loader thread as they are needed and freed when unused; compiled
+  programs are kept in `cache/sky-programs`.
+- It reads no sensors and no network, and stores nothing but that cache and the tier it stepped down to.
 
 ## Known limitations (0.9.7)
 
-- The real sky (0.10) has not been run on a phone: its speed, its battery use and its look on a real screen and a real phone GPU driver are unknown. The emulators draw it with a software GPU (minutes per picture).
+- The real sky (0.11) has not been run on a phone by its maker: its speed, its battery use and its look on a real screen and a real phone GPU driver are known only from an emulator (a software GPU) and the design bench. 0.10's Sun could not be seen on the owner's phone (most likely a half-float overflow, removed in 0.11); whether 0.11's is, only his phone can say.
 - 0.9.7's Adhan changes for Android 17 are checked on Android 14 and 15 emulators with a real scheduled alarm; the
   Android 17 emulator image does not run reliably on GitHub's machines, so Android 17 needs the owner's phone.
 - The map's imagery and gestures, and the phone's geocoder, are checked in software and on an emulator only.

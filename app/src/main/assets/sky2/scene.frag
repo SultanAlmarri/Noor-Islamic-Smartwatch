@@ -395,6 +395,8 @@ void main() {
         vec2 q = rd.xz * tw;
         float rough;
         vec2 sl = waterSlope(q, tw, rough);
+        // (Where the water is only a film over the sand there is no room for a wave.)
+        sl *= smoothstep(0.0, 0.5, max(t - tw, 0.0) * -rd.y) * 0.85 + 0.15;
         vec3 n = normalize(vec3(-sl.x, 1.0, -sl.y));
         vec3 r = reflect(rd, n);
         r.y = abs(r.y) + 0.002;

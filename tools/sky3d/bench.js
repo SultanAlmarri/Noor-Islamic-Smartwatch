@@ -164,6 +164,8 @@ function updateUniforms() {
   const cw = lightWeights(moonLight ? Math.max(mel, 0.7) : el, side, true);
   let light = lw.dir;
   if (moonLight && moonVis <= 0) light = [0, 1, 0];
+  // (The weights are found for the screen as it is seen; the scene's own x runs the other way when mirrored.)
+  if (P.rtl) light = [-light[0], light[1], light[2]];
   G.landLight = lw; G.cloudLight = cw;
   Object.assign(u, {
     uView: [W, H], uTime: P.time, uFrame: G.frame,
