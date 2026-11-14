@@ -358,6 +358,21 @@ internal class RealSkyFrame(
         u["uAir"] = floatArrayOf(s.mist, s.rain, (s.wind + 0.8f * gust).coerceAtMost(1f), s.dust)
         u["uWater"] = floatArrayOf((s.waterRough + 0.22f * gust).coerceAtMost(1f), biome.waterClear, 0f, 0f)
         u["uTouch"] = floatArrayOf(0f, 0f, 1000f, 0f)
+        // Life: by day a flock of birds crosses the sky every few minutes (not in rain, nor under a storm); by night
+        // a shooting star now and then. Nothing of either when animations are off.
+        val k = (t / BIRDS_EVERY).toInt()
+        val into = t - k * BIRDS_EVERY
+        val flock = !still && sunEl > 3f && s.rain < 0.15f && s.storm < 0.5f && into < BIRDS_CROSS && CloudField.hash(seed.toInt(), k, 57) < 0.8f
+        u["uBirds"] = if (flock) floatArrayOf(
+            into / BIRDS_CROSS, 0.07f + 0.13f * CloudField.hash(seed.toInt(), k, 58), k * 7.31f + seed, if (CloudField.hash(seed.toInt(), k, 59) < 0.5f) 1f else -1f,
+        ) else floatArrayOf(-1f, 0f, 0f, 1f)
+        val mk = (t / METEOR_EVERY).toInt()
+        val mInto = t - mk * METEOR_EVERY
+        val star = !still && night > 0.9f && mInto < 0.85f && CloudField.hash(seed.toInt(), mk, 61) < 0.6f
+        u["uMeteor"] = if (star) floatArrayOf(
+            (mInto / 0.85f).coerceIn(0.001f, 1f), 0.15f + 0.7f * CloudField.hash(seed.toInt(), mk, 62), 0.05f + 0.35f * CloudField.hash(seed.toInt(), mk, 63),
+            -1.1f + 2.2f * CloudField.hash(seed.toInt(), mk, 64),
+        ) else floatArrayOf(0f, 0f, 0f, 0f)
         u["uText"] = floatArrayOf(textBottom, 0f, 0f, 0f)
         u["uPanel"] = floatArrayOf(panelTop, panelRadius, if (lightGlass) 0.50f else 0.50f, if (lightGlass) 1f else 0f)
         u["uPanelTint"] = tint
@@ -368,6 +383,10 @@ internal class RealSkyFrame(
 
     companion object {
         private const val DEG = PI / 180
+        /** A flock of birds sets out every so many seconds and takes this long to cross; a shooting star's chance. */
+        private const val BIRDS_EVERY = 210f
+        private const val BIRDS_CROSS = 75f
+        private const val METEOR_EVERY = 38f
 
         /**
          * The direction seen at a point of the layer (px from its top-left corner). Mirrors `viewRay` in common.glsl:

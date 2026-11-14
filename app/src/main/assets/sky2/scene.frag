@@ -21,6 +21,10 @@ uniform vec4 uLand;           // biome, season (0 winter .. 1 summer), snow, wet
 uniform vec4 uAir;            // mist near the ground, rain here, wind strength, dust
 uniform vec4 uWater;          // roughness of the water (0 glass .. 1 storm), its clearness, -, -
 uniform vec4 uTouch;          // where the scene was last touched (px), seconds since, strength
+uniform vec4 uBirds;          // a flock crossing the sky: how far across (0..1; below 0 = none), its height (of the
+                              // view's width above the horizon), its seed, +1 left to right / -1 right to left
+uniform vec4 uMeteor;         // a shooting star: how far along its track (0..1; 0 = none), where it starts (x, y, of the
+                              // view's width from the top-left), its bearing (radians from straight down)
 
 out vec4 o;
 
@@ -140,7 +144,10 @@ vec3 sunLight(vec3 rd, float shows) {
     // crosses much more air), and the fine rays a lens draws out of a point of light: by these a camera's Sun is
     // known for the Sun even against a bright sky.
     float low = smoothstep(12.0, 1.0, uSunEl);
-    vec3 g = c * (0.022 * exp(-th / 0.030) * shows
+    // (A low Sun's disc is drawn dimmer so that it keeps its colour; its glow is not.)
+    vec3 cg = c * max(1.0, 9.0 / max(luma(c), 0.5));
+    cg = mix(c, cg, low);
+    vec3 g = cg * (0.022 * exp(-th / 0.030) * shows
                 + 0.0085 * (1.0 + 1.6 * low) * exp(-th / 0.085) * (0.35 + 0.65 * shows)
                 + 0.0018 * (1.0 + 1.2 * low) * exp(-th / 0.26));
     if (th < 0.30 && shows > 0.05) {
@@ -148,7 +155,7 @@ vec3 sunLight(vec3 rd, float shows) {
         vec3 upv = cross(uSunDir, right);
         float phi = atan(dot(rd, upv), dot(rd, right));
         float rays = pow(abs(cos(phi * 7.0)), 40.0) + 0.55 * pow(abs(cos(phi * 7.0 + 0.9)), 90.0);
-        g += c * rays * 0.030 * shows * shows * exp(-th / 0.060) * smoothstep(0.012, 0.03, th);
+        g += c * rays * 0.015 * shows * shows * exp(-th / 0.050) * smoothstep(0.012, 0.03, th);
     }
     return (col + g) * up;
 }
@@ -185,6 +192,58 @@ float cloudGap(vec3 d) {
          * (1.0 - layerAt(tCloud2, uCloudF2, uCloudD.z, p.xy).a);
 }
 
+// ---- Life ---------------------------------------------------------------------------------------------------------
+
+// A flock of birds far off, crossing the sky: small dark shapes with beating wings, in a loose line. How much of this
+// pixel they cover.
+float birds(vec2 vp) {
+    if (uBirds.x < 0.0) return 0.0;
+    float W = uView.x;
+    vec2 c = vec2(mix(-0.12, 1.12, uBirds.w > 0.0 ? uBirds.x : 1.0 - uBirds.x) * W, uCam.y - uBirds.y * W);
+    c.y += sin(uBirds.x * 9.0 + uBirds.z) * 0.012 * W;
+    vec2 d = vp - c;
+    if (abs(d.x) > 0.16 * W || abs(d.y) > 0.07 * W) return 0.0;
+    float cover = 0.0;
+    for (int i = 0; i < 9; i++) {
+        float fi = float(i);
+        vec2 r = hash22(vec2(fi * 7.3 + uBirds.z, uBirds.z * 3.1 + fi));
+        // A ragged skein: each bird a little behind and to the side of the one before, bobbing.
+        float side = mod(fi, 2.0) < 0.5 ? 1.0 : -1.0;
+        float rank = floor((fi + 1.0) * 0.5);
+        vec2 at = vec2(-uBirds.w * rank * 0.022 * W - uBirds.w * r.x * 0.012 * W, side * rank * 0.011 * W + (r.y - 0.5) * 0.012 * W);
+        at.y += sin(uTime * 0.9 + fi * 1.7) * 0.0016 * W;
+        float span = (0.0065 + 0.003 * r.x) * W;                    // half a wingspan
+        float beat = sin(uTime * (5.2 + 1.6 * r.y) + fi * 2.4);
+        vec2 q = d - at;
+        if (dot(q, q) > span * span * 1.6) continue;
+        // Two wings from the body, raised and lowered; thicker at the shoulder.
+        float lift = beat * 0.55 + 0.15;
+        vec2 tip = vec2(span * cos(lift), -span * sin(lift));
+        vec2 qa = vec2(abs(q.x), q.y);
+        float h = clamp(dot(qa, tip) / dot(tip, tip), 0.0, 1.0);
+        float dist = length(qa - tip * h);
+        float thick = mix(0.16, 0.05, h) * span;
+        cover = max(cover, smoothstep(thick, thick * 0.35, dist));
+    }
+    return cover;
+}
+
+// A shooting star: a quick bright streak, brightest at its head, gone in under a second.
+vec3 meteor(vec2 vp) {
+    if (uMeteor.x <= 0.0) return vec3(0.0);
+    float W = uView.x;
+    vec2 dir = vec2(sin(uMeteor.w), cos(uMeteor.w));
+    vec2 head = uMeteor.yz * W + dir * uMeteor.x * 0.30 * W;
+    vec2 q = vp - head;
+    float along = -dot(q, dir);                                   // behind the head: positive
+    if (along < -3.0 || along > 0.16 * W) return vec3(0.0);
+    float across = abs(dot(q, vec2(dir.y, -dir.x)));
+    float tail = exp(-along / (0.045 * W)) * step(0.0, along) + exp(-along * along / 6.0);
+    float glow = exp(-across * across / (1.6 + 0.00002 * along * W));
+    float life = smoothstep(0.0, 0.12, uMeteor.x) * (1.0 - smoothstep(0.7, 1.0, uMeteor.x));
+    return vec3(0.85, 0.93, 1.0) * tail * glow * life * 1.6;
+}
+
 // ---- The sky, whole -----------------------------------------------------------------------------------------------
 
 // Everything above the land in a direction: the air, the night's lights, the Sun, the clouds. `soft`: 0 for the view
@@ -207,6 +266,7 @@ vec3 heavens(vec3 rd, vec2 vp, float soft, float sunShows) {
         col += vec3(0.62, 0.72, 0.95) * uMoon.w * uMoonLit.w * uNight * (0.22 * exp(-mth / 0.022) + 0.050 * exp(-mth / 0.09) + 0.012 * exp(-mth / 0.30));
     }
     col += sunLight(rd, sunShows);
+    if (soft < 0.5) col += meteor(vp) * uNight;
     float through;
     col = cloudsOver(col, vp, through);
     // Thin cloud close to the Sun is lit through: the silver lining.
@@ -312,6 +372,9 @@ void main() {
     float sunShows = mix(0.04, 1.0, cloudGap(uSunDir));
 
     vec3 col = heavens(rd, vp, 0.0, sunShows);
+    // Birds, between us and the clouds: dark against the sky, a little of its light on them.
+    float bird = birds(vp);
+    if (bird > 0.0) col = mix(col, mAmbTop() * 0.10 + hazeCol * 0.04, bird * 0.9);
 
     vec2 luv = landUv(vp);
     // Grass and leaves stir: the picture is looked up a hair's breadth aside, by the wind.

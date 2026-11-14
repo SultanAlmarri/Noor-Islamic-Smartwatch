@@ -28,7 +28,8 @@ void main() {
     vec3 dome = mix(ambLow, ambTop, 0.6);
     // The ground under the clouds: a third of the light that falls on it comes back up.
     vec3 ground = 0.30 * (mSunGround() * max(uSunTrue.y, 0.0) + dome);
-    vec3 c = sun * direct + glow * mGlow() + fromSky * dome + fromGround * ground;
+    // (Clouds are exposed a little up, as the land is held a little down: in a photograph they are the brightest things.)
+    vec3 c = (sun * direct + glow * mGlow()) * 1.5 + fromSky * dome + fromGround * ground;
 
     // Far clouds fade into the air in front of them, which has the colour of the sky at the horizon behind.
     float vx = (uv.x - 0.5) * uLayFrame.z / uLayFrame.x;                      // across the view, 0 = its middle

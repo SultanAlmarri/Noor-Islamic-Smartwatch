@@ -1,17 +1,17 @@
 name: Real sky on real Android (emulator)
 
-# The real sky (0.10): the OpenGL ES 3 renderer on an Android emulator, each scenery photographed through the day.
+# The real sky: the OpenGL ES 3 renderer on an Android emulator, each scenery photographed through the day.
 # See tools/devicetest/real_sky.sh. The pictures are uploaded, and published as a pre-release asset.
 
 on:
   push:
     branches: [ main, 'sky/**' ]
-    paths: [ 'app/src/main/assets/sky/**', 'app/src/main/java/com/noor/app/sky/**', 'tools/devicetest/real_sky.sh', '.github/workflows/real-sky.yml' ]
+    paths: [ 'app/src/main/assets/sky2/**', 'app/src/main/java/com/noor/app/sky/**', 'tools/devicetest/real_sky.sh', '.github/workflows/real-sky.yml' ]
   workflow_dispatch:
     inputs:
       tier:
         description: Quality tier (LOW, MEDIUM, HIGH, ULTRA)
-        default: LOW
+        default: HIGH
       sceneries:
         description: Sceneries (Scenery names, space separated)
         default: DUNES RAINFOREST ARCTIC SEA SAVANNA CANYON
@@ -59,7 +59,7 @@ jobs:
           ram-size: 4096M
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
-          script: timeout 5400 bash tools/devicetest/real_sky.sh app/build/outputs/apk/debug/app-debug.apk real-sky ${{ inputs.tier || 'LOW' }} || true
+          script: timeout 5400 bash tools/devicetest/real_sky.sh app/build/outputs/apk/debug/app-debug.apk real-sky ${{ inputs.tier || 'HIGH' }} || true
 
       - name: What the renderer said
         if: always()

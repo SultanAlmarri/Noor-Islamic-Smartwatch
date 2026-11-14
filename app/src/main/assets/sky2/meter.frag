@@ -36,8 +36,11 @@ void main() {
         vec3 t = transmittance(EYE_KM, sin((uSunEl + refraction(uSunEl)) * DEG)) * wb;
         // (Its hue is the air's doing; its brightness falls far less than its light does: a setting Sun is still
         // the brightest thing in the picture.)
+        // High, it is far brighter than anything a picture can show: white-hot. Low, the air has dimmed it enough for
+        // a camera to hold its colour: a clear red-gold ball, still the brightest thing in the picture.
         float m = max(max(t.r, t.g), max(t.b, 1e-5));
-        c = min(t / m * (16.0 + 34.0 * pow(saturate(luma(t)), 0.35)), vec3(60.0));
+        float l = saturate(luma(t));
+        c = min(pow(t / m, vec3(1.25)) * (9.0 + 40.0 * l * l), vec3(60.0));
     }
     else if (k == 8) {
         // The glow of the sky round a low Sun, as light on things: the bright air low in the Sun's quarter.

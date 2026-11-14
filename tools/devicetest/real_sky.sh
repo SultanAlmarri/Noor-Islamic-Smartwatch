@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# The real sky (0.10) on a real Android system (an emulator in CI): the OpenGL ES 3 renderer, its shaders compiled by
-# Android's own driver, photographed for each scenery at several times of day.
+# The real sky on a real Android system (an emulator in CI): the OpenGL ES 3 renderer, its shaders compiled by
+# Android's own driver, its baked pictures read from the APK, photographed for each scenery at several times of day.
 #
 #   tools/devicetest/real_sky.sh <debug apk> <output dir> [graphics tier, default LOW]
 #
 # The emulator draws with SwiftShader (a software GPU): the pictures are what the renderer draws, the speed is not that
-# of a phone (a picture that a phone draws in milliseconds takes it minutes), so the lowest tier is used by default and
-# each picture waits until the renderer says it has been shown. The renderer's log lines are saved (real_sky_log.txt):
+# of a phone, so each picture waits until the renderer says it has been shown. The renderer's log lines are saved (real_sky_log.txt):
 # they say how long each stage took.
 set -u
 APK="$1"; OUT="$2"; TIER="${3:-LOW}"
@@ -24,10 +23,9 @@ adb shell settings put global auto_time 0
 adb shell settings put global auto_time_zone 0
 adb shell settings put system screen_off_timeout 1800000
 adb shell svc power stayon true
-# The software GPU draws every pixel on the CPU (the land of one scenery took it five minutes at 720x1600, and the
-# system gave up; at 360x800 a picture still takes it about ten minutes, most of them in the clouds): a small screen
-# of the same shape, with the same layout.
-adb shell wm size "${WM_SIZE:-360x800}"; adb shell wm density "${WM_DENSITY:-140}"
+# The software GPU draws every pixel on the CPU: a screen of a phone's shape at two thirds of a phone's size, with
+# the same layout. (Since 0.11 the renderer only puts pictures together, which a software GPU does in seconds.)
+adb shell wm size "${WM_SIZE:-720x1600}"; adb shell wm density "${WM_DENSITY:-280}"
 adb shell wm size | tee -a "$OUT/steps.txt"
 adb install -r -g "$APK" | tail -1
 adb logcat -c
@@ -72,7 +70,7 @@ for sc in $SCENERIES; do
     SEEN=$(grep -c "Real sky shown" "$OUT/logcat.txt" 2>/dev/null || echo 0)
     adb shell am force-stop $PKG; sleep 1
     adb shell am start -W -n $ACT >/dev/null
-    shown "${WAIT:-900}"; r=$?
+    shown "${WAIT:-420}"; r=$?
     grep "NoorRealSky" "$OUT/logcat.txt" | tail -4 | tee -a "$OUT/steps.txt"
     sleep 6
     shot "real_${sc}_${hhmm}_${name}"
