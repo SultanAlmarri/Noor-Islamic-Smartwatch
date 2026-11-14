@@ -142,13 +142,17 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
 **What is seen**
 
 - **Six sceneries** (`Biome`; Settings → Home scenery, or "Automatic" by place), each a rendered place with
-  foreground, middle distance and far distance: **Arabian dunes** (ranks of dunes with sharp crests and slip faces
-  from a simulated sand sea, ripples underfoot), **Pacific Northwest** (still water, dark conifers, a snow volcano
-  from real elevation data), **Arctic** (snow peaks over a fjord, from real elevation data; the aurora), **Ocean**
-  (a beach of golden sand, scanned from real beaches, its shore running away into the distance, and the open sea
-  coming in on it; nothing stands between us and the horizon), **Green hills** (rolling spring hills and oaks, a lake; it took the
-  savanna's place in 0.11) and **Red rock** (buttes and mesas over a desert floor). Only nature: nothing man-made, no
-  people. What each is made of and where its data comes from: `tools/scenery/sources/`.
+  foreground, middle distance and far distance, built from real-world data wherever it exists (elevation models for
+  the shape of the land, photogrammetry scans for its surfaces, stones, logs and plants): **Arabian dunes** (ranks of
+  dunes with sharp crests and slip faces from a simulated sand sea, ripples underfoot, far ranges unbroken),
+  **Pacific Northwest** (a still lake, dark conifers, Mount Rainier from the USGS elevation model, scanned stones and
+  logs on the shore), **Arctic** (Reinefjorden in Lofoten as Norway's elevation model gives it: an unbroken wall of
+  snow peaks over the fjord; the aurora), **Ocean** (a beach of golden sand, scanned from real beaches, its shore
+  running away into the distance, the open sea coming in on it, and the mountains of Musandam far across the water,
+  from the Copernicus elevation model), **Green hills** (the Diablo Range above a reservoir in spring, from the USGS
+  elevation model, oaks, a meadow of scanned grass and flowers; it took the savanna's place in 0.11) and **Red
+  rock** (buttes and mesas over a desert floor, scanned rock and ground). Only nature: nothing man-made, no people.
+  What each is made of and where its data comes from: `tools/scenery/sources/`.
 - **Natural skylines, exact times.** A scenery is never cut open for the Sun (the owner's decision: "what I don't
   like is cutting mountains in order to have the sunrise and set on the ground"): a range runs unbroken, a forest
   stands where it stands. Instead the Sun's path stands on the scenery's own skyline: the app reads from the land's
@@ -158,7 +162,11 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   level horizon as before. The disc itself is drawn only between those two moments (its true height is -0.83
   degrees at both), so no gap in the land can show it early or late; its glow behind the land is the dawn and the
   dusk. The colour of the sky and of the light still comes from the Sun's true height.
-- **Clouds of twelve kinds**, each a set of path-traced volumes (`skybake.py`): low (fair-weather cumulus, a cumulus
+- **Clouds of twelve kinds**, each a set of path-traced volumes (`skybake.py`). The heaped kinds are built of
+  film-quality cumulus volumes (CGHEVEN's free cloud VDBs, see `tools/scenery/sources/clouds_low.md`; only pictures
+  rendered from them are shipped): set out as fields on one base for the low clouds, and as hundreds or thousands of
+  small cloudlets in ranks, rolls and ripples for altocumulus and cirrocumulus. (The first clouds, shaped by noise
+  formulas, read as computer-made beside photographs and were thrown away.) The kinds: low (fair-weather cumulus, a cumulus
   field, towering cumulus, a thunderhead with its anvil, a stratocumulus sheet, an overcast), middle (altocumulus in
   flocks and in rolls, an altostratus veil) and high (cirrus, cirrocumulus, a cirrostratus veil). The phone shows a
   low, a middle and a high set over one another, slides them slowly with the wind, and fades from one set to the
