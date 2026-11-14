@@ -1,42 +1,39 @@
-// Puts the picture together, in linear light: the sky of the moment, the Sun and the moon, the stars, the high ice
-// clouds, the marched clouds lit with the colours of the moment, and the land or the sea under them.
+// Puts the picture together, in linear light: the sky of the moment, the Sun and the Moon, the stars, the layers of
+// cloud in the light of the moment, and under them the land (a path-traced picture relit) and the water (drawn live).
 
 uniform sampler2D tSky;       // the clear sky for every direction in view (sky.frag)
-uniform sampler2D tCloudA;    // cloud.frag
-uniform sampler2D tCloudB;
+uniform sampler2D tNoise2D;
+uniform sampler2D tCloud0;    // the three layers of cloud, lit (layer.frag): high, middle, low
+uniform sampler2D tCloud1;
+uniform sampler2D tCloud2;
+uniform vec4 uCloudF0, uCloudF1, uCloudF2;   // each layer's picture: px across the phone's view, row of the horizon, width, height
+uniform vec4 uCloudD;         // how far the wind has slid each layer (px of its picture); 1 = there are clouds at all
 uniform sampler2D tLandA;     // the land: its colour under white light, and where it is (alpha)
 uniform sampler2D tLandK;     // the land lit by a plain white sky
-uniform sampler2D tLandG;     // how far it is (16 bits, log), how much it faces the sky
-uniform sampler2D tLandLit;   // its shading under the Sun of the moment (land.frag)
-uniform vec4 uLandInfo;       // 1 if there is a land picture, -, the brightest shading stored, -
-uniform vec2 uCloudRes;       // size of the cloud buffers, px
+uniform sampler2D tLandG;     // how far it is (16 bits, log)
+uniform sampler2D tLandM;     // R: under water, G: moves in the wind, B: takes snow in winter
+uniform sampler2D tLandLit;   // its shading under the Sun and the glow of the moment (lit.frag)
+uniform vec4 uLandInfo;       // 1 if there is a land picture, the water's level (m under the eye; 0 = none), the
+                              // brightest shading stored, 1 if there is a mask
 uniform vec3 uCelX, uCelY, uCelZ, uGalN, uGalC;   // the turning sky: celestial axes, the Milky Way's pole and centre
 uniform vec4 uSky;            // aurora strength, meteor (0..1 along its track, 0 = none), lightning flash, rainbow
 uniform vec4 uLand;           // biome, season (0 winter .. 1 summer), snow, wetness
 uniform vec4 uAir;            // mist near the ground, rain here, wind strength, dust
+uniform vec4 uWater;          // roughness of the water (0 glass .. 1 storm), its clearness, -, -
 uniform vec4 uTouch;          // where the scene was last touched (px), seconds since, strength
 
 out vec4 o;
 
 vec3 skyAt(vec2 vp) { return texture(tSky, vec2(vp.x / uView.x, 1.0 - vp.y / uView.y)).rgb; }
 
-// The sky colour in a direction (clamped to what the camera sees).
-vec3 skyDir(vec3 d) {
-    vec3 p = viewPoint(d);
-    return skyAt(clamp(p.xy, vec2(0.0), uView));
-}
+float hg(float mu, float g) { float g2 = g * g; return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * mu, 1.5); }
 
-float sphereExitS(float eye, vec3 rd, float h) {
-    float r0 = RE + eye, r = RE + h;
-    float b = r0 * rd.y;
-    return -b + sqrt(max(b * b - (r0 * r0 - r * r), 0.0));
-}
+// ---- The night ----------------------------------------------------------------------------------------------------
 
 // Faint stars fixed to the turning sky, so they rise and set with the night.
 vec3 faintStars(vec3 d, float alt) {
     vec3 c = vec3(dot(d, uCelX), dot(d, uCelY), dot(d, uCelZ));
     vec3 a = abs(c);
-    // A cube round the sky keeps the cells nearly square everywhere.
     vec2 uv; float face;
     if (a.x > a.y && a.x > a.z) { uv = c.yz / a.x; face = c.x > 0.0 ? 0.0 : 1.0; }
     else if (a.y > a.z) { uv = c.xz / a.y; face = c.y > 0.0 ? 2.0 : 3.0; }
@@ -50,7 +47,7 @@ vec3 faintStars(vec3 d, float alt) {
         float m = hash12(id * 1.37 + face * 11.0 + float(k) * 7.0);
         float keep = step(k == 0 ? 0.90 : 0.86, m);
         vec2 dlt = fract(g) - (0.2 + 0.6 * r);
-        float px = n * 2.0 / uCam.x * 0.55;            // one pixel, in cells
+        float px = n * 2.0 / uCam.x * 0.55;
         float spot = exp(-dot(dlt, dlt) / (px * px * (k == 0 ? 1.6 : 0.9)));
         float mag = pow(hash12(id + 5.0 + face), 6.0);
         float tw = 0.75 + 0.25 * sin(uTime * (2.0 + 5.0 * r.x) + r.y * 40.0) * smoothstep(40.0, 5.0, alt);
@@ -74,18 +71,17 @@ vec3 milkyWay(vec3 d) {
     float dust = smoothstep(0.42, 0.62, texture(tNoise2D, vec2(l * 0.55, b * 2.6) + 0.17).g) * exp(-sq((b + 0.015) / (0.05 + 0.04 * cen)));
     float grain = 0.6 + 0.8 * texture(tNoise2D, q * 1.7 + 0.5).a * texture(tNoise2D, q * 0.9).b;
     float glow = band * (0.30 + 1.0 * cen) * (0.45 + 1.1 * clumps * clumps) * (1.0 - 0.8 * dust) * grain;
-    glow += 0.5 * exp(-sq(b / 0.09)) * exp(-sq(l / 0.22)) * (1.0 - 0.6 * dust);       // the bulge
+    glow += 0.5 * exp(-sq(b / 0.09)) * exp(-sq(l / 0.22)) * (1.0 - 0.6 * dust);
     vec3 col = mix(vec3(0.62, 0.72, 1.0), vec3(1.0, 0.86, 0.68), cen * 0.8);
     return col * glow * 0.050;
 }
 
 // The aurora: curtains of light a hundred kilometres up and more, folded along the far sky, green at their sharp
 // lower border and fading upward into red and violet, with fine rays along the field lines. They drift and pulse.
-vec3 aurora(vec3 rd) {
+vec3 aurora(vec3 rd, float jit) {
     float s = uSky.x;
     if (s <= 0.01 || rd.y < 0.03) return vec3(0.0);
     vec3 col = vec3(0.0);
-    float jit = ign(gl_FragCoord.xy);
     for (int i = 0; i < 20; i++) {
         float h = 95.0 + (float(i) + jit) * 8.0;
         vec2 p = rd.xz * (h / rd.y);
@@ -124,56 +120,171 @@ vec4 moonDisc(vec3 rd) {
     return vec4(col * edge * vis, edge * vis * lit);
 }
 
-vec4 cloudTap(sampler2D t, vec2 uv) {
-    vec2 px = 1.0 / uCloudRes;
-    vec4 c = texture(t, uv) * 0.36;
-    c += texture(t, uv + px * vec2(1.2, 0.4)) * 0.16;
-    c += texture(t, uv + px * vec2(-1.2, -0.4)) * 0.16;
-    c += texture(t, uv + px * vec2(-0.4, 1.2)) * 0.16;
-    c += texture(t, uv + px * vec2(0.4, -1.2)) * 0.16;
-    return c;
+// ---- The Sun ------------------------------------------------------------------------------------------------------
+
+// The Sun as a camera sees it: its disc (drawn a little over twice its real size, like the Moon: it is also the hand
+// of this clock), white-hot when high and a clear red-gold ball when the air has dimmed it; the glare close round it;
+// and the wide glow of the air it shines through. `shows`: how much of it the clouds in front let through.
+vec3 sunLight(vec3 rd, float shows) {
+    if (uSunEl < -3.0) return vec3(0.0);
+    float th = acos(clamp(dot(rd, uSunDir), -1.0, 1.0));
+    vec3 c = mSunDisc();                               // the disc's colour and brightness (white = about 40)
+    const float R = 0.0135;
+    float sd = th / R;
+    float up = smoothstep(-3.0, -0.6, uSunEl);
+    vec3 col = vec3(0.0);
+    if (sd < 1.3) {
+        float limb = 1.0 - 0.38 * (1.0 - sqrt(max(1.0 - sd * sd, 0.0)));
+        col += c * limb * smoothstep(1.0, 0.86, sd) * shows;
+    }
+    // Round it: a tight glare, the wider glow of the air it shines through (fuller when it is low and its light
+    // crosses much more air), and the fine rays a lens draws out of a point of light: by these a camera's Sun is
+    // known for the Sun even against a bright sky.
+    float low = smoothstep(12.0, 1.0, uSunEl);
+    vec3 g = c * (0.022 * exp(-th / 0.030) * shows
+                + 0.0085 * (1.0 + 1.6 * low) * exp(-th / 0.085) * (0.35 + 0.65 * shows)
+                + 0.0018 * (1.0 + 1.2 * low) * exp(-th / 0.26));
+    if (th < 0.30 && shows > 0.05) {
+        vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), uSunDir));
+        vec3 upv = cross(uSunDir, right);
+        float phi = atan(dot(rd, upv), dot(rd, right));
+        float rays = pow(abs(cos(phi * 7.0)), 40.0) + 0.55 * pow(abs(cos(phi * 7.0 + 0.9)), 90.0);
+        g += c * rays * 0.030 * shows * shows * exp(-th / 0.060) * smoothstep(0.012, 0.03, th);
+    }
+    return (col + g) * up;
 }
 
-// The marched clouds at a point of the view, in the light of the moment: colour to add (rgb), what shows through (a).
-vec4 cloudsAt(vec2 vp, vec3 hazeCol, vec3 ambLow, vec3 ambTop, float moonW) {
-    vec2 cuv = vec2(vp.x / uView.x, 1.0 - vp.y / uView.y);
-    vec4 ca = cloudTap(tCloudA, cuv);
-    vec4 cb = cloudTap(tCloudB, cuv);
-    vec3 lightLow = mSunCloud() + mMoonLight() * moonW;
-    vec3 lightMid = mSunMid() + mMoonLight() * moonW;
-    // In twilight the whole glowing sky lights a cloud's shaded side: it is dusky against the afterglow, never black.
-    vec3 ambCloud = mix(ambLow, ambTop, 0.55) * (1.15 + 0.9 * smoothstep(5.0, -3.0, uSunEl) * (1.0 - 0.6 * uNight));
-    vec3 c = ca.r * lightLow + ca.g * lightMid + ca.b * ambCloud;
-    // Lightning inside the storm lights it from within.
-    c += uSky.z * vec3(0.75, 0.8, 1.0) * ca.b * 3.0;
-    // Far clouds take the colour of the air in front of them.
-    c = mix(c, hazeCol * (1.0 - ca.a), cb.x * 0.85);
-    return vec4(c, ca.a);
+// ---- The clouds ---------------------------------------------------------------------------------------------------
+
+// A layer of cloud at a point of the view: colour (already multiplied by opacity) and opacity.
+vec4 layerAt(sampler2D t, vec4 f, float slide, vec2 vp) {
+    float k = f.x / uView.x;
+    vec2 uv = vec2(0.5 + ((vp.x - 0.5 * uView.x) * k + slide) / f.z, (f.y + (vp.y - uCam.y) * k) / f.w);
+    if (uv.y >= 1.0 || uv.y <= 0.0) return vec4(0.0);
+    return texture(t, vec2(uv.x, 1.0 - uv.y));
 }
 
-float unpackDist(vec2 v) { return exp2((v.x * 255.0 * 256.0 + v.y * 255.0) / 65535.0 * 17.0); }
+// All three laid over a colour, the highest first.
+vec3 cloudsOver(vec3 col, vec2 vp, out float through) {
+    through = 1.0;
+    if (uCloudD.w < 0.5) return col;
+    vec4 c = layerAt(tCloud0, uCloudF0, uCloudD.x, vp);
+    col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
+    c = layerAt(tCloud1, uCloudF1, uCloudD.y, vp);
+    col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
+    c = layerAt(tCloud2, uCloudF2, uCloudD.z, vp);
+    col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
+    return col;
+}
 
-uniform vec4 uWater;      // roughness of the water (0 glass .. 1 storm), its colour (0 dark and deep .. 1 clear and green), -, -
+// How much sky shows through the clouds in a direction.
+float cloudGap(vec3 d) {
+    if (uCloudD.w < 0.5) return 1.0;
+    vec3 p = viewPoint(d);
+    if (p.z <= 0.0) return 1.0;
+    return (1.0 - layerAt(tCloud0, uCloudF0, uCloudD.x, p.xy).a) * (1.0 - layerAt(tCloud1, uCloudF1, uCloudD.y, p.xy).a)
+         * (1.0 - layerAt(tCloud2, uCloudF2, uCloudD.z, p.xy).a);
+}
+
+// ---- The sky, whole -----------------------------------------------------------------------------------------------
+
+// Everything above the land in a direction: the air, the night's lights, the Sun, the clouds. `soft`: 0 for the view
+// itself; 1 for a mirror image in water (the finest things are left out).
+vec3 heavens(vec3 rd, vec2 vp, float soft, float sunShows) {
+    float alt = asin(clamp(rd.y, -1.0, 1.0)) / DEG;
+    vec3 col = skyAt(vp);
+    if (uNight > 0.01) {
+        float clear = smoothstep(0.5, 14.0, alt);
+        float dark = uNight * uNight * (1.0 - 0.6 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
+        col += milkyWay(rd) * smoothstep(0.55, 1.0, uNight) * clear * (1.0 - 0.7 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
+        if (soft < 0.5) col += faintStars(rd, alt) * dark * clear;
+        col += aurora(rd, ign(gl_FragCoord.xy)) * uNight * uNight;
+    }
+    vec4 moon = moonDisc(rd);
+    col = col * (1.0 - moon.a * 0.85 * uNight) + moon.rgb;
+    if (uMoonLit.w > 0.0) {
+        float mm = dot(rd, normalize(uMoon.xyz));
+        col += vec3(0.55, 0.66, 0.9) * uMoon.w * uMoonLit.w * uNight * (0.035 * pow(saturate(mm), 90.0) + 0.012 * pow(saturate(mm), 12.0));
+    }
+    col += sunLight(rd, sunShows);
+    float through;
+    col = cloudsOver(col, vp, through);
+    // Thin cloud close to the Sun is lit through: the silver lining.
+    if (uSunEl > -2.0 && through < 0.999) {
+        float mu = dot(rd, uSunDir);
+        col += mSunDisc() * 0.012 * min(hg(mu, 0.86), 30.0) * through * (1.0 - through) * smoothstep(-2.0, 1.0, uSunEl);
+    }
+    return col;
+}
+
+// ---- The land -----------------------------------------------------------------------------------------------------
+
+float landDist(vec2 luv) {
+    vec3 g = texture(tLandG, luv).rgb;
+    return exp2((g.r * 255.0 * 256.0 + g.g * 255.0) / 65535.0 * 18.0);
+}
+
+// The land at a point of its picture, in the light of the moment and seen through the air between: colour, and how
+// much of the pixel it covers. `t`: how far it is (m).
+vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
+    t = 2.0e5;
+    if (uLandInfo.x < 0.5 || luv.y <= 0.0 || luv.x <= 0.0 || luv.x >= 1.0) return vec4(0.0);
+    luv.y = min(luv.y, 0.9995);
+    vec4 A = texture(tLandA, luv);
+    if (A.a < 0.004) return vec4(0.0);
+    vec3 alb = pow(A.rgb, vec3(2.2));
+    vec2 lit = texture(tLandLit, vec2(luv.x, 1.0 - luv.y)).rg;
+    float S = sq(lit.r) * uLandInfo.z, G = sq(lit.g) * uLandInfo.z;
+    vec3 K = pow(texture(tLandK, luv).rgb, vec3(2.2));
+    t = landDist(luv);
+    vec3 p = vec3(0.0, uCam.z, 0.0) + rd * t;
+    float moonW = smoothstep(-6.0, -10.0, uSunEl);
+    // (Lit land is held a little under the sky, as a photographer exposes: its colour stays rich.)
+    vec3 light = mSunGround() * 0.70 * (1.0 - moonW) + mMoonLight() * moonW;
+    // The shadows of the low clouds, cast from where they stand in the picture.
+    float sh = 1.0;
+    vec3 L = uLightDir;
+    if (uCloudD.w > 0.5 && L.y > 0.12) {
+        vec3 q = p + L * ((1500.0 - p.y) / L.y);
+        vec3 sp = viewPoint(normalize(q - vec3(0.0, uCam.z, 0.0)));
+        if (sp.z > 0.0) sh = 1.0 - 0.85 * layerAt(tCloud2, uCloudF2, uCloudD.z, sp.xy).a * smoothstep(0.12, 0.3, L.y);
+    }
+    vec3 ambTop = mAmbTop(), ambLow = mAmbLow();
+    vec3 amb = mix(ambLow, ambTop, 0.6);
+    vec3 land = alb * (S * light * sh + G * mGlow()) + K * amb;
+
+    // The air between: far things fade into the colour of the sky behind them.
+    float tk = t * 0.001;
+    float ya = uCam.z * 0.001, yb = max(p.y, 0.0) * 0.001;
+    const float HH = 1.3;
+    float layer = abs(yb - ya) > 1e-3 ? HH / (yb - ya) * (exp(-ya / HH) - exp(-yb / HH)) : exp(-ya / HH);
+    float fog = 1.0 - exp(-tk * (0.006 + (0.022 + 0.024 * (uHaze - 1.0) + 0.06 * uAir.w + 0.5 * uAir.x) * layer));
+    float glow = pow(saturate(dot(rd, uSunDir)), 8.0);
+    vec3 airCol = mix(hazeCol * (1.0 + 0.35 * glow), amb, 0.26) * 0.93;
+    land = mix(land, airCol, min(fog, 0.94) * 0.95);
+    return vec4(land, A.a);
+}
+
+// ---- The water ----------------------------------------------------------------------------------------------------
 
 // The slope of the water at a place (m), from a few trains of waves and the ripples of the wind. `t` is how far the eye
 // is: waves too small to be seen from there are left out, and only roughen the reflection (`rough`).
 vec2 waterSlope(vec2 q, float t, out float rough) {
-    float wind = mix(0.25, 1.0, uWater.x);
-    // Metres under one pixel there: seen at a grazing angle a pixel covers a long strip of water.
-    float px = t / uCam.x * mix(1.0, 3.2, smoothstep(0.25, 0.02, uCam.z / max(t, 1.0)));
+    float wind = mix(0.20, 1.0, uWater.x);
+    float px = t / uCam.x * mix(1.0, 3.2, smoothstep(0.25, 0.02, uLandInfo.y / max(t, 1.0)));
     vec2 g = vec2(0.0);
     float lost = 0.0;
     for (int i = 0; i < 6; i++) {
         float fi = float(i);
-        float lambda = mix(62.0, 2.6, pow(fi / 5.0, 0.7)) * mix(0.55, 1.0, uWater.x);
+        float lambda = mix(46.0, 1.9, pow(fi / 5.0, 0.7)) * mix(0.35, 1.0, uWater.x);
         float k = 2.0 * PI / lambda;
         float ang = 0.35 + fi * 1.13 + sin(fi * 2.7) * 0.5;
         vec2 dir = vec2(sin(ang * 0.55 - 0.2), cos(ang * 0.55 - 0.2));
-        float amp = lambda * 0.016 * wind * (i == 0 ? 1.5 : 1.0);
+        float amp = lambda * 0.013 * wind * (i == 0 ? 1.4 : 1.0);
         float seen = saturate(lambda / (px * 9.0) - 0.5);
         float ph = dot(q, dir) * k - uTime * sqrt(9.8 * k) + fi * 1.7;
         float c = cos(ph), s1 = sin(ph);
-        g += dir * (k * amp * c * (1.0 + 0.5 * s1)) * seen;       // crests sharper than a sine's
+        g += dir * (k * amp * c * (1.0 + 0.5 * s1)) * seen;
         lost += (1.0 - seen) * k * amp;
     }
     vec2 drift = vec2(uTime * 0.021, uTime * 0.013);
@@ -181,114 +292,72 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
     vec2 rq = q * 0.043 + drift;
     float n0 = texture(tNoise2D, rq).g, nx = texture(tNoise2D, rq + vec2(e, 0.0)).g, nz = texture(tNoise2D, rq + vec2(0.0, e)).g;
     float seenR = saturate(1.6 / (px * 5.0) - 0.4);
-    g += vec2(nx - n0, nz - n0) / e * 0.012 * wind * seenR;
-    rough = saturate(0.02 + lost * 0.9 + (1.0 - seenR) * 0.10 * wind);
+    g += vec2(nx - n0, nz - n0) / e * 0.010 * wind * seenR;
+    rough = saturate(0.015 + lost * 0.9 + (1.0 - seenR) * 0.08 * wind);
     return g;
 }
 
 void main() {
     vec2 vp = viewPx();
     vec3 rd = viewRay(vp);
-    float eye = uCam.z * 0.001;
-    float alt = asin(clamp(rd.y, -1.0, 1.0)) / DEG;
-    float mu = dot(rd, uSunDir);
-    float moonW = smoothstep(-6.0, -10.0, uSunEl);
-    vec3 ambTop = mAmbTop(), ambLow = mAmbLow();
-
-    vec3 col = skyAt(vp);
-
-    // Night: the Milky Way, the stars (dimmed by the air near the horizon), the moon.
-    if (uNight > 0.01) {
-        float clear = smoothstep(0.5, 14.0, alt);
-        float dark = uNight * uNight * (1.0 - 0.6 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
-        col += milkyWay(rd) * smoothstep(0.55, 1.0, uNight) * clear * (1.0 - 0.7 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
-        col += faintStars(rd, alt) * dark * clear;      // the catalogue's bright stars are drawn as points (stars.vert)
-        col += aurora(rd) * uNight * uNight;
-    }
-    vec4 moon = moonDisc(rd);
-    col = col * (1.0 - moon.a * 0.85 * uNight) + moon.rgb;
-    // The moon's glow in the air around it.
-    if (uMoonLit.w > 0.0) {
-        float mm = dot(rd, normalize(uMoon.xyz));
-        col += vec3(0.55, 0.66, 0.9) * uMoon.w * uMoonLit.w * uNight * (0.035 * pow(saturate(mm), 90.0) + 0.012 * pow(saturate(mm), 12.0));
-    }
-
-    // The marched clouds, in the light of the moment (looked up first: the Sun's disc does not show through thick cloud).
     vec3 hazeCol = skyAt(vec2(vp.x, min(vp.y, uCam.y - 0.012 * uView.y)));
-    vec4 cl = cloudsAt(vp, hazeCol, ambLow, ambTop, moonW);
-    float sunShows = smoothstep(0.02, 0.22, cl.a);
+    float sunShows = mix(0.04, 1.0, cloudGap(uSunDir));
 
-    // The Sun's disc, with a darker limb.
-    float sunR = 0.0058;
-    float sd = acos(clamp(mu, -1.0, 1.0)) / sunR;
-    if (sd < 1.3 && uSunEl > -2.0) {
-        float limb = 1.0 - 0.45 * (1.0 - sqrt(max(1.0 - sd * sd, 0.0)));
-        col += mSunDisc() * limb * smoothstep(1.0, 0.9, sd) * sunShows;
-    }
-    // Its glare: light scattered in the eye and the lens, tight round the disc and a wide soft bloom.
-    if (uSunEl > -3.0) {
-        float th = acos(clamp(mu, -1.0, 1.0));
-        vec3 sc = mSunDisc() / 2500.0;
-        // (Low in the sky its light comes through much more air, which glows round it: a fuller halo at sunrise and sunset.)
-        float low = smoothstep(9.0, 0.5, uSunEl);
-        col += sc * (2.6 * exp(-th / 0.016) * sunShows + 0.36 * (1.0 + 1.6 * low) * exp(-th / 0.07) * (0.3 + 0.7 * sunShows) + 0.06 * (1.0 + 0.8 * low) * exp(-th / 0.22)) * smoothstep(-3.0, 0.0, uSunEl);
-    }
+    vec3 col = heavens(rd, vp, 0.0, sunShows);
 
-    // High ice clouds, lit long after the ground has gone dark.
-    float tH = sphereExitS(eye, rd, HIGH_ALT);
-    if (rd.y > 0.003 && tH < 420.0) {
-        vec3 pw = vec3(0.0, RE + eye, 0.0) + rd * tH;
-        // How many texels of the streak pattern a pixel covers there (its tile is 15 km across 256 texels).
-        float hlod = max(log2(tH / uCam.x * (uView.x / uRes.x) / max(rd.y, 0.04) / 0.0586), 0.0);
-        float c = highCover(pw.xz, hlod);
-        if (c > 0.002) {
-            float thin = 1.0 - exp(-c * 1.5 / max(rd.y, 0.10));
-            float far = exp(-tH * 0.006 * uHaze);
-            vec3 lightHigh = mSunHigh() + mMoonLight() * moonW;
-            float e = 0.34 + 0.20 * min(hg(mu, 0.72), 14.0) + 0.05 * hg(mu, -0.4);
-            vec3 cc = lightHigh * e + mix(ambLow, ambTop, 0.7) * 0.42;
-            float a = thin * mix(0.25, 0.72, saturate(c)) * far;
-            col = mix(col, cc, a);
-            // A veil of ice crystals bends light into a ring 22 degrees from the Sun (or the moon).
-            float ring = exp(-sq((acos(clamp(mu, -1.0, 1.0)) / DEG - 22.4) / 1.1));
-            col += lightHigh * ring * uCloudC.z * thin * 0.22 * vec3(1.0, 0.93, 0.86);
-        }
-    }
-
-    col = col * cl.a + cl.rgb;
-
-    // The land: put together from its pictures in the light of the moment.
     vec2 luv = landUv(vp);
-    if (uLandInfo.x > 0.5 && luv.y > 0.0) {
-        luv.y = min(luv.y, 0.9995);
-        vec4 A = texture(tLandA, luv);
-        if (A.a > 0.004) {
-            vec3 alb = pow(A.rgb, vec3(2.2));
-            float S = sq(texture(tLandLit, vec2(luv.x, 1.0 - luv.y)).r) * uLandInfo.z;
-            vec3 K = pow(texture(tLandK, luv).rgb, vec3(2.2));
-            vec3 g = texture(tLandG, luv).rgb;
-            float t = exp2((g.r * 255.0 * 256.0 + g.g * 255.0) / 65535.0 * 18.0);
-            vec3 p = vec3(0.0, uCam.z, 0.0) + rd * t;
-            vec3 L = uLightDir;
-            vec3 light = mSunGround() * 0.72 + mMoonLight() * moonW;
-            float shCloud = mix(1.0, cloudShadow(p.xz * 0.001), smoothstep(0.02, 0.2, L.y));
-            // (With the Sun low the land would be a black shape against the bright sky; it is given what the eye, and
-            // a careful photograph, find in it then: the glowing sky fills its shade.)
-            float fill = 1.0 + 1.3 * smoothstep(16.0, 2.0, uSunEl);
-            vec3 amb = mix(ambLow, ambTop, 0.6) * fill;
-            vec3 land = alb * S * light * shCloud + K * amb;
+    // Grass and leaves stir: the picture is looked up a hair's breadth aside, by the wind.
+    float water = 0.0;
+    if (uLandInfo.w > 0.5 && luv.y > 0.0) {
+        vec3 m = texture(tLandM, vec2(luv.x, min(luv.y, 0.9995))).rgb;
+        water = step(0.5, m.r) * step(0.001, uLandInfo.y);
+        float gust = sin(uTime * 1.7 + vp.x * 0.021 + vp.y * 0.013) * 0.6 + sin(uTime * 2.9 + vp.x * 0.047 - vp.y * 0.031) * 0.4;
+        luv.x += m.g * gust * (0.35 + 1.2 * uAir.z) / uView.x * (1.0 - water);
+    }
+    float t;
+    vec4 land = landAt(luv, rd, hazeCol, t);
 
-            // The air between: far things fade into the colour of the sky behind them.
-            float tk = t * 0.001;
-            float ya = uCam.z * 0.001, yb = max(p.y, 0.0) * 0.001;
-            const float HH = 1.3;
-            float layer = abs(yb - ya) > 1e-3 ? HH / (yb - ya) * (exp(-ya / HH) - exp(-yb / HH)) : exp(-ya / HH);
-            float fog = 1.0 - exp(-tk * (0.006 + (0.022 + 0.024 * (uHaze - 1.0) + 0.06 * uAir.w + 0.02 * uAir.x) * layer));
-            float glow = pow(saturate(dot(rd, uSunDir)), 8.0);
-            vec3 airCol = mix(hazeCol * (1.0 + 0.35 * glow), mix(ambLow, ambTop, 0.6), 0.26) * 0.93;
-            land = mix(land, airCol, min(fog, 0.92) * 0.95);
-            col = mix(col, land, A.a);
+    if (water > 0.5 && rd.y < -0.0005) {
+        // Still or ruffled water: it mirrors the sky and the land beyond it, and shows its bed through the shallows.
+        float h = uLandInfo.y;
+        float tw = h / -rd.y;
+        vec2 q = rd.xz * tw;
+        float rough;
+        vec2 sl = waterSlope(q, tw, rough);
+        vec3 n = normalize(vec3(-sl.x, 1.0, -sl.y));
+        vec3 r = reflect(rd, n);
+        r.y = abs(r.y) + 0.002;
+        r = normalize(r);
+        vec3 rp = viewPoint(r);
+        vec2 rvp = clamp(rp.xy, vec2(0.0), vec2(uView.x, uCam.y));
+        vec3 refl = heavens(r, rvp, 1.0, sunShows);
+        // The land beyond, mirrored: a thing at distance D is seen in the water 2h/D lower than a far thing would be.
+        float te = r.y / max(length(r.xz), 1e-4);
+        float D = 3000.0;
+        vec2 mluv = luv;
+        for (int i = 0; i < 3; i++) {
+            float tl = te - 2.0 * h / D;
+            vec3 dd = normalize(vec3(r.x, tl * length(r.xz), r.z));
+            vec3 pp = viewPoint(dd);
+            mluv = landUv(pp.xy);
+            if (mluv.y <= 0.0 || mluv.y >= 1.0) { D = 1.0e6; break; }
+            float dist = landDist(mluv) * length(dd.xz);
+            D = max(dist, tw + 1.0);
         }
+        if (D < 9.0e5 && mluv.y > 0.0) {
+            float mt;
+            float notWater = uLandInfo.w > 0.5 ? 1.0 - step(0.5, texture(tLandM, mluv).r) : 1.0;
+            vec4 ml = landAt(mluv, r, hazeCol, mt);
+            refl = mix(refl, ml.rgb, ml.a * notWater);
+        }
+        float fres = 0.02 + 0.98 * pow(1.0 - saturate(dot(-rd, n)), 5.0);
+        // What lies under: the bed, dimmed and coloured by the depth of water over it.
+        float depth = max(t - tw, 0.0) * -rd.y;
+        vec3 deep = mix(vec3(0.010, 0.045, 0.060), vec3(0.020, 0.090, 0.085), uWater.y) * (mAmbTop() * 2.0 + mSunGround() * max(uSunTrue.y, 0.0));
+        vec3 under = mix(deep, land.rgb, exp(-depth * mix(1.6, 0.45, uWater.y)) * land.a);
+        col = mix(under, refl, fres);
+    } else {
+        col = mix(col, land.rgb, land.a);
     }
 
     // Rain here: fine streaks, slanted by the wind. Where snow lies it is cold enough to fall as snow: soft flakes,
@@ -313,9 +382,10 @@ void main() {
                 streaks += step(0.72, r) * smoothstep(0.06, 0.0, x) * smoothstep(0.0, 0.3, fract(q.y)) * smoothstep(1.0, 0.5, fract(q.y)) * (0.5 - fi * 0.12);
             }
         }
-        col = mix(col, col + (ambTop + mSunGround() * 0.1) * (snowing ? 0.9 : 0.5), streaks * uAir.y);
+        col = mix(col, col + (mAmbTop() + mSunGround() * 0.1) * (snowing ? 0.9 : 0.5), streaks * uAir.y);
         col = mix(col, hazeCol, uAir.y * 0.18);
     }
 
-    o = vec4(max(col, 0.0), 1.0);
+    // (Nothing in the picture is brighter than a half-float can hold, whatever a driver does with the Sun.)
+    o = vec4(clamp(col, 0.0, 200.0), 1.0);
 }

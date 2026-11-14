@@ -99,3 +99,4 @@ vec3 mSunMid() { return texelFetch(tMeter, ivec2(4, 0), 0).rgb; }     // ... of 
 vec3 mSunHigh() { return texelFetch(tMeter, ivec2(5, 0), 0).rgb; }    // ... of the high ice clouds
 vec3 mSunDisc() { return texelFetch(tMeter, ivec2(6, 0), 0).rgb; }    // the Sun's own disc through the air
 vec3 mMoonLight() { return texelFetch(tMeter, ivec2(7, 0), 0).rgb; }  // moonlight on a white surface
+vec3 mGlow() { return texelFetch(tMeter, ivec2(8, 0), 0).rgb; }       // the glow round a low Sun, as light on things

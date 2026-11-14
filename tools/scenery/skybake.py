@@ -126,8 +126,15 @@ def _far_materials():
         nt.links.new(m.outputs[0], e.inputs[0])
         f = nt.nodes.new('ShaderNodeMath'); f.operation = 'SUBTRACT'; f.inputs[0].default_value = 1.0
         nt.links.new(e.outputs[0], f.inputs[1])
+        # (A medium that glows by f times what it absorbs sends f times its opacity to the eye. The node's emission is
+        # per metre whatever the density, so the density is put in by hand.)
+        att = nt.nodes.new('ShaderNodeAttribute'); att.attribute_name = 'density'
+        em = nt.nodes.new('ShaderNodeMath'); em.operation = 'MULTIPLY'
+        nt.links.new(f.outputs[0], em.inputs[0]); nt.links.new(att.outputs['Fac'], em.inputs[1])
+        em2 = nt.nodes.new('ShaderNodeMath'); em2.operation = 'MULTIPLY'; em2.inputs[1].default_value = v.inputs['Density'].default_value
+        nt.links.new(em.outputs[0], em2.inputs[0])
         v.inputs['Emission Color'].default_value = (1, 1, 1, 1)
-        nt.links.new(f.outputs[0], v.inputs['Emission Strength'])
+        nt.links.new(em2.outputs[0], v.inputs['Emission Strength'])
 
 
 def bake_render(out, samples=1024, bounces=96):

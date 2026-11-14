@@ -1,6 +1,6 @@
 // The light of the moment, as a photographer meters it: the exposure that follows the Sun down through twilight (as
 // the eye adapts), skylight from above and from the horizon, and sunlight as it arrives at the ground, at the clouds
-// and at the high ice clouds, each reddened by the air it has crossed. Eight values in a row; see atmosphere.glsl.
+// and at the high ice clouds, each reddened by the air it has crossed. Ten values in a row; see atmosphere.glsl.
 out vec4 o;
 
 // Atmospheric refraction (Saemundsson), degrees, for a true elevation in degrees.
@@ -30,7 +30,22 @@ void main() {
     else if (k == 3) c = transmittance(2.5, mu) * wb * k0;
     else if (k == 4) c = transmittance(5.5, mu) * wb * k0;
     else if (k == 5) c = transmittance(9.5, mu) * wb * k0;
-    else if (k == 6) c = min(transmittance(EYE_KM, sin((uSunEl + refraction(uSunEl)) * DEG)) * wb * k0 * 2500.0, vec3(6.0e4));
+    else if (k == 6) {
+        // The Sun's own disc: white-hot when high, a red-gold ball when the air has dimmed it. Never brighter than a
+        // picture in half-floats can hold with room to spare (an overflow there turns the Sun black on some phones).
+        vec3 t = transmittance(EYE_KM, sin((uSunEl + refraction(uSunEl)) * DEG)) * wb;
+        // (Its hue is the air's doing; its brightness falls far less than its light does: a setting Sun is still
+        // the brightest thing in the picture.)
+        float m = max(max(t.r, t.g), max(t.b, 1e-5));
+        c = min(t / m * (16.0 + 34.0 * pow(saturate(luma(t)), 0.35)), vec3(60.0));
+    }
+    else if (k == 8) {
+        // The glow of the sky round a low Sun, as light on things: the bright air low in the Sun's quarter.
+        vec2 hz = normalize(uSunDir.xz + 1e-5);
+        vec3 at = vec3(hz.x * cos(5.0 * DEG), sin(5.0 * DEG), hz.y * cos(5.0 * DEG));
+        c = skyRadiance(at, uSunTrue, uSunDir) * ex * 0.45 * smoothstep(12.0, 2.0, uSunEl) + NIGHT_LOW * uNight * 0.2;
+    }
+    else if (k == 9) c = vec3(0.0);
     else {
         // Moonlight: by how much of the moon is lit and how high it stands; it only matters once the Sun is well down.
         float up = smoothstep(-0.02, 0.12, uMoon.y);

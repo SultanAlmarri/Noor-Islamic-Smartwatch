@@ -3,6 +3,7 @@
 // uMode 0: one slice of the cloud volume (tiles in x, y and z). R: Perlin-Worley (the heaped shape of a cloud),
 //          G, B, A: Worley at rising frequency (the billows that erode its edges).
 // uMode 1: the flat noise tile. R, G: two independent smooth fields, B: cells, A: fine grain.
+// uMode 2: one slice of the small volume of crumbs. R: Worley in three sizes, G: finer, B: between.
 
 uniform int uMode;
 uniform float uSlice;   // 0..1 through the volume
@@ -65,6 +66,9 @@ void main() {
         pf = abs(pf * 2.0 - 1.0);
         float w4 = worleyFbm(p, 4), w8 = worleyFbm(p, 8), w16 = worleyFbm(p, 16);
         o = vec4(clamp(remap(pf, 0.0, 1.0, w4, 1.0), 0.0, 1.0), w4, w8, w16);
+    } else if (uMode == 2) {
+        vec3 p = vec3(uv, uSlice);
+        o = vec4(worleyFbm(p, 4), worley(p * 8.0, 8) * 0.6 + worley(p * 16.0, 16) * 0.4, worley(p * 12.0, 12), 1.0);
     } else {
         vec3 p = vec3(uv, 0.37);
         float a = perlinFbm(p, 4, 7) * 0.5 + 0.5;

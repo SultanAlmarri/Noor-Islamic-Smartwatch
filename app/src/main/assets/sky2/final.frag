@@ -7,7 +7,7 @@ uniform vec4 uText;       // bottom of the text written on the sky (px from the 
 uniform vec4 uPanel;      // top of the glass (px from the top; beyond the view = none), corner radius (px), tint 0..1, 1 = light glass
 uniform vec3 uPanelTint;  // the glass's own colour (display)
 uniform float uFade;      // 0 = not yet shown (the waiting sky and the page's colour) .. 1 = fully shown
-uniform vec4 uCloudA, uCloudB, uCloudC;
+uniform float uCover;     // how much of the sky is cloud, 0..1
 out vec4 o;
 
 // Relative luminance at most `lim`, bright parts eased down rather than cut (their shapes stay).
@@ -61,7 +61,7 @@ void main() {
         lim = mix(lim, 1.0, exp(-dot(ds, ds)) * step(0.0, sp.z) * smoothstep(-2.0, 1.0, uSunEl));
     }
     if (lim < 1.0) {
-        float clouds = saturate(uCloudA.x * 1.5 + uCloudB.x * 0.9 + uCloudC.y * 0.4 + uCloudC.z * 0.5);
+        float clouds = saturate(uCover * 2.0);
         float sunlit = luma(toneLinear(mSunCloud() + mAmbTop()));
         float clear = luma(toneLinear(mAmbTop() * 1.25 + mAmbLow() * 0.25));
         float ref = max(mix(clear, max(sunlit, clear), smoothstep(0.0, 0.3, clouds)), 1e-3);
@@ -90,20 +90,22 @@ void main() {
             float l = luma(g);
             if (l < floorL) g = mix(g, vec3(1.0), (floorL - l) / max(1.0 - l, 1e-3));
         } else {
-            // Dark glass: white letters must read on it. It is as dark as the brightest part of the scene behind it
-            // asks, all over: sunlit sand and its shadows are both dimmed by the same amount, so the land's forms
-            // show through the glass instead of being flattened into one tone.
+            // Dark glass, clear: the land is seen through it as through sunglasses, its forms and its texture kept,
+            // a little out of focus; white letters read on it because nothing behind it is left brighter than they
+            // can stand against. It is as dark as the brightest part of the scene behind it asks, all over, so light
+            // and shade keep their relations.
+            g = mix(d, g, 0.45);
             float top = 1.0 - uPanel.x / uView.y;
             float ref = 0.0;
             for (int i = 0; i < 6; i++) {
                 vec2 at = vec2(0.18 + 0.32 * float(i % 3), top * (i < 3 ? 0.30 : 0.78));
                 ref = max(ref, luma(toneLinear(texture(tBlur, at).rgb)));
             }
-            g *= min(1.0, 0.125 / max(ref, 1e-3));
-            // Smoked glass: it cools what it dims (dimmed warm light alone turns to mud).
-            g = mix(g, luma(g) * vec3(0.80, 0.96, 1.22), 0.40);
-            g = mix(g, tint, uPanel.z * 0.8);
-            g = easeTo(g, 0.105);
+            g *= min(0.82, 0.20 / max(ref, 1e-3));
+            // (Dimmed warm light alone turns to mud: the glass cools what it dims, a little.)
+            g = mix(g, luma(g) * vec3(0.86, 0.97, 1.15), 0.22);
+            g = mix(g, tint, uPanel.z * 0.25);
+            g = easeTo(g, 0.24);
         }
         // A hairline of light along the upper edge of the glass.
         float edge = smoothstep(2.5, 0.0, abs(vp.y - uPanel.x - 1.0)) * 0.10;

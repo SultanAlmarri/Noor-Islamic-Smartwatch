@@ -9,10 +9,18 @@ uniform vec4 uCam;
 uniform float uTime;
 uniform float uNight;
 uniform vec3 uCelX, uCelY, uCelZ;
-uniform sampler2D tCloudA;
+uniform sampler2D tCloud0, tCloud1, tCloud2;
+uniform vec4 uCloudF0, uCloudF1, uCloudF2, uCloudD;
 uniform sampler2D tLandA;
 uniform vec4 uLandFrame;
 out vec4 vCol;
+
+float gap(sampler2D t, vec4 f, float slide, vec2 vp) {
+    float k = f.x / uView.x;
+    vec2 uv = vec2(0.5 + ((vp.x - 0.5 * uView.x) * k + slide) / f.z, (f.y + (vp.y - uCam.y) * k) / f.w);
+    if (uv.y >= 1.0 || uv.y <= 0.0) return 1.0;
+    return 1.0 - textureLod(t, vec2(uv.x, 1.0 - uv.y), 0.0).a;
+}
 
 void main() {
     vec3 dir = uCelX * aStar.x + uCelY * aStar.y + uCelZ * aStar.z;
@@ -25,7 +33,7 @@ void main() {
     float alt = asin(clamp(dir.y, -1.0, 1.0)) * 57.29578;
     bool vis = d.z > 0.0 && alt > 0.5 && p.x > 0.0 && p.x < uView.x && p.y > 0.0 && p.y < uView.y;
     vec2 uv = vec2(p.x / uView.x, 1.0 - p.y / uView.y);
-    float through = vis ? textureLod(tCloudA, uv, 0.0).a : 0.0;
+    float through = !vis ? 0.0 : uCloudD.w < 0.5 ? 1.0 : gap(tCloud0, uCloudF0, uCloudD.x, p) * gap(tCloud1, uCloudF1, uCloudD.y, p) * gap(tCloud2, uCloudF2, uCloudD.z, p);
     float lk = uLandFrame.x / uView.x;
     float lx = p.x * lk;
     if (uCam.w > 0.5) lx = uLandFrame.x - lx;
