@@ -170,7 +170,26 @@ data class SceneLayout(
 )
 
 /** Positions on the sky: a smooth time axis that gives daylight most of the width, and an elevation scale. */
-internal class SkyGeometry(scene: SkyScene, private val w: Float, val horizonY: Float, val arcTopY: Float, val groundY: Float, private val rtl: Boolean) {
+/**
+ * How high the scenery's own skyline stands where the Sun rises and where it sets, as tangents of the angle over the
+ * horizon (0 = a level horizon). The real sky (0.11) sets it for the scenery on screen; everything else leaves it 0.
+ *
+ * It is what lets a scenery keep its natural skyline and the prayer times stay exact to the eye: the Sun's path does
+ * not meet the level horizon but the land itself, so the Sun comes up over the mountain exactly at Shuruq and goes
+ * behind the trees exactly at Maghrib ([SkyGeometry.y]).
+ */
+internal object SunLift {
+    @Volatile var rise = 0f
+    @Volatile var set = 0f
+    /** The lens of the real sky (focal length in screen widths): a tangent times this times the width is pixels. */
+    const val FOCAL = 1.15f
+}
+
+internal class SkyGeometry(
+    scene: SkyScene, private val w: Float, val horizonY: Float, val arcTopY: Float, val groundY: Float, private val rtl: Boolean,
+    /** How far above the horizon line (px) the land stands where the Sun rises, and where it sets. */
+    private val riseLift: Float = 0f, private val setLift: Float = 0f,
+) {
     private val maxEl = max(scene.path.maxElevation, 12.0)
     private val minEl = minOf(scene.path.minElevation, -24.0)
     private val warp: (Double) -> Double = timeWarp(scene)
@@ -196,6 +215,32 @@ internal class SkyGeometry(scene: SkyScene, private val w: Float, val horizonY: 
     }
 
     private fun apparent(el: Double): Double = el + horizonLift(el)
+
+    /** How far above the horizon line (px) the Sun's path stands at a moment of the day: on the skyline where the
+     *  Sun rises in the morning, on the skyline where it sets in the evening, passing from one to the other between. */
+    fun lift(fraction: Double): Float {
+        if (riseLift == 0f && setLift == 0f) return 0f
+        val u = -0.04 + 1.08 * warp(fraction.coerceIn(0.0, 1.0))
+        val t = ((u - 0.1976) / 0.6048).coerceIn(0.0, 1.0)
+        val k = (t * t * (3 - 2 * t)).toFloat()
+        // (Never so high that no arch is left under the top of the path.)
+        return (riseLift + (setLift - riseLift) * k).coerceIn(0f, (horizonY - arcTopY) * 0.72f)
+    }
+
+    /**
+     * Height on screen of the Sun at true elevation [el] at [fraction] of the day, over a scenery with a skyline of
+     * its own: as [y], but the path stands on the land ([lift]) instead of on the level horizon. Shuruq and Maghrib
+     * are then the moments the Sun meets the skyline: it is seen to rise and to set exactly at their times, whatever
+     * the land is like, and no scenery has to be cut open for it.
+     */
+    fun y(el: Double, fraction: Double): Float {
+        val l = lift(fraction)
+        if (l == 0f) return y(el)
+        val base = horizonY - l
+        val e = apparent(el)
+        return if (e >= 0) (base - (e / maxApp) * (base - arcTopY)).toFloat()
+        else (base + (-e / -minEl) * (groundY - horizonY)).toFloat()
+    }
 
     /** The fraction of the day drawn at [px] (inverse of [x]). */
     fun fractionAt(px: Float): Double {
@@ -458,7 +503,10 @@ internal fun LivingSky(
 
     if (real != null) {
         // The real sky: hand the renderer everything this moment's picture needs (it is told only when that changes).
-        val year = remember(scene.now, scene.southernHemisphere) { com.noor.app.sky.SkyDirector.yearPhase(scene.now, scene.southernHemisphere) }
+        // (The time of year: the real one where the seasons are followed, otherwise the one each scenery looks best in.)
+        val year = remember(scene.now, scene.southernHemisphere, real.seasons, real.biome) {
+            if (real.seasons) com.noor.app.sky.SkyDirector.yearPhase(scene.now, scene.southernHemisphere) else real.biome.signatureYear
+        }
         val wx = remember(scene.seed, real.biome, (year * 24).toInt()) { com.noor.app.sky.SkyDirector.weather(scene.seed, real.biome, year) }
         val frame: () -> com.noor.app.sky.RealSkyFrame? = {
             val v = skyView; val l = look
@@ -467,7 +515,7 @@ internal fun LivingSky(
                 com.noor.app.sky.RealSkyFrame.of(
                     scene, v, l, real.biome, wx, year, display, scene.instantAt(display), real.w, real.h,
                     textBottom = v.cloudTopY - 8 * densityValue, panelTop = real.panelTop, panelRadius = real.radius, lightGlass = real.lightGlass, tint = real.tint,
-                    fade = smoothstep(0f, 0.38f, o), busy = scrubbing || o < 1f, still = !ambient, lapse = OpeningSky.cloudLapse(o),
+                    fade = smoothstep(0f, 0.38f, o), busy = scrubbing || o < 1f, still = !ambient, lapse = OpeningSky.cloudLapse(o), trueStars = real.trueStars,
                 )
             }
         }
@@ -479,7 +527,7 @@ internal fun LivingSky(
         // 1 · Sky, warm air round a low Sun, stars, the moon. Farthest away, so it lags most when the page scrolls.
         if (real == null && shaders == null) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
             val w = size.width; val h = size.height
-            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
             // The clock is read only when there is something to move, so a daytime sky is not redrawn for nothing.
             val time = if (light.night > 0f && live) now() else 0.13f
             val hy = h * layout.horizon
@@ -521,7 +569,7 @@ internal fun LivingSky(
             val moonEl = scene.elevationAt(moonF)
             if (moonEl > 2.0) {
                 val visibility = (0.35f + 0.65f * light.night).coerceAtMost(1f) * smoothstep(2f, 8f, moonEl.toFloat())
-                moon(scene.hijriDay, Offset(g.x(moonF), g.y(moonEl)), 10.dp.toPx(), visibility, scene.southernHemisphere, light.night)
+                moon(scene.hijriDay, Offset(g.x(moonF), g.y(moonEl, moonF)), 10.dp.toPx(), visibility, scene.southernHemisphere, light.night)
             }
         }
 
@@ -532,7 +580,7 @@ internal fun LivingSky(
         Box(Modifier.fillMaxSize().drawWithCache {
             val w = size.width; val h = size.height
             val hy = h * layout.horizon
-            val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+            val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
             val path = sunPath(scene, g)
             val stroke = 1.6.dp.toPx()
             val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
@@ -540,7 +588,7 @@ internal fun LivingSky(
                 val shownF = display
                 val sunEl = scene.elevationAt(shownF)
                 val pathAlpha = pathIn()
-                val sun = Offset(g.x(shownF), g.y(sunEl))
+                val sun = Offset(g.x(shownF), g.y(sunEl, shownF))
                 // The Sun fades as it sinks below the horizon (no sudden switch at sunrise or sunset). On the GPU the
                 // shader draws the Sun itself.
                 val up = if (shaders != null || real != null) 0f else smoothstep(-2.5f, 0.5f, sunEl.toFloat())
@@ -579,11 +627,11 @@ internal fun LivingSky(
         else if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
         else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
-            val (riseX, setX) = sunriseSunsetX(scene, SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl))
+            val (riseX, setX) = sunriseSunsetX(scene, SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w))
             val shapes = land.paths(w, h * layout.horizon, h, density, riseX, setX)
 
             onDrawBehind {
-                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
                 drawLand(shapes, light, horizonColor, mid, zenith, page, soil, g.x(display), w)
             }
         })
@@ -595,7 +643,7 @@ internal fun LivingSky(
         Box(Modifier.fillMaxSize().drawWithCache {
             val w = size.width; val h = size.height
             val hy = h * layout.horizon
-            val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+            val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
             // Each prayer at the Sun's real position at its moment: in the sky on the path, on the horizon at Shuruq
             // and Maghrib, below it (in the land) at Fajr and Isha.
             val marks = scene.events.map { (p, t) ->
@@ -671,7 +719,7 @@ internal fun sunriseSunsetX(scene: SkyScene, g: SkyGeometry): Pair<Float, Float>
  * Shuruq and Maghrib (the Sun's upper edge on the horizon, 0.83° below it) sit on the horizon itself, which the land
  * leaves open there, and Fajr and Isha (the Sun 15–20° down) sit below the horizon, in the land, where the Sun is.
  */
-internal fun prayerMark(scene: SkyScene, g: SkyGeometry, f: Double): Offset = Offset(g.x(f), g.y(scene.elevationAt(f)))
+internal fun prayerMark(scene: SkyScene, g: SkyGeometry, f: Double): Offset = Offset(g.x(f), g.y(scene.elevationAt(f), f))
 
 private val densityHolder = floatArrayOf(2.625f)
 private fun densityOf() = densityHolder[0]
@@ -724,7 +772,7 @@ internal fun interpolate(samples: List<Pair<Double, Double>>, f: Double): Double
 }
 
 private fun sunPath(scene: SkyScene, g: SkyGeometry): Path = Path().apply {
-    scene.samples.forEachIndexed { i, (f, el) -> if (i == 0) moveTo(g.x(f), g.y(el)) else lineTo(g.x(f), g.y(el)) }
+    scene.samples.forEachIndexed { i, (f, el) -> if (i == 0) moveTo(g.x(f), g.y(el, f)) else lineTo(g.x(f), g.y(el, f)) }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

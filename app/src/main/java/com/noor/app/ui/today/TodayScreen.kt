@@ -222,14 +222,20 @@ fun TodayContent(
     val skyContext = androidx.compose.ui.platform.LocalContext.current
     val realSky = RealSky.usable(skyContext, u.settings.skyGraphics) && RealSky.unusable.intValue == 0
     SkyText.real = realSky
+    // The Sun's path stands on the skyline of the scenery on screen (see SunLift); on a level horizon otherwise.
+    val lift = if (realSky) remember(u.settings.scenery, u.place) {
+        RealSky.sunLift(skyContext, Biome.of(u.settings.scenery, u.place.countryCode, u.place.point.elevationM, u.place.point.latitude))
+    } else floatArrayOf(0f, 0f)
+    SunLift.rise = lift[0]; SunLift.set = lift[1]
     val bridge = remember { RealSkyBridge() }
     val pagePx = with(LocalDensity.current) { Triple(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), home.heroHeight.toPx()) }
     val glassRadius = with(LocalDensity.current) { 28.dp.toPx() }
     val pageColor = NoorTheme.colors.background
-    val realSetup = if (realSky) remember(bridge, u.settings.scenery, u.place, pagePx, pageColor) {
+    val realSetup = if (realSky) remember(bridge, u.settings.scenery, u.settings.seasons, u.settings.trueStars, u.place, pagePx, pageColor) {
         RealSkySetup(
             bridge, Biome.of(u.settings.scenery, u.place.countryCode, u.place.point.elevationM, u.place.point.latitude),
             pagePx.first, pagePx.second, pagePx.third, glassRadius, pageColor.luminance() > 0.5f, floatArrayOf(pageColor.red, pageColor.green, pageColor.blue),
+            seasons = u.settings.seasons, trueStars = u.settings.trueStars,
         )
     } else null
     if (realSky) {

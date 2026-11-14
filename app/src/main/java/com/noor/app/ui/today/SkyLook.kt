@@ -18,7 +18,7 @@ internal class SkyView(scene: SkyScene, val w: Float, val h: Float, val density:
     val horizonY = h * layout.horizon
     val arcTopY = h * layout.arcTop
     val cloudTopY = h * layout.cloudTop
-    val geometry = SkyGeometry(scene, w, horizonY, arcTopY, h * layout.ground, rtl)
+    val geometry = SkyGeometry(scene, w, horizonY, arcTopY, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
     val fov: Double = (w / density * 0.0051).toDouble().coerceIn(1.6, 2.6)
     /** Where the Sun rises and sets on the horizon today, px (far off screen when it does not). */
     val sunrise: Pair<Float, Float> = sunriseSunsetX(scene, geometry)
@@ -174,7 +174,7 @@ internal class SkyLook(
         fun at(scene: SkyScene, view: SkyView, display: Double): SkyLook {
             val g = view.geometry
             val el = scene.elevationAt(display)
-            val sunX = g.x(display); val sunY = g.y(el)
+            val sunX = g.x(display); val sunY = g.y(el, display)
             val drawAlt = if (el > 0) view.altitudeAt(sunY) else el
             val night = Atmosphere.night(el).toFloat()
             // The moon rides the Sun's own path, as far behind it as it is old.
@@ -182,7 +182,7 @@ internal class SkyLook(
             val moonF = ((display - age) % 1.0 + 1.0) % 1.0
             val moonEl = scene.elevationAt(moonF)
             val moonVis = if (moonEl > 2.0) ((0.35f + 0.65f * night).coerceAtMost(1f) * smooth(2f, 8f, moonEl.toFloat())) else 0f
-            val mx = g.x(moonF); val my = g.y(moonEl)
+            val mx = g.x(moonF); val my = g.y(moonEl, moonF)
             val phase = 2 * PI * (((scene.hijriDay - 1).coerceIn(0, 29) + 1.0) / 29.53)
             val pa = PI - phase
             var lx = sunX - mx; var ly = sunY - my

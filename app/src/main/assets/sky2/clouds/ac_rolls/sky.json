@@ -1,0 +1,129 @@
+{
+ "layer": "mid",
+ "altitude": 4.6,
+ "kind": "altocumulus rolls",
+ "width": 1012,
+ "height": 810,
+ "horizon": 791.6088888888889,
+ "viewWidth": 809.6,
+ "rMax": 4.0,
+ "farKm": 30.0,
+ "cover": 0.38778141140937805,
+ "suns": [
+  {
+   "name": "l0",
+   "azimuth": -14.7,
+   "elevation": 0.7
+  },
+  {
+   "name": "l1",
+   "azimuth": -14.7,
+   "elevation": 2.5
+  },
+  {
+   "name": "l2",
+   "azimuth": -14.7,
+   "elevation": 5.0
+  },
+  {
+   "name": "l3",
+   "azimuth": -14.8778564453125,
+   "elevation": 9.0
+  },
+  {
+   "name": "l4",
+   "azimuth": -20.4216796875,
+   "elevation": 14.0
+  },
+  {
+   "name": "l5",
+   "azimuth": -39.9177734375,
+   "elevation": 22.0
+  },
+  {
+   "name": "l6",
+   "azimuth": -70.9783203125,
+   "elevation": 34.0
+  },
+  {
+   "name": "l7",
+   "azimuth": -76.7,
+   "elevation": 50.0
+  },
+  {
+   "name": "r0",
+   "azimuth": 14.7,
+   "elevation": 0.7
+  },
+  {
+   "name": "r1",
+   "azimuth": 14.7,
+   "elevation": 2.5
+  },
+  {
+   "name": "r2",
+   "azimuth": 14.7,
+   "elevation": 5.0
+  },
+  {
+   "name": "r3",
+   "azimuth": 14.8778564453125,
+   "elevation": 9.0
+  },
+  {
+   "name": "r4",
+   "azimuth": 20.4216796875,
+   "elevation": 14.0
+  },
+  {
+   "name": "r5",
+   "azimuth": 39.9177734375,
+   "elevation": 22.0
+  },
+  {
+   "name": "r6",
+   "azimuth": 70.9783203125,
+   "elevation": 34.0
+  },
+  {
+   "name": "r7",
+   "azimuth": 76.7,
+   "elevation": 50.0
+  },
+  {
+   "name": "top",
+   "azimuth": 0.0,
+   "elevation": 68.0
+  },
+  {
+   "name": "gl",
+   "azimuth": -14.7,
+   "elevation": 7.0
+  },
+  {
+   "name": "gr",
+   "azimuth": 14.7,
+   "elevation": 7.0
+  },
+  {
+   "name": "lu0",
+   "azimuth": -14.7,
+   "elevation": -1.5
+  },
+  {
+   "name": "lu1",
+   "azimuth": -14.7,
+   "elevation": -4.0
+  },
+  {
+   "name": "ru0",
+   "azimuth": 14.7,
+   "elevation": -1.5
+  },
+  {
+   "name": "ru1",
+   "azimuth": 14.7,
+   "elevation": -4.0
+  }
+ ]
+}

@@ -17,3 +17,4 @@ captures/
 __pycache__/
 .kotlin/
 tools/sky3d/out/
+.claude/launch.json

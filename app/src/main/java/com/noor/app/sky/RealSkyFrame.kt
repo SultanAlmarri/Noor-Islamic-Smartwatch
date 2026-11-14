@@ -11,7 +11,6 @@ import java.time.ZoneOffset
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.asin
-import kotlin.math.atan
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.max
@@ -40,7 +39,77 @@ internal class SkyState(
     val season: Float, val snow: Float, val wet: Float,
     val aurora: Float,
     val waterRough: Float,
+    /** The baked cloud sets that show this sky (assets/sky2/clouds/<id>), or null for none, and how much of each. */
+    val lowSet: String? = null, val lowAmount: Float = 0f,
+    val midSet: String? = null, val midAmount: Float = 0f,
+    val highSet: String? = null, val highAmount: Float = 0f,
 )
+
+/**
+ * Which of the rendered Suns of a baked picture the light of a moment lies between, and how much of each (see
+ * tools/scenery/bake.py and lit.frag). [names] are five pictures (two on the left, two on the right, the high one in
+ * front), [w] their weights, [glow] the weights of the two glows (left, right), [dir] where that light falls from
+ * (the scene's own frame: x to the right of the unmirrored scene, y up, z into the picture).
+ */
+internal class LightWeights(val names: Array<String>, val w: FloatArray, val glow: FloatArray, val dir: FloatArray) {
+    /** The same light for a picture that is shown mirrored (right to left): left and right change places. */
+    fun mirrored(): LightWeights = LightWeights(
+        Array(names.size) { val n = names[it]; if (n == "top") n else (if (n[0] == 'l') "r" else "l") + n.substring(1) },
+        w, floatArrayOf(glow[1], glow[0]), dir,
+    )
+
+    companion object {
+        /** Elevations (degrees) of the Suns the land and the clouds are rendered under: bake.SUN_ELEVATIONS. */
+        val SUN_EL = doubleArrayOf(0.7, 2.5, 5.0, 9.0, 14.0, 22.0, 34.0, 50.0)
+        /** ... and of the Suns under the horizon that clouds have as well: skybake.UNDER. */
+        val UNDER_EL = doubleArrayOf(-1.5, -4.0)
+        private const val DEG = PI / 180
+
+        private fun smooth(a: Double, b: Double, x: Double): Double { val t = ((x - a) / (b - a)).coerceIn(0.0, 1.0); return t * t * (3 - 2 * t) }
+
+        /** Where a rendered Sun of elevation [e] stands to the side of the view's middle (degrees): bake.sun_azimuth. */
+        fun sunAzimuth(e: Double): Double = 14.7 + 62.0 * smooth(8.0, 40.0, e)
+
+        /**
+         * [el]: the light's elevation (degrees); [side]: -1 light from the left (morning) .. +1 from the right;
+         * [under]: the picture has Suns under the horizon (clouds); [glow]: how strong the glow round a low Sun is, 0..1.
+         */
+        fun of(el: Double, side: Double, under: Boolean, glow: Float): LightWeights {
+            val wr = smooth(-1.0, 1.0, side); val wl = 1 - wr
+            val a: String; val b: String; val f: Double; val ea: Double; val eb: Double
+            var top = 0.0
+            if (el >= SUN_EL[0] || !under) {
+                val e = el.coerceIn(SUN_EL[0], SUN_EL[SUN_EL.size - 1])
+                var i = 0
+                while (i < SUN_EL.size - 2 && e > SUN_EL[i + 1]) i++
+                f = (e - SUN_EL[i]) / (SUN_EL[i + 1] - SUN_EL[i])
+                a = "$i"; b = "${i + 1}"; ea = SUN_EL[i]; eb = SUN_EL[i + 1]
+                top = 4 * wl * wr * smooth(24.0, 46.0, e) * 0.85
+            } else if (el >= UNDER_EL[0]) {
+                f = (el - UNDER_EL[0]) / (SUN_EL[0] - UNDER_EL[0]); a = "u0"; b = "0"; ea = UNDER_EL[0]; eb = SUN_EL[0]
+            } else {
+                val e = max(el, UNDER_EL[1])
+                f = (e - UNDER_EL[1]) / (UNDER_EL[0] - UNDER_EL[1]); a = "u1"; b = "u0"; ea = UNDER_EL[1]; eb = UNDER_EL[0]
+            }
+            val names = arrayOf("l$a", "l$b", "r$a", "r$b", "top")
+            val w = doubleArrayOf(wl * (1 - top) * (1 - f), wl * (1 - top) * f, wr * (1 - top) * (1 - f), wr * (1 - top) * f, top)
+            val dirs = arrayOf(
+                RealSkyFrame.dirAzEl(-sunAzimuth(ea) * DEG, ea * DEG), RealSkyFrame.dirAzEl(-sunAzimuth(eb) * DEG, eb * DEG),
+                RealSkyFrame.dirAzEl(sunAzimuth(ea) * DEG, ea * DEG), RealSkyFrame.dirAzEl(sunAzimuth(eb) * DEG, eb * DEG),
+                RealSkyFrame.dirAzEl(0.0, 68 * DEG),
+            )
+            val d = DoubleArray(3)
+            for (k in 0 until 5) for (c in 0 until 3) d[c] += dirs[k][c] * w[k]
+            // Below the lowest rendered Sun the picture keeps that shading; the light itself sinks with the Sun.
+            if (el < SUN_EL[0]) d[1] = sin(el * DEG)
+            val len = sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).coerceAtLeast(1e-6)
+            return LightWeights(
+                names, FloatArray(5) { w[it].toFloat() }, floatArrayOf((wl * glow).toFloat(), (wr * glow).toFloat()),
+                floatArrayOf((d[0] / len).toFloat(), (d[1] / len).toFloat(), (d[2] / len).toFloat()),
+            )
+        }
+    }
+}
 
 /**
  * Directs the sky (Showcase weather): a character for each day at each place from [Weather] (clear, fair, convective,
@@ -62,8 +131,7 @@ internal object SkyDirector {
     private val FOREST = floatArrayOf(0.08f, 0.21f, 0.10f, 0.05f, 0.18f, 0.15f, 0.10f, 0.13f)
     private val ARCTIC = floatArrayOf(0.24f, 0.22f, 0.04f, 0.02f, 0.22f, 0.11f, 0.03f, 0.12f)
     private val OCEAN = floatArrayOf(0.10f, 0.28f, 0.15f, 0.07f, 0.14f, 0.07f, 0.06f, 0.13f)
-    private val SAVANNA_DRY = floatArrayOf(0.20f, 0.35f, 0.10f, 0.03f, 0.14f, 0.04f, 0.02f, 0.12f)
-    private val SAVANNA_WET = floatArrayOf(0.05f, 0.22f, 0.28f, 0.14f, 0.08f, 0.06f, 0.07f, 0.10f)
+    private val MEADOW = floatArrayOf(0.14f, 0.32f, 0.15f, 0.04f, 0.14f, 0.05f, 0.04f, 0.12f)
     private val CANYON = floatArrayOf(0.24f, 0.28f, 0.15f, 0.06f, 0.12f, 0.03f, 0.02f, 0.10f)
 
     /** How far through the year a moment is, from midwinter (0) through midsummer (0.5), for the user's hemisphere. */
@@ -81,7 +149,7 @@ internal object SkyDirector {
         Biome.RAINFOREST -> FOREST
         Biome.ARCTIC -> ARCTIC
         Biome.OCEAN -> OCEAN
-        Biome.SAVANNA -> FloatArray(8) { SAVANNA_DRY[it] * (1 - summer) + SAVANNA_WET[it] * summer }
+        Biome.MEADOW -> MEADOW
         Biome.CANYON -> CANYON
     }
 
@@ -175,12 +243,12 @@ internal object SkyDirector {
                 mist = 0.10f * mistBase
                 rough = (0.34f + 0.3f * windy + 0.3f * winter * day(9) + 0.3f * storm).coerceIn(0.15f, 1f)
             }
-            Biome.SAVANNA -> {
-                // Green after the rains (summer), gold and dusty in the dry season.
-                season = smooth(0.25f, 0.75f, summer)
-                haze = 1.1f + 0.6f * (1f - season)
-                mist = 0.22f * mistBase
-                dust = 0.15f * (1f - season) * windy
+            Biome.MEADOW -> {
+                // Green hills: soft air, mist in the hollows at dawn, snow only in the depth of winter.
+                haze = 1.1f + 0.25f * summer
+                mist = 0.35f * mistBase
+                snow = smooth(0.80f, 0.97f, winter) * (0.5f + 0.5f * day(10))
+                season = year
             }
             Biome.CANYON -> {
                 haze = 0.9f + 0.2f * summer
@@ -189,10 +257,27 @@ internal object SkyDirector {
                 storm = max(storm, 0f)
             }
         }
+        cover = cover.coerceIn(0f, 0.95f); kind = kind.coerceIn(0.05f, 1f)
+        mid = mid.coerceIn(0f, 1f); cirrus = cirrus.coerceIn(0f, 1f)
+        val midForm = (0.15f + 0.6f * day(12) + 0.35f * s.overcast).coerceIn(0f, 1f)
+        val veilNow = veil * (1f - s.overcast)
+        // The sets of clouds that show this sky (each a path-traced picture, tools/scenery/skybake.py). A set comes
+        // and goes by its amount, so nothing appears at a stroke; a change of kind is cross-faded by the renderer.
+        val lowSet = when {
+            kind < 0.25f -> if (s.overcast > 0.72f) "st_overcast" else "sc_sheet"
+            kind < 0.56f -> if (cover < 0.37f) "cu_fair" else "cu_field"
+            kind < 0.84f -> "cu_towers"
+            else -> "cb_storm"
+        }
+        val midSet = if (midForm < 0.42f) "ac_flock" else if (midForm < 0.78f) "ac_rolls" else "as_veil"
+        val highSet = if (veilNow > 0.2f) "cs_veil" else if (day(15) < 0.28f) "cc_ripples" else "ci_wisps"
         return SkyState(
-            cover = cover.coerceIn(0f, 0.95f), kind = kind.coerceIn(0.05f, 1f), base = 1.25f + 0.5f * day(11), cluster = s.cluster,
-            mid = mid.coerceIn(0f, 1f), midForm = (0.15f + 0.6f * day(12) + 0.35f * s.overcast).coerceIn(0f, 1f),
-            cirrus = cirrus.coerceIn(0f, 1f), veil = veil * (1f - s.overcast), storm = storm, showers = showers, rain = rain,
+            lowSet = lowSet, lowAmount = smooth(0.05f, 0.20f, cover),
+            midSet = midSet, midAmount = smooth(0.08f, 0.30f, mid),
+            highSet = highSet, highAmount = if (veilNow > 0.2f) smooth(0.2f, 0.4f, veilNow) else smooth(0.08f, 0.28f, cirrus),
+            cover = cover, kind = kind, base = 1.25f + 0.5f * day(11), cluster = s.cluster,
+            mid = mid, midForm = midForm,
+            cirrus = cirrus, veil = veilNow, storm = storm, showers = showers, rain = rain,
             haze = haze, mist = mist, dust = dust, wind = windy, season = season, snow = snow,
             // (Where snow lies, what falls is snow: the ground is not wet.)
             wet = smooth(0.15f, 0.5f, rain) * (1f - smooth(0.4f, 0.6f, snow)),
@@ -206,14 +291,17 @@ internal object SkyDirector {
  * to the renderer: where the camera looks, where the Sun and the moon are drawn and where their light comes from, the
  * weather, the land's season, where the text and the glass are.
  *
- * The Sun is drawn where the day's path puts it on the screen ([SkyLook]); the direction that corresponds to through
- * the camera lights the scene, so shadows and the silver linings of clouds agree with the Sun that is seen. The
- * colour of its light always comes from its true elevation.
+ * The Sun is drawn where the day's path puts it on the screen ([SkyLook]). The land and the clouds are pictures
+ * rendered under a set of Suns ([LightWeights]): low Suns stand where the Sun is seen, higher ones swing round to the
+ * side, so the scene is modelled by light and shade. The colour of the light always comes from the Sun's true
+ * elevation.
  */
 internal class RealSkyFrame(
     val biome: Biome, val state: SkyState,
     val focalPx: Float, val horizon: Float, val flip: Boolean,
     val sunDir: FloatArray, val lightDir: FloatArray, val sunTrue: FloatArray, val sunEl: Float,
+    /** Which rendered Suns light the land, and the clouds, now (already for the mirrored picture when [flip]). */
+    val landLight: LightWeights, val cloudLight: LightWeights,
     val moon: FloatArray, val moonLit: FloatArray, val night: Float,
     val cel: Array<FloatArray>,
     val hour: Float, val seed: Float,
@@ -232,9 +320,17 @@ internal class RealSkyFrame(
     fun lightKey(): String = "${(sunEl * 40).toInt()} ${(sunDir[0] * 2000).toInt()} ${(sunDir[1] * 2000).toInt()} ${(moon[0] * 500).toInt()} ${(moon[1] * 500).toInt()} " +
         "${(moon[3] * 50).toInt()} ${(night * 100).toInt()} ${(state.haze * 50).toInt()} ${focalPx.toInt()} ${horizon.toInt()} $flip"
 
-    fun landKey(): String = "${biome.id} ${(state.season * 12).toInt()} ${(state.snow * 6).toInt()} ${focalPx.toInt()} ${horizon.toInt()} $flip"
+    fun landKey(): String = biome.id
 
-    fun cloudKey(): String = "${biome.id} ${seed.toInt()}"
+    /** How far the wind has slid a layer of cloud (0 high, 1 middle, 2 low), as a share of the room it has (-1..1). */
+    fun slide(layer: Int, time: Float, travel: Float): Float {
+        val t = if (still) 0f else time + lapse
+        val speed = floatArrayOf(0.55f, 0.8f, 1f)[layer] * (0.5f + state.wind)
+        // (There and back, slowly: the picture is only a little wider than the view. A day's drag crosses it twice.)
+        val x = hour / 24f * 2.2f * speed + t * 0.0009f * speed + travel * 0.5f + layer * 0.37f + seed * 0.13f
+        val ph = x - kotlin.math.floor(x)
+        return (if (ph < 0.5f) ph * 4f - 1f else 3f - ph * 4f) * 0.92f
+    }
 
     /**
      * Writes the uniforms every pass reads; [time] is the renderer's clock, seconds. [gust] (0..1) is a breath of wind
@@ -246,19 +342,11 @@ internal class RealSkyFrame(
         u["uView"] = floatArrayOf(w, h)
         u["uTime"] = floatArrayOf(t)
         u["uCam"] = floatArrayOf(focalPx, horizon, biome.eye, if (flip) 1f else 0f)
-        // Where the Sun rises and sets on the horizon line, as an angle from the middle of the view (the land leaves
-        // a gap there): 30.24 % of the width from the middle, through this camera.
-        u["uGapAz"] = floatArrayOf(gapAzimuth(w, h, focalPx, horizon))
         u["uSunDir"] = sunDir; u["uLightDir"] = lightDir; u["uSunTrue"] = sunTrue
         u["uSunEl"] = floatArrayOf(sunEl)
         u["uMoon"] = moon; u["uMoonLit"] = moonLit
         u["uNight"] = floatArrayOf(night)
         u["uHaze"] = floatArrayOf(s.haze)
-        u["uCloudA"] = floatArrayOf(s.cover, s.kind, s.base, 30f)
-        u["uCloudB"] = floatArrayOf(s.mid, s.midForm, s.cluster, s.storm)
-        u["uCloudC"] = floatArrayOf(seed, s.cirrus, s.veil, s.showers)
-        val wl = 0.006f + 0.016f * s.wind; val wm = 0.012f + 0.02f * s.wind
-        u["uWind"] = floatArrayOf(t * wl + hour * 9f + travel, t * wl * 0.25f + travel * 0.2f, t * wm + hour * 14f + travel * 1.4f, t * wm * 0.2f)
         // Lightning: a flash or two every so often while a storm is on.
         val flash = if (s.storm > 0.3f && !still) {
             val k = (t * 0.9f).toInt()
@@ -270,6 +358,21 @@ internal class RealSkyFrame(
         u["uAir"] = floatArrayOf(s.mist, s.rain, (s.wind + 0.8f * gust).coerceAtMost(1f), s.dust)
         u["uWater"] = floatArrayOf((s.waterRough + 0.22f * gust).coerceAtMost(1f), biome.waterClear, 0f, 0f)
         u["uTouch"] = floatArrayOf(0f, 0f, 1000f, 0f)
+        // Life: by day a flock of birds crosses the sky every few minutes (not in rain, nor under a storm); by night
+        // a shooting star now and then. Nothing of either when animations are off.
+        val k = (t / BIRDS_EVERY).toInt()
+        val into = t - k * BIRDS_EVERY
+        val flock = !still && sunEl > 3f && s.rain < 0.15f && s.storm < 0.5f && into < BIRDS_CROSS && CloudField.hash(seed.toInt(), k, 57) < 0.8f
+        u["uBirds"] = if (flock) floatArrayOf(
+            into / BIRDS_CROSS, 0.07f + 0.13f * CloudField.hash(seed.toInt(), k, 58), k * 7.31f + seed, if (CloudField.hash(seed.toInt(), k, 59) < 0.5f) 1f else -1f,
+        ) else floatArrayOf(-1f, 0f, 0f, 1f)
+        val mk = (t / METEOR_EVERY).toInt()
+        val mInto = t - mk * METEOR_EVERY
+        val star = !still && night > 0.9f && mInto < 0.85f && CloudField.hash(seed.toInt(), mk, 61) < 0.6f
+        u["uMeteor"] = if (star) floatArrayOf(
+            (mInto / 0.85f).coerceIn(0.001f, 1f), 0.15f + 0.7f * CloudField.hash(seed.toInt(), mk, 62), 0.05f + 0.35f * CloudField.hash(seed.toInt(), mk, 63),
+            -1.1f + 2.2f * CloudField.hash(seed.toInt(), mk, 64),
+        ) else floatArrayOf(0f, 0f, 0f, 0f)
         u["uText"] = floatArrayOf(textBottom, 0f, 0f, 0f)
         u["uPanel"] = floatArrayOf(panelTop, panelRadius, if (lightGlass) 0.50f else 0.50f, if (lightGlass) 1f else 0f)
         u["uPanelTint"] = tint
@@ -280,24 +383,54 @@ internal class RealSkyFrame(
 
     companion object {
         private const val DEG = PI / 180
+        /** A flock of birds sets out every so many seconds and takes this long to cross; a shooting star's chance. */
+        private const val BIRDS_EVERY = 210f
+        private const val BIRDS_CROSS = 75f
+        private const val METEOR_EVERY = 38f
 
-        /** The direction seen at a point of the layer (px from its top-left corner). Mirrors `viewRay` in common.glsl. */
+        /**
+         * The direction seen at a point of the layer (px from its top-left corner). Mirrors `viewRay` in common.glsl:
+         * the camera looks level, its lens shifted so that the horizon lies [horizon] px from the top.
+         */
+        @Suppress("UNUSED_PARAMETER")
         fun ray(px: Float, py: Float, w: Float, h: Float, focalPx: Float, horizon: Float, flip: Boolean): FloatArray {
             var x = px - 0.5f * w
             if (flip) x = -x
-            val y = 0.5f * h - py
+            val y = horizon - py
             val len = sqrt(x * x + y * y + focalPx * focalPx)
-            val dx = x / len; val dy = y / len; val dz = focalPx / len
-            val pitch = atan((horizon - 0.5f * h) / focalPx)
-            val c = cos(pitch); val s = sin(pitch)
-            return floatArrayOf(dx, dy * c + dz * s, dz * c - dy * s)
+            return floatArrayOf(x / len, y / len, focalPx / len)
         }
 
-        /** The angle from straight ahead at which the Sun rises and sets (see `sunGap` in land.glsl). */
-        fun gapAzimuth(w: Float, h: Float, focalPx: Float, horizon: Float): Float =
-            atan(0.3024f * w / sqrt(focalPx * focalPx + (horizon - 0.5f * h) * (horizon - 0.5f * h)))
-
         fun dirAzEl(az: Double, el: Double) = floatArrayOf((cos(el) * sin(az)).toFloat(), sin(el).toFloat(), (cos(el) * cos(az)).toFloat())
+
+        /**
+         * The night sky at its finest: the celestial axes (x to right ascension 0, y to 6 h, z to the north pole), the
+         * Milky Way's pole and its centre, as directions of the view, turned so that the bright heart of the Milky Way
+         * stands in the picture a hand's breadth over the horizon and its band climbs steeply across the sky, as in
+         * the photographs people remember. It leans and drifts a little through the night ([hour], 0..24), so the
+         * sky is not a still, and keeps to the side of the picture the Moon is not on ([moonBearing]: where the Moon
+         * is drawn, degrees right of the middle of the screen; NaN when it is down). The stars keep their true places
+         * among themselves; only the whole sky is turned.
+         */
+        fun showcaseSky(hour: Float, moonBearing: Float = Float.NaN): Array<FloatArray> {
+            val s = (((hour + 6f) % 24f) / 12f).coerceIn(0f, 1f).toDouble()          // 18:00 -> 0, 06:00 -> 1
+            val aside = if (moonBearing.isNaN()) 0.0 else -8.0 * (moonBearing / 6f).coerceIn(-1f, 1f)
+            val az = (-5.0 + 10.0 * s + aside) * DEG
+            val el = (11.0 + 4.0 * sin(PI * s)) * DEG
+            val lean = (58.0 + 10.0 * s) * DEG
+            val c = dirAzEl(az, el).map { it.toDouble() }
+            val r = doubleArrayOf(cos(az), 0.0, -sin(az))                               // to the right, level
+            // (Upwards at the centre: the upright with its part along the line of sight taken out.)
+            val uy = doubleArrayOf(-c[1] * c[0], 1.0 - c[1] * c[1], -c[1] * c[2])
+            val ul = sqrt(uy[0] * uy[0] + uy[1] * uy[1] + uy[2] * uy[2])
+            val t = DoubleArray(3) { -cos(lean) * r[it] + sin(lean) * uy[it] / ul }      // the band's way: up and to the left
+            val n = doubleArrayOf(c[1] * t[2] - c[2] * t[1], c[2] * t[0] - c[0] * t[2], c[0] * t[1] - c[1] * t[0])
+            fun cel(ra: Double, dec: Double) = doubleArrayOf(cos(dec * DEG) * cos(ra * DEG), cos(dec * DEG) * sin(ra * DEG), sin(dec * DEG))
+            val gc = cel(266.40499, -28.93617); val gn = cel(192.85948, 27.12825)
+            val gm = doubleArrayOf(gn[1] * gc[2] - gn[2] * gc[1], gn[2] * gc[0] - gn[0] * gc[2], gn[0] * gc[1] - gn[1] * gc[0])
+            fun axis(k: Int) = FloatArray(3) { (c[it] * gc[k] + n[it] * gn[k] + t[it] * gm[k]).toFloat() }
+            return arrayOf(axis(0), axis(1), axis(2), FloatArray(3) { n[it].toFloat() }, FloatArray(3) { c[it].toFloat() })
+        }
 
         /**
          * The frame for a scene: [view] and [look] are the home screen's own (where the Sun and the moon are drawn);
@@ -306,7 +439,7 @@ internal class RealSkyFrame(
         fun of(
             scene: SkyScene, view: SkyView, look: SkyLook, biome: Biome, weather: Weather, year: Float, display: Double, shownAt: Instant,
             w: Float, h: Float, textBottom: Float, panelTop: Float, panelRadius: Float, lightGlass: Boolean, tint: FloatArray,
-            fade: Float, busy: Boolean, still: Boolean, lapse: Float,
+            fade: Float, busy: Boolean, still: Boolean, lapse: Float, trueStars: Boolean = false,
         ): RealSkyFrame {
             val focalPx = biome.focal * w
             val horizon = view.horizonY
@@ -314,29 +447,37 @@ internal class RealSkyFrame(
             val el = look.elevation
             val seen = ray(look.sunX, look.sunY, w, h, focalPx, horizon, flip)
             val az = atan2(seen[0].toDouble(), seen[2].toDouble())
-            val seenEl = asin(seen[1].toDouble().coerceIn(-1.0, 1.0)) / DEG
             // Below the horizon the Sun is where it truly is; above it, where the path draws it.
-            val sunDir = if (el > 0) seen else dirAzEl(az, el * DEG)
-            // Its light falls from higher than it is drawn at midday (the path is drawn low so that it fits the sky).
-            val lightEl = if (el <= 0) el else max(seenEl, min(el, 50.0))
+            // (Over a scenery with a skyline of its own the path stands on the land: there the Sun is still drawn above
+            // the level horizon for a while after its true height has gone under it.)
+            val sunDir = if (el > 0 || seen[1] > sin(el * DEG)) seen else dirAzEl(az, el * DEG)
             val moonUp = look.moonVisibility > 0f
             val moonDir = if (moonUp) ray(look.moonX, look.moonY, w, h, focalPx, horizon, flip) else floatArrayOf(0f, -0.2f, 0.98f)
-            // By day it falls from the side of the Sun's half of the sky (where it rose in the morning, where it will set
-            // in the afternoon), so the land and the clouds are modelled by it; as the Sun nears the horizon the light
-            // comes from the Sun as it is seen.
-            val half = ((display - scene.noonFraction) / 0.07).coerceIn(-1.0, 1.0) * (if (flip) -1 else 1)
-            val high = ((el - 8.0) / 32.0).coerceIn(0.0, 1.0).let { it * it * (3 - 2 * it) }
-            val lightAz = az + half * 62 * DEG * high
-            val light = if (el >= -6.0) dirAzEl(lightAz, lightEl * DEG) else if (moonUp) moonDir else floatArrayOf(0f, 1f, 0f)
+            // By day the light falls from the side of the Sun's half of the sky (where it rose in the morning, where it
+            // will set in the afternoon); as the Sun nears the horizon it comes from the Sun as it is seen. Deep in the
+            // night the Moon lights the scene the same way, from where it stands.
+            val moonLight = el < -6.0
+            val side = if (moonLight) ((look.moonX - 0.5f * w) / (0.2f * w)).toDouble().coerceIn(-1.0, 1.0)
+            else ((display - scene.noonFraction) / 0.07).coerceIn(-1.0, 1.0) * (if (flip) -1 else 1)
+            val moonEl = max(asin(moonDir[1].toDouble().coerceIn(-1.0, 1.0)) / DEG, 0.7)
+            val glow = (((12.0 - el) / 10.0).coerceIn(0.0, 1.0)).let { it * it * (3 - 2 * it) }.toFloat()
+            var lw = LightWeights.of(if (moonLight) moonEl else max(el, 0.7), side, false, glow)
+            var cw = LightWeights.of(if (moonLight) moonEl else el, side, true, glow)
+            // (The weights are found for the screen as it is seen; the scene's own x runs the other way when mirrored.)
+            var light = if (moonLight && !moonUp) floatArrayOf(0f, 1f, 0f) else lw.dir
+            if (flip) { lw = lw.mirrored(); cw = cw.mirrored(); light = floatArrayOf(-light[0], light[1], light[2]) }
             val state = SkyDirector.at(biome, weather, display, el, year, look.mist)
-            val fr = NightSky.frame(shownAt, scene.latitude, scene.longitude, flip)
             // The stars are a real, unmirrored sky; the scene's own x runs the other way when it is mirrored.
             fun m(v: FloatArray) = if (flip) floatArrayOf(-v[0], v[1], v[2]) else v
+            // Where the heavens stand: truly, for the place and the moment, if that is asked for in Settings; otherwise
+            // as the finest night shows them (the owner's rule: by default, the most beautiful view the app has).
+            val cel = if (trueStars) NightSky.frame(shownAt, scene.latitude, scene.longitude, flip).let { arrayOf(it.celX, it.celY, it.celZ, it.galN, it.galC) }
+            else showcaseSky((display * 24).toFloat(), if (moonUp) (Math.toDegrees(atan2(moonDir[0].toDouble(), moonDir[2].toDouble())) * (if (flip) -1 else 1)).toFloat() else Float.NaN)
             return RealSkyFrame(
-                biome, state, focalPx, horizon, flip, sunDir, light, dirAzEl(az, el * DEG), el.toFloat(),
+                biome, state, focalPx, horizon, flip, sunDir, light, dirAzEl(az, el * DEG), el.toFloat(), lw, cw,
                 floatArrayOf(moonDir[0], moonDir[1], moonDir[2], look.moonIllumination),
                 floatArrayOf(look.moonLight[0], look.moonLight[1], look.moonLight[2], look.moonVisibility),
-                look.night, arrayOf(m(fr.celX), m(fr.celY), m(fr.celZ), m(fr.galN), m(fr.galC)),
+                look.night, Array(5) { m(cel[it]) },
                 hour = (display * 24).toFloat(), seed = (weather.seedX + weather.seedY * 0.37f),
                 textBottom = textBottom, panelTop = panelTop, panelRadius = panelRadius, lightGlass = lightGlass, tint = tint,
                 fade = fade, busy = busy, still = still, lapse = lapse,

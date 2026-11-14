@@ -172,7 +172,11 @@ class WidgetsTest {
             val end = Instant.now()
             // Android's clock rounds to the nearest second when it reads the time between its ticks (here, as the wheel
             // is set): up to half a second ahead until its next tick, which falls on the second.
-            val ok = setOf(expected(start, c.countAt, c.elapsed), expected(end.plusMillis(500), c.countAt, c.elapsed))
+            // (Looking takes time, and on a busy machine more than a second: every second from the start of the look to
+            // its end is a right answer, and no other.)
+            val last = end.plusMillis(500)
+            val ok = generateSequence(start) { it.plusSeconds(1) }.takeWhile { it.isBefore(last) }
+                .map { expected(it, c.countAt, c.elapsed) }.toSet() + expected(last, c.countAt, c.elapsed)
             assertTrue("seconds shown $shown, expected one of $ok", shown in ok)
         }
         // Since Asr, counting up.

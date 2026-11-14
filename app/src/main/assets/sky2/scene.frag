@@ -1,0 +1,705 @@
+// Puts the picture together, in linear light: the sky of the moment, the Sun and the Moon, the stars, the layers of
+// cloud in the light of the moment, and under them the land (a path-traced picture relit) and the water (drawn live).
+
+uniform sampler2D tSky;       // the clear sky for every direction in view (sky.frag)
+uniform sampler2D tNoise2D;
+uniform sampler2D tCloud0;    // the three layers of cloud, lit (layer.frag): high, middle, low
+uniform sampler2D tCloud1;
+uniform sampler2D tCloud2;
+uniform vec4 uCloudF0, uCloudF1, uCloudF2;   // each layer's picture: px across the phone's view, row of the horizon, width, height
+uniform vec4 uCloudD;         // how far the wind has slid each layer (px of its picture); 1 = there are clouds at all
+uniform sampler2D tLandA;     // the land: its colour under white light, and where it is (alpha)
+uniform sampler2D tLandK;     // the land lit by a plain white sky
+uniform sampler2D tLandG;     // how far it is (16 bits, log)
+uniform sampler2D tLandM;     // R: under water, G: moves in the wind, B: takes snow in winter
+uniform sampler2D tLandLit;   // its shading under the Sun and the glow of the moment (lit.frag)
+uniform vec4 uLandInfo;       // 1 if there is a land picture, the water's level (m under the eye; 0 = none), the
+                              // brightest shading stored, 1 if there is a mask
+uniform vec3 uCelX, uCelY, uCelZ, uGalN, uGalC;   // the turning sky: celestial axes, the Milky Way's pole and centre
+uniform vec4 uSky;            // aurora strength, meteor (0..1 along its track, 0 = none), lightning flash, rainbow
+uniform vec4 uLand;           // biome, season (0 winter .. 1 summer), snow, wetness
+uniform vec4 uAir;            // mist near the ground, rain here, wind strength, dust
+uniform vec4 uWater;          // roughness of the water (0 glass .. 1 storm), its clearness, -, -
+uniform vec4 uTouch;          // where the scene was last touched (px), seconds since, strength
+uniform vec4 uBirds;          // a flock crossing the sky: how far across (0..1; below 0 = none), its height (of the
+                              // view's width above the horizon), its seed, +1 left to right / -1 right to left
+uniform vec4 uMeteor;         // a shooting star: how far along its track (0..1; 0 = none), where it starts (x, y, of the
+                              // view's width from the top-left), its bearing (radians from straight down)
+
+out vec4 o;
+
+vec3 skyAt(vec2 vp) { return texture(tSky, vec2(vp.x / uView.x, 1.0 - vp.y / uView.y)).rgb; }
+
+float hg(float mu, float g) { float g2 = g * g; return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * mu, 1.5); }
+
+// ---- The night ----------------------------------------------------------------------------------------------------
+
+// Faint stars fixed to the turning sky, so they rise and set with the night.
+vec3 faintStars(vec3 d, float alt) {
+    vec3 c = vec3(dot(d, uCelX), dot(d, uCelY), dot(d, uCelZ));
+    vec3 a = abs(c);
+    vec2 uv; float face;
+    if (a.x > a.y && a.x > a.z) { uv = c.yz / a.x; face = c.x > 0.0 ? 0.0 : 1.0; }
+    else if (a.y > a.z) { uv = c.xz / a.y; face = c.y > 0.0 ? 2.0 : 3.0; }
+    else { uv = c.xy / a.z; face = c.z > 0.0 ? 4.0 : 5.0; }
+    vec3 sum = vec3(0.0);
+    for (int k = 0; k < 2; k++) {
+        float n = k == 0 ? 190.0 : 420.0;
+        vec2 g = uv * n;
+        vec2 id = floor(g);
+        vec2 r = hash22(id + face * 37.0 + float(k) * 91.0);
+        float m = hash12(id * 1.37 + face * 11.0 + float(k) * 7.0);
+        float keep = step(k == 0 ? 0.90 : 0.86, m);
+        vec2 dlt = fract(g) - (0.2 + 0.6 * r);
+        float px = n * 2.0 / uCam.x * 0.55;
+        float spot = exp(-dot(dlt, dlt) / (px * px * (k == 0 ? 1.6 : 0.9)));
+        float mag = pow(hash12(id + 5.0 + face), 6.0);
+        float tw = 0.75 + 0.25 * sin(uTime * (2.0 + 5.0 * r.x) + r.y * 40.0) * smoothstep(40.0, 5.0, alt);
+        vec3 tint = mix(vec3(1.0, 0.86, 0.72), vec3(0.78, 0.86, 1.0), r.y);
+        sum += keep * spot * tw * tint * (k == 0 ? 0.035 + 0.75 * mag : 0.012 + 0.20 * mag);
+    }
+    return sum;
+}
+
+// The Milky Way as it is: NASA's map of the whole sky without its stars (Deep Star Maps 2020, public domain), fixed
+// to the turning sky, so the bright centre, the dust lanes and the Magellanic Clouds stand where they really do for
+// the place and the hour. (The picture runs right ascension leftwards from 0 h in its middle.)
+uniform sampler2D tMilky;
+vec3 milkyWay(vec3 d) {
+    vec3 c = vec3(dot(d, uCelX), dot(d, uCelY), dot(d, uCelZ));
+    vec2 uv = vec2(fract(0.5 - atan(c.y, c.x) / (2.0 * PI)), 0.5 - asin(clamp(c.z, -1.0, 1.0)) / PI);
+    vec3 t = pow(texture(tMilky, uv).rgb, vec3(2.2));
+    // (As a long exposure shows it: its bright parts brought out, its colour kept.)
+    return t * (0.55 + 1.6 * luma(t)) * 0.20;
+}
+
+// The aurora: curtains of light a hundred kilometres up and more, folded along the far sky, green at their sharp
+// lower border and fading upward into red and violet, with fine rays along the field lines. They drift and pulse.
+vec3 aurora(vec3 rd, float jit) {
+    float s = uSky.x;
+    if (s <= 0.01 || rd.y < 0.03) return vec3(0.0);
+    vec3 col = vec3(0.0);
+    for (int i = 0; i < 20; i++) {
+        float h = 95.0 + (float(i) + jit) * 8.0;
+        vec2 p = rd.xz * (h / rd.y);
+        vec2 q = p * 0.0035 + vec2(uTime * 0.0035, uTime * 0.0011);
+        float w = texture(tNoise2D, q * 0.33 + 0.3).r;
+        float band = 1.0 - abs(texture(tNoise2D, vec2(q.x * 0.55 + w * 0.6, q.y * 0.13 + 0.2)).g * 2.0 - 1.0);
+        float fil = pow(band, 10.0);
+        float ray = 0.45 + 0.55 * texture(tNoise2D, vec2(q.x * 11.0 + w * 4.0, q.y * 1.1 + uTime * 0.01)).r;
+        float hk = (h - 95.0) / 160.0;
+        float profile = smoothstep(0.0, 0.05, hk) * exp(-hk * 3.4);
+        vec3 c = mix(vec3(0.16, 1.0, 0.42), vec3(0.55, 0.18, 0.80), smoothstep(0.22, 0.85, hk));
+        float where = smoothstep(180.0, 650.0, length(p)) * smoothstep(0.30, 0.62, w) * smoothstep(0.045, 0.16, rd.y);
+        col += c * fil * ray * profile * where;
+    }
+    return col * s * 0.30 * (0.75 + 0.25 * sin(uTime * 0.23));
+}
+
+// The Moon as a lit sphere with its real face (NASA's map from the Lunar Reconnaissance Orbiter, public domain): its
+// phase, the seas and the bright rayed craters where they are, earthshine on the dark part.
+uniform sampler2D tMoon;
+vec4 moonDisc(vec3 rd) {
+    float vis = uMoonLit.w;
+    if (vis <= 0.0) return vec4(0.0);
+    vec3 m = normalize(uMoon.xyz);
+    float rad = 0.0135;                          // drawn larger than life, as the eye remembers it (and as the Sun is)
+    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), m));
+    vec3 up = cross(m, right);
+    vec2 q = vec2(dot(rd, right), dot(rd, up)) / rad;
+    if (uCam.w > 0.5) q.x = -q.x;
+    float r2 = dot(q, q);
+    if (r2 > 1.2) return vec4(0.0);
+    float edge = smoothstep(1.0, 0.93, sqrt(r2));
+    vec3 n = vec3(q.x, -q.y, sqrt(max(1.0 - r2, 0.0)));
+    float lit = smoothstep(-0.04, 0.22, dot(n, normalize(uMoonLit.xyz)));
+    // The side that faces the Earth: longitude 0 in the middle of the disc.
+    vec2 uv = vec2(0.5 + atan(n.x, n.z) / (2.0 * PI), 0.5 - asin(clamp(-n.y, -1.0, 1.0)) / PI);
+    vec3 face = pow(texture(tMoon, uv).rgb, vec3(2.2));
+    // (The full Moon is flat-lit: no darkening to its limb. Its face is given a little more contrast than the map's.)
+    face = mix(face, vec3(luma(face)), 0.65);
+    vec3 alb = clamp((face - 0.03) * 3.1, 0.0, 1.6);
+    vec3 col = alb * vec3(1.0, 0.98, 0.93) * (lit * (1.2 + 4.2 * uNight) + 0.03 * uNight);
+    return vec4(col * edge * vis, edge * vis * max(lit, 0.25 * uNight));
+}
+
+// ---- The Sun ------------------------------------------------------------------------------------------------------
+
+// The Sun as a camera sees it: its disc (drawn a little over twice its real size, like the Moon: it is also the hand
+// of this clock), white-hot when high and a clear red-gold ball when the air has dimmed it; the glare close round it;
+// and the wide glow of the air it shines through. `shows`: how much of it the clouds in front let through.
+vec3 sunLight(vec3 rd, float shows) {
+    if (uSunEl < -3.0) return vec3(0.0);
+    float th = acos(clamp(dot(rd, uSunDir), -1.0, 1.0));
+    vec3 c = mSunDisc();                               // the disc's colour and brightness (white = about 40)
+    const float R = 0.0135;
+    float sd = th / R;
+    float up = smoothstep(-3.0, -0.6, uSunEl);
+    vec3 col = vec3(0.0);
+    if (sd < 1.3) {
+        float limb = 1.0 - 0.38 * (1.0 - sqrt(max(1.0 - sd * sd, 0.0)));
+        // (The disc is there from Shuruq to Maghrib and at no other time, whatever the land in front of it is like:
+        // the Sun's true height is -0.83 degrees at both.)
+        col += c * limb * smoothstep(1.0, 0.86, sd) * shows * smoothstep(-1.10, -0.80, uSunEl);
+    }
+    // Round it: a tight glare, the wider glow of the air it shines through (fuller when it is low and its light
+    // crosses much more air), and the fine rays a lens draws out of a point of light: by these a camera's Sun is
+    // known for the Sun even against a bright sky.
+    float low = smoothstep(12.0, 1.0, uSunEl);
+    // (A low Sun's disc is drawn dimmer so that it keeps its colour; its glow is not.)
+    vec3 cg = c * max(1.0, 9.0 / max(luma(c), 0.5));
+    cg = mix(c, cg, low);
+    vec3 g = cg * (0.022 * exp(-th / 0.030) * shows
+                + 0.0085 * (1.0 + 1.6 * low) * exp(-th / 0.085) * (0.35 + 0.65 * shows)
+                + 0.0018 * (1.0 + 1.2 * low) * exp(-th / 0.26));
+    if (th < 0.30 && shows > 0.05) {
+        vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), uSunDir));
+        vec3 upv = cross(uSunDir, right);
+        float phi = atan(dot(rd, upv), dot(rd, right));
+        float rays = pow(abs(cos(phi * 7.0)), 40.0) + 0.55 * pow(abs(cos(phi * 7.0 + 0.9)), 90.0);
+        g += c * rays * 0.015 * shows * shows * exp(-th / 0.050) * smoothstep(0.012, 0.03, th);
+    }
+    return (col + g) * up;
+}
+
+// ---- The clouds ---------------------------------------------------------------------------------------------------
+
+// A layer of cloud at a point of the view: colour (already multiplied by opacity) and opacity.
+vec4 layerAt(sampler2D t, vec4 f, float slide, vec2 vp) {
+    float k = f.x / uView.x;
+    vec2 uv = vec2(0.5 + ((vp.x - 0.5 * uView.x) * k + slide) / f.z, (f.y + (vp.y - uCam.y) * k) / f.w);
+    if (uv.y >= 1.0 || uv.y <= 0.0) return vec4(0.0);
+    return texture(t, vec2(uv.x, 1.0 - uv.y));
+}
+
+// All three laid over a colour, the highest first.
+vec3 cloudsOver(vec3 col, vec2 vp, out float through) {
+    through = 1.0;
+    if (uCloudD.w < 0.5) return col;
+    vec4 c = layerAt(tCloud0, uCloudF0, uCloudD.x, vp);
+    col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
+    c = layerAt(tCloud1, uCloudF1, uCloudD.y, vp);
+    col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
+    c = layerAt(tCloud2, uCloudF2, uCloudD.z, vp);
+    col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
+    return col;
+}
+
+// How much sky shows through the clouds in a direction.
+float cloudGap(vec3 d) {
+    if (uCloudD.w < 0.5) return 1.0;
+    vec3 p = viewPoint(d);
+    if (p.z <= 0.0) return 1.0;
+    return (1.0 - layerAt(tCloud0, uCloudF0, uCloudD.x, p.xy).a) * (1.0 - layerAt(tCloud1, uCloudF1, uCloudD.y, p.xy).a)
+         * (1.0 - layerAt(tCloud2, uCloudF2, uCloudD.z, p.xy).a);
+}
+
+// ---- Life ---------------------------------------------------------------------------------------------------------
+
+// A flock of birds far off, crossing the sky: small dark shapes with beating wings, in a loose line. How much of this
+// pixel they cover.
+float birds(vec2 vp) {
+    if (uBirds.x < 0.0) return 0.0;
+    float W = uView.x;
+    vec2 c = vec2(mix(-0.12, 1.12, uBirds.w > 0.0 ? uBirds.x : 1.0 - uBirds.x) * W, uCam.y - uBirds.y * W);
+    c.y += sin(uBirds.x * 9.0 + uBirds.z) * 0.012 * W;
+    vec2 d = vp - c;
+    if (abs(d.x) > 0.16 * W || abs(d.y) > 0.07 * W) return 0.0;
+    float cover = 0.0;
+    for (int i = 0; i < 9; i++) {
+        float fi = float(i);
+        vec2 r = hash22(vec2(fi * 7.3 + uBirds.z, uBirds.z * 3.1 + fi));
+        // A ragged skein: each bird a little behind and to the side of the one before, bobbing.
+        float side = mod(fi, 2.0) < 0.5 ? 1.0 : -1.0;
+        float rank = floor((fi + 1.0) * 0.5);
+        vec2 at = vec2(-uBirds.w * rank * 0.022 * W - uBirds.w * r.x * 0.012 * W, side * rank * 0.011 * W + (r.y - 0.5) * 0.012 * W);
+        at.y += sin(uTime * 0.9 + fi * 1.7) * 0.0016 * W;
+        float span = (0.0065 + 0.003 * r.x) * W;                    // half a wingspan
+        float beat = sin(uTime * (5.2 + 1.6 * r.y) + fi * 2.4);
+        vec2 q = d - at;
+        if (dot(q, q) > span * span * 1.6) continue;
+        // Two wings from the body, raised and lowered; thicker at the shoulder.
+        float lift = beat * 0.55 + 0.15;
+        vec2 tip = vec2(span * cos(lift), -span * sin(lift));
+        vec2 qa = vec2(abs(q.x), q.y);
+        float h = clamp(dot(qa, tip) / dot(tip, tip), 0.0, 1.0);
+        float dist = length(qa - tip * h);
+        float thick = mix(0.16, 0.05, h) * span;
+        cover = max(cover, smoothstep(thick, thick * 0.35, dist));
+    }
+    return cover;
+}
+
+// A shooting star: a quick bright streak, brightest at its head, gone in under a second.
+vec3 meteor(vec2 vp) {
+    if (uMeteor.x <= 0.0) return vec3(0.0);
+    float W = uView.x;
+    vec2 dir = vec2(sin(uMeteor.w), cos(uMeteor.w));
+    vec2 head = uMeteor.yz * W + dir * uMeteor.x * 0.30 * W;
+    vec2 q = vp - head;
+    float along = -dot(q, dir);                                   // behind the head: positive
+    if (along < -3.0 || along > 0.16 * W) return vec3(0.0);
+    float across = abs(dot(q, vec2(dir.y, -dir.x)));
+    float tail = exp(-along / (0.045 * W)) * step(0.0, along) + exp(-along * along / 6.0);
+    float glow = exp(-across * across / (1.6 + 0.00002 * along * W));
+    float life = smoothstep(0.0, 0.12, uMeteor.x) * (1.0 - smoothstep(0.7, 1.0, uMeteor.x));
+    return vec3(0.85, 0.93, 1.0) * tail * glow * life * 1.6;
+}
+
+// ---- The sky, whole -----------------------------------------------------------------------------------------------
+
+// Everything above the land in a direction: the air, the night's lights, the Sun, the clouds. `soft`: 0 for the view
+// itself; 1 for a mirror image in water (the finest things are left out).
+vec3 heavens(vec3 rd, vec2 vp, float soft, float sunShows) {
+    float alt = asin(clamp(rd.y, -1.0, 1.0)) / DEG;
+    vec3 col = skyAt(vp);
+    if (uNight > 0.01) {
+        float clear = smoothstep(0.5, 14.0, alt);
+        float dark = uNight * uNight * (1.0 - 0.6 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
+        col += milkyWay(rd) * smoothstep(0.55, 1.0, uNight) * clear * (1.0 - 0.7 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
+        if (soft < 0.5) col += faintStars(rd, alt) * dark * clear;
+        col += aurora(rd, ign(gl_FragCoord.xy)) * uNight * uNight;
+    }
+    vec4 moon = moonDisc(rd);
+    col = col * (1.0 - moon.a * 0.85 * uNight) + moon.rgb;
+    if (uMoonLit.w > 0.0) {
+        float mm = dot(rd, normalize(uMoon.xyz));
+        float mth = acos(clamp(mm, -1.0, 1.0));
+        col += vec3(0.62, 0.72, 0.95) * uMoon.w * uMoonLit.w * uNight * (0.22 * exp(-mth / 0.022) + 0.050 * exp(-mth / 0.09) + 0.012 * exp(-mth / 0.30));
+    }
+    col += sunLight(rd, sunShows);
+    if (soft < 0.5) col += meteor(vp) * uNight;
+    float through;
+    col = cloudsOver(col, vp, through);
+    // Thin cloud close to the Sun is lit through: the silver lining.
+    if (uSunEl > -2.0 && through < 0.999) {
+        float mu = dot(rd, uSunDir);
+        col += mSunDisc() * 0.012 * min(hg(mu, 0.86), 30.0) * through * (1.0 - through) * smoothstep(-2.0, 1.0, uSunEl);
+    }
+    return col;
+}
+
+// ---- The land -----------------------------------------------------------------------------------------------------
+
+float landDist(vec2 luv) {
+    vec3 g = texture(tLandG, luv).rgb;
+    return exp2((g.r * 255.0 * 256.0 + g.g * 255.0) / 65535.0 * 18.0);
+}
+
+// The same, smoothly between the picture's (coarser) distance samples: where an edge is drawn from the distance
+// itself (the sea's edge on a beach), steps would show.
+float landDistSmooth(vec2 luv) {
+    vec2 sz = vec2(textureSize(tLandG, 0));
+    vec2 p = luv * sz - 0.5;
+    ivec2 i = ivec2(floor(p));
+    vec2 f = p - vec2(i);
+    ivec2 hi = ivec2(sz) - 1;
+    float v[4];
+    for (int k = 0; k < 4; k++) {
+        vec3 g = texelFetch(tLandG, clamp(i + ivec2(k & 1, k >> 1), ivec2(0), hi), 0).rgb;
+        v[k] = (g.r * 255.0 * 256.0 + g.g * 255.0) / 65535.0 * 18.0;
+    }
+    return exp2(mix(mix(v[0], v[1], f.x), mix(v[2], v[3], f.x), f.y));
+}
+
+// The land at a point of its picture, in the light of the moment and seen through the air between: colour, and how
+// much of the pixel it covers. `t`: how far it is (m).
+vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
+    t = 2.0e5;
+    if (uLandInfo.x < 0.5 || luv.y <= 0.0 || luv.x <= 0.0 || luv.x >= 1.0) return vec4(0.0);
+    luv.y = min(luv.y, 0.9995);
+    vec4 A = texture(tLandA, luv);
+    if (A.a < 0.004) return vec4(0.0);
+    vec3 alb = pow(A.rgb, vec3(2.2));
+    vec2 lit = texture(tLandLit, vec2(luv.x, 1.0 - luv.y)).rg;
+    float S = sq(lit.r) * uLandInfo.z, G = sq(lit.g) * uLandInfo.z;
+    vec3 K = pow(texture(tLandK, luv).rgb, vec3(2.2));
+    // Winter (where the seasons are followed): snow lies on what the scenery says takes it.
+    if (uLand.z > 0.01 && uLandInfo.w > 0.5) {
+        float snow = smoothstep(0.25, 0.75, texture(tLandM, luv).b * (0.4 + 0.9 * uLand.z)) * uLand.z;
+        vec3 white = vec3(0.80, 0.83, 0.88);
+        K = mix(K, K * (luma(white) / max(luma(alb), 0.04)) * vec3(0.96, 0.99, 1.06), snow);
+        alb = mix(alb, white, snow);
+    }
+    t = landDist(luv);
+    vec3 p = vec3(0.0, uCam.z, 0.0) + rd * t;
+    float moonW = smoothstep(-6.0, -10.0, uSunEl);
+    // (Lit land is held a little under the sky, as a photographer exposes: its colour stays rich.)
+    vec3 light = mSunGround() * 0.70 * (1.0 - moonW) + mMoonLight() * moonW;
+    // The shadows of the low clouds, cast from where they stand in the picture.
+    float sh = 1.0;
+    vec3 L = uLightDir;
+    if (uCloudD.w > 0.5 && L.y > 0.12) {
+        vec3 q = p + L * ((1500.0 - p.y) / L.y);
+        vec3 sp = viewPoint(normalize(q - vec3(0.0, uCam.z, 0.0)));
+        if (sp.z > 0.0) sh = 1.0 - 0.85 * layerAt(tCloud2, uCloudF2, uCloudD.z, sp.xy).a * smoothstep(0.12, 0.3, L.y);
+    }
+    vec3 ambTop = mAmbTop(), ambLow = mAmbLow();
+    // (At night the land is given what a long exposure finds in it by starlight: its forms, dim and blue.)
+    vec3 amb = mix(ambLow, ambTop, 0.6) + vec3(0.034, 0.052, 0.105) * uNight;
+    // (Skylight in the shade is held a little under what the sky gives: a photograph keeps its shadows.)
+    vec3 land = alb * (S * light * sh + G * mGlow()) + K * amb * mix(0.78, 1.0, max(uNight, smoothstep(10.0, 0.0, uSunEl)));
+
+    // The air between: far things fade into the colour of the sky behind them.
+    float tk = t * 0.001;
+    float ya = uCam.z * 0.001, yb = max(p.y, 0.0) * 0.001;
+    const float HH = 1.3;
+    float layer = abs(yb - ya) > 1e-3 ? HH / (yb - ya) * (exp(-ya / HH) - exp(-yb / HH)) : exp(-ya / HH);
+    float fog = 1.0 - exp(-tk * (0.006 + (0.022 + 0.024 * (uHaze - 1.0) + 0.06 * uAir.w + 0.5 * uAir.x) * layer));
+    float glow = pow(saturate(dot(rd, uSunDir)), 8.0);
+    vec3 airCol = mix(hazeCol * (1.0 + 0.35 * glow), amb, 0.26) * 0.93;
+    land = mix(land, airCol, min(fog, 0.94) * 0.95);
+    return vec4(land, A.a);
+}
+
+// ---- The water ----------------------------------------------------------------------------------------------------
+
+// The slope of the water at a place (m), from a few trains of waves and the ripples of the wind. `t` is how far the eye
+// is: waves too small to be seen from there are left out, and only roughen the reflection (`rough`).
+vec2 waterSlope(vec2 q, float t, out float rough) {
+    float wind = mix(0.20, 1.0, uWater.x);
+    // What a pixel covers of the water there: so many metres across the view, and many times more along it (far
+    // water is seen at a low angle). A wave is drawn only if a pixel can show it; one coming towards us is the first
+    // to be lost, far off (drawn all the same it would flicker, in dashes of sky across the land's mirror image).
+    float px0 = t / uCam.x;
+    float squash = clamp(t / max(uLandInfo.y, 0.1), 1.0, 80.0);
+    vec2 vdir = q / max(length(q), 1e-3);
+    float px = px0 * sqrt(squash);
+    vec2 g = vec2(0.0);
+    float lost = 0.0;
+    for (int i = 0; i < 7; i++) {
+        float fi = float(i);
+        float lambda = mix(38.0, 1.4, pow(fi / 6.0, 0.6)) * mix(0.35, 1.0, uWater.x);
+        float k = 2.0 * PI / lambda;
+        // Each train comes in from its own quarter of the open sea, so their crests cross and never line up.
+        float ang = 1.05 * sin(fi * 2.4 + 0.7) + 0.25 * sin(fi * 5.1);
+        vec2 dir = vec2(sin(ang), -cos(ang));
+        float amp = lambda * 0.0075 * wind;
+        float seen = saturate(lambda / (px0 * mix(1.0, squash, abs(dot(dir, vdir))) * 3.0) - 0.5);
+        // (No train is endless: each swells and dies away along its crests.)
+        float group = 0.55 + 0.45 * sin(dot(q, vec2(dir.y, -dir.x)) * k * 0.13 + fi * 2.1) * sin(dot(q, dir) * k * 0.07 + fi);
+        float ph = dot(q, dir) * k - uTime * sqrt(9.8 * k) + fi * 1.7;
+        float c = cos(ph), s1 = sin(ph);
+        g += dir * (k * amp * c * (1.0 + 0.5 * s1)) * seen * group;
+        lost += (1.0 - seen) * k * amp;
+    }
+    // The wind's own ripples, at two sizes, drifting.
+    const float e = 0.004;
+    float seenR = saturate(1.6 / (px * 5.0) - 0.4);
+    vec2 rq = q * 0.043 + vec2(uTime * 0.021, uTime * 0.013);
+    float n0 = texture(tNoise2D, rq).g, nx = texture(tNoise2D, rq + vec2(e, 0.0)).g, nz = texture(tNoise2D, rq + vec2(0.0, e)).g;
+    g += vec2(nx - n0, nz - n0) / e * 0.011 * wind * seenR;
+    float seenS = saturate(0.45 / (px * 5.0) - 0.4);
+    vec2 sq = q.yx * 0.17 + vec2(-uTime * 0.034, uTime * 0.027);
+    float m0 = texture(tNoise2D, sq).r, mx = texture(tNoise2D, sq + vec2(e, 0.0)).r, mz = texture(tNoise2D, sq + vec2(0.0, e)).r;
+    g += vec2(mz - m0, mx - m0) / e * 0.0045 * wind * seenS;
+    rough = saturate(0.015 + lost * 0.9 + (1.0 - seenR) * 0.08 * wind);
+    return g;
+}
+
+// ---- A beach ------------------------------------------------------------------------------------------------------
+//
+// Where a scenery is a beach (uShore), the sea comes in on it: lines of swell that steepen, break into foam and run up
+// the sand as a thin sheet, which slides back and leaves the sand wet. Everything is worked out from where a place
+// lies across the shore and from the beach's own height there (the land's picture knows how far every pixel is).
+
+uniform vec4 uShore;      // how far ahead of the eye the sea's mean edge lies in the middle of the view (m; 0 = no beach),
+                          // how much further per metre to the right, the beach's slope, the bed's slope
+const float WAVE_L = 13.0;     // metres from one wave to the next
+const float WAVE_T = 7.0;      // seconds from one wave to the next
+
+// Metres seaward of the sea's mean edge, and metres along it, for a place (m, the eye at the origin).
+float shoreS(vec2 q) { return (q.y - uShore.x - uShore.y * q.x) / sqrt(1.0 + uShore.y * uShore.y); }
+float shoreA(vec2 q) { return (q.x + uShore.y * q.y) / sqrt(1.0 + uShore.y * uShore.y); }
+
+// The waves' clock at a place along the shore, in waves: whole numbers as a front reaches the sea's mean edge there.
+// (No front is straight: it lags and leads along the shore.)
+float waveClock(float a) {
+    float wob = (texture(tNoise2D, vec2(a / 90.0, 0.37)).r - 0.5) * 0.9 + (texture(tNoise2D, vec2(a / 23.0, 0.71)).g - 0.5) * 0.22;
+    return uTime / WAVE_T + wob;
+}
+
+// How large wave number n is at a place along the shore: no two alike, none the same all along. 0.75..1.25.
+float waveSize(float a, float n) { return 1.0 + 0.25 * sin(n * 2.39996 + a * 0.085 + 1.3 * sin(n * 1.71)); }
+
+// How high the swell stands s metres out: low on the open sea, rising as the bed shelves, spent after it has broken.
+float waveHigh(float s) {
+    return (0.12 + 0.50 * smoothstep(120.0, 46.0, s) - 0.44 * smoothstep(46.0, 4.0, s)) * smoothstep(320.0, 130.0, s) * smoothstep(-1.0, 3.0, s);
+}
+
+// How wide a wave's face is (m): a broad swell far out, steep where it is about to break.
+float waveFace(float s) { return mix(0.9, 3.0, smoothstep(48.0, 120.0, s)); }
+
+// The height of the water over the sea's level, s metres out, on the clock c (waveClock) of that stretch of shore.
+// d: metres seaward of the nearest crest (negative on its face, which looks at the shore); size: that wave's.
+float swell(float s, float a, float c, out float d, out float size) {
+    float ph = s / WAVE_L + c;
+    float n = floor(ph + 0.5);
+    d = (ph - n) * WAVE_L;
+    size = waveSize(a, n);
+    float w = d < 0.0 ? waveFace(s) : 3.2;
+    return waveHigh(s) * size * exp(-sq(d / w));
+}
+
+// How far up the sand wave n runs at its furthest (m from where the sheet starts): each wave its own, and in lobes
+// along the shore, so the sheet's edge is scalloped.
+float waveReach(float a, float n) {
+    float lobe = texture(tNoise2D, vec2(a / 41.0 + n * 0.61, 0.53 + n * 0.17)).r;
+    return 4.6 * waveSize(a, n) * (0.55 + 0.90 * lobe);
+}
+
+// How far up the sand (m landward of the mean edge) the sheet of water reaches now.
+float runUp(float a, float c) {
+    float f = fract(c);
+    // It rushes up as the wave arrives and slides back more slowly.
+    float up = smoothstep(0.0, 0.20, f) * (1.0 - smoothstep(0.28, 0.95, f));
+    return -0.7 + up * waveReach(a, floor(c));
+}
+
+void main() {
+    vec2 vp = viewPx();
+    vec3 rd = viewRay(vp);
+    vec3 hazeCol = skyAt(vec2(vp.x, min(vp.y, uCam.y - 0.012 * uView.y)));
+    float sunShows = mix(0.04, 1.0, cloudGap(uSunDir));
+
+    vec3 col = heavens(rd, vp, 0.0, sunShows);
+    // Birds, between us and the clouds: dark against the sky, a little of its light on them.
+    float bird = birds(vp);
+    if (bird > 0.0) col = mix(col, mAmbTop() * 0.10 + hazeCol * 0.04, bird * 0.9);
+
+    vec2 luv = landUv(vp);
+    // Grass and leaves stir: the picture is looked up a hair's breadth aside, by the wind.
+    // (The mask's red: 1 where the land lies under water; less where it is only wet, as sand is near the sea's edge.)
+    float water = 0.0;
+    if (uLandInfo.w > 0.5 && luv.y > 0.0) {
+        vec3 m = texture(tLandM, vec2(luv.x, min(luv.y, 0.9995))).rgb;
+        water = m.r * step(0.001, uLandInfo.y);
+        float gust = sin(uTime * 1.7 + vp.x * 0.021 + vp.y * 0.013) * 0.6 + sin(uTime * 2.9 + vp.x * 0.047 - vp.y * 0.031) * 0.4;
+        luv.x += m.g * gust * (0.35 + 1.2 * uAir.z) / uView.x * (1.0 - step(0.5, water));
+    }
+    float t;
+    vec4 land = landAt(luv, rd, hazeCol, t);
+
+    // On a beach the sea's edge is alive: what is under the sheet of water now, what it has just left wet.
+    float foam = 0.0, damp = 0.0;
+    bool beach = uShore.x > 0.0 && uLandInfo.y > 0.0 && rd.y < -0.0005;
+    float shoreK = sqrt(1.0 + uShore.y * uShore.y);
+    float across = (rd.z - uShore.y * rd.x) / shoreK;      // metres seaward per metre along this ray
+    float s0 = -uShore.x / shoreK;                         // where the eye stands (landward: negative)
+    if (beach) {
+        float h = uLandInfo.y;
+        float ts = land.a > 0.5 ? landDistSmooth(vec2(luv.x, min(luv.y, 0.9995))) : h / -rd.y;
+        float zb = land.a > 0.5 ? h + rd.y * ts : -50.0;                     // the ground's height over the sea's level
+        // The beach's face and the bed are planes that meet at the sea's mean edge. Where the picture's ground lies
+        // on them, the plane itself is used: exact, so the water's edge is a clean line, not the picture's samples.
+        float denF = -rd.y - across * uShore.z, denB = -rd.y - across * uShore.w;
+        if (denF > 1e-5) {
+            float tp = (h + s0 * uShore.z) / denF;
+            float zp = h + rd.y * tp;
+            if (zp >= 0.0 && zp < 0.80 && zb - zp < 0.25 + 0.004 * tp) { zb = zp; ts = tp; }
+        }
+        if (denB > 1e-5) {
+            float tp = (h + s0 * uShore.w) / denB;
+            float zp = h + rd.y * tp;
+            if (zp < 0.0 && zp > -0.6 && zb - zp < 0.25 + 0.004 * tp) { zb = zp; ts = tp; }
+        }
+        vec2 qg = rd.xz * ts;
+        float ag = shoreA(qg);
+        float cg = waveClock(ag);
+        float f0 = fract(cg);
+        float df = runUp(ag, cg) * uShore.z - zb;                            // water over the sand here (m)
+        if (df > 0.0) {
+            water = mix(0.80, 1.0, smoothstep(0.04, 0.35, df));
+            damp = 1.0;
+            // The sheet's edge: a line of foam while it runs up; lace left on the water as it thins and slides back.
+            float adv = 1.0 - smoothstep(0.18, 0.42, f0);
+            vec2 lq = vec2(ag * 0.7, shoreS(qg) * 1.2);
+            float lace = texture(tNoise2D, lq * 0.55 + vec2(0.0, uTime * 0.03)).b * 0.45 + texture(tNoise2D, lq * 1.7).b * 0.33
+                       + texture(tNoise2D, lq * 5.3).b * 0.22;
+            foam = smoothstep(0.050, 0.006, df) * (0.35 + 0.65 * adv);
+            foam = max(foam, smoothstep(0.46, 0.70, lace + 0.32 * adv) * smoothstep(0.24, 0.0, df) * (0.40 + 0.60 * adv));
+        } else {
+            // Sand the sheet has just left shines with a film of water and mirrors the sky; the film sinks away
+            // before the next wave. As high as the largest waves reach the sand stays damp and dark.
+            float n0 = floor(cg);
+            float reach = (-0.7 + waveReach(ag, n0)) * uShore.z, last = (-0.7 + waveReach(ag, n0 - 1.0)) * uShore.z;
+            float fresh = smoothstep(reach + 0.015, reach - 0.05, zb) * smoothstep(0.12, 0.25, f0) * (1.0 - 0.55 * smoothstep(0.3, 1.0, f0));
+            float old = smoothstep(last + 0.015, last - 0.05, zb) * mix(0.45, 0.28, f0);
+            float top = 6.5 * uShore.z;
+            damp = smoothstep(top + 0.05, top - 0.10, zb);
+            water = 0.78 * max(max(fresh, old), 0.30 * damp);
+            // Where the last wave turned back it left a thin line of foam on the sand.
+            float mark = smoothstep(0.014, 0.0, abs(zb - last - 0.004)) * smoothstep(0.30, 0.55, texture(tNoise2D, qg * 0.9).b);
+            foam = 0.34 * mark * (1.0 - 0.6 * f0);
+        }
+    }
+
+    if (water > 0.03 && rd.y < -0.0005) {
+        // Still or ruffled water: it mirrors the sky and the land beyond it, and shows its bed through the shallows.
+        // Wet sand does the same, more faintly, and nothing moves on it.
+        float sea = smoothstep(0.80, 0.98, water);
+        float h = uLandInfo.y;
+        float tw = h / -rd.y;
+        float swellSlope = 0.0, crestD = 0.0, crestSize = 1.0, ss = 0.0, chop = 0.0;
+        if (beach && sea > 0.0) {
+            // The swell has height: the ray is walked down onto it, so a wave shows its face and hides what is
+            // behind it. (The clock is taken where the ray would meet a level sea; it changes slowly along the shore.)
+            vec2 qp = rd.xz * tw;
+            float aw = shoreA(qp), cw = waveClock(aw), sp = shoreS(qp);
+            float bound = 0.16 + 0.80 * smoothstep(200.0, 110.0, sp);
+            float t0 = max((h - bound) / -rd.y, 0.0);
+            float dt = (tw - t0) / 14.0;
+            float ta = tw - dt, tb = tw, dd, sz;
+            for (int i = 1; i <= 14; i++) {
+                float tt = t0 + dt * float(i);
+                if (h + rd.y * tt < swell(s0 + across * tt, aw, cw, dd, sz)) { ta = tt - dt; tb = tt; break; }
+            }
+            for (int i = 0; i < 5; i++) {
+                float tm = 0.5 * (ta + tb);
+                if (h + rd.y * tm < swell(s0 + across * tm, aw, cw, dd, sz)) tb = tm; else ta = tm;
+            }
+            tw = tb;
+            ss = s0 + across * tw;
+            swell(ss, aw, cw, crestD, crestSize);
+            swellSlope = (swell(ss + 0.08, aw, cw, dd, sz) - swell(ss - 0.08, aw, cw, dd, sz)) / 0.16;
+        }
+        vec2 q = rd.xz * tw;
+        float rough;
+        vec2 sl = waterSlope(q, tw, rough);
+        // (Where the water is only a film over the sand there is no room for a wave.)
+        sl *= (smoothstep(0.0, 0.5, max(t - tw, 0.0) * -rd.y) * 0.85 + 0.15) * sea;
+        // (The thin sheet on the sand is never glass: it shivers, and breaks the Sun in it into glints.)
+        if (beach) sl += (texture(tNoise2D, q * 2.3 + vec2(uTime * 0.05, 0.0)).rg - 0.5) * 0.07 * smoothstep(0.55, 0.80, water) * (1.0 - 0.6 * sea);
+        if (beach && sea > 0.0) {
+            sl += normalize(vec2(-uShore.y, 1.0)) * swellSlope * sea;
+            // A wave breaks where the water is too shallow for it (the large ones further out): its face turns white
+            // and tumbles, and the foam it makes trails behind it, thinning.
+            float breakS = 44.0 + 30.0 * (crestSize - 1.0);
+            float broken = smoothstep(breakS + 3.0, breakS - 3.0, ss) * smoothstep(-1.0, 2.5, ss);
+            // Foam is made of bubbles in patches and streaks drawn out along the wave: where it is, it is white; between,
+            // the water shows. (bn: a pattern of it, 0..1, evenly spread; streaked along the shore.)
+            vec2 bq = vec2(shoreA(q) * 0.42, ss);
+            float bub = texture(tNoise2D, bq * 0.11 + vec2(uTime * 0.012, 0.0)).b * 0.40 + texture(tNoise2D, bq * 0.33 + vec2(0.0, uTime * 0.04)).b * 0.35
+                      + texture(tNoise2D, bq * 1.1 - vec2(uTime * 0.02, 0.0)).b * 0.25;
+            float bn = saturate((bub - 0.5) * 3.4 + 0.5);
+            float wf = waveFace(ss);
+            float front = crestD < 0.0 ? smoothstep(-1.7 * wf, -0.7 * wf, crestD) * (0.80 + 0.20 * bn)
+                                       : smoothstep(1.2, 0.0, crestD);
+            float behind = crestD >= 0.0 ? crestD : crestD + WAVE_L;
+            float cover = 0.92 * exp(-behind / 3.2);
+            float churn = smoothstep(1.0 - cover - 0.07, 1.0 - cover + 0.07, bn) * (0.55 + 0.45 * exp(-behind / 5.0));
+            foam = max(foam, broken * max(front, churn) * sea);
+            // Just before it breaks its crest whitens and begins to spill.
+            foam = max(foam, 0.65 * smoothstep(breakS + 9.0, breakS + 3.0, ss) * (1.0 - broken) * smoothstep(0.55, 0.0, abs(crestD + 0.1))
+                       * smoothstep(0.35, 0.7, bn) * sea);
+            // Old foam, in thin streaks, drifting in the shallows between one wave and the next.
+            foam = max(foam, 0.45 * smoothstep(34.0, 4.0, ss) * smoothstep(0.80, 0.90, bn) * sea);
+            // The water of the surf is churned and choppy: it mirrors less, and shows its own green.
+            chop = 0.16 * smoothstep(70.0, 25.0, ss) * smoothstep(-1.0, 4.0, ss) * sea;
+        }
+        vec3 n = normalize(vec3(-sl.x, 1.0, -sl.y));
+        vec3 r = reflect(rd, n);
+        r.y = abs(r.y) + 0.002;
+        r = normalize(r);
+        // Waves too small or too far off to be seen each for itself still tilt the water. So what a sea mirrors far off is
+        // not the horizon but the sky well above it, and it mirrors less of it than glass would: a sea is darker and
+        // bluer than the sky that stands over it, and the horizon is a line. (The Sun's road keeps its true place.)
+        float sig = rough * sea + chop;
+        vec3 rs = normalize(vec3(r.x, r.y + 0.9 * sig * length(r.xz), r.z));
+        vec3 rp = viewPoint(rs);
+        vec2 rvp = clamp(rp.xy, vec2(0.0), vec2(uView.x, uCam.y));
+        vec3 refl = heavens(rs, rvp, 1.0, 0.0);
+        // The Sun in the water. Near us each wave throws its own glint. Far off a pixel holds many waves: there the
+        // Sun's road is their sum, the light of all the facets that happen to be turned right (drawn wave by wave it
+        // would be a flicker of white dashes).
+        float many = max(saturate(sig / 0.10), smoothstep(10.0, 40.0, tw / max(h, 0.1)));
+        refl += sunLight(r, sunShows) * (1.0 - many);
+        if (many > 0.0 && uSunDir.y > 0.0) {
+            vec3 hv = normalize(uSunDir - rd);
+            vec2 need = hv.xz / max(hv.y, 0.05);
+            float s2 = max(sig * sig, 0.0025);
+            float turned = exp(-dot(need, need) / (2.0 * s2)) / (6.2832 * s2);
+            refl += mSunDisc() * sunShows * 5.7e-4 * turned / (4.0 * max(-rd.y, 0.02) * pow(max(hv.y, 0.05), 4.0))
+                    * many * smoothstep(-1.10, -0.80, uSunEl);
+        }
+        // The land beyond, mirrored: a thing at distance D is seen in the water 2h/D lower than a far thing would be.
+        float te = r.y / max(length(r.xz), 1e-4);
+        float D = 3000.0;
+        vec2 mluv = luv, mfar = vec2(-1.0);
+        for (int i = 0; i < 3; i++) {
+            float tl = te - 2.0 * h / D;
+            vec3 dd = normalize(vec3(r.x, tl * length(r.xz), r.z));
+            vec3 pp = viewPoint(dd);
+            mluv = landUv(pp.xy);
+            if (i == 0) mfar = mluv;
+            if (mluv.y <= 0.0 || mluv.y >= 1.0) { D = 1.0e6; break; }
+            float dist = landDist(mluv) * length(dd.xz);
+            D = max(dist, tw + 1.0);
+        }
+        if (D < 9.0e5 && mluv.y > 0.0) {
+            float mt;
+            float notWater = uLandInfo.w > 0.5 ? 1.0 - step(0.5, texture(tLandM, mluv).r) : 1.0;
+            // (A ray that leaves the water nearly level meets the far shore at its foot. The search can end on the
+            // water in front of that shore instead: then what it found first, taking the shore for far off, is right.)
+            if (notWater < 0.5 && uLandInfo.w > 0.5 && mfar.y > 0.0 && mfar.y < 1.0 && texture(tLandM, mfar).r < 0.5) { mluv = mfar; notWater = 1.0; }
+            vec4 ml = landAt(mluv, r, hazeCol, mt);
+            refl = mix(refl, ml.rgb, ml.a * notWater);
+        }
+        float fres = 0.02 + 0.98 * pow(1.0 - saturate(dot(-rd, n)), 5.0 * exp(-2.69 * sig)) / (1.0 + 22.7 * pow(sig, 1.5));
+        // What lies under: the bed, dimmed and coloured by the depth of water over it.
+        float depth = max(t - tw, 0.0) * -rd.y;
+        vec3 deep = mix(vec3(0.010, 0.045, 0.060), vec3(0.020, 0.090, 0.085), uWater.y) * (mAmbTop() * 2.0 + mSunGround() * max(uSunTrue.y, 0.0));
+        vec3 under;
+        if (beach) {
+            // Over pale sand the sea is green and clear: water takes the red out of the light first. Sand that is
+            // wet is darker than dry sand.
+            vec3 through = exp(-depth * vec3(0.90, 0.22, 0.17) * mix(1.6, 0.7, uWater.y));
+            vec3 sand = land.rgb * mix(1.0, 0.62, saturate(max(water * 1.28, 0.75 * damp))) * mix(vec3(1.0), vec3(1.0, 0.95, 0.88), damp);
+            // (Deep water has a colour of its own: the blue that the sea sends back up.)
+            vec3 body = mix(vec3(0.004, 0.034, 0.072), vec3(0.006, 0.058, 0.105), uWater.y) * (mAmbTop() * 2.0 + mSunGround() * max(uSunTrue.y, 0.0));
+            under = mix(sand, land.rgb * land.a * through * 0.85 + body * 1.6 * (1.0 - through.g), sea);
+            col = mix(under, refl, fres * mix(min(1.0, water * 1.25), 1.0, sea));
+        } else {
+            under = mix(land.rgb, mix(deep, land.rgb, exp(-depth * mix(1.6, 0.45, uWater.y)) * land.a), sea);
+            col = mix(under, refl, fres * mix(0.78 * water, 1.0, sea));
+        }
+    } else {
+        col = mix(col, land.rgb, land.a);
+    }
+    if (foam > 0.003) {
+        // Foam is white and dull: it takes the light as snow would.
+        float moonF = smoothstep(-6.0, -10.0, uSunEl);
+        vec3 lit = mSunGround() * 0.70 * (0.30 + 0.70 * saturate(uLightDir.y * 2.5)) * (1.0 - moonF) + mMoonLight() * moonF
+                 + mix(mAmbLow(), mAmbTop(), 0.6) + mGlow() * 0.6 + vec3(0.034, 0.052, 0.105) * uNight;
+        col = mix(col, 0.80 * lit, saturate(foam) * 0.92);
+    }
+
+    // Rain here: fine streaks, slanted by the wind. Where snow lies it is cold enough to fall as snow: soft flakes,
+    // drifting down slowly.
+    if (uAir.y > 0.01) {
+        vec2 rp = vp / uView.x;
+        float streaks = 0.0;
+        bool snowing = uLand.z > 0.5;
+        for (int i = 0; i < 3; i++) {
+            float fi = float(i);
+            if (snowing) {
+                float sc = 30.0 + fi * 24.0;
+                vec2 q = vec2(rp.x * sc + 0.7 * sin(rp.y * 6.0 + uTime * 0.5 + fi * 2.1) + uTime * (0.15 + 0.5 * uAir.z), rp.y * sc - uTime * (1.0 + fi * 0.45));
+                vec2 cell = floor(q);
+                vec2 f = fract(q) - 0.5 - (hash22(cell + fi * 9.1) - 0.5) * 0.6;
+                streaks += step(0.78, hash12(cell + fi * 17.0)) * smoothstep(0.17, 0.05, length(f)) * (0.60 - fi * 0.13);
+            } else {
+                float sc = 26.0 + fi * 19.0;
+                vec2 q = vec2(rp.x * sc + rp.y * sc * (0.10 + 0.2 * uAir.z), rp.y * (2.2 - fi * 0.5) + uTime * (1.9 + fi * 0.6));
+                float r = hash12(floor(q) + fi * 17.0);
+                float x = abs(fract(q.x) - 0.5);
+                streaks += step(0.72, r) * smoothstep(0.06, 0.0, x) * smoothstep(0.0, 0.3, fract(q.y)) * smoothstep(1.0, 0.5, fract(q.y)) * (0.5 - fi * 0.12);
+            }
+        }
+        col = mix(col, col + (mAmbTop() + mSunGround() * 0.1) * (snowing ? 0.9 : 0.5), streaks * uAir.y);
+        col = mix(col, hazeCol, uAir.y * 0.18);
+    }
+
+    // (Nothing in the picture is brighter than a half-float can hold, whatever a driver does with the Sun.)
+    o = vec4(clamp(col, 0.0, 200.0), 1.0);
+}

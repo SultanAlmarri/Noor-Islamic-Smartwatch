@@ -19,25 +19,24 @@ import com.noor.app.data.Scenery
 import com.noor.app.data.SkyGraphics
 
 /**
- * The six sceneries of the real sky (0.10), as different from each other as land can be: sand, forest, ice, water,
- * grass and rock. Each has its own camera (how high it stands, in metres) and its own water.
+ * The six sceneries of the real sky, as different from each other as land can be: sand, forest and snow peak, ice,
+ * water, green hills and red rock. Each is a path-traced picture of a place (assets/sky2/land/<id>), which also says
+ * how high the camera stands and where its water lies. [signatureYear] is the time of year it is shown in when the
+ * seasons are not followed (0 midwinter .. 0.5 midsummer).
  */
-enum class Biome(val id: String, val eye: Float, val focal: Float, val waterRough: Float, val waterClear: Float, val hasWater: Boolean) {
+enum class Biome(val id: String, val eye: Float, val focal: Float, val waterRough: Float, val waterClear: Float, val signatureYear: Float) {
     /** The Arabian sand sea, from the crest of a high dune. */
-    DUNES("dunes", 62.8f, 1.15f, 0.3f, 0.2f, false),
-    /** The Pacific Northwest: tall firs, a sea inlet between forested ridges, a snow-capped volcano. */
-    RAINFOREST("pnw", 28.0f, 1.15f, 0.10f, 0.15f, true),
-    /** A frozen sea: floes, leads of dark water, icebergs, the aurora. */
-    ARCTIC("arctic", 14.5f, 1.15f, 0.08f, 0.10f, true),
-    /** Nothing but the sea and the sky. */
-    OCEAN("ocean", 9.0f, 1.15f, 0.55f, 0.25f, true),
-    /** Grass to the horizon, a lone acacia. */
-    SAVANNA("savanna", 2.3f, 1.15f, 0.3f, 0.2f, false),
+    DUNES("dunes", 1.9f, 1.15f, 0.3f, 0.2f, 0.12f),
+    /** The Pacific Northwest: tall firs, still water, a snow-capped volcano. */
+    RAINFOREST("pnw", 2.0f, 1.15f, 0.10f, 0.45f, 0.42f),
+    /** The far north in winter: snow peaks over a fjord, the aurora. */
+    ARCTIC("arctic", 2.0f, 1.15f, 0.08f, 0.30f, 0.0f),
+    /** The sea and the sky. */
+    OCEAN("ocean", 3.0f, 1.15f, 0.55f, 0.25f, 0.40f),
+    /** Green hills and oaks in spring. */
+    MEADOW("meadow", 2.0f, 1.15f, 0.12f, 0.35f, 0.30f),
     /** Red rock: buttes and mesas over a desert floor. */
-    CANYON("canyon", 3.0f, 1.15f, 0.3f, 0.2f, false);
-
-    /** How often the whole picture is redrawn when only the clouds move (water moves all the time). */
-    internal fun sceneEveryMs(tier: RealSky.Tier): Long = if (hasWater) tier.waterMs else tier.stillMs
+    CANYON("canyon", 2.0f, 1.15f, 0.3f, 0.2f, 0.35f);
 
     companion object {
         private val ARID = setOf("AE", "SA", "QA", "KW", "BH", "OM", "YE", "IQ", "JO", "EG", "LY", "DZ", "TN", "MA", "EH", "MR", "ML", "NE", "TD", "SD", "DJ")
@@ -53,15 +52,15 @@ enum class Biome(val id: String, val eye: Float, val focal: Float, val waterRoug
 
         /**
          * The scenery for a choice in Settings. "Automatic" takes the one that fits the place: the far north and south
-         * the ice, the deserts the dunes, small islands the ocean, Africa's grasslands the savanna, high dry country
-         * the red rock, everywhere else the rainforest.
+         * the ice, the deserts the dunes, small islands the ocean, grasslands the green hills, high dry country the
+         * red rock, everywhere else the forest.
          */
         fun of(scenery: Scenery, countryCode: String?, elevationM: Double?, latitude: Double?): Biome = when (scenery) {
             Scenery.DUNES -> DUNES
             Scenery.HILLS, Scenery.RAINFOREST -> RAINFOREST
             Scenery.ARCTIC -> ARCTIC
             Scenery.SEA -> OCEAN
-            Scenery.SAVANNA -> SAVANNA
+            Scenery.SAVANNA -> MEADOW
             Scenery.MOUNTAINS, Scenery.CANYON -> CANYON
             Scenery.AUTO -> {
                 val cc = countryCode?.uppercase()
@@ -69,7 +68,7 @@ enum class Biome(val id: String, val eye: Float, val focal: Float, val waterRoug
                     latitude != null && kotlin.math.abs(latitude) >= 60.0 -> ARCTIC
                     cc in ARID -> DUNES
                     cc in ISLANDS -> OCEAN
-                    cc in GRASSLANDS -> SAVANNA
+                    cc in GRASSLANDS -> MEADOW
                     cc in ROCK || (elevationM != null && elevationM >= 1400.0) -> CANYON
                     else -> RAINFOREST
                 }
@@ -91,17 +90,15 @@ enum class Biome(val id: String, val eye: Float, val focal: Float, val waterRoug
  */
 object RealSky {
     /**
-     * How much is drawn: the size of the cloud buffers and of the picture relative to the screen, how coarse the march
-     * through the clouds is, how often things are redrawn (ms), and how much of the land is found per frame.
+     * How much is drawn: the size of the picture relative to the screen, how often it is redrawn (ms: at most, when
+     * nothing but the air moves, when there is water), and by how much the clouds' and the land's pictures are
+     * coarsened when read (1 = as shipped, 2 = half).
      */
-    enum class Tier(
-        val cloudScale: Float, val sceneScale: Float, val steps: Float, val frameMs: Long, val cloudEveryMs: Long,
-        val stillMs: Long, val waterMs: Long, val landBand: Float,
-    ) {
-        ULTRA(0.50f, 1.00f, 1.0f, 33, 50, 100, 33, 0.05f),
-        HIGH(0.42f, 0.85f, 1.25f, 33, 66, 110, 40, 0.05f),
-        MEDIUM(0.34f, 0.70f, 1.6f, 40, 100, 150, 55, 0.04f),
-        LOW(0.26f, 0.55f, 2.2f, 50, 160, 220, 80, 0.03f),
+    enum class Tier(val sceneScale: Float, val frameMs: Long, val stillMs: Long, val waterMs: Long, val cloudSample: Int, val landSample: Int) {
+        ULTRA(1.00f, 33, 66, 33, 1, 1),
+        HIGH(0.85f, 33, 100, 40, 1, 1),
+        MEDIUM(0.72f, 40, 150, 55, 2, 1),
+        LOW(0.58f, 50, 220, 80, 2, 2),
     }
 
     private const val PREFS = "noor_ui"
@@ -180,6 +177,46 @@ object RealSky {
         android.os.Handler(android.os.Looper.getMainLooper()).post { unusable.intValue = 1 }
     }
 
+    private val lifts = HashMap<String, FloatArray>()
+
+    /**
+     * How high a scenery's skyline stands where the Sun rises and where it sets: tangents of the angle over the
+     * horizon. The packer writes them into land.json (`lift`); for a scenery packed without them they are read once
+     * from the land's own picture (where its alpha begins, 30.24 % of the width to either side of the middle; the
+     * lowest point within the Sun's own width, so the Sun is seen the moment it clears the land).
+     * Zeros when there is no picture or it cannot be read: the Sun then rises and sets on the level horizon.
+     */
+    fun sunLift(context: Context, biome: Biome): FloatArray = synchronized(lifts) {
+        lifts.getOrPut(biome.id) {
+            runCatching {
+                val dir = "sky2/land/${biome.id}"
+                val meta = org.json.JSONObject(context.assets.open("$dir/land.json").bufferedReader().use { it.readText() })
+                meta.optJSONArray("lift")?.takeIf { it.length() == 2 }?.let { l ->
+                    return@runCatching floatArrayOf(l.getDouble(0).toFloat().coerceIn(0f, 0.5f), l.getDouble(1).toFloat().coerceIn(0f, 0.5f))
+                        .also { Log.i(TAG, "Skyline of ${biome.id}: ${it[0]} where the Sun rises, ${it[1]} where it sets") }
+                }
+                val bmp = context.assets.open("$dir/a.webp").use { android.graphics.BitmapFactory.decodeStream(it) } ?: error("unreadable")
+                val width = meta.getDouble("width"); val top = meta.getDouble("top"); val horizon = meta.getDouble("horizon")
+                val rows = meta.getDouble("height")
+                val focal = meta.optDouble("focal", 1.15) * width
+                fun at(u: Double): Float {
+                    var low = Double.MAX_VALUE
+                    var c = u - 0.0125
+                    while (c <= u + 0.0125) {
+                        val x = (c * bmp.width).toInt().coerceIn(0, bmp.width - 1)
+                        var y = 0
+                        while (y < bmp.height && (bmp.getPixel(x, y) ushr 24) < 128) y++
+                        val row = top + y * rows / bmp.height
+                        low = minOf(low, (horizon - row) / focal)
+                        c += 0.0025
+                    }
+                    return low.coerceIn(0.0, 0.5).toFloat()
+                }
+                floatArrayOf(at(0.5 - 0.3024), at(0.5 + 0.3024)).also { bmp.recycle(); Log.i(TAG, "Skyline of ${biome.id}: ${it[0]} where the Sun rises, ${it[1]} where it sets") }
+            }.getOrElse { floatArrayOf(0f, 0f) }
+        }
+    }
+
     /** The tier to draw at: the one fixed in Settings, or the one that suits this phone (and has not proved too slow). */
     internal fun tierFor(context: Context, renderer: String): Tier {
         when (graphics) {
@@ -231,6 +268,10 @@ object RealSky {
 internal class RealSkySetup(
     val bridge: RealSkyBridge, val biome: Biome, val w: Float, val h: Float, val panelTop: Float, val radius: Float,
     val lightGlass: Boolean, val tint: FloatArray,
+    /** The scenery follows the real season of the place (Settings; off unless asked). */
+    val seasons: Boolean = false,
+    /** The stars stand where they truly are for the place and time (Settings; off unless asked). */
+    val trueStars: Boolean = false,
 )
 
 /** How the home screen hands the scene of the moment to the renderer behind it. */

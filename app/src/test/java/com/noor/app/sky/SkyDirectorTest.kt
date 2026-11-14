@@ -13,10 +13,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * The real sky (0.10), the parts that are plain arithmetic: the weather the director invents (always within what the
- * shaders expect, changing smoothly through the day, arranged for the hour of colour and for the stars, true to each
- * scenery and season), the camera (the same mapping as `viewRay` in assets/sky/common.glsl), where the light falls
- * from, and the quality tier guessed for a phone. What the pictures look like is checked on the design bench
+ * The real sky, the parts that are plain arithmetic: the weather the director invents (always within what the
+ * renderer expects, changing smoothly through the day, arranged for the hour of colour and for the stars, true to each
+ * scenery and season) and the cloud sets it chooses, the camera (the same mapping as `viewRay` in
+ * assets/sky2/common.glsl), which of the rendered Suns light a moment, and the quality tier guessed for a phone. What the pictures look like is checked on the design bench
  * (tools/sky3d) and on an emulator (real-sky.yml), not here.
  */
 class SkyDirectorTest {
@@ -109,10 +109,12 @@ class SkyDirectorTest {
             val forest = SkyDirector.weather(seed, Biome.RAINFOREST, 0f)
             assertTrue("snow lies in the forest's winter", SkyDirector.at(Biome.RAINFOREST, forest, 0.5, 20.0, 0f, 0.3f).snow > 0.9f)
             assertEquals(0f, SkyDirector.at(Biome.RAINFOREST, forest, 0.5, 60.0, 0.5f, 0.3f).snow, 0f)
-            // The savanna is green after its rains (summer), gold in the dry season.
-            val grass = SkyDirector.weather(seed, Biome.SAVANNA, 0.5f)
-            assertTrue(SkyDirector.at(Biome.SAVANNA, grass, 0.5, 60.0, 0.5f, 0f).season > 0.9f)
-            assertTrue(SkyDirector.at(Biome.SAVANNA, grass, 0.5, 60.0, 0f, 0f).season < 0.1f)
+            // The green hills are snow-free outside the depth of winter, and never in the season they are shown in
+            // when the seasons are not followed.
+            val grass = SkyDirector.weather(seed, Biome.MEADOW, 0.5f)
+            assertEquals(0f, SkyDirector.at(Biome.MEADOW, grass, 0.5, 60.0, 0.5f, 0f).snow, 0f)
+            assertEquals(0f, SkyDirector.at(Biome.MEADOW, grass, 0.5, 60.0, Biome.MEADOW.signatureYear, 0f).snow, 0f)
+            for (b in Biome.entries) if (b != Biome.ARCTIC) assertEquals("${b.id} in its own season", 0f, SkyDirector.at(b, SkyDirector.weather(seed, b, b.signatureYear), 0.5, 40.0, b.signatureYear, 0f).snow, 0f)
         }
         // Night: less cloud than the same weather would have by day, storms apart.
         var clearer = 0; var all = 0
@@ -143,10 +145,16 @@ class SkyDirectorTest {
         assertTrue(left[0] < 0f)
         assertEquals(-left[0], mirrored[0], 1e-6f); assertEquals(left[1], mirrored[1], 1e-6f); assertEquals(left[2], mirrored[2], 1e-6f)
         assertEquals(1f, left[0] * left[0] + left[1] * left[1] + left[2] * left[2], 1e-5f)
-        // The Sun rises and sets 30.24 % of the width from the middle: the gap the land leaves open for it.
+        // Upright things stay upright: the lens is shifted, not tilted, so a point straight above or below the middle of
+        // the horizon has no sideways part, and the picture of the land only has to be slid to the horizon's row.
+        assertEquals(0f, RealSkyFrame.ray(w / 2, 200f, w, h, focal, horizon, false)[0], 1e-6f)
+        assertEquals((horizon - 300f) / focal, RealSkyFrame.ray(540f, 300f, w, h, focal, horizon, false).let { it[1] / it[2] }, 1e-5f)
+        // The Sun rises and sets 30.24 % of the width from the middle: 14.7 degrees to the side through this lens, the
+        // bearing the land is rendered to leave open (bake.RISE_AZIMUTH) and its lowest Suns stand at.
         val rise = RealSkyFrame.ray(w * (0.5f - 0.3024f), horizon, w, h, focal, horizon, false)
-        assertEquals(-RealSkyFrame.gapAzimuth(w, h, focal, horizon), kotlin.math.atan2(rise[0], rise[2]), 1e-4f)
-        assertEquals(atan(0.3024f / 1.15f), RealSkyFrame.gapAzimuth(w, h, focal, h / 2), 1e-5f)
+        assertEquals(-atan(0.3024f / 1.15f), kotlin.math.atan2(rise[0], rise[2]), 1e-5f)
+        assertEquals(14.7, atan(0.3024 / 1.15) * 180 / PI, 0.05)
+        assertEquals(14.7, LightWeights.sunAzimuth(0.7), 1e-9)
         assertEquals(0.0, RealSkyFrame.dirAzEl(0.3, 0.0)[1].toDouble(), 1e-6)
         assertEquals(sin(0.5).toFloat(), RealSkyFrame.dirAzEl(0.3, 0.5)[1], 1e-6f)
     }
@@ -164,7 +172,7 @@ class SkyDirectorTest {
         // Tiers only ever get lighter down the list.
         for (i in 1 until RealSky.Tier.entries.size) {
             val a = RealSky.Tier.entries[i - 1]; val b = RealSky.Tier.entries[i]
-            assertTrue(b.cloudScale < a.cloudScale && b.sceneScale < a.sceneScale && b.steps > a.steps)
+            assertTrue(b.sceneScale < a.sceneScale && b.stillMs >= a.stillMs && b.waterMs >= a.waterMs && b.cloudSample >= a.cloudSample && b.landSample >= a.landSample)
         }
     }
 
@@ -173,11 +181,93 @@ class SkyDirectorTest {
         assertEquals(Biome.RAINFOREST, Biome.of(Scenery.RAINFOREST, null, null, null))
         assertEquals(Biome.ARCTIC, Biome.of(Scenery.ARCTIC, null, null, null))
         assertEquals(Biome.OCEAN, Biome.of(Scenery.SEA, null, null, null))
-        assertEquals(Biome.SAVANNA, Biome.of(Scenery.SAVANNA, null, null, null))
+        // (Green hills took the savanna's place in 0.11; a choice stored under the old name shows them.)
+        assertEquals(Biome.MEADOW, Biome.of(Scenery.SAVANNA, null, null, null))
         assertEquals(Biome.CANYON, Biome.of(Scenery.CANYON, null, null, null))
         // The 0.9 choices still mean something.
         assertEquals(Biome.RAINFOREST, Biome.of(Scenery.HILLS, null, null, null))
         assertEquals(Biome.CANYON, Biome.of(Scenery.MOUNTAINS, null, null, null))
         assertEquals(6, Biome.entries.map { it.id }.toSet().size)
+    }
+
+    @Test fun theLightOfAMomentLiesBetweenRenderedSuns() {
+        val land = setOf("l0", "l1", "l2", "l3", "l4", "l5", "l6", "l7", "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "top")
+        val clouds = land + setOf("lu0", "lu1", "ru0", "ru1")
+        var last: LightWeights? = null
+        var el = -9.0
+        while (el <= 80.0) {
+            for (side in listOf(-1.0, -0.4, 0.0, 0.7, 1.0)) for (under in listOf(false, true)) {
+                val lw = LightWeights.of(el, side, under, 0.5f)
+                assertEquals("weights sum to one at $el", 1f, lw.w.sum(), 1e-4f)
+                assertTrue(lw.w.all { it >= 0f })
+                assertTrue("names at $el: ${lw.names.toList()}", (if (under) clouds else land).containsAll(lw.names.toList()))
+                assertEquals(0.5f, lw.glow[0] + lw.glow[1], 1e-5f)
+                assertEquals(1f, lw.dir.let { it[0] * it[0] + it[1] * it[1] + it[2] * it[2] }, 1e-4f)
+                // Morning light comes from the left, afternoon light from the right.
+                if (side < -0.3) assertTrue(lw.dir[0] < 0f) else if (side > 0.3) assertTrue(lw.dir[0] > 0f)
+                // Mirrored (right to left) the sides change places, nothing else.
+                val m = lw.mirrored()
+                for (k in 0 until 4) assertEquals(lw.names[k].drop(1), m.names[k].drop(1)).also { assertTrue(lw.names[k][0] != m.names[k][0]) }
+                assertEquals("top", m.names[4]); assertEquals(lw.glow[0], m.glow[1], 0f)
+            }
+            // Nothing jumps as the Sun climbs: a small step in height is a small change of the light's direction.
+            val now = LightWeights.of(el, -1.0, true, 0f)
+            last?.let { assertTrue("light turns smoothly at $el", abs(it.dir[1] - now.dir[1]) < 0.02f && abs(it.dir[0] - now.dir[0]) < 0.03f) }
+            last = now
+            el += 0.25
+        }
+        // The land has no Suns under the horizon: it keeps its lowest shading; the clouds are lit from below then.
+        assertEquals(listOf("l0", "l1", "r0", "r1", "top"), LightWeights.of(-3.0, 0.0, false, 0f).names.toList())
+        assertEquals(listOf("lu1", "lu0", "ru1", "ru0", "top"), LightWeights.of(-3.0, 0.0, true, 0f).names.toList())
+        assertTrue(LightWeights.of(-3.0, 0.0, true, 0f).dir[1] < 0f)
+        // At noon the high Sun in front takes part; in the morning it does not.
+        assertTrue(LightWeights.of(60.0, 0.0, false, 0f).w[4] > 0.5f)
+        assertEquals(0f, LightWeights.of(60.0, -1.0, false, 0f).w[4], 0f)
+    }
+
+    @Test fun theDirectorChoosesCloudSetsThatExist() {
+        val low = setOf("cu_fair", "cu_field", "cu_towers", "cb_storm", "sc_sheet", "st_overcast")
+        val mid = setOf("ac_flock", "ac_rolls", "as_veil")
+        val high = setOf("ci_wisps", "cc_ripples", "cs_veil")
+        val seen = HashSet<String>()
+        for (biome in Biome.entries) for (day in 0 until 150) {
+            val w = SkyDirector.weather(day * 977L + biome.ordinal, biome, biome.signatureYear)
+            var f = 0.0
+            while (f < 1.0) {
+                val s = SkyDirector.at(biome, w, f, sunEl(f), biome.signatureYear, 0.2f)
+                assertTrue(s.lowSet in low); assertTrue(s.midSet in mid); assertTrue(s.highSet in high)
+                for (a in listOf(s.lowAmount, s.midAmount, s.highAmount)) assertTrue(a in 0f..1f)
+                if (s.lowAmount > 0.5f) seen += s.lowSet!!
+                if (s.midAmount > 0.5f) seen += s.midSet!!
+                if (s.highAmount > 0.5f) seen += s.highSet!!
+                f += 1.0 / 48
+            }
+        }
+        // Over the sceneries and a few months of days, every kind of cloud has its day.
+        assertEquals(low + mid + high, seen)
+    }
+
+    @Test fun theFinestNightKeepsTheMilkyWayInThePicture() {
+        var h = 0f
+        while (h < 24f) {
+            val moon = listOf(Float.NaN, -12f, 3f, 14f)[(h * 2).toInt() % 4]
+            val f = RealSkyFrame.showcaseSky(h, moon)
+            val x = f[0]; val y = f[1]; val z = f[2]; val pole = f[3]; val centre = f[4]
+            fun dot(a: FloatArray, b: FloatArray) = a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+            // The sky is only turned: its axes stay square and of unit length.
+            for (a in listOf(x, y, z)) assertEquals(1f, dot(a, a), 1e-4f)
+            assertEquals(0f, dot(x, y), 1e-4f); assertEquals(0f, dot(y, z), 1e-4f); assertEquals(0f, dot(x, z), 1e-4f)
+            // The Milky Way's centre is where the true sky's axes put it, and stands in the picture over the horizon.
+            val ra = 266.40499 * PI / 180; val dec = -28.93617 * PI / 180
+            val c = floatArrayOf((cos(dec) * cos(ra)).toFloat(), (cos(dec) * sin(ra)).toFloat(), sin(dec).toFloat())
+            for (k in 0 until 3) assertEquals(centre[k], x[k] * c[0] + y[k] * c[1] + z[k] * c[2], 1e-4f)
+            val el = asin(centre[1].toDouble()) * 180 / PI
+            val az = kotlin.math.atan2(centre[0].toDouble(), centre[2].toDouble()) * 180 / PI
+            assertTrue("height $el", el in 9.0..17.0); assertTrue("bearing $az", abs(az) < 14.0)
+            // It keeps to the side of the picture the Moon is not on.
+            if (!moon.isNaN() && abs(moon) > 6f) assertTrue("away from the Moon at $moon: $az", az * moon < 0 || abs(az) < 3.5)
+            assertEquals(0f, dot(pole, centre), 1e-4f)
+            h += 0.5f
+        }
     }
 }

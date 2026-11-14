@@ -65,6 +65,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun setElapsedAfterPrayer(on: Boolean) = viewModelScope.launch { repo.setElapsedAfterPrayer(on) }
     fun setScenery(v: com.noor.app.data.Scenery) = viewModelScope.launch { repo.setScenery(v) }
     fun setSkyGraphics(v: com.noor.app.data.SkyGraphics) = viewModelScope.launch { repo.setSkyGraphics(v) }
+    fun setSeasons(on: Boolean) = viewModelScope.launch { repo.setSeasons(on) }
+    fun setTrueStars(on: Boolean) = viewModelScope.launch { repo.setTrueStars(on) }
     fun completeOnboarding() = viewModelScope.launch { repo.setOnboardingDone() }
 
     fun setLanguage(l: Language) = viewModelScope.launch {
