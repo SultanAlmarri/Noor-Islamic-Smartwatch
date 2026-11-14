@@ -130,6 +130,18 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
             }
             NoorSwitch(s.seasons) { on -> vm.setSeasons(on) }
         }
+        // The stars: where they truly are, or the finest night sky (unless asked).
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp).clip(shape0).border(0.5.dp, c.separator, shape0).background(c.surface)
+                .clickable { vm.setTrueStars(!s.trueStars) }.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(stringResource(R.string.scenery_stars_title), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
+                Text(stringResource(R.string.scenery_stars_note), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+            }
+            NoorSwitch(s.trueStars) { on -> vm.setTrueStars(on) }
+        }
 
         // How finely the sky is drawn.
         Text(stringResource(R.string.sky_graphics_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary,

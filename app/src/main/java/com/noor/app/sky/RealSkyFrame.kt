@@ -404,13 +404,42 @@ internal class RealSkyFrame(
         fun dirAzEl(az: Double, el: Double) = floatArrayOf((cos(el) * sin(az)).toFloat(), sin(el).toFloat(), (cos(el) * cos(az)).toFloat())
 
         /**
+         * The night sky at its finest: the celestial axes (x to right ascension 0, y to 6 h, z to the north pole), the
+         * Milky Way's pole and its centre, as directions of the view, turned so that the bright heart of the Milky Way
+         * stands in the picture a hand's breadth over the horizon and its band climbs steeply across the sky, as in
+         * the photographs people remember. It leans and drifts a little through the night ([hour], 0..24), so the
+         * sky is not a still, and keeps to the side of the picture the Moon is not on ([moonBearing]: where the Moon
+         * is drawn, degrees right of the middle of the screen; NaN when it is down). The stars keep their true places
+         * among themselves; only the whole sky is turned.
+         */
+        fun showcaseSky(hour: Float, moonBearing: Float = Float.NaN): Array<FloatArray> {
+            val s = (((hour + 6f) % 24f) / 12f).coerceIn(0f, 1f).toDouble()          // 18:00 -> 0, 06:00 -> 1
+            val aside = if (moonBearing.isNaN()) 0.0 else -8.0 * (moonBearing / 6f).coerceIn(-1f, 1f)
+            val az = (-5.0 + 10.0 * s + aside) * DEG
+            val el = (11.0 + 4.0 * sin(PI * s)) * DEG
+            val lean = (58.0 + 10.0 * s) * DEG
+            val c = dirAzEl(az, el).map { it.toDouble() }
+            val r = doubleArrayOf(cos(az), 0.0, -sin(az))                               // to the right, level
+            // (Upwards at the centre: the upright with its part along the line of sight taken out.)
+            val uy = doubleArrayOf(-c[1] * c[0], 1.0 - c[1] * c[1], -c[1] * c[2])
+            val ul = sqrt(uy[0] * uy[0] + uy[1] * uy[1] + uy[2] * uy[2])
+            val t = DoubleArray(3) { -cos(lean) * r[it] + sin(lean) * uy[it] / ul }      // the band's way: up and to the left
+            val n = doubleArrayOf(c[1] * t[2] - c[2] * t[1], c[2] * t[0] - c[0] * t[2], c[0] * t[1] - c[1] * t[0])
+            fun cel(ra: Double, dec: Double) = doubleArrayOf(cos(dec * DEG) * cos(ra * DEG), cos(dec * DEG) * sin(ra * DEG), sin(dec * DEG))
+            val gc = cel(266.40499, -28.93617); val gn = cel(192.85948, 27.12825)
+            val gm = doubleArrayOf(gn[1] * gc[2] - gn[2] * gc[1], gn[2] * gc[0] - gn[0] * gc[2], gn[0] * gc[1] - gn[1] * gc[0])
+            fun axis(k: Int) = FloatArray(3) { (c[it] * gc[k] + n[it] * gn[k] + t[it] * gm[k]).toFloat() }
+            return arrayOf(axis(0), axis(1), axis(2), FloatArray(3) { n[it].toFloat() }, FloatArray(3) { c[it].toFloat() })
+        }
+
+        /**
          * The frame for a scene: [view] and [look] are the home screen's own (where the Sun and the moon are drawn);
          * [w] × [h] is the layer the renderer fills (px).
          */
         fun of(
             scene: SkyScene, view: SkyView, look: SkyLook, biome: Biome, weather: Weather, year: Float, display: Double, shownAt: Instant,
             w: Float, h: Float, textBottom: Float, panelTop: Float, panelRadius: Float, lightGlass: Boolean, tint: FloatArray,
-            fade: Float, busy: Boolean, still: Boolean, lapse: Float,
+            fade: Float, busy: Boolean, still: Boolean, lapse: Float, trueStars: Boolean = false,
         ): RealSkyFrame {
             val focalPx = biome.focal * w
             val horizon = view.horizonY
@@ -436,14 +465,17 @@ internal class RealSkyFrame(
             var light = if (moonLight && !moonUp) floatArrayOf(0f, 1f, 0f) else lw.dir
             if (flip) { lw = lw.mirrored(); cw = cw.mirrored(); light = floatArrayOf(-light[0], light[1], light[2]) }
             val state = SkyDirector.at(biome, weather, display, el, year, look.mist)
-            val fr = NightSky.frame(shownAt, scene.latitude, scene.longitude, flip)
             // The stars are a real, unmirrored sky; the scene's own x runs the other way when it is mirrored.
             fun m(v: FloatArray) = if (flip) floatArrayOf(-v[0], v[1], v[2]) else v
+            // Where the heavens stand: truly, for the place and the moment, if that is asked for in Settings; otherwise
+            // as the finest night shows them (the owner's rule: by default, the most beautiful view the app has).
+            val cel = if (trueStars) NightSky.frame(shownAt, scene.latitude, scene.longitude, flip).let { arrayOf(it.celX, it.celY, it.celZ, it.galN, it.galC) }
+            else showcaseSky((display * 24).toFloat(), if (moonUp) (Math.toDegrees(atan2(moonDir[0].toDouble(), moonDir[2].toDouble())) * (if (flip) -1 else 1)).toFloat() else Float.NaN)
             return RealSkyFrame(
                 biome, state, focalPx, horizon, flip, sunDir, light, dirAzEl(az, el * DEG), el.toFloat(), lw, cw,
                 floatArrayOf(moonDir[0], moonDir[1], moonDir[2], look.moonIllumination),
                 floatArrayOf(look.moonLight[0], look.moonLight[1], look.moonLight[2], look.moonVisibility),
-                look.night, arrayOf(m(fr.celX), m(fr.celY), m(fr.celZ), m(fr.galN), m(fr.galC)),
+                look.night, Array(5) { m(cel[it]) },
                 hour = (display * 24).toFloat(), seed = (weather.seedX + weather.seedY * 0.37f),
                 textBottom = textBottom, panelTop = panelTop, panelRadius = panelRadius, lightGlass = lightGlass, tint = tint,
                 fade = fade, busy = busy, still = still, lapse = lapse,

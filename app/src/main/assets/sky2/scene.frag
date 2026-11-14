@@ -343,25 +343,32 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
     float px = t / uCam.x * mix(1.0, 3.2, smoothstep(0.25, 0.02, uLandInfo.y / max(t, 1.0)));
     vec2 g = vec2(0.0);
     float lost = 0.0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         float fi = float(i);
-        float lambda = mix(46.0, 1.9, pow(fi / 5.0, 0.7)) * mix(0.35, 1.0, uWater.x);
+        float lambda = mix(38.0, 1.4, pow(fi / 6.0, 0.6)) * mix(0.35, 1.0, uWater.x);
         float k = 2.0 * PI / lambda;
-        float ang = 0.35 + fi * 1.13 + sin(fi * 2.7) * 0.5;
-        vec2 dir = vec2(sin(ang * 0.55 - 0.2), cos(ang * 0.55 - 0.2));
-        float amp = lambda * 0.013 * wind * (i == 0 ? 1.4 : 1.0);
+        // Each train comes in from its own quarter of the open sea, so their crests cross and never line up.
+        float ang = 1.05 * sin(fi * 2.4 + 0.7) + 0.25 * sin(fi * 5.1);
+        vec2 dir = vec2(sin(ang), -cos(ang));
+        float amp = lambda * 0.0075 * wind;
         float seen = saturate(lambda / (px * 9.0) - 0.5);
+        // (No train is endless: each swells and dies away along its crests.)
+        float group = 0.55 + 0.45 * sin(dot(q, vec2(dir.y, -dir.x)) * k * 0.13 + fi * 2.1) * sin(dot(q, dir) * k * 0.07 + fi);
         float ph = dot(q, dir) * k - uTime * sqrt(9.8 * k) + fi * 1.7;
         float c = cos(ph), s1 = sin(ph);
-        g += dir * (k * amp * c * (1.0 + 0.5 * s1)) * seen;
+        g += dir * (k * amp * c * (1.0 + 0.5 * s1)) * seen * group;
         lost += (1.0 - seen) * k * amp;
     }
-    vec2 drift = vec2(uTime * 0.021, uTime * 0.013);
+    // The wind's own ripples, at two sizes, drifting.
     const float e = 0.004;
-    vec2 rq = q * 0.043 + drift;
-    float n0 = texture(tNoise2D, rq).g, nx = texture(tNoise2D, rq + vec2(e, 0.0)).g, nz = texture(tNoise2D, rq + vec2(0.0, e)).g;
     float seenR = saturate(1.6 / (px * 5.0) - 0.4);
-    g += vec2(nx - n0, nz - n0) / e * 0.010 * wind * seenR;
+    vec2 rq = q * 0.043 + vec2(uTime * 0.021, uTime * 0.013);
+    float n0 = texture(tNoise2D, rq).g, nx = texture(tNoise2D, rq + vec2(e, 0.0)).g, nz = texture(tNoise2D, rq + vec2(0.0, e)).g;
+    g += vec2(nx - n0, nz - n0) / e * 0.011 * wind * seenR;
+    float seenS = saturate(0.45 / (px * 5.0) - 0.4);
+    vec2 sq = q.yx * 0.17 + vec2(-uTime * 0.034, uTime * 0.027);
+    float m0 = texture(tNoise2D, sq).r, mx = texture(tNoise2D, sq + vec2(e, 0.0)).r, mz = texture(tNoise2D, sq + vec2(0.0, e)).r;
+    g += vec2(mz - m0, mx - m0) / e * 0.0045 * wind * seenS;
     rough = saturate(0.015 + lost * 0.9 + (1.0 - seenR) * 0.08 * wind);
     return g;
 }

@@ -226,11 +226,11 @@ fun TodayContent(
     val pagePx = with(LocalDensity.current) { Triple(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), home.heroHeight.toPx()) }
     val glassRadius = with(LocalDensity.current) { 28.dp.toPx() }
     val pageColor = NoorTheme.colors.background
-    val realSetup = if (realSky) remember(bridge, u.settings.scenery, u.settings.seasons, u.place, pagePx, pageColor) {
+    val realSetup = if (realSky) remember(bridge, u.settings.scenery, u.settings.seasons, u.settings.trueStars, u.place, pagePx, pageColor) {
         RealSkySetup(
             bridge, Biome.of(u.settings.scenery, u.place.countryCode, u.place.point.elevationM, u.place.point.latitude),
             pagePx.first, pagePx.second, pagePx.third, glassRadius, pageColor.luminance() > 0.5f, floatArrayOf(pageColor.red, pageColor.green, pageColor.blue),
-            seasons = u.settings.seasons,
+            seasons = u.settings.seasons, trueStars = u.settings.trueStars,
         )
     } else null
     if (realSky) {

@@ -9,6 +9,9 @@ float refraction(float el) {
     return 1.02 / tan((h + 10.3 / (h + 5.11)) * DEG) / 60.0;
 }
 
+// The last sunlight is red, but never only red: what it falls on keeps a little of its own colour.
+vec3 warm(vec3 c) { return max(c, luma(c) * vec3(0.0, 0.9, 0.45)); }
+
 void main() {
     int k = int(gl_FragCoord.x);
     vec3 z = skyRadiance(vec3(0.0, sin(89.0 * DEG), cos(89.0 * DEG)), uSunTrue, uSunDir);
@@ -26,10 +29,10 @@ void main() {
         c = skyRadiance(side, uSunTrue, uSunDir) * ex + NIGHT_TOP * uNight * 2.4;
         a = uNight;
     }
-    else if (k == 2) c = transmittance(0.3, mu) * wb * k0;
-    else if (k == 3) c = transmittance(2.5, mu) * wb * k0;
-    else if (k == 4) c = transmittance(5.5, mu) * wb * k0;
-    else if (k == 5) c = transmittance(9.5, mu) * wb * k0;
+    else if (k == 2) c = warm(transmittance(0.3, mu) * wb * k0);
+    else if (k == 3) c = warm(transmittance(2.5, mu) * wb * k0);
+    else if (k == 4) c = warm(transmittance(5.5, mu) * wb * k0);
+    else if (k == 5) c = warm(transmittance(9.5, mu) * wb * k0);
     else if (k == 6) {
         // The Sun's own disc: white-hot when high, a red-gold ball when the air has dimmed it. Never brighter than a
         // picture in half-floats can hold with room to spare (an overflow there turns the Sun black on some phones).
@@ -40,7 +43,8 @@ void main() {
         // a camera to hold its colour: a clear red-gold ball, still the brightest thing in the picture.
         float m = max(max(t.r, t.g), max(t.b, 1e-5));
         float l = saturate(luma(t));
-        c = min(pow(t / m, vec3(1.25)) * (9.0 + 40.0 * l * l), vec3(60.0));
+        // (Never a pure red: the lowest Sun is still gold at its heart.)
+        c = min(max(pow(t / m, vec3(1.25)), vec3(1.0, 0.30, 0.07)) * (9.0 + 40.0 * l * l), vec3(60.0));
     }
     else if (k == 8) {
         // The glow of the sky round a low Sun, as light on things: the bright air low in the Sun's quarter.

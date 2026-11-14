@@ -82,4 +82,6 @@ data class AppSettings(
     val skyGraphics: SkyGraphics = SkyGraphics.AUTO,
     /** The scenery follows the real season of the place (snow in winter...). Off: its best look all year (0.11). */
     val seasons: Boolean = false,
+    /** The stars and the Milky Way stand where they truly are for the place and time. Off: the finest night sky (0.11). */
+    val trueStars: Boolean = false,
 )

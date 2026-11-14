@@ -230,6 +230,8 @@ internal class RealSkySetup(
     val lightGlass: Boolean, val tint: FloatArray,
     /** The scenery follows the real season of the place (Settings; off unless asked). */
     val seasons: Boolean = false,
+    /** The stars stand where they truly are for the place and time (Settings; off unless asked). */
+    val trueStars: Boolean = false,
 )
 
 /** How the home screen hands the scene of the moment to the renderer behind it. */

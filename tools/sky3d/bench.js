@@ -83,6 +83,7 @@ const P = {
   cirrus: 0.35, veil: 0.0, showers: 0.0, seed: 3.0, haze: 1.0, time: 100, windLow: 0.012, windMid: 0.02,
   biome: 0, season: 0.3, snow: 0.0, wet: 0.0, mist: 0.0, rain: 0.0, windForce: 0.3, dust: 0.0,
   aurora: 0.0, flash: 0.0, rainbow: 0.0, waterRough: 0.3, waterClear: 0.2,
+  trueStars: false,                              // the stars where they truly are (off: the finest night sky)
   birds: -1, birdsHeight: 0.14, meteor: 0,       // a flock (0..1 across the sky; -1 none), a shooting star (0..1; 0 none)
   skyHigh: null, skyMid: null, skyLow: null, slideHigh: 0, slideMid: 0, slideLow: 0,     // cloud sets (ids) and how far each has slid (px)
   focal: 1.15, eye: 60.0, horizon: 911 / 2340, arcTop: 596 / 2340, ground: 1110 / 2340, textBottom: 554 / 2340, panelTop: 1126 / 2340,
@@ -150,6 +151,7 @@ function updateUniforms() {
   const phase = 2 * Math.PI * (P.hijriDay / 29.53), pa = Math.PI - phase;
   let lx = sx - mx, ly = sy - my; const ll = Math.max(1, Math.hypot(lx, ly)); lx /= ll; ly /= ll;
   const moonVis = mel > 2 ? Math.min(1, 0.35 + 0.65 * night) * smooth(2, 8, mel) : 0;
+  G.moonBearing = moonVis > 0 ? Math.atan2(moonDir[0], moonDir[2]) / DEG * (P.rtl ? -1 : 1) : undefined;
   const illum = (1 - Math.cos(phase)) / 2;
   // The light falls from where the land was rendered under it (bake.py): low Suns stand where the Sun is seen, higher
   // ones swing to the side, the morning's on the left and the afternoon's on the right, crossing over the top at noon.
@@ -294,6 +296,24 @@ const draw = () => gl.drawArrays(gl.TRIANGLES, 0, 3);
 
 // The celestial axes in the view's frame for a place and a moment (NightSky.frame in the app).
 function celestial() {
+  // By default the night sky at its finest (RealSkyFrame.showcaseSky): the Milky Way's centre in the picture.
+  if (!P.trueStars) {
+    const hour = (((P.tod % 1) + 1) % 1) * 24;
+    const sN = Math.min(1, Math.max(0, ((hour + 6) % 24) / 12));
+    const mb = G.moonBearing;          // where the Moon is drawn (degrees right of the middle), or undefined
+    const aside = (mb === undefined || mb === null) ? 0 : -8 * Math.max(-1, Math.min(1, mb / 6));
+    const az = (-5 + 10 * sN + aside) * DEG, el = (11 + 4 * Math.sin(Math.PI * sN)) * DEG, lean = (58 + 10 * sN) * DEG;
+    const c = dirAzEl(az, el), r = [Math.cos(az), 0, -Math.sin(az)];
+    const uy = norm([-c[1] * c[0], 1 - c[1] * c[1], -c[1] * c[2]]);
+    const t = [0, 1, 2].map(i => -Math.cos(lean) * r[i] + Math.sin(lean) * uy[i]);
+    const n = [c[1] * t[2] - c[2] * t[1], c[2] * t[0] - c[0] * t[2], c[0] * t[1] - c[1] * t[0]];
+    const cel = (ra, dec) => [Math.cos(dec * DEG) * Math.cos(ra * DEG), Math.cos(dec * DEG) * Math.sin(ra * DEG), Math.sin(dec * DEG)];
+    const gc = cel(266.40499, -28.93617), gn = cel(192.85948, 27.12825);
+    const gm = [gn[1] * gc[2] - gn[2] * gc[1], gn[2] * gc[0] - gn[0] * gc[2], gn[0] * gc[1] - gn[1] * gc[0]];
+    const axis = k => [0, 1, 2].map(i => c[i] * gc[k] + n[i] * gn[k] + t[i] * gm[k]);
+    const m = v => P.rtl ? [-v[0], v[1], v[2]] : v;
+    return { uCelX: m(axis(0)), uCelY: m(axis(1)), uCelZ: m(axis(2)), uGalN: m(n), uGalC: m(c) };
+  }
   const lon = 55.3, lat = P.lat;
   const utcHours = (P.tod * 24 - lon / 15 + 24) % 24;
   const d = (Date.UTC(2026, 0, 1) / 86400000 + 2440587.5 - 2451545.0) + (P.doy - 1) + utcHours / 24;

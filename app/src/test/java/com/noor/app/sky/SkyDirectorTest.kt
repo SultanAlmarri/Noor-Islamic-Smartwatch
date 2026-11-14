@@ -246,4 +246,28 @@ class SkyDirectorTest {
         // Over the sceneries and a few months of days, every kind of cloud has its day.
         assertEquals(low + mid + high, seen)
     }
+
+    @Test fun theFinestNightKeepsTheMilkyWayInThePicture() {
+        var h = 0f
+        while (h < 24f) {
+            val moon = listOf(Float.NaN, -12f, 3f, 14f)[(h * 2).toInt() % 4]
+            val f = RealSkyFrame.showcaseSky(h, moon)
+            val x = f[0]; val y = f[1]; val z = f[2]; val pole = f[3]; val centre = f[4]
+            fun dot(a: FloatArray, b: FloatArray) = a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+            // The sky is only turned: its axes stay square and of unit length.
+            for (a in listOf(x, y, z)) assertEquals(1f, dot(a, a), 1e-4f)
+            assertEquals(0f, dot(x, y), 1e-4f); assertEquals(0f, dot(y, z), 1e-4f); assertEquals(0f, dot(x, z), 1e-4f)
+            // The Milky Way's centre is where the true sky's axes put it, and stands in the picture over the horizon.
+            val ra = 266.40499 * PI / 180; val dec = -28.93617 * PI / 180
+            val c = floatArrayOf((cos(dec) * cos(ra)).toFloat(), (cos(dec) * sin(ra)).toFloat(), sin(dec).toFloat())
+            for (k in 0 until 3) assertEquals(centre[k], x[k] * c[0] + y[k] * c[1] + z[k] * c[2], 1e-4f)
+            val el = asin(centre[1].toDouble()) * 180 / PI
+            val az = kotlin.math.atan2(centre[0].toDouble(), centre[2].toDouble()) * 180 / PI
+            assertTrue("height $el", el in 9.0..17.0); assertTrue("bearing $az", abs(az) < 14.0)
+            // It keeps to the side of the picture the Moon is not on.
+            if (!moon.isNaN() && abs(moon) > 6f) assertTrue("away from the Moon at $moon: $az", az * moon < 0 || abs(az) < 3.5)
+            assertEquals(0f, dot(pole, centre), 1e-4f)
+            h += 0.5f
+        }
+    }
 }
