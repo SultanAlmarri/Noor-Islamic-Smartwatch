@@ -50,7 +50,7 @@ void main() {
 
     vec3 d = toneLinear(c);
     // The hour of colour is printed as a photographer prints it: a little richer than the rest of the day.
-    d = clamp(mix(vec3(luma(d)), d, 1.0 + 0.28 * smoothstep(14.0, 3.0, uSunEl) * (1.0 - uNight)), 0.0, 1.0);
+    d = clamp(mix(vec3(luma(d)), d, 1.07 + 0.24 * smoothstep(14.0, 3.0, uSunEl) * (1.0 - uNight)), 0.0, 1.0);
     // The graduated filter: one smooth darkening towards the text, as strong as the brightest thing likely to stand
     // behind it needs (a sunlit cloud when there are clouds, the sky itself when it is clear). Shapes and colours
     // keep their relations; only then is anything still too bright eased down.

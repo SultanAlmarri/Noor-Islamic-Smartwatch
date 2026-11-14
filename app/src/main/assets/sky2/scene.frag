@@ -319,7 +319,8 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     vec3 ambTop = mAmbTop(), ambLow = mAmbLow();
     // (At night the land is given what a long exposure finds in it by starlight: its forms, dim and blue.)
     vec3 amb = mix(ambLow, ambTop, 0.6) + vec3(0.034, 0.052, 0.105) * uNight;
-    vec3 land = alb * (S * light * sh + G * mGlow()) + K * amb;
+    // (Skylight in the shade is held a little under what the sky gives: a photograph keeps its shadows.)
+    vec3 land = alb * (S * light * sh + G * mGlow()) + K * amb * mix(0.78, 1.0, max(uNight, smoothstep(10.0, 0.0, uSunEl)));
 
     // The air between: far things fade into the colour of the sky behind them.
     float tk = t * 0.001;

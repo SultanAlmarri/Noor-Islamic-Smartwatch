@@ -461,11 +461,15 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private val slots = Array(3) { Slot() }
     private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "NoorSkyPictures").apply { priority = Thread.NORM_PRIORITY - 2; isDaemon = true } }
 
-    private fun bakedSet(dir: String, land: Boolean): Baked? = baked.getOrPut(dir) {
-        runCatching {
+    private fun bakedSet(dir: String, land: Boolean): Baked? {
+        // (A folder that is not there is remembered as such: it is asked for at every frame.)
+        if (baked.containsKey(dir)) return baked[dir]
+        val b = runCatching {
             val json = app.assets.open("sky2/$dir/" + (if (land) "land.json" else "sky.json")).bufferedReader().use { it.readText() }
             Baked(dir, land, org.json.JSONObject(json))
         }.onFailure { Log.i(TAG, "No pictures for $dir") }.getOrNull()
+        baked[dir] = b
+        return b
     }
 
     /** A picture of a set as a texture, or null while it is being read (or if the set has none of that name). */
