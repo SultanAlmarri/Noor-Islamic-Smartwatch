@@ -623,3 +623,132 @@ and dragging the Sun over the new scene, TalkBack, Arabic and the light theme on
 4. Known weak spots: the foregrounds under the glass are plain (the rainforest's bluff, the savanna's grass); cloud
    edges show a fine stipple, coarser at the Low tier; the emulator pictures are too few and too small to judge
    anything but that it runs.
+
+## 21. The real sky from pictures of real places (0.11.0, 14 November 2026, phone only)
+
+The owner opened 0.10.0 and was "severely disappointed": the sceneries "bland and empty... lifeless", the clouds
+"absolutely disgusting", "the sun doesn't even appear". His brief for 0.11: "completely redo everything... I want the
+app to look like real life... indistinguishable from real life", six sceneries (no savanna), complete freedom to use
+his PC and the web, as much time as needed; the same four untouchable rules as in section 20. Through the day he
+judged previews and gave these decisions, all in force:
+
+- **Photorealism is judged against photographs**, by him. "Nothing should look flat and artificial. It should have
+  depth and look photorealistic." Whatever was shaped by formulas he called fake at once (0.10's land and clouds, a
+  first procedural beach, the first noise clouds of 0.11).
+- **Natural skylines.** "What I don't like is cutting mountains in order to have the sunrise and set on the
+  ground... make everything look natural." A level sunrise is fine where the place has one.
+- **Exact times all the same**: he asked for "a clever solution" (below: the Sun's path stands on the skyline).
+- **Beauty first by default**: seasons and the true stars for the place are switches in Settings → Home scenery,
+  both off by default ("by default it should show the most beautiful views that app has to offer").
+- **The beach**: real sand colour, waves that come in on the shore, no rocks in the way of the sunrise, depth.
+- Do not make dialogs pop up on his screen (downloads are fetched with curl, not through a browser's save dialog).
+
+**What 0.11 is.** Everything that does not move is rendered once, offline, as a film would render it, through
+Noor's fixed camera under a set of unit Suns, and the phone only relights and composes those pictures; what moves is
+drawn live (sky, Sun, Moon, stars, water, waves, birds, weather). [DESIGN.md](DESIGN.md#the-real-sky-011) describes
+what is seen and how it is put together; `tools/scenery/README.md` is the brief a scenery must meet.
+
+| What | Where |
+|---|---|
+| Baking: the framework, one script per scenery, clouds, the night sky | `tools/scenery/` (`bake.py`, `skybake.py`, `<scenery>.py`, `sky_low.py`, `sky_high.py`, `nightsky.py`, `geotiff.py`, `lift.py`) |
+| Every source and licence | `tools/scenery/sources/*.md` |
+| The pictures the app ships | `app/src/main/assets/sky2/land/<id>`, `.../clouds/<id>`, `.../night` |
+| Shaders (GLSL ES 3.00), shared with the bench | `app/src/main/assets/sky2/*.frag`, `*.glsl` |
+| Renderer, sceneries and tiers, the moment and the weather director | `app/src/main/java/com/noor/app/sky/` |
+| Design bench (the same shaders on the same pictures, WebGL 2) | `tools/sky3d/` (`python tools/sky3d/serve.py`, then `/tools/sky3d/index.html`) |
+| Blender 4.5 LTS, downloads, work files (not in the repository) | `%USERPROFILE%\ProjectMinhad\NoorTools` (`blender-4.5.16-windows-x64`, `assets`, `work`) |
+
+**The six sceneries, and what each is made from**
+
+| Scenery (`Biome` id) | The place | Real data | Still made by formula |
+|---|---|---|---|
+| Arabian dunes (`dunes`) | a sand sea | none exists at this scale: a Werner sand-transport simulation | all of it; the far ranges are unbroken |
+| Pacific Northwest (`pnw`) | a lake under Mount Rainier | USGS elevation model (the mountain), Poly Haven scans (stones, logs, ferns, bark, twigs) | tree trunks and branching, the shores' outlines |
+| Arctic (`arctic`) | Reinefjorden, Lofoten | Kartverket's 5 m model and Copernicus GLO-30, as they are; Poly Haven snow and shore rocks | where snow lies, crags finer than 5 m |
+| Ocean (`ocean`) | a beach south of Ras Al Khaimah, looking towards Musandam | ambientCG sand scans (toned to beach sand), Copernicus GLO-30 for the mountains across the water | the beach's simple profile; the sea is drawn live |
+| Green hills (`meadow`) | the Diablo Range over Calaveras Reservoir, in spring | USGS 10 m model as it is; Poly Haven grass, flowers, stones | the oaks |
+| Red rock (`canyon`) | Monument Valley from the valley floor | USGS 10 m model as it is; Poly Haven rock, earth, brush | wall relief finer than 10 m |
+
+**Clouds.** Twelve sets (`clouds/<id>`), each path traced under the same lights plus Suns under the horizon, a white
+sky and white ground. The first sets, made from noise fields, looked computer-made beside photographs (blobs,
+"metaballs") and were thrown away. The heaped kinds are now built from film-quality cumulus volumes: CGHEVEN's free
+cloud VDBs (author Ammar Khan; free also commercially in finished work such as renders and games; the files
+themselves may not be redistributed, so only pictures made from them are in the repository). Low clouds are fields
+of them on one base; altocumulus and cirrocumulus are thousands of small copies in ranks, rolls and ripples; cirrus
+and the veils are procedural.
+
+**Decisions, and why**
+
+- *Baked pictures, not a 3D renderer on the phone.* 0.10 proved that what a phone can raymarch in real time looks
+  like a game. A path tracer gives real shadows, light bouncing in a forest, light inside a cloud; the fixed camera
+  makes it affordable (a scenery is about 3 to 4 MB).
+- *Real data first.* Elevation models for shapes, photogrammetry for surfaces. Where the owner could tell, he
+  preferred the real thing every time; the two sceneries first arranged by formula (Arctic's lone peak, Red rock's
+  buttes) were rebuilt from real viewpoints, nothing moved or cut.
+- *The Sun's path stands on the scenery's own skyline* (`bake.sun_lift` writes `lift` into `land.json`;
+  `RealSky.sunLift`, `SunLift`, `SkyGeometry.y(el, fraction)`): it clears the land exactly at Shuruq and goes behind
+  it exactly at Maghrib, over a mountain as over the sea. Prayer times themselves are untouched.
+- *A showcase night by default* (`RealSkyFrame.showcaseSky`): the Milky Way's centre stands in the picture every
+  clear night; the true sky for the place is the "Real stars" switch.
+- *The sea on a beach is drawn, not baked* (`uShore`, `scene.frag`): waves with real height (the view ray is walked
+  onto them), breaking by size, foam in patches, a sheet running up the sand in lobes and leaving it wet. A sea is
+  darker and bluer than its sky because unseen waves tilt it: rough-surface Fresnel, and the sky above the horizon
+  mirrored; far off, the Sun's road is the sum of its glints (drawn wave by wave it flickered in dashes).
+- *The Sun is drawn at no more than 60* in a half-float picture (0.10 wrote up to 60 000: the likely reason it was
+  black on the owner's phone), and the text filter no longer dims it under the header.
+
+**Rules of CLAUDE.md set aside**, and why: rule 5 again (the home screen and Settings → Home scenery are changed:
+that was the task; `Scenery.SAVANNA` now shows Green hills). Kept: prayer times and their tests, honest reports,
+the keys, `legacy/`, nature only (the coastal plain in front of Musandam is pressed flat so nothing built on it is
+in the picture; a reservoir's dam is outside the Green hills' frame), no scraping (files are fetched one by one from
+pages that offer them free, or from public APIs and buckets), every source and licence written down.
+
+**Found on the way**
+
+- Several Blender jobs at once starve each other: at normal priority a bake could be fed the GPU at under 10 %.
+  Three at a time, the baking one at AboveNormal priority, was the fastest.
+- Cycles takes volume density per object unit: a VDB enlarged k times renders k times thinner.
+- `WidgetsTest` failed on a PC busy rendering: it accepted only the first and last second of its look at the
+  widget's seconds wheel, and the look took more than a second. It now accepts every second of the look.
+- The mirror image of a far shore broke into dashes of sky where the search for it ended on the water in front of
+  the shore; and far waves that a pixel cannot show flickered. Both fixed in `scene.frag`.
+- On GitHub's emulator (a software GPU) a picture takes over a minute and Android shows "isn't responding" for its
+  own launcher and for Noor over the screenshots. The renderer does not hold the main thread; the one thing 0.11
+  did there, decoding a picture to find the skyline, is gone (`lift`).
+
+**How it was tested**
+
+- *By eye, in the design bench* (the phone's own shader files on the phone's own pictures, in Chromium on the
+  owner's PC): every scenery from before sunrise to deep night with the header's text and the glass panel drawn
+  in, every cloud set over several sceneries at midday, low Sun and after sunset, the beach's waves at several
+  moments of their cycle. Each picture was put beside photographs of such places and its faults named before it was
+  accepted; the owner saw the previews as they were made and sent several back. The bench shows the look, not the
+  speed, and not a phone's screen.
+- *Unit tests*: `app` 71 (among them `SkyDirectorTest`: the director, the light weights, the camera, that every
+  cloud set the director can choose exists, the showcase night; `LivingSkyTest`: the Sun's path on a skyline),
+  `core/prayer` 105, `alerts` 16, `wear` 29: all pass. Both release APKs build.
+- *On Android* (GitHub's Android 14 emulator, a software GPU, 720x1600, High tier; `real-sky.yml`): the beach and
+  the dunes at sunrise, midday and sunset: every shader compiled, the pictures were read and "Real sky shown"
+  logged, with no GL error. A picture takes that emulator over a minute, and Android showed "isn't responding"
+  dialogs over the screenshots (see above): the pictures prove that it runs there, nothing about speed.
+- *GitHub's run on `main`*: see the end of this section.
+
+**Not tested: any phone.** Everything that only a phone can tell is still unknown: whether the Sun is seen on the
+owner's phone (0.10's was not), the speed and the wait at the first start, battery and warmth, the look on a real
+screen, whether a real GPU driver accepts every shader (if one does not, the 0.9 sky is shown), Arabic and the
+light theme on a device, TalkBack.
+
+**Open work**
+
+1. The owner's phone first (`adb logcat -s NoorRealSky`: the GPU, the tier, how long each picture took).
+2. Size: the six sceneries and twelve cloud sets add about 30 MB to the APK. The lit pictures tolerate more
+   compression than they have; `bake.run` should take samples and pack quality as arguments (three scenery
+   scripts wrap it to set them).
+3. Known weak spots: on ruffled water the mirror image of a far shore breaks into hard little dashes; the
+   thunderhead's anvil has a ruled-straight top; the Pacific Northwest's far forest is one even dark wall, its
+   mountain is in shade at low Sun (no alpenglow), and one tall fir crosses the countdown's digits; the Arctic's
+   snow slopes are smoother than Reine's; Red rock's buttes are small in the frame; the dunes are a simulation,
+   not a real place; the oaks of Green hills are grown by formula.
+4. Real local weather as an option (`SkyDirector.at`); the widgets and the notification still use the 0.9
+   pictures; the watch has no part in any of this.
+5. The work branches of this version (`sky/photoreal`) can be deleted once merged.
