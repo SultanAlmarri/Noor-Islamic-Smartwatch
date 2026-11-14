@@ -45,18 +45,21 @@ blender -b --factory-startup -P tools/scenery/<id>.py -- bake     <out dir>
 - A scenery needs a foreground, a middle distance and a far distance, and it needs life: plants that move in the
   wind, water, things that give scale.
 
-## The skyline: where the land may stand
+## The skyline: natural, never cut open
 
 The Sun and the Moon are drawn on the phone where the prayer times put them: they rise 14.7 degrees left of the
 view's middle, set 14.7 degrees right of it, and cross the sky between on an arch that tops out 14.2 degrees above
-the horizon. A hill or a tree in their way would hide the Sun before sunset, which a prayer-time app must never show.
+the horizon.
 
-- **At bearings 12.9 to 16.5 degrees on either side, nothing may stand higher than 0.3 degrees above the horizon.**
-  (Open sea, a far plain, a distant low shore.)
-- Between them, the land must stay under the arch: `bake.skyline_limit(bearing)` gives the limit (11.7 degrees in
-  the middle, 7.5 degrees at bearing 7.5, 1.9 degrees at bearing 11.9).
-- Outside (bearings beyond 16.5 degrees, the picture's two edges) it may stand as high as it likes: tall trees, a
-  cliff, a peak there frame the picture well.
+**A scenery's skyline is whatever the place's skyline is.** The Sun may rise over a mountain and set behind trees,
+as it does in the world. Never cut a range, a treeline or a row of rocks open so that the Sun meets level ground
+(the owner's decision, 14 November 2026: "what I don't like is cutting mountains in order to have the sunrise and
+set on the ground... make everything look natural"). A level horizon where the Sun rises or sets is welcome when
+the place has one (the sea, a plain), and wrong when it is forced.
+
+The one thing to keep in mind is the middle of the day: land so high under the arch that the Sun is hidden for most
+of its day is too much. `bake.skyline_limit(bearing)` gives a height to stay under between the two points (about two
+thirds of the arch; 11.7 degrees in the middle), and the packer prints how the skyline stands against it, as advice.
 
 ## Light and materials
 

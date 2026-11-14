@@ -371,7 +371,6 @@ def build(mode, out):
         return m.outputs[0]
 
     # Far off, great dunes: the same field read seven times larger and four times higher, beyond a kilometre.
-    # They leave the horizon free where the Sun rises and sets (bake.RISE_AZIMUTH to either side of the middle).
     uv2 = N.new('ShaderNodeMapping')
     uv2.vector_type = 'POINT'
     uv2.inputs['Scale'].default_value = (1.0 / (size * 7.0), 1.0 / (size * 7.0), 0.0)
@@ -397,7 +396,7 @@ def build(mode, out):
     L.new(azd.outputs[0], azb.inputs[0])
     gap = N.new('ShaderNodeMapRange'); gap.interpolation_type = 'SMOOTHSTEP'
     gap.inputs['From Min'].default_value = 0.05; gap.inputs['From Max'].default_value = 0.17
-    gap.inputs['To Min'].default_value = 0.12; gap.inputs['To Max'].default_value = 1.0
+    gap.inputs['To Min'].default_value = 1.0; gap.inputs['To Max'].default_value = 1.0     # (whole: no gap is cut for the Sun)
     L.new(azb.outputs[0], gap.inputs['Value'])
     great = mul(mul(tex2.outputs['Color'], 3.6), mul(farf.outputs[0], gap.outputs[0]))
 
@@ -456,7 +455,7 @@ def build(mode, out):
 
 def mountains(cz):
     """A range of bare rock far beyond the sand (the Hajar, as seen from the desert's edge): ridged, jagged, low
-    on the horizon. Not where the Sun rises and sets."""
+    on the horizon, unbroken across the view: the Sun rises over it and sets behind it."""
     rng = np.random.default_rng(11)
     nx, ny = 700, 160
     az = np.radians(np.linspace(-40.0, 40.0, nx))
@@ -479,11 +478,8 @@ def mountains(cz):
     # A range, not a wall: high in its middle depth, falling to the plain in front and behind.
     depth = (R - r[0]) / (r[-1] - r[0])
     h *= np.clip(np.sin(np.pi * depth), 0, 1) ** 0.8
-    # Open where the Sun rises and sets, and lower in the middle than at the sides.
-    off = np.abs(np.abs(A) - math.radians(bake.RISE_AZIMUTH))
-    t = np.clip((off - 0.06) / 0.10, 0, 1)
-    h *= t * t * (3 - 2 * t)
-    h *= 0.45 + 0.55 * np.clip(np.abs(A) / math.radians(30.0), 0, 1)
+    # A range has high and low stretches of its own: a slow rise and fall along it, nothing cut out of it.
+    h *= 0.62 + 0.38 * np.sin(A * 7.3 + 1.1) * np.sin(A * 3.1 + 0.4)
     co = np.stack([X, Y, h - cz - 40.0], -1).reshape(-1, 3).astype(np.float32)
     i = np.arange((ny - 1) * (nx - 1))
     rr, cc = i // (nx - 1), i % (nx - 1)

@@ -373,6 +373,39 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
     return g;
 }
 
+// ---- A beach ------------------------------------------------------------------------------------------------------
+//
+// Where a scenery is a beach (uShore), the sea comes in on it: lines of swell that steepen, break into foam and run up
+// the sand as a thin sheet, which slides back and leaves the sand wet. Everything is worked out from where a place
+// lies across the shore and from the beach's own height there (the land's picture knows how far every pixel is).
+
+uniform vec4 uShore;      // how far ahead of the eye the sea's mean edge lies in the middle of the view (m; 0 = no beach),
+                          // how much further per metre to the right, the beach's slope, the bed's slope
+const float WAVE_L = 15.0;     // metres from one wave to the next
+const float WAVE_T = 7.5;      // seconds from one wave to the next
+
+// Metres seaward of the sea's mean edge, for a place (m, the eye at the origin).
+float shoreS(vec2 q) { return (q.y - uShore.x - uShore.y * q.x) / sqrt(1.0 + uShore.y * uShore.y); }
+
+// Which wave is passing a place, and how far through it is: whole numbers as a wave's front arrives.
+float wavePhase(vec2 q, float s) {
+    // (No front is straight: it lags and leads along the shore.)
+    float wob = (texture(tNoise2D, vec2(q.x / 90.0, 0.37)).r - 0.5) * 0.9 + (texture(tNoise2D, vec2(q.x / 23.0, 0.71)).g - 0.5) * 0.22;
+    return s / WAVE_L + uTime / WAVE_T + wob;
+}
+
+// How large the wave passing is (no two alike), 0.75..1.25.
+float waveSize(vec2 q, float ph) { return 0.75 + 0.5 * texture(tNoise2D, vec2(q.x / 31.0 + floor(ph) * 0.37, 0.13 + floor(ph) * 0.11)).r; }
+
+// How far up the sand (m landward of the mean edge) the sheet of water reaches now, along the shore at q.
+float runUp(vec2 q) {
+    float ph = wavePhase(q, 0.0);
+    float f = fract(ph);
+    // It rushes up as the wave arrives and slides back more slowly.
+    float up = smoothstep(0.0, 0.20, f) * (1.0 - smoothstep(0.28, 0.95, f));
+    return -0.7 + 3.6 * up * waveSize(q, ph);
+}
+
 void main() {
     vec2 vp = viewPx();
     vec3 rd = viewRay(vp);
@@ -386,25 +419,70 @@ void main() {
 
     vec2 luv = landUv(vp);
     // Grass and leaves stir: the picture is looked up a hair's breadth aside, by the wind.
+    // (The mask's red: 1 where the land lies under water; less where it is only wet, as sand is near the sea's edge.)
     float water = 0.0;
     if (uLandInfo.w > 0.5 && luv.y > 0.0) {
         vec3 m = texture(tLandM, vec2(luv.x, min(luv.y, 0.9995))).rgb;
-        water = step(0.5, m.r) * step(0.001, uLandInfo.y);
+        water = m.r * step(0.001, uLandInfo.y);
         float gust = sin(uTime * 1.7 + vp.x * 0.021 + vp.y * 0.013) * 0.6 + sin(uTime * 2.9 + vp.x * 0.047 - vp.y * 0.031) * 0.4;
-        luv.x += m.g * gust * (0.35 + 1.2 * uAir.z) / uView.x * (1.0 - water);
+        luv.x += m.g * gust * (0.35 + 1.2 * uAir.z) / uView.x * (1.0 - step(0.5, water));
     }
     float t;
     vec4 land = landAt(luv, rd, hazeCol, t);
 
-    if (water > 0.5 && rd.y < -0.0005) {
+    // On a beach the sea's edge is alive: what is under the sheet of water now, what it has just left wet.
+    float foam = 0.0;
+    bool beach = uShore.x > 0.0 && uLandInfo.y > 0.0 && rd.y < -0.0005;
+    if (beach) {
+        vec2 qg = rd.xz * (land.a > 0.5 ? t : uLandInfo.y / -rd.y);
+        float zb = land.a > 0.5 ? uLandInfo.y + rd.y * t : -50.0;            // the ground's height over the sea's level
+        float f0 = fract(wavePhase(qg, 0.0));
+        float df = runUp(qg) * uShore.z - zb;                                // water over the sand here (m)
+        if (df > 0.0) {
+            water = mix(0.80, 1.0, smoothstep(0.04, 0.35, df));
+            // The sheet's edge: a line of foam while it runs up; lace left on the water as it thins and slides back.
+            float adv = 1.0 - smoothstep(0.18, 0.42, f0);
+            float lace = texture(tNoise2D, qg * 0.55 + vec2(0.0, uTime * 0.03)).b * 0.6 + texture(tNoise2D, qg * 1.7).b * 0.4;
+            foam = smoothstep(0.030, 0.004, df) * (0.30 + 0.70 * adv);
+            foam = max(foam, smoothstep(0.50, 0.72, lace + 0.30 * adv) * smoothstep(0.14, 0.0, df) * (0.35 + 0.65 * adv));
+        } else {
+            // Sand the sheet has just left is wet and mirrors the sky; higher up it has had time to dry.
+            float top = 2.9 * uShore.z;
+            water = 0.76 * smoothstep(top + 0.03, top - 0.10, zb) * (0.50 + 0.50 * smoothstep(-0.30, 0.0, df));
+        }
+    }
+
+    if (water > 0.03 && rd.y < -0.0005) {
         // Still or ruffled water: it mirrors the sky and the land beyond it, and shows its bed through the shallows.
+        // Wet sand does the same, more faintly, and nothing moves on it.
+        float sea = smoothstep(0.80, 0.98, water);
         float h = uLandInfo.y;
         float tw = h / -rd.y;
         vec2 q = rd.xz * tw;
         float rough;
         vec2 sl = waterSlope(q, tw, rough);
         // (Where the water is only a film over the sand there is no room for a wave.)
-        sl *= smoothstep(0.0, 0.5, max(t - tw, 0.0) * -rd.y) * 0.85 + 0.15;
+        sl *= (smoothstep(0.0, 0.5, max(t - tw, 0.0) * -rd.y) * 0.85 + 0.15) * sea;
+        if (beach && sea > 0.0) {
+            // The swell coming in: each wave a ridge of water that steepens towards the shore, breaks, and runs on
+            // as a line of foam with the foam it has made trailing behind it.
+            float ss = shoreS(q);
+            float ph = wavePhase(q, ss);
+            float f = fract(ph);
+            float size = waveSize(q, ph);
+            float dm = min(f, 1.0 - f) * WAVE_L;                               // metres from the wave's front
+            float high = (0.07 + 0.25 * smoothstep(70.0, 22.0, ss) - 0.24 * smoothstep(22.0, 3.0, ss)) * size * smoothstep(260.0, 90.0, ss);
+            float ridge = high * exp(-sq(dm / 1.5));
+            vec2 seaward = normalize(vec2(-uShore.y, 1.0));
+            sl += seaward * (f < 0.5 ? -1.0 : 1.0) * ridge * 2.0 * dm / 2.25 * sea;
+            float broken = smoothstep(27.0, 19.0, ss) * smoothstep(-1.0, 2.5, ss) * size;
+            float bub = texture(tNoise2D, q * 0.33 + vec2(0.0, uTime * 0.04)).b * 0.55 + texture(tNoise2D, q * 1.1 - vec2(uTime * 0.02, 0.0)).b * 0.45;
+            float behind = f * WAVE_L;                                          // metres behind the front (seaward of it)
+            float churn = exp(-behind / 4.5) * smoothstep(0.62 - 0.45 * exp(-behind / 2.0), 0.80, bub + 0.25);
+            foam = max(foam, broken * max(smoothstep(0.9, 0.0, behind), churn) * sea);
+            // Old foam, drifting in the shallows between one wave and the next.
+            foam = max(foam, 0.30 * smoothstep(14.0, 2.0, ss) * smoothstep(0.66, 0.84, bub) * sea);
+        }
         vec3 n = normalize(vec3(-sl.x, 1.0, -sl.y));
         vec3 r = reflect(rd, n);
         r.y = abs(r.y) + 0.002;
@@ -435,10 +513,17 @@ void main() {
         // What lies under: the bed, dimmed and coloured by the depth of water over it.
         float depth = max(t - tw, 0.0) * -rd.y;
         vec3 deep = mix(vec3(0.010, 0.045, 0.060), vec3(0.020, 0.090, 0.085), uWater.y) * (mAmbTop() * 2.0 + mSunGround() * max(uSunTrue.y, 0.0));
-        vec3 under = mix(deep, land.rgb, exp(-depth * mix(1.6, 0.45, uWater.y)) * land.a);
-        col = mix(under, refl, fres);
+        vec3 under = mix(land.rgb, mix(deep, land.rgb, exp(-depth * mix(1.6, 0.45, uWater.y)) * land.a), sea);
+        col = mix(under, refl, fres * mix(0.78 * water, 1.0, sea));
     } else {
         col = mix(col, land.rgb, land.a);
+    }
+    if (foam > 0.003) {
+        // Foam is white and dull: it takes the light as snow would.
+        float moonF = smoothstep(-6.0, -10.0, uSunEl);
+        vec3 lit = mSunGround() * 0.70 * (0.30 + 0.70 * saturate(uLightDir.y * 2.5)) * (1.0 - moonF) + mMoonLight() * moonF
+                 + mix(mAmbLow(), mAmbTop(), 0.6) + mGlow() * 0.6 + vec3(0.034, 0.052, 0.105) * uNight;
+        col = mix(col, 0.80 * lit, saturate(foam) * 0.92);
     }
 
     // Rain here: fine streaks, slanted by the wind. Where snow lies it is cold enough to fall as snow: soft flakes,

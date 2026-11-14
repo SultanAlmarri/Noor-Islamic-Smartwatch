@@ -439,13 +439,14 @@ function frame(amort = 16) {
     const m = land.meta;
     u.uLandFrame = [m.width, m.horizon, m.top, m.height];
     u.uLandInfo = [1, m.water || 0, m.sMax, land.m ? 1 : 0];
+    u.uShore = m.shore || [0, 0, 0, 0];
     T.tLandA = land.a; T.tLandK = land.k; T.tLandG = land.g; T.tLandLit = land.lit; T.tLandM = land.m || T.tZero;
     // (The land's picture is not mirrored here: scene.frag mirrors the lookup. Only the Suns change sides.)
     const rtl = P.rtl; P.rtl = false;
     const lw = Object.assign({}, G.landLight, rtl ? { names: G.landLight.names.map(swap), glow: [G.landLight.glow[1], G.landLight.glow[0]] } : {});
     lit(land, lw, land.fLit);
     P.rtl = rtl;
-  } else { u.uLandFrame = [1080, 1056, 0, 1]; u.uLandInfo = [0, 0, 2, 0]; T.tLandA = T.tZero; T.tLandK = T.tZero; T.tLandG = T.tZero; T.tLandLit = T.tZero; T.tLandM = T.tZero; }
+  } else { u.uShore = [0, 0, 0, 0]; u.uLandFrame = [1080, 1056, 0, 1]; u.uLandInfo = [0, 0, 2, 0]; T.tLandA = T.tZero; T.tLandK = T.tZero; T.tLandG = T.tZero; T.tLandLit = T.tZero; T.tLandM = T.tZero; }
   // The three layers of cloud, each in the light of the moment.
   let cover = 0, any = 0;
   [P.skyHigh, P.skyMid, P.skyLow].forEach((id, i) => {

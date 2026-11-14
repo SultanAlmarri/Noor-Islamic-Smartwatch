@@ -53,21 +53,22 @@ ARC_TOP = 14.2            # degrees over the horizon: where the Sun is drawn at 
 
 
 def skyline_limit(az):
-    """How high the land (and anything on it) may stand at a bearing (degrees right of the view's middle), in
-    degrees over the horizon. The Sun and the Moon rise at -RISE_AZIMUTH and set at +RISE_AZIMUTH on the phone, and
-    cross the sky between on an arch: there the skyline must be the true horizon, and under the arch the land must
-    stay under their path. Outside the two points it may be as high as it likes."""
+    """How high the land (and anything on it) should stand at most at a bearing (degrees right of the view's
+    middle), in degrees over the horizon: advice, not a rule. The Sun and the Moon are drawn on an arch that rises
+    at -RISE_AZIMUTH, tops out ARC_TOP degrees up in the middle and sets at +RISE_AZIMUTH. Land may stand in their
+    way: the Sun may rise over a mountain and set behind trees, as it does in the world (the owner's decision:
+    a skyline is never cut open for it). Only land so high that it hides most of the Sun's day is too much: between
+    the two points the skyline should stay under about two thirds of the arch, and never needs to be under 5 degrees."""
     a = abs(az)
-    if a > RISE_AZIMUTH + 1.8:
+    if a > RISE_AZIMUTH:
         return 90.0
-    if a > RISE_AZIMUTH - 1.8:
-        return 0.3
     x = math.tan(math.radians(a)) / math.tan(math.radians(RISE_AZIMUTH))
-    return max(0.3, ARC_TOP * math.cos(0.5 * math.pi * x) - 2.5)
+    return max(5.0, ARC_TOP * math.cos(0.5 * math.pi * x) - 2.5)
 
 
 def check_skyline(alpha, top=0):
-    """Says where a packed land picture (its alpha, `top` rows cut off above) stands higher than skyline_limit."""
+    """Says how the skyline of a packed land picture (its alpha, `top` rows cut off above) stands against the Sun's
+    arch: how high it is where the Sun rises and sets, and whether it hides much of the Sun's day anywhere."""
     h, w = alpha.shape
     k = w / W
     solid = alpha > 0.5
@@ -76,12 +77,14 @@ def check_skyline(alpha, top=0):
     az = np.degrees(np.arctan((np.arange(w) + 0.5 - w / 2) / (FOCAL * w)))
     over = el - np.array([skyline_limit(a) for a in az])
     bad = np.where(over > 0.0)[0]
+    rise = float(el[int(np.argmin(np.abs(az + RISE_AZIMUTH)))])
+    sets = float(el[int(np.argmin(np.abs(az - RISE_AZIMUTH)))])
+    print('skyline: %.1f degrees up where the Sun rises, %.1f where it sets, highest %.1f (at bearing %.1f)'
+          % (rise, sets, el.max(), az[int(np.argmax(el))]), flush=True)
     if len(bad):
         worst = bad[np.argmax(over[bad])]
-        print('SKYLINE TOO HIGH at %d of %d columns: worst %.1f degrees over the limit at bearing %.1f (it stands %.1f '
-              'degrees over the horizon there)' % (len(bad), w, over[worst], az[worst], el[worst]), flush=True)
-    else:
-        print('skyline: within its limits (highest %.1f degrees, at bearing %.1f)' % (el.max(), az[int(np.argmax(el))]), flush=True)
+        print('skyline: hides much of the Sun\'s day at bearing %.1f (%.1f degrees up; about %.1f would leave it in view)'
+              % (az[worst], el[worst], el[worst] - over[worst]), flush=True)
     return len(bad) == 0
 
 

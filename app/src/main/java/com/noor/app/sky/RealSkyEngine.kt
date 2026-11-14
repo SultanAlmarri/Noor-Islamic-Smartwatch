@@ -695,14 +695,17 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             for (n in arrayOf("a", "k", "g")) if (!known(land, n, now)) ready = false
             if (land.mask && !known(land, "m", now)) ready = false
             if (!light(land, f.landLight, false, now)) ready = false
-            water = land.water > 0f
+            water = land.water > 0f       // (moving water is redrawn at every frame)
             u["uLandFrame"] = floatArrayOf(land.num("width", 1080.0), land.num("horizon", 1056.0), land.num("top"), land.num("height", 1620.0))
             u["uLandInfo"] = floatArrayOf(if (land.tex["a"] != null && land.lit != null) 1f else 0f, land.water, land.num("sMax", 2.0), if (land.tex["m"] != null) 1f else 0f)
             tex["tLandA"] = land.tex["a"] ?: zero!!; tex["tLandK"] = land.tex["k"] ?: zero!!; tex["tLandG"] = land.tex["g"] ?: zero!!
             tex["tLandM"] = land.tex["m"] ?: zero!!; tex["tLandLit"] = land.lit ?: zero!!
+            // A beach says how it lies, for the waves that come in on it.
+            u["uShore"] = land.meta.optJSONArray("shore")?.let { a -> FloatArray(4) { a.optDouble(it, 0.0).toFloat() } } ?: floatArrayOf(0f, 0f, 0f, 0f)
             // The camera stands where the land was rendered from.
             land.meta.optJSONArray("eye")?.let { e -> u["uCam"] = floatArrayOf(f.focalPx, f.horizon, e.optDouble(2, 2.0).toFloat(), if (f.flip) 1f else 0f) }
         } else {
+            u["uShore"] = floatArrayOf(0f, 0f, 0f, 0f)
             u["uLandFrame"] = floatArrayOf(1080f, 1056f, 0f, 1f); u["uLandInfo"] = floatArrayOf(0f, 0f, 2f, 0f)
             for (n in arrayOf("tLandA", "tLandK", "tLandG", "tLandM", "tLandLit")) tex[n] = zero!!
         }

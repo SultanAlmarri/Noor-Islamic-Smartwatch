@@ -1,13 +1,15 @@
-"""The Ocean scenery: a rocky shore at low tide, built from photogrammetry of real coasts.
+"""The Ocean scenery: a beach, the open sea in front of it, waves coming in.
 
-Everything solid here is a scan of a real place (Poly Haven, CC0: see tools/scenery/sources/ocean.md): the damp sand
-underfoot, the rocks on the flat and in the shallows, the cliffs that frame the view, the islets far out. The sea
-itself is drawn by the phone (waves, the mirrored sky, the Sun's road on the water).
+The sand is photogrammetry of real beaches (ambientCG and Poly Haven, CC0: see tools/scenery/sources/ocean.md): dry,
+trodden sand with real relief where we stand, wind ripples beside it, wet rippled sand down at the sea's edge. The
+horizon is open: the Sun rises out of the sea and sets into it. The sea itself is drawn by the phone (the swell, the
+breakers and their foam, the sheet of water that runs up the sand and back, the mirrored sky), from the beach's
+shape, which is written into land.json (`shore`).
 
     blender -b --factory-startup -P tools/scenery/ocean.py -- preview <out dir> [azimuth elevation]
 
-The scans are expected in %USERPROFILE%/ProjectMinhad/NoorTools/assets/polyhaven/<id>/ (their .blend at 2k with its
-textures folder), as the Poly Haven API serves them.
+The scans are expected in %USERPROFILE%/ProjectMinhad/NoorTools/assets/polyhaven/<id>/ (Poly Haven's 2k .blend with
+its textures folder) and .../assets/ambientcg/<id>_2K/ (ambientCG's 2K-JPG archive, unpacked).
 """
 import math
 import os
@@ -19,9 +21,15 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bake      # noqa: E402
 
-EYE = 1.75                  # metres above the sea: standing on the damp sand of the flat
 SEA = 0.0
+STAND = 0.95                # metres above the sea: the dry sand we stand on
+EYE = STAND + 1.75
+SHORE_AHEAD = 11.5          # metres ahead of us (in the middle of the view) the sea's mean edge lies
+SHORE_SLANT = 0.10          # it runs across the view on a slant: this much further away per metre to the right
+BEACH_SLOPE = STAND / SHORE_AHEAD
+BED_SLOPE = 0.040           # the bed under the breakers
 SCANS = os.environ.get('NOOR_POLYHAVEN', os.path.join(os.path.expanduser('~'), 'ProjectMinhad', 'NoorTools', 'assets', 'polyhaven'))
+ACG = os.environ.get('NOOR_AMBIENTCG', os.path.join(os.path.expanduser('~'), 'ProjectMinhad', 'NoorTools', 'assets', 'ambientcg'))
 _loaded = {}
 
 
@@ -85,24 +93,39 @@ def texture(nt, aid, kind, vector, colour=False):
     return node
 
 
-def flat():
-    """The tidal flat: scanned damp beach sand, nearly level, its hollows under a film of water, falling away into
-    the sea."""
+def acg(nt, aid, kind, vector, colour=False):
+    """One map of an ambientCG scan (Color, Displacement, Roughness, NormalGL)."""
+    d = os.path.join(ACG, aid + '_2K')
+    name = [f for f in os.listdir(d) if f.endswith('_%s.jpg' % kind)][0]
+    node = nt.nodes.new('ShaderNodeTexImage')
+    node.image = bpy.data.images.load(os.path.join(d, name), check_existing=True)
+    if not colour:
+        node.image.colorspace_settings.name = 'Non-Color'
+    nt.links.new(vector, node.inputs['Vector'])
+    return node
+
+
+def beach():
+    """The beach and the bed of the sea: its shape (a level top where we stand, a face falling to the sea's edge, a
+    gently shelving bed) and its sand, three scans laid by how high above the sea the sand lies."""
     rng = np.random.default_rng(3)
-    ys = np.concatenate([np.linspace(-30, 0, 16)[:-1], np.geomspace(1.0, 60000.0, 170) - 1.0])
-    half = np.geomspace(1.0, 40000.0, 100) - 1.0
+    ys = np.concatenate([np.linspace(-30, 0, 16)[:-1], np.geomspace(1.0, 60000.0, 190) - 1.0])
+    half = np.geomspace(1.0, 40000.0, 110) - 1.0
     xs = np.concatenate([-half[::-1], half[1:]])
     X, Y = np.meshgrid(xs, ys)
-    bars = fbm(X * 1.0, Y * 2.2, rng, 4, 1 / 7.0) * 0.045 + fbm(X, Y, rng, 3, 1 / 31.0) * 0.05
-    z = 0.045 - 0.0040 * Y + bars * np.clip(1.0 - Y / 260.0, 0.0, 1.0)
-    z = np.where(Y > 60, z - (Y - 60) * 0.006, z)
-    z = np.where(Y > 600, z - (Y - 600) * 0.03, z)
-    z = np.maximum(z, -45.0)
-    z = z + 0.10 * np.exp(-(X * X + Y * Y) / (2 * 2.4 ** 2))       # dry where we stand
-    ob = bake.grid_mesh('Flat', xs, ys, z + SEA)
+    c = 1.0 / math.sqrt(1.0 + SHORE_SLANT * SHORE_SLANT)
+    s = (Y - SHORE_AHEAD - SHORE_SLANT * X) * c              # metres seaward of the sea's mean edge
+    z = np.where(s < 0, -s * BEACH_SLOPE, -s * BED_SLOPE)
+    # The top of the beach is nearly level and a little hummocky; cusps scallop the face along the shore.
+    top = STAND + 0.05 * fbm(X, Y, rng, 3, 1 / 14.0)
+    z = np.minimum(z, top)
+    z = z + 0.035 * np.sin(X / 7.5 + 0.6 * np.sin(X / 23.0)) * np.exp(-np.abs(s + 2.5) / 3.5)
+    z = np.where(s > 120, z - (s - 120) * 0.05, z)
+    z = np.maximum(z, -60.0)
+    ob = bake.grid_mesh('Beach', xs, ys, z + SEA)
     bake.adaptive(ob, 1.0)
 
-    mat = bpy.data.materials.new('DampSand')
+    mat = bpy.data.materials.new('BeachSand')
     mat.use_nodes = True
     mat.displacement_method = 'DISPLACEMENT'
     nt = mat.node_tree
@@ -110,79 +133,97 @@ def flat():
     bsdf = N['Principled BSDF']
     out = N['Material Output']
     geo = N.new('ShaderNodeNewGeometry')
-    # The scan is 1.87 m across: laid out by the ground's own metres, and once more larger and turned, the two mixed
-    # by patches, so no tile is seen twice the same.
-    m1 = N.new('ShaderNodeMapping'); m1.inputs['Scale'].default_value = (1 / 1.87, 1 / 1.87, 1.0)
-    m2 = N.new('ShaderNodeMapping'); m2.inputs['Scale'].default_value = (1 / 4.3, 1 / 4.3, 1.0); m2.inputs['Rotation'].default_value = (0, 0, 0.66)
-    L.new(geo.outputs['Position'], m1.inputs['Vector']); L.new(geo.outputs['Position'], m2.inputs['Vector'])
-    patch = N.new('ShaderNodeTexNoise'); patch.inputs['Scale'].default_value = 0.23; patch.inputs['Detail'].default_value = 3.0
-    L.new(geo.outputs['Position'], patch.inputs['Vector'])
-    pm = N.new('ShaderNodeMapRange'); pm.interpolation_type = 'SMOOTHSTEP'
-    pm.inputs['From Min'].default_value = 0.42; pm.inputs['From Max'].default_value = 0.58
-    L.new(patch.outputs['Fac'], pm.inputs['Value'])
-
-    def both(kind, colour=False):
-        a = texture(nt, 'damp_beach_sand_02', kind, m1.outputs[0], colour)
-        b = texture(nt, 'damp_beach_sand_02', kind, m2.outputs[0], colour)
-        mx = N.new('ShaderNodeMixRGB')
-        L.new(pm.outputs[0], mx.inputs['Fac']); L.new(a.outputs['Color'], mx.inputs['Color1']); L.new(b.outputs['Color'], mx.inputs['Color2'])
-        return mx.outputs['Color']
-
-    diff = both('diff', True)
     sep = N.new('ShaderNodeSeparateXYZ')
     L.new(geo.outputs['Position'], sep.inputs[0])
-    # Wetter (darker, glossier) the nearer the water's level it lies.
-    wet = N.new('ShaderNodeMapRange'); wet.interpolation_type = 'SMOOTHSTEP'
-    wet.inputs['From Min'].default_value = SEA + 0.11; wet.inputs['From Max'].default_value = SEA + 0.02
-    L.new(sep.outputs['Z'], wet.inputs['Value'])
+
+    def mapping(size, turn):
+        m = N.new('ShaderNodeMapping')
+        m.inputs['Scale'].default_value = (1 / size, 1 / size, 1.0)
+        m.inputs['Rotation'].default_value = (0, 0, turn)
+        L.new(geo.outputs['Position'], m.inputs['Vector'])
+        return m.outputs[0]
+
+    def mix(a, b, fac):
+        m = N.new('ShaderNodeMixRGB')
+        L.new(fac, m.inputs['Fac']); L.new(a, m.inputs['Color1']); L.new(b, m.inputs['Color2'])
+        return m.outputs['Color']
+
+    def ramp(lo, hi):
+        """1 where the sand lies at `lo` over the sea or lower, 0 at `hi` or higher."""
+        r = N.new('ShaderNodeMapRange'); r.interpolation_type = 'SMOOTHSTEP'
+        r.inputs['From Min'].default_value = SEA + hi; r.inputs['From Max'].default_value = SEA + lo
+        L.new(sep.outputs['Z'], r.inputs['Value'])
+        return r.outputs[0]
+
+    # Where the scans go: trodden dry sand (3.5 m across) and wind-rippled sand (3 m) in patches on the top and the
+    # upper face; wet, tide-rippled sand below, where the sea reaches.
+    trod, ripple, wet_s = mapping(3.5, 0.37), mapping(3.0, -0.52), mapping(2.4, 0.21)
+    patch = N.new('ShaderNodeTexNoise'); patch.inputs['Scale'].default_value = 0.17; patch.inputs['Detail'].default_value = 3.0
+    L.new(geo.outputs['Position'], patch.inputs['Vector'])
+    pm = N.new('ShaderNodeMapRange'); pm.interpolation_type = 'SMOOTHSTEP'
+    pm.inputs['From Min'].default_value = 0.40; pm.inputs['From Max'].default_value = 0.60
+    L.new(patch.outputs['Fac'], pm.inputs['Value'])
+    wet = ramp(0.16, 0.36)
+
+    def maps(kind, colour=False):
+        dry = mix(acg(nt, 'Ground054', kind, trod, colour).outputs['Color'], acg(nt, 'Ground055L', kind, ripple, colour).outputs['Color'], pm.outputs[0])
+        return mix(dry, acg(nt, 'Ground061', kind, wet_s, colour).outputs['Color'], wet)
+
+    col = maps('Color', True)
+    # Wet sand is darker and shines; the wetter, the more.
+    soak = ramp(0.02, 0.30)
     dark = N.new('ShaderNodeMixRGB'); dark.blend_type = 'MULTIPLY'
-    dark.inputs['Color2'].default_value = (0.62, 0.60, 0.57, 1)
-    L.new(wet.outputs[0], dark.inputs['Fac']); L.new(diff, dark.inputs['Color1'])
+    dark.inputs['Color2'].default_value = (0.50, 0.47, 0.43, 1)
+    L.new(soak, dark.inputs['Fac']); L.new(col, dark.inputs['Color1'])
     L.new(dark.outputs['Color'], bsdf.inputs['Base Color'])
-    rough = both('rough')
-    rw = N.new('ShaderNodeMixRGB'); rw.blend_type = 'MULTIPLY'; rw.inputs['Color2'].default_value = (0.45, 0.45, 0.45, 1)
-    L.new(wet.outputs[0], rw.inputs['Fac']); L.new(rough, rw.inputs['Color1'])
-    L.new(rw.outputs['Color'], bsdf.inputs['Roughness'])
-    nor = both('nor_gl')
+    rough = N.new('ShaderNodeMixRGB'); rough.blend_type = 'MULTIPLY'; rough.inputs['Color2'].default_value = (0.38, 0.38, 0.38, 1)
+    L.new(soak, rough.inputs['Fac']); L.new(maps('Roughness'), rough.inputs['Color1'])
+    L.new(rough.outputs['Color'], bsdf.inputs['Roughness'])
     nm = N.new('ShaderNodeNormalMap')
-    L.new(nor, nm.inputs['Color']); L.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
-    # Its real relief near the eye (the scan's own height map), fading out with distance.
-    disp_tex = both('disp')
+    L.new(maps('NormalGL'), nm.inputs['Color']); L.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+    # The scans' own relief, as real geometry: hollows and heaps a hand deep in the dry sand, ripples a finger high,
+    # the wet sand nearly smooth. It fades with distance (under the sea it is gone).
     dist = N.new('ShaderNodeVectorMath'); dist.operation = 'LENGTH'
     L.new(geo.outputs['Position'], dist.inputs[0])
     near = N.new('ShaderNodeMapRange'); near.interpolation_type = 'SMOOTHSTEP'
-    near.inputs['From Min'].default_value = 30.0; near.inputs['From Max'].default_value = 160.0
-    near.inputs['To Min'].default_value = 0.045; near.inputs['To Max'].default_value = 0.0
+    near.inputs['From Min'].default_value = 25.0; near.inputs['From Max'].default_value = 90.0
+    near.inputs['To Min'].default_value = 1.0; near.inputs['To Max'].default_value = 0.0
     L.new(dist.outputs['Value'], near.inputs['Value'])
-    disp = N.new('ShaderNodeDisplacement'); disp.inputs['Midlevel'].default_value = 0.5
-    L.new(disp_tex, disp.inputs['Height']); L.new(near.outputs[0], disp.inputs['Scale'])
+
+    def height(node, depth):
+        a = N.new('ShaderNodeMath'); a.operation = 'SUBTRACT'; a.inputs[1].default_value = 0.5
+        L.new(node.outputs['Color'], a.inputs[0])
+        b = N.new('ShaderNodeMath'); b.operation = 'MULTIPLY'; b.inputs[1].default_value = depth
+        L.new(a.outputs[0], b.inputs[0])
+        return b.outputs[0]
+
+    hd = mix(height(acg(nt, 'Ground054', 'Displacement', trod), 0.085), height(acg(nt, 'Ground055L', 'Displacement', ripple), 0.030), pm.outputs[0])
+    hw = height(acg(nt, 'Ground061', 'Displacement', wet_s), 0.014)
+    hh = mix(hd, hw, wet)
+    hn = N.new('ShaderNodeMath'); hn.operation = 'MULTIPLY'
+    L.new(hh, hn.inputs[0]); L.new(near.outputs[0], hn.inputs[1])
+    disp = N.new('ShaderNodeDisplacement'); disp.inputs['Midlevel'].default_value = 0.0; disp.inputs['Scale'].default_value = 1.0
+    L.new(hn.outputs[0], disp.inputs['Height'])
     L.new(disp.outputs[0], out.inputs['Displacement'])
-    bake.add_mask(mat, wind=0.0, snow=0.0, water_level=SEA)
     ob.data.materials.append(mat)
 
 
 def build():
-    flat()
-    # Underfoot and in the first shallows: sand with small stones, shelves of rock (true size).
-    place('sand_rocks_small_01', 1.8, 5.2, 1.0, 20.0, sink=0.35, base=SEA + 0.06)
-    place('coast_land_rocks_02', 9.5, 15.0, 1.0, -25.0, sink=0.30)
-    place('coast_land_rocks_03', -7.5, 11.0, 1.0, 140.0, sink=0.30)
-    place('coast_rocks_03', -17.0, 34.0, 1.0, 35.0, sink=0.22)
-    place('coast_rocks_05', 5.5, 31.0, 1.6, 70.0, sink=0.30)
-    # A reef the tide has left, further out.
-    place('coast_rocks_01', 44.0, 105.0, 1.0, -15.0, sink=0.35, lod=2)
-    place('coast_rocks_02', -70.0, 150.0, 1.0, 60.0, sink=0.40, lod=2)
-    # The picture's edges: sea stacks, near and tall. They are scans of whole boulders, many times larger than
-    # life (rock looks alike at every size), so they are solid all round, as a stack is. (Nothing may stand in the
-    # Sun's way between bearings -16.5 and 16.5 degrees but what is under its path; see bake.skyline_limit.)
-    place('namaqualand_boulder_04', -80.0, 200.0, 13.0, 40.0, sink=0.10, lod=0)
-    place('namaqualand_boulder_03', -152.0, 420.0, 7.0, 110.0, sink=0.12, lod=0)
-    place('namaqualand_boulder_03', 97.0, 232.0, 10.0, -30.0, sink=0.10, lod=0)
-    place('coast_rocks_05', 262.0, 665.0, 28.0, 150.0, sink=0.10)
-    # Out in the bay, under the Sun's arch: a rocky island, and islets beyond it.
-    place('coast_rocks_05', -80.0, 2300.0, 100.0, 30.0, sink=0.10)
-    place('namaqualand_boulder_04', 425.0, 3300.0, 58.0, 200.0, sink=0.18, lod=2)
-    place('boulder_01', -620.0, 5200.0, 120.0, 80.0, sink=0.30, lod=2)
+    beach()
+    # On the sand beside us: a few sea-worn stones (a scan, true size). Nothing else stands between us and the
+    # horizon: the Sun rises out of the open sea and sets into it.
+    place('sand_rocks_small_01', -2.7, 4.3, 1.0, 200.0, sink=0.30, base=SEA + BEACH_SLOPE * (SHORE_AHEAD - 4.3) - 0.02)
 
 
-bake.run(build, (0.0, 0.0, EYE), aovs=('mask',), water_level=SEA, exposure=-2.4)
+def shore_meta(out):
+    """Tells the phone how the beach lies, for the waves it draws on it."""
+    import json
+    path = os.path.join(out, 'land', 'land.json')
+    if os.path.exists(path):
+        meta = json.load(open(path))
+        meta['shore'] = [SHORE_AHEAD, SHORE_SLANT, BEACH_SLOPE, BED_SLOPE]
+        json.dump(meta, open(path, 'w'), indent=1)
+
+
+bake.run(build, (0.0, 0.0, EYE), water_level=SEA, exposure=-2.4)
+shore_meta(bake.args()[1])

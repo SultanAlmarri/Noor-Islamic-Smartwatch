@@ -148,9 +148,12 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   (the open sea from a beach, sea stacks), **Green hills** (rolling spring hills and oaks, a lake; it took the
   savanna's place in 0.11) and **Red rock** (buttes and mesas over a desert floor). Only nature: nothing man-made, no
   people. What each is made of and where its data comes from: `tools/scenery/sources/`.
-- **The skyline keeps the Sun's road clear.** The Sun and the Moon are drawn where the prayer times put them: they
-  rise 14.7 degrees left of the view's middle and set 14.7 degrees right of it, on the true horizon. Every scenery
-  is built so that nothing stands there (`bake.skyline_limit`, checked when a scenery is packed).
+- **Natural skylines.** The Sun and the Moon are drawn where the prayer times put them: they rise 14.7 degrees
+  left of the view's middle and set 14.7 degrees right of it. A scenery is never cut open for them (the owner's
+  decision: "what I don't like is cutting mountains in order to have the sunrise and set on the ground"): the Sun
+  rises over a mountain or sets behind trees where that is what the place is like, and meets a level horizon
+  where the place has one. The prayer times shown are exact either way; the Sun may be seen to pass behind land a
+  little before or after them.
 - **Clouds of twelve kinds**, each a set of path-traced volumes (`skybake.py`): low (fair-weather cumulus, a cumulus
   field, towering cumulus, a thunderhead with its anvil, a stratocumulus sheet, an overcast), middle (altocumulus in
   flocks and in rolls, an altostratus veil) and high (cirrus, cirrocumulus, a cirrostratus veil). The phone shows a
