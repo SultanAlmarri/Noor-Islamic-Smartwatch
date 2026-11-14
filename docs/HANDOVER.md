@@ -731,7 +731,10 @@ pages that offer them free, or from public APIs and buckets), every source and l
   the dunes at sunrise, midday and sunset: every shader compiled, the pictures were read and "Real sky shown"
   logged, with no GL error. A picture takes that emulator over a minute, and Android showed "isn't responding"
   dialogs over the screenshots (see above): the pictures prove that it runs there, nothing about speed.
-- *GitHub's run on `main`*: see the end of this section.
+- *GitHub's run on `main`* (`05ee9d7`, 14 November 2026): "Android build and tests" passed (every test, both
+  APKs, the watch face validation) and republished the download links: `Noor-phone.apk` is 0.11.0, 59.8 MB (the
+  pictures are about 28 MB of it). On the work branch before the merge, `real-sky.yml` photographed all six
+  sceneries at midday and sunset on the emulator: each logged "Real sky shown" with its skyline's lift, no error.
 
 **Not tested: any phone.** Everything that only a phone can tell is still unknown: whether the Sun is seen on the
 owner's phone (0.10's was not), the speed and the wait at the first start, battery and warmth, the look on a real
