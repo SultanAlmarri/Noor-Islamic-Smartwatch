@@ -14,10 +14,11 @@ enum class TimeFormat { H12, H24 }
 enum class ThemeMode { SUN, SYSTEM, DARK, LIGHT }
 /** The landscape under the home screen's sky (0.9.8): chosen by place, or one the user prefers. */
 /**
- * The home screen's scenery. Since the real sky (0.10) there are six: [DUNES], [RAINFOREST], [ARCTIC], [SEA] (the open
- * ocean), [SAVANNA] and [CANYON]. [HILLS] and [MOUNTAINS] are the 0.9 names, kept so an earlier choice still means
- * something (hills show the rainforest, mountains the red rock); the 0.9 sky, where it is still used, draws the
- * nearest of its own four.
+ * The home screen's scenery. There are six: [DUNES], [RAINFOREST] (the Pacific Northwest), [ARCTIC], [SEA] (the open
+ * ocean), [SAVANNA] (since 0.11 the green hills and oaks that took the savanna's place: the name is what earlier
+ * versions stored) and [CANYON]. [HILLS] and [MOUNTAINS] are the 0.9 names, kept so an earlier choice still means
+ * something (hills show the Pacific Northwest, mountains the red rock); the 0.9 sky, where it is still used, draws
+ * the nearest of its own four.
  */
 enum class Scenery { AUTO, DUNES, HILLS, MOUNTAINS, SEA, RAINFOREST, ARCTIC, SAVANNA, CANYON }
 
@@ -79,4 +80,6 @@ data class AppSettings(
     val elapsedAfterPrayer: Boolean = true,
     val scenery: Scenery = Scenery.AUTO,
     val skyGraphics: SkyGraphics = SkyGraphics.AUTO,
+    /** The scenery follows the real season of the place (snow in winter...). Off: its best look all year (0.11). */
+    val seasons: Boolean = false,
 )

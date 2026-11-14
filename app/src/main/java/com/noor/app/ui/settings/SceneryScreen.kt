@@ -55,7 +55,7 @@ internal fun sceneryImage(b: Biome): Int = when (b) {
     Biome.RAINFOREST -> R.drawable.scenery_real_pnw
     Biome.ARCTIC -> R.drawable.scenery_real_arctic
     Biome.OCEAN -> R.drawable.scenery_real_ocean
-    Biome.SAVANNA -> R.drawable.scenery_real_savanna
+    Biome.MEADOW -> R.drawable.scenery_real_meadow
     Biome.CANYON -> R.drawable.scenery_real_canyon
 }
 
@@ -64,7 +64,7 @@ internal fun sceneryName(b: Biome): Int = when (b) {
     Biome.RAINFOREST -> R.string.scenery_rainforest
     Biome.ARCTIC -> R.string.scenery_arctic
     Biome.OCEAN -> R.string.scenery_ocean
-    Biome.SAVANNA -> R.string.scenery_savanna
+    Biome.MEADOW -> R.string.scenery_meadow
     Biome.CANYON -> R.string.scenery_canyon
 }
 
@@ -103,7 +103,7 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
         Spacer(Modifier.height(12.dp))
         val choices = listOf(
             Scenery.DUNES to Biome.DUNES, Scenery.RAINFOREST to Biome.RAINFOREST, Scenery.ARCTIC to Biome.ARCTIC,
-            Scenery.SEA to Biome.OCEAN, Scenery.SAVANNA to Biome.SAVANNA, Scenery.CANYON to Biome.CANYON,
+            Scenery.SEA to Biome.OCEAN, Scenery.SAVANNA to Biome.MEADOW, Scenery.CANYON to Biome.CANYON,
         )
         choices.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -116,6 +116,20 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
         }
         Text(stringResource(R.string.scenery_note), style = MaterialTheme.typography.bodySmall, color = c.textMuted,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+
+        // The seasons: followed or not (not, unless asked).
+        val shape0 = RoundedCornerShape(18.dp)
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp).clip(shape0).border(0.5.dp, c.separator, shape0).background(c.surface)
+                .clickable { vm.setSeasons(!s.seasons) }.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(stringResource(R.string.scenery_seasons_title), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
+                Text(stringResource(R.string.scenery_seasons_note), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+            }
+            NoorSwitch(s.seasons) { on -> vm.setSeasons(on) }
+        }
 
         // How finely the sky is drawn.
         Text(stringResource(R.string.sky_graphics_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary,

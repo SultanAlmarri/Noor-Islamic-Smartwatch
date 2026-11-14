@@ -458,7 +458,10 @@ internal fun LivingSky(
 
     if (real != null) {
         // The real sky: hand the renderer everything this moment's picture needs (it is told only when that changes).
-        val year = remember(scene.now, scene.southernHemisphere) { com.noor.app.sky.SkyDirector.yearPhase(scene.now, scene.southernHemisphere) }
+        // (The time of year: the real one where the seasons are followed, otherwise the one each scenery looks best in.)
+        val year = remember(scene.now, scene.southernHemisphere, real.seasons, real.biome) {
+            if (real.seasons) com.noor.app.sky.SkyDirector.yearPhase(scene.now, scene.southernHemisphere) else real.biome.signatureYear
+        }
         val wx = remember(scene.seed, real.biome, (year * 24).toInt()) { com.noor.app.sky.SkyDirector.weather(scene.seed, real.biome, year) }
         val frame: () -> com.noor.app.sky.RealSkyFrame? = {
             val v = skyView; val l = look
