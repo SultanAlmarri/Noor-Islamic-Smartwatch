@@ -154,8 +154,17 @@ phone) as bland and fake: never call a render beautiful on your own judgment; pu
   built from real-world data (scans, elevation models) wherever such data exists, not from formulas; and a natural
   skyline: never cut a range or a treeline open so the Sun rises and sets on level ground (the owner rejected that;
   the Sun may rise over a mountain). The times stay exact to the eye because the Sun's path stands on the land's
-  own skyline where it rises and sets (`RealSky.sunLift`, `SunLift`, `SkyGeometry.y(el, fraction)`; the bench does
-  the same). `bake.skyline_limit` is only advice against hiding the Sun's whole day.
+  own skyline where it rises and sets (`bake.sun_lift` writes `lift` into `land.json` when a scenery is packed,
+  `tools/scenery/lift.py` adds it to one packed earlier; `RealSky.sunLift`, `SunLift`, `SkyGeometry.y(el, fraction)`;
+  the bench does the same). `bake.skyline_limit` is only advice against hiding the Sun's whole day.
+- The data the sceneries and clouds are built from lives outside the repository, in `NoorToolsssets\<source>`:
+  Poly Haven and ambientCG scans (CC0), elevation models (USGS 3DEP, Copernicus GLO-30, Kartverket; read with
+  `tools/scenery/geotiff.py`, which does not read LZW: see `meadow_dem.py`), NASA's sky maps, and CGHEVEN's cloud
+  VDBs (free to use in renders, also commercially; the files themselves may not be redistributed: never commit a
+  `.vdb`). Fetch files with curl (User-Agent `scenery-tools/1.0`), not through a browser's download button: that
+  opens a save dialog on the owner's screen.
+- Several Blender jobs at once starve each other. At most three, and a bake at AboveNormal priority; a volume
+  enlarged k times renders k times thinner (set density per instance scale).
 - Pitfalls met: never write a value near 65 000 into a half-float target (0.10's Sun did, and was black on the
   owner's phone); Blender ignores `mat.cycles.displacement_method` (use `mat.displacement_method`); a generated
   image must be saved and reloaded before Cycles sees it; volume emission is per metre whatever the density;
