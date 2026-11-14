@@ -1,18 +1,26 @@
 # Sources: the Ocean scenery
 
-Every solid thing in this scenery is a photogrammetry scan from Poly Haven (https://polyhaven.com), all under
-**CC0 1.0** (public domain dedication: free to use and redistribute, no attribution required). They were fetched
-through Poly Haven's public API (`https://api.polyhaven.com/files/<id>`, the 2k `.blend` and its textures) and are not
-stored in this repository: only the pictures rendered from them are (`app/src/main/assets/sky2/land/ocean/`).
+Every solid thing in this scenery is a photogrammetry scan of real ground, all under **CC0 1.0** (public domain
+dedication: free to use and redistribute, no attribution required). The scans are not stored in this repository:
+only the pictures rendered from them are (`app/src/main/assets/sky2/land/ocean/`).
 
-| Poly Haven id | What it is here |
-|---|---|
-| `damp_beach_sand_02` (texture) | the damp sand of the tidal flat |
-| `sand_rocks_small_01` | sand with small stones, underfoot |
-| `coast_land_rocks_02`, `coast_land_rocks_03` | shelves of rock on the flat |
-| `coast_rocks_03`, `coast_rocks_05` | rocks in the first shallows; scaled up, the far islets |
-| `coast_rocks_01`, `coast_rocks_02` | the reef further out |
-| `coastal_cliff_01`, `coastal_cliff_02`, `coastal_cliff_04` | the headlands at the picture's edges; scaled up, a far islet |
+| Source | Id | What it is here |
+|---|---|---|
+| ambientCG (https://ambientcg.com) | `Ground054` | dry sand, uneven underfoot (colour, relief, roughness, normals) |
+| ambientCG | `Ground055L` | sand rippled by the wind: most of the dry beach |
+| ambientCG | `Ground061` | wet, tide-rippled sand: the beach's face, where the sea reaches |
+| Poly Haven (https://polyhaven.com) | `sand_rocks_small_01` | a few sea-worn stones on the sand beside us |
 
-The arrangement, the tidal flat's shape and everything else in `tools/scenery/ocean.py` is this project's own work.
-The sea itself is drawn by the phone.
+- ambientCG: fetched as its 2K-JPG archive (`https://ambientcg.com/get?file=<id>_2K-JPG.zip`).
+- Poly Haven: fetched through its public API (`https://api.polyhaven.com/files/<id>`, the 2k `.blend` and its
+  textures).
+
+What is this project's own work (`tools/scenery/ocean.py`): the beach's shape (a level top, a face that falls to the
+sea's edge, a shelving bed) and where each scan lies on it. One change is made to the scans: their colour is brought
+to the colour of beach sand (each scan's colours are multiplied so that its mean becomes a warm, pale gold), because
+the owner found the scans' own grey-brown "not beach sand colour"; their grain, their light and dark and their relief
+are the scans' own.
+
+The sea is not a scan and not a picture: the phone draws it (the swell, the breakers and their foam, the sheet of
+water that runs up the sand and back, the wet sand's shine, the mirrored sky), from the beach's shape, which
+`ocean.py` writes into `land.json` (`shore`).

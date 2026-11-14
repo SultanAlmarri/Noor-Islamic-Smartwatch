@@ -1,4 +1,4 @@
-"""The Ocean scenery: a beach, the open sea in front of it, waves coming in.
+"""The Ocean scenery: a beach on the Gulf, the open sea in front of it, waves coming in, mountains far across the water.
 
 The sand is photogrammetry of real beaches (ambientCG and Poly Haven, CC0: see tools/scenery/sources/ocean.md): dry,
 trodden sand with real relief where we stand, wind ripples beside it, wet rippled sand down at the sea's edge. The
@@ -22,12 +22,21 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bake      # noqa: E402
 
 SEA = 0.0
-STAND = 0.95                # metres above the sea: the dry sand we stand on
+STAND = 0.88                # metres above the sea: the dry sand we stand on
 EYE = STAND + 1.75
-SHORE_AHEAD = 11.5          # metres ahead of us (in the middle of the view) the sea's mean edge lies
-SHORE_SLANT = 0.10          # it runs across the view on a slant: this much further away per metre to the right
-BEACH_SLOPE = STAND / SHORE_AHEAD
+SHORE_AHEAD = 22.0          # metres ahead of us (in the middle of the view) the sea's mean edge lies
+SHORE_SLANT = 1.60          # it runs away to the right: this much further per metre to the right (we look along
+                            # the beach, 32 degrees off its line: sea to the left, sand to the right, into the distance)
+BEACH_SLOPE = STAND / (SHORE_AHEAD / math.sqrt(1.0 + SHORE_SLANT * SHORE_SLANT))
 BED_SLOPE = 0.040           # the bed under the breakers
+# The colour of beach sand (linear albedo): the scans keep their grain and relief, and are brought to this colour.
+# Where we stand, and the bearing we look along: a beach south of Ras Al Khaimah, looking north-east along the coast.
+# The sea (the Gulf) is on the left; far ahead and to the right stand the mountains of Musandam and the Hajar,
+# falling into the sea at the Strait of Hormuz. Their shapes are the real ones (Copernicus DEM, see sources/ocean.md).
+VIEW_LAT, VIEW_LON, VIEW_BEARING = 25.72, 55.80, 40.0
+DEM = os.environ.get('NOOR_COPERNICUS', os.path.join(os.path.expanduser('~'), 'ProjectMinhad', 'NoorTools', 'assets', 'copernicus_glo30'))
+SAND = (0.54, 0.41, 0.245)
+SAND_WET = (0.48, 0.365, 0.22)
 SCANS = os.environ.get('NOOR_POLYHAVEN', os.path.join(os.path.expanduser('~'), 'ProjectMinhad', 'NoorTools', 'assets', 'polyhaven'))
 ACG = os.environ.get('NOOR_AMBIENTCG', os.path.join(os.path.expanduser('~'), 'ProjectMinhad', 'NoorTools', 'assets', 'ambientcg'))
 _loaded = {}
@@ -116,10 +125,10 @@ def beach():
     c = 1.0 / math.sqrt(1.0 + SHORE_SLANT * SHORE_SLANT)
     s = (Y - SHORE_AHEAD - SHORE_SLANT * X) * c              # metres seaward of the sea's mean edge
     z = np.where(s < 0, -s * BEACH_SLOPE, -s * BED_SLOPE)
-    # The top of the beach is nearly level and a little hummocky; cusps scallop the face along the shore.
+    # The top of the beach is nearly level and a little hummocky. (The face is a true plane: the phone works the
+    # sea's edge out on it.)
     top = STAND + 0.05 * fbm(X, Y, rng, 3, 1 / 14.0)
     z = np.minimum(z, top)
-    z = z + 0.035 * np.sin(X / 7.5 + 0.6 * np.sin(X / 23.0)) * np.exp(-np.abs(s + 2.5) / 3.5)
     z = np.where(s > 120, z - (s - 120) * 0.05, z)
     z = np.maximum(z, -60.0)
     ob = bake.grid_mesh('Beach', xs, ys, z + SEA)
@@ -161,19 +170,51 @@ def beach():
     patch = N.new('ShaderNodeTexNoise'); patch.inputs['Scale'].default_value = 0.17; patch.inputs['Detail'].default_value = 3.0
     L.new(geo.outputs['Position'], patch.inputs['Vector'])
     pm = N.new('ShaderNodeMapRange'); pm.interpolation_type = 'SMOOTHSTEP'
-    pm.inputs['From Min'].default_value = 0.40; pm.inputs['From Max'].default_value = 0.60
+    # (Mostly the wind's ripples; the trodden sand only here and there, and shallow: uneven ground, not footprints.)
+    pm.inputs['From Min'].default_value = 0.30; pm.inputs['From Max'].default_value = 0.46
     L.new(patch.outputs['Fac'], pm.inputs['Value'])
-    wet = ramp(0.16, 0.36)
+    wet = ramp(0.42, 0.70)
+
+    def toned(node, target):
+        """A scan's colour brought to a mean colour: its own light and dark, grain by grain, in the sand's colour."""
+        img = node.image
+        px = np.empty(img.size[0] * img.size[1] * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+        px = px.reshape(-1, 4)[::53, :3]
+        lin = np.where(px <= 0.04045, px / 12.92, ((px + 0.055) / 1.055) ** 2.4)
+        mean = lin.mean(axis=0)
+        print('sand: %s mean %s -> %s' % (img.name, np.round(mean, 3), target), flush=True)
+        m = N.new('ShaderNodeVectorMath'); m.operation = 'MULTIPLY'
+        m.inputs[1].default_value = tuple(float(t / max(v, 1e-3)) for t, v in zip(target, mean))
+        L.new(node.outputs['Color'], m.inputs[0])
+        return m.outputs['Vector']
 
     def maps(kind, colour=False):
-        dry = mix(acg(nt, 'Ground054', kind, trod, colour).outputs['Color'], acg(nt, 'Ground055L', kind, ripple, colour).outputs['Color'], pm.outputs[0])
-        return mix(dry, acg(nt, 'Ground061', kind, wet_s, colour).outputs['Color'], wet)
+        def one(aid, vector, target):
+            node = acg(nt, aid, kind, vector, colour)
+            return toned(node, target) if colour else node.outputs['Color']
+        dry = mix(one('Ground054', trod, SAND), one('Ground055L', ripple, SAND), pm.outputs[0])
+        return mix(dry, one('Ground061', wet_s, SAND_WET), wet)
 
     col = maps('Color', True)
+    # No beach is one colour: the sea sorts its sand into bands along the shore, lighter and darker, finer and coarser.
+    band = N.new('ShaderNodeMapping')
+    band.inputs['Rotation'].default_value = (0, 0, -math.atan(SHORE_SLANT))
+    band.inputs['Scale'].default_value = (0.022, 0.30, 1.0)
+    L.new(geo.outputs['Position'], band.inputs['Vector'])
+    bn = N.new('ShaderNodeTexNoise'); bn.inputs['Scale'].default_value = 1.0; bn.inputs['Detail'].default_value = 5.0
+    L.new(band.outputs[0], bn.inputs['Vector'])
+    bm = N.new('ShaderNodeMapRange')
+    bm.inputs['From Min'].default_value = 0.30; bm.inputs['From Max'].default_value = 0.70
+    bm.inputs['To Min'].default_value = 0.80; bm.inputs['To Max'].default_value = 1.12
+    L.new(bn.outputs['Fac'], bm.inputs['Value'])
+    tone = N.new('ShaderNodeVectorMath'); tone.operation = 'SCALE'
+    L.new(col, tone.inputs[0]); L.new(bm.outputs[0], tone.inputs['Scale'])
+    col = tone.outputs['Vector']
     # Wet sand is darker and shines; the wetter, the more.
-    soak = ramp(0.02, 0.30)
+    soak = ramp(0.05, 0.66)
     dark = N.new('ShaderNodeMixRGB'); dark.blend_type = 'MULTIPLY'
-    dark.inputs['Color2'].default_value = (0.50, 0.47, 0.43, 1)
+    dark.inputs['Color2'].default_value = (0.80, 0.76, 0.71, 1)      # (a little: the phone darkens the sand the sea has wetted)
     L.new(soak, dark.inputs['Fac']); L.new(col, dark.inputs['Color1'])
     L.new(dark.outputs['Color'], bsdf.inputs['Base Color'])
     rough = N.new('ShaderNodeMixRGB'); rough.blend_type = 'MULTIPLY'; rough.inputs['Color2'].default_value = (0.38, 0.38, 0.38, 1)
@@ -197,7 +238,7 @@ def beach():
         L.new(a.outputs[0], b.inputs[0])
         return b.outputs[0]
 
-    hd = mix(height(acg(nt, 'Ground054', 'Displacement', trod), 0.085), height(acg(nt, 'Ground055L', 'Displacement', ripple), 0.030), pm.outputs[0])
+    hd = mix(height(acg(nt, 'Ground054', 'Displacement', trod), 0.040), height(acg(nt, 'Ground055L', 'Displacement', ripple), 0.034), pm.outputs[0])
     hw = height(acg(nt, 'Ground061', 'Displacement', wet_s), 0.014)
     hh = mix(hd, hw, wet)
     hn = N.new('ShaderNodeMath'); hn.operation = 'MULTIPLY'
@@ -208,11 +249,65 @@ def beach():
     ob.data.materials.append(mat)
 
 
+def far_land():
+    """The mountains across the water, in their real shapes: the elevation model read where each point of a grid
+    over the far distance lies on the map, lowered by the Earth's curve. (The coastal plain in front of them is
+    pressed flat: whatever stands on it today is not part of this picture.)"""
+    import geotiff
+    grids = {}
+    for t in ('N25_00_E055', 'N25_00_E056', 'N26_00_E056'):
+        a, lon, lat, _, _ = geotiff.read_geotiff(os.path.join(DEM, 'Copernicus_DSM_COG_10_%s_00_DEM.tif' % t))
+        grids[(int(round(lat)) - 1, int(round(lon)))] = a
+    xs = np.arange(-34000.0, 66000.0, 110.0)
+    ys = np.arange(9000.0, 98000.0, 110.0)
+    X, Y = np.meshgrid(xs, ys)
+    b = math.radians(VIEW_BEARING)
+    east, north = X * math.cos(b) + Y * math.sin(b), -X * math.sin(b) + Y * math.cos(b)
+    lat = VIEW_LAT + north / 111320.0
+    lon = VIEW_LON + east / (111320.0 * math.cos(math.radians(VIEW_LAT)))
+    z = np.zeros(X.shape, np.float32)
+    for (la, lo), a in grids.items():
+        m = (lat >= la) & (lat < la + 1) & (lon >= lo) & (lon < lo + 1)
+        r, c = (la + 1 - lat[m]) * 3600.0, (lon[m] - lo) * 3600.0
+        r0, c0 = np.clip(np.floor(r).astype(int), 0, 3598), np.clip(np.floor(c).astype(int), 0, 3598)
+        fr, fc = np.clip(r - r0, 0, 1), np.clip(c - c0, 0, 1)
+        z[m] = ((a[r0, c0] * (1 - fc) + a[r0, c0 + 1] * fc) * (1 - fr) + (a[r0 + 1, c0] * (1 - fc) + a[r0 + 1, c0 + 1] * fc) * fr)
+    land = z > 1.5
+    z = np.where(z < 60.0, z * 0.25, z - 45.0)
+    z = np.where(land, z, -400.0) - 0.87 * (X * X + Y * Y) / (2.0 * 6371000.0)
+    print('far land: highest %.0f m, %.1f degrees up' % (float(z.max()), float(np.degrees(np.arctan((z - EYE) / np.hypot(X, Y))).max())), flush=True)
+    ob = bake.grid_mesh('FarLand', xs, ys, z + SEA)
+    mat = bpy.data.materials.new('FarRock')
+    mat.use_nodes = True
+    nt = mat.node_tree
+    N, L = nt.nodes, nt.links
+    bsdf = N['Principled BSDF']
+    bsdf.inputs['Roughness'].default_value = 0.92
+    geo = N.new('ShaderNodeNewGeometry')
+    sep = N.new('ShaderNodeSeparateXYZ'); L.new(geo.outputs['Position'], sep.inputs[0])
+    # Bare limestone, grey-brown; paler gravel fans and sand at its feet; darker and lighter beds across it.
+    low = N.new('ShaderNodeMapRange')
+    low.inputs['From Min'].default_value = 20.0; low.inputs['From Max'].default_value = 260.0
+    L.new(sep.outputs['Z'], low.inputs['Value'])
+    base = N.new('ShaderNodeMixRGB')
+    base.inputs['Color1'].default_value = (0.44, 0.37, 0.27, 1); base.inputs['Color2'].default_value = (0.30, 0.265, 0.225, 1)
+    L.new(low.outputs[0], base.inputs['Fac'])
+    noise = N.new('ShaderNodeTexNoise'); noise.inputs['Scale'].default_value = 0.0011; noise.inputs['Detail'].default_value = 6.0
+    L.new(geo.outputs['Position'], noise.inputs['Vector'])
+    var = N.new('ShaderNodeMapRange'); var.inputs['To Min'].default_value = 0.72; var.inputs['To Max'].default_value = 1.22
+    L.new(noise.outputs['Fac'], var.inputs['Value'])
+    tone = N.new('ShaderNodeVectorMath'); tone.operation = 'SCALE'
+    L.new(base.outputs['Color'], tone.inputs[0]); L.new(var.outputs[0], tone.inputs['Scale'])
+    L.new(tone.outputs['Vector'], bsdf.inputs['Base Color'])
+    ob.data.materials.append(mat)
+
+
 def build():
+    # Sand and sea in front, nothing in the Sun's way where it rises out of the open sea; far ahead and to the right
+    # the mountains across the water, behind which it sets. (Stones stood on the sand once: the owner had them taken
+    # out of the Sun's way, and a scan of stones on its own patch of other sand looked laid on.)
     beach()
-    # On the sand beside us: a few sea-worn stones (a scan, true size). Nothing else stands between us and the
-    # horizon: the Sun rises out of the open sea and sets into it.
-    place('sand_rocks_small_01', -2.7, 4.3, 1.0, 200.0, sink=0.30, base=SEA + BEACH_SLOPE * (SHORE_AHEAD - 4.3) - 0.02)
+    far_land()
 
 
 def shore_meta(out):

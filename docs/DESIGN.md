@@ -145,7 +145,8 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   foreground, middle distance and far distance: **Arabian dunes** (ranks of dunes with sharp crests and slip faces
   from a simulated sand sea, ripples underfoot), **Pacific Northwest** (still water, dark conifers, a snow volcano
   from real elevation data), **Arctic** (snow peaks over a fjord, from real elevation data; the aurora), **Ocean**
-  (the open sea from a beach, sea stacks), **Green hills** (rolling spring hills and oaks, a lake; it took the
+  (a beach of golden sand, scanned from real beaches, its shore running away into the distance, and the open sea
+  coming in on it; nothing stands between us and the horizon), **Green hills** (rolling spring hills and oaks, a lake; it took the
   savanna's place in 0.11) and **Red rock** (buttes and mesas over a desert floor). Only nature: nothing man-made, no
   people. What each is made of and where its data comes from: `tools/scenery/sources/`.
 - **Natural skylines, exact times.** A scenery is never cut open for the Sun (the owner's decision: "what I don't
@@ -176,6 +177,13 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   is seen by starlight, as a long exposure finds it. A shooting star falls now and then.
 - **Water, live.** Still or ruffled, it mirrors the sky, the clouds and the land beyond (a thing mirrored at the
   right height for its distance), shows its bed through clear shallows, and carries the Sun's and the Moon's road.
+- **A beach with waves** (the Ocean scenery; `uShore` in `scene.frag`, written into `land.json` by `ocean.py`). The
+  swell comes in as lines that rise as the bed shelves, steepen, break (the larger ones further out) and run on as
+  white water with the foam they made trailing behind; the last of each wave runs up the sand as a thin sheet with a
+  foam edge, slides back, and leaves the sand dark and shining until it sinks away. The waves have real height: the
+  view ray is walked down onto them, so a wave shows its dark face and hides the water behind it. Over the pale
+  sand the shallows are clear and green. The sea's edge is worked out on the beach's own plane, not from the
+  picture's samples, so it is a clean line.
 - **Life.** Grass and leaves stir (and bend to a touch's breath of wind), a flock of distant birds crosses the day
   sky every few minutes, water moves, clouds drift, stars twinkle, the aurora plays over the Arctic.
 - **Seasons, if asked for.** Settings → Home scenery → Seasons (off by default, the owner's decision): on, the

@@ -286,6 +286,22 @@ float landDist(vec2 luv) {
     return exp2((g.r * 255.0 * 256.0 + g.g * 255.0) / 65535.0 * 18.0);
 }
 
+// The same, smoothly between the picture's (coarser) distance samples: where an edge is drawn from the distance
+// itself (the sea's edge on a beach), steps would show.
+float landDistSmooth(vec2 luv) {
+    vec2 sz = vec2(textureSize(tLandG, 0));
+    vec2 p = luv * sz - 0.5;
+    ivec2 i = ivec2(floor(p));
+    vec2 f = p - vec2(i);
+    ivec2 hi = ivec2(sz) - 1;
+    float v[4];
+    for (int k = 0; k < 4; k++) {
+        vec3 g = texelFetch(tLandG, clamp(i + ivec2(k & 1, k >> 1), ivec2(0), hi), 0).rgb;
+        v[k] = (g.r * 255.0 * 256.0 + g.g * 255.0) / 65535.0 * 18.0;
+    }
+    return exp2(mix(mix(v[0], v[1], f.x), mix(v[2], v[3], f.x), f.y));
+}
+
 // The land at a point of its picture, in the light of the moment and seen through the air between: colour, and how
 // much of the pixel it covers. `t`: how far it is (m).
 vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
@@ -383,29 +399,55 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
 
 uniform vec4 uShore;      // how far ahead of the eye the sea's mean edge lies in the middle of the view (m; 0 = no beach),
                           // how much further per metre to the right, the beach's slope, the bed's slope
-const float WAVE_L = 15.0;     // metres from one wave to the next
-const float WAVE_T = 7.5;      // seconds from one wave to the next
+const float WAVE_L = 13.0;     // metres from one wave to the next
+const float WAVE_T = 7.0;      // seconds from one wave to the next
 
-// Metres seaward of the sea's mean edge, for a place (m, the eye at the origin).
+// Metres seaward of the sea's mean edge, and metres along it, for a place (m, the eye at the origin).
 float shoreS(vec2 q) { return (q.y - uShore.x - uShore.y * q.x) / sqrt(1.0 + uShore.y * uShore.y); }
+float shoreA(vec2 q) { return (q.x + uShore.y * q.y) / sqrt(1.0 + uShore.y * uShore.y); }
 
-// Which wave is passing a place, and how far through it is: whole numbers as a wave's front arrives.
-float wavePhase(vec2 q, float s) {
-    // (No front is straight: it lags and leads along the shore.)
-    float wob = (texture(tNoise2D, vec2(q.x / 90.0, 0.37)).r - 0.5) * 0.9 + (texture(tNoise2D, vec2(q.x / 23.0, 0.71)).g - 0.5) * 0.22;
-    return s / WAVE_L + uTime / WAVE_T + wob;
+// The waves' clock at a place along the shore, in waves: whole numbers as a front reaches the sea's mean edge there.
+// (No front is straight: it lags and leads along the shore.)
+float waveClock(float a) {
+    float wob = (texture(tNoise2D, vec2(a / 90.0, 0.37)).r - 0.5) * 0.9 + (texture(tNoise2D, vec2(a / 23.0, 0.71)).g - 0.5) * 0.22;
+    return uTime / WAVE_T + wob;
 }
 
-// How large the wave passing is (no two alike), 0.75..1.25.
-float waveSize(vec2 q, float ph) { return 0.75 + 0.5 * texture(tNoise2D, vec2(q.x / 31.0 + floor(ph) * 0.37, 0.13 + floor(ph) * 0.11)).r; }
+// How large wave number n is at a place along the shore: no two alike, none the same all along. 0.75..1.25.
+float waveSize(float a, float n) { return 1.0 + 0.25 * sin(n * 2.39996 + a * 0.085 + 1.3 * sin(n * 1.71)); }
 
-// How far up the sand (m landward of the mean edge) the sheet of water reaches now, along the shore at q.
-float runUp(vec2 q) {
-    float ph = wavePhase(q, 0.0);
-    float f = fract(ph);
+// How high the swell stands s metres out: low on the open sea, rising as the bed shelves, spent after it has broken.
+float waveHigh(float s) {
+    return (0.12 + 0.50 * smoothstep(120.0, 46.0, s) - 0.44 * smoothstep(46.0, 4.0, s)) * smoothstep(320.0, 130.0, s) * smoothstep(-1.0, 3.0, s);
+}
+
+// How wide a wave's face is (m): a broad swell far out, steep where it is about to break.
+float waveFace(float s) { return mix(0.9, 3.0, smoothstep(48.0, 120.0, s)); }
+
+// The height of the water over the sea's level, s metres out, on the clock c (waveClock) of that stretch of shore.
+// d: metres seaward of the nearest crest (negative on its face, which looks at the shore); size: that wave's.
+float swell(float s, float a, float c, out float d, out float size) {
+    float ph = s / WAVE_L + c;
+    float n = floor(ph + 0.5);
+    d = (ph - n) * WAVE_L;
+    size = waveSize(a, n);
+    float w = d < 0.0 ? waveFace(s) : 3.2;
+    return waveHigh(s) * size * exp(-sq(d / w));
+}
+
+// How far up the sand wave n runs at its furthest (m from where the sheet starts): each wave its own, and in lobes
+// along the shore, so the sheet's edge is scalloped.
+float waveReach(float a, float n) {
+    float lobe = texture(tNoise2D, vec2(a / 41.0 + n * 0.61, 0.53 + n * 0.17)).r;
+    return 4.6 * waveSize(a, n) * (0.55 + 0.90 * lobe);
+}
+
+// How far up the sand (m landward of the mean edge) the sheet of water reaches now.
+float runUp(float a, float c) {
+    float f = fract(c);
     // It rushes up as the wave arrives and slides back more slowly.
     float up = smoothstep(0.0, 0.20, f) * (1.0 - smoothstep(0.28, 0.95, f));
-    return -0.7 + 3.6 * up * waveSize(q, ph);
+    return -0.7 + up * waveReach(a, floor(c));
 }
 
 void main() {
@@ -433,24 +475,56 @@ void main() {
     vec4 land = landAt(luv, rd, hazeCol, t);
 
     // On a beach the sea's edge is alive: what is under the sheet of water now, what it has just left wet.
-    float foam = 0.0;
+    float foam = 0.0, damp = 0.0;
     bool beach = uShore.x > 0.0 && uLandInfo.y > 0.0 && rd.y < -0.0005;
+    float shoreK = sqrt(1.0 + uShore.y * uShore.y);
+    float across = (rd.z - uShore.y * rd.x) / shoreK;      // metres seaward per metre along this ray
+    float s0 = -uShore.x / shoreK;                         // where the eye stands (landward: negative)
     if (beach) {
-        vec2 qg = rd.xz * (land.a > 0.5 ? t : uLandInfo.y / -rd.y);
-        float zb = land.a > 0.5 ? uLandInfo.y + rd.y * t : -50.0;            // the ground's height over the sea's level
-        float f0 = fract(wavePhase(qg, 0.0));
-        float df = runUp(qg) * uShore.z - zb;                                // water over the sand here (m)
+        float h = uLandInfo.y;
+        float ts = land.a > 0.5 ? landDistSmooth(vec2(luv.x, min(luv.y, 0.9995))) : h / -rd.y;
+        float zb = land.a > 0.5 ? h + rd.y * ts : -50.0;                     // the ground's height over the sea's level
+        // The beach's face and the bed are planes that meet at the sea's mean edge. Where the picture's ground lies
+        // on them, the plane itself is used: exact, so the water's edge is a clean line, not the picture's samples.
+        float denF = -rd.y - across * uShore.z, denB = -rd.y - across * uShore.w;
+        if (denF > 1e-5) {
+            float tp = (h + s0 * uShore.z) / denF;
+            float zp = h + rd.y * tp;
+            if (zp >= 0.0 && zp < 0.80 && zb - zp < 0.25 + 0.004 * tp) { zb = zp; ts = tp; }
+        }
+        if (denB > 1e-5) {
+            float tp = (h + s0 * uShore.w) / denB;
+            float zp = h + rd.y * tp;
+            if (zp < 0.0 && zp > -0.6 && zb - zp < 0.25 + 0.004 * tp) { zb = zp; ts = tp; }
+        }
+        vec2 qg = rd.xz * ts;
+        float ag = shoreA(qg);
+        float cg = waveClock(ag);
+        float f0 = fract(cg);
+        float df = runUp(ag, cg) * uShore.z - zb;                            // water over the sand here (m)
         if (df > 0.0) {
             water = mix(0.80, 1.0, smoothstep(0.04, 0.35, df));
+            damp = 1.0;
             // The sheet's edge: a line of foam while it runs up; lace left on the water as it thins and slides back.
             float adv = 1.0 - smoothstep(0.18, 0.42, f0);
-            float lace = texture(tNoise2D, qg * 0.55 + vec2(0.0, uTime * 0.03)).b * 0.6 + texture(tNoise2D, qg * 1.7).b * 0.4;
-            foam = smoothstep(0.030, 0.004, df) * (0.30 + 0.70 * adv);
-            foam = max(foam, smoothstep(0.50, 0.72, lace + 0.30 * adv) * smoothstep(0.14, 0.0, df) * (0.35 + 0.65 * adv));
+            vec2 lq = vec2(ag * 0.7, shoreS(qg) * 1.2);
+            float lace = texture(tNoise2D, lq * 0.55 + vec2(0.0, uTime * 0.03)).b * 0.45 + texture(tNoise2D, lq * 1.7).b * 0.33
+                       + texture(tNoise2D, lq * 5.3).b * 0.22;
+            foam = smoothstep(0.050, 0.006, df) * (0.35 + 0.65 * adv);
+            foam = max(foam, smoothstep(0.46, 0.70, lace + 0.32 * adv) * smoothstep(0.24, 0.0, df) * (0.40 + 0.60 * adv));
         } else {
-            // Sand the sheet has just left is wet and mirrors the sky; higher up it has had time to dry.
-            float top = 2.9 * uShore.z;
-            water = 0.76 * smoothstep(top + 0.03, top - 0.10, zb) * (0.50 + 0.50 * smoothstep(-0.30, 0.0, df));
+            // Sand the sheet has just left shines with a film of water and mirrors the sky; the film sinks away
+            // before the next wave. As high as the largest waves reach the sand stays damp and dark.
+            float n0 = floor(cg);
+            float reach = (-0.7 + waveReach(ag, n0)) * uShore.z, last = (-0.7 + waveReach(ag, n0 - 1.0)) * uShore.z;
+            float fresh = smoothstep(reach + 0.015, reach - 0.05, zb) * smoothstep(0.12, 0.25, f0) * (1.0 - 0.55 * smoothstep(0.3, 1.0, f0));
+            float old = smoothstep(last + 0.015, last - 0.05, zb) * mix(0.45, 0.28, f0);
+            float top = 6.5 * uShore.z;
+            damp = smoothstep(top + 0.05, top - 0.10, zb);
+            water = 0.78 * max(max(fresh, old), 0.30 * damp);
+            // Where the last wave turned back it left a thin line of foam on the sand.
+            float mark = smoothstep(0.014, 0.0, abs(zb - last - 0.004)) * smoothstep(0.30, 0.55, texture(tNoise2D, qg * 0.9).b);
+            foam = 0.34 * mark * (1.0 - 0.6 * f0);
         }
     }
 
@@ -460,38 +534,75 @@ void main() {
         float sea = smoothstep(0.80, 0.98, water);
         float h = uLandInfo.y;
         float tw = h / -rd.y;
+        float swellSlope = 0.0, crestD = 0.0, crestSize = 1.0, ss = 0.0, chop = 0.0;
+        if (beach && sea > 0.0) {
+            // The swell has height: the ray is walked down onto it, so a wave shows its face and hides what is
+            // behind it. (The clock is taken where the ray would meet a level sea; it changes slowly along the shore.)
+            vec2 qp = rd.xz * tw;
+            float aw = shoreA(qp), cw = waveClock(aw), sp = shoreS(qp);
+            float bound = 0.16 + 0.80 * smoothstep(200.0, 110.0, sp);
+            float t0 = max((h - bound) / -rd.y, 0.0);
+            float dt = (tw - t0) / 14.0;
+            float ta = tw - dt, tb = tw, dd, sz;
+            for (int i = 1; i <= 14; i++) {
+                float tt = t0 + dt * float(i);
+                if (h + rd.y * tt < swell(s0 + across * tt, aw, cw, dd, sz)) { ta = tt - dt; tb = tt; break; }
+            }
+            for (int i = 0; i < 5; i++) {
+                float tm = 0.5 * (ta + tb);
+                if (h + rd.y * tm < swell(s0 + across * tm, aw, cw, dd, sz)) tb = tm; else ta = tm;
+            }
+            tw = tb;
+            ss = s0 + across * tw;
+            swell(ss, aw, cw, crestD, crestSize);
+            swellSlope = (swell(ss + 0.08, aw, cw, dd, sz) - swell(ss - 0.08, aw, cw, dd, sz)) / 0.16;
+        }
         vec2 q = rd.xz * tw;
         float rough;
         vec2 sl = waterSlope(q, tw, rough);
         // (Where the water is only a film over the sand there is no room for a wave.)
         sl *= (smoothstep(0.0, 0.5, max(t - tw, 0.0) * -rd.y) * 0.85 + 0.15) * sea;
+        // (The thin sheet on the sand is never glass: it shivers, and breaks the Sun in it into glints.)
+        if (beach) sl += (texture(tNoise2D, q * 2.3 + vec2(uTime * 0.05, 0.0)).rg - 0.5) * 0.07 * smoothstep(0.55, 0.80, water) * (1.0 - 0.6 * sea);
         if (beach && sea > 0.0) {
-            // The swell coming in: each wave a ridge of water that steepens towards the shore, breaks, and runs on
-            // as a line of foam with the foam it has made trailing behind it.
-            float ss = shoreS(q);
-            float ph = wavePhase(q, ss);
-            float f = fract(ph);
-            float size = waveSize(q, ph);
-            float dm = min(f, 1.0 - f) * WAVE_L;                               // metres from the wave's front
-            float high = (0.07 + 0.25 * smoothstep(70.0, 22.0, ss) - 0.24 * smoothstep(22.0, 3.0, ss)) * size * smoothstep(260.0, 90.0, ss);
-            float ridge = high * exp(-sq(dm / 1.5));
-            vec2 seaward = normalize(vec2(-uShore.y, 1.0));
-            sl += seaward * (f < 0.5 ? -1.0 : 1.0) * ridge * 2.0 * dm / 2.25 * sea;
-            float broken = smoothstep(27.0, 19.0, ss) * smoothstep(-1.0, 2.5, ss) * size;
-            float bub = texture(tNoise2D, q * 0.33 + vec2(0.0, uTime * 0.04)).b * 0.55 + texture(tNoise2D, q * 1.1 - vec2(uTime * 0.02, 0.0)).b * 0.45;
-            float behind = f * WAVE_L;                                          // metres behind the front (seaward of it)
-            float churn = exp(-behind / 4.5) * smoothstep(0.62 - 0.45 * exp(-behind / 2.0), 0.80, bub + 0.25);
-            foam = max(foam, broken * max(smoothstep(0.9, 0.0, behind), churn) * sea);
-            // Old foam, drifting in the shallows between one wave and the next.
-            foam = max(foam, 0.30 * smoothstep(14.0, 2.0, ss) * smoothstep(0.66, 0.84, bub) * sea);
+            sl += normalize(vec2(-uShore.y, 1.0)) * swellSlope * sea;
+            // A wave breaks where the water is too shallow for it (the large ones further out): its face turns white
+            // and tumbles, and the foam it makes trails behind it, thinning.
+            float breakS = 44.0 + 30.0 * (crestSize - 1.0);
+            float broken = smoothstep(breakS + 3.0, breakS - 3.0, ss) * smoothstep(-1.0, 2.5, ss);
+            // Foam is made of bubbles in patches and streaks drawn out along the wave: where it is, it is white; between,
+            // the water shows. (bn: a pattern of it, 0..1, evenly spread; streaked along the shore.)
+            vec2 bq = vec2(shoreA(q) * 0.42, ss);
+            float bub = texture(tNoise2D, bq * 0.11 + vec2(uTime * 0.012, 0.0)).b * 0.40 + texture(tNoise2D, bq * 0.33 + vec2(0.0, uTime * 0.04)).b * 0.35
+                      + texture(tNoise2D, bq * 1.1 - vec2(uTime * 0.02, 0.0)).b * 0.25;
+            float bn = saturate((bub - 0.5) * 3.4 + 0.5);
+            float wf = waveFace(ss);
+            float front = crestD < 0.0 ? smoothstep(-1.7 * wf, -0.7 * wf, crestD) * (0.80 + 0.20 * bn)
+                                       : smoothstep(1.2, 0.0, crestD);
+            float behind = crestD >= 0.0 ? crestD : crestD + WAVE_L;
+            float cover = 0.92 * exp(-behind / 3.2);
+            float churn = smoothstep(1.0 - cover - 0.07, 1.0 - cover + 0.07, bn) * (0.55 + 0.45 * exp(-behind / 5.0));
+            foam = max(foam, broken * max(front, churn) * sea);
+            // Just before it breaks its crest whitens and begins to spill.
+            foam = max(foam, 0.65 * smoothstep(breakS + 9.0, breakS + 3.0, ss) * (1.0 - broken) * smoothstep(0.55, 0.0, abs(crestD + 0.1))
+                       * smoothstep(0.35, 0.7, bn) * sea);
+            // Old foam, in thin streaks, drifting in the shallows between one wave and the next.
+            foam = max(foam, 0.45 * smoothstep(34.0, 4.0, ss) * smoothstep(0.80, 0.90, bn) * sea);
+            // The water of the surf is churned and choppy: it mirrors less, and shows its own green.
+            chop = 0.16 * smoothstep(70.0, 25.0, ss) * smoothstep(-1.0, 4.0, ss) * sea;
         }
         vec3 n = normalize(vec3(-sl.x, 1.0, -sl.y));
         vec3 r = reflect(rd, n);
         r.y = abs(r.y) + 0.002;
         r = normalize(r);
-        vec3 rp = viewPoint(r);
+        // Waves too small or too far off to be seen each for itself still tilt the water. So what a sea mirrors far off is
+        // not the horizon but the sky well above it, and it mirrors less of it than glass would: a sea is darker and
+        // bluer than the sky that stands over it, and the horizon is a line. (The Sun's road keeps its true place.)
+        float sig = rough * sea + chop;
+        vec3 rs = normalize(vec3(r.x, r.y + 0.9 * sig * length(r.xz), r.z));
+        vec3 rp = viewPoint(rs);
         vec2 rvp = clamp(rp.xy, vec2(0.0), vec2(uView.x, uCam.y));
-        vec3 refl = heavens(r, rvp, 1.0, sunShows);
+        vec3 refl = heavens(rs, rvp, 1.0, 0.0) + sunLight(r, sunShows);
         // The land beyond, mirrored: a thing at distance D is seen in the water 2h/D lower than a far thing would be.
         float te = r.y / max(length(r.xz), 1e-4);
         float D = 3000.0;
@@ -511,12 +622,24 @@ void main() {
             vec4 ml = landAt(mluv, r, hazeCol, mt);
             refl = mix(refl, ml.rgb, ml.a * notWater);
         }
-        float fres = 0.02 + 0.98 * pow(1.0 - saturate(dot(-rd, n)), 5.0);
+        float fres = 0.02 + 0.98 * pow(1.0 - saturate(dot(-rd, n)), 5.0 * exp(-2.69 * sig)) / (1.0 + 22.7 * pow(sig, 1.5));
         // What lies under: the bed, dimmed and coloured by the depth of water over it.
         float depth = max(t - tw, 0.0) * -rd.y;
         vec3 deep = mix(vec3(0.010, 0.045, 0.060), vec3(0.020, 0.090, 0.085), uWater.y) * (mAmbTop() * 2.0 + mSunGround() * max(uSunTrue.y, 0.0));
-        vec3 under = mix(land.rgb, mix(deep, land.rgb, exp(-depth * mix(1.6, 0.45, uWater.y)) * land.a), sea);
-        col = mix(under, refl, fres * mix(0.78 * water, 1.0, sea));
+        vec3 under;
+        if (beach) {
+            // Over pale sand the sea is green and clear: water takes the red out of the light first. Sand that is
+            // wet is darker than dry sand.
+            vec3 through = exp(-depth * vec3(0.90, 0.22, 0.17) * mix(1.6, 0.7, uWater.y));
+            vec3 sand = land.rgb * mix(1.0, 0.62, saturate(max(water * 1.28, 0.75 * damp))) * mix(vec3(1.0), vec3(1.0, 0.95, 0.88), damp);
+            // (Deep water has a colour of its own: the blue that the sea sends back up.)
+            vec3 body = mix(vec3(0.004, 0.034, 0.072), vec3(0.006, 0.058, 0.105), uWater.y) * (mAmbTop() * 2.0 + mSunGround() * max(uSunTrue.y, 0.0));
+            under = mix(sand, land.rgb * land.a * through * 0.85 + body * 1.6 * (1.0 - through.g), sea);
+            col = mix(under, refl, fres * mix(min(1.0, water * 1.25), 1.0, sea));
+        } else {
+            under = mix(land.rgb, mix(deep, land.rgb, exp(-depth * mix(1.6, 0.45, uWater.y)) * land.a), sea);
+            col = mix(under, refl, fres * mix(0.78 * water, 1.0, sea));
+        }
     } else {
         col = mix(col, land.rgb, land.a);
     }
