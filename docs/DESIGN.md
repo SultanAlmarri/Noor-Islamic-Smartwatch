@@ -148,12 +148,15 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   (the open sea from a beach, sea stacks), **Green hills** (rolling spring hills and oaks, a lake; it took the
   savanna's place in 0.11) and **Red rock** (buttes and mesas over a desert floor). Only nature: nothing man-made, no
   people. What each is made of and where its data comes from: `tools/scenery/sources/`.
-- **Natural skylines.** The Sun and the Moon are drawn where the prayer times put them: they rise 14.7 degrees
-  left of the view's middle and set 14.7 degrees right of it. A scenery is never cut open for them (the owner's
-  decision: "what I don't like is cutting mountains in order to have the sunrise and set on the ground"): the Sun
-  rises over a mountain or sets behind trees where that is what the place is like, and meets a level horizon
-  where the place has one. The prayer times shown are exact either way; the Sun may be seen to pass behind land a
-  little before or after them.
+- **Natural skylines, exact times.** A scenery is never cut open for the Sun (the owner's decision: "what I don't
+  like is cutting mountains in order to have the sunrise and set on the ground"): a range runs unbroken, a forest
+  stands where it stands. Instead the Sun's path stands on the scenery's own skyline: the app reads from the land's
+  picture how high the land is where the Sun rises and where it sets (`RealSky.sunLift`), and draws the path from
+  the one to the other over the same top (`SkyGeometry.y(el, fraction)`, `SunLift`). So the Sun comes up over the
+  mountain exactly at Shuruq and goes behind the trees exactly at Maghrib; over the sea or a plain it meets the
+  level horizon as before. The disc itself is drawn only between those two moments (its true height is -0.83
+  degrees at both), so no gap in the land can show it early or late; its glow behind the land is the dawn and the
+  dusk. The colour of the sky and of the light still comes from the Sun's true height.
 - **Clouds of twelve kinds**, each a set of path-traced volumes (`skybake.py`): low (fair-weather cumulus, a cumulus
   field, towering cumulus, a thunderhead with its anvil, a stratocumulus sheet, an overcast), middle (altocumulus in
   flocks and in rolls, an altostratus veil) and high (cirrus, cirrocumulus, a cirrostratus veil). The phone shows a

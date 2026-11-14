@@ -448,7 +448,9 @@ internal class RealSkyFrame(
             val seen = ray(look.sunX, look.sunY, w, h, focalPx, horizon, flip)
             val az = atan2(seen[0].toDouble(), seen[2].toDouble())
             // Below the horizon the Sun is where it truly is; above it, where the path draws it.
-            val sunDir = if (el > 0) seen else dirAzEl(az, el * DEG)
+            // (Over a scenery with a skyline of its own the path stands on the land: there the Sun is still drawn above
+            // the level horizon for a while after its true height has gone under it.)
+            val sunDir = if (el > 0 || seen[1] > sin(el * DEG)) seen else dirAzEl(az, el * DEG)
             val moonUp = look.moonVisibility > 0f
             val moonDir = if (moonUp) ray(look.moonX, look.moonY, w, h, focalPx, horizon, flip) else floatArrayOf(0f, -0.2f, 0.98f)
             // By day the light falls from the side of the Sun's half of the sky (where it rose in the morning, where it

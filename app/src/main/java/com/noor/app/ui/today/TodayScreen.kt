@@ -222,6 +222,11 @@ fun TodayContent(
     val skyContext = androidx.compose.ui.platform.LocalContext.current
     val realSky = RealSky.usable(skyContext, u.settings.skyGraphics) && RealSky.unusable.intValue == 0
     SkyText.real = realSky
+    // The Sun's path stands on the skyline of the scenery on screen (see SunLift); on a level horizon otherwise.
+    val lift = if (realSky) remember(u.settings.scenery, u.place) {
+        RealSky.sunLift(skyContext, Biome.of(u.settings.scenery, u.place.countryCode, u.place.point.elevationM, u.place.point.latitude))
+    } else floatArrayOf(0f, 0f)
+    SunLift.rise = lift[0]; SunLift.set = lift[1]
     val bridge = remember { RealSkyBridge() }
     val pagePx = with(LocalDensity.current) { Triple(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), home.heroHeight.toPx()) }
     val glassRadius = with(LocalDensity.current) { 28.dp.toPx() }

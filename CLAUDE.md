@@ -153,7 +153,9 @@ phone) as bland and fake: never call a render beautiful on your own judgment; pu
 - Rules a scenery must keep: nature only; every source and licence written down in `tools/scenery/sources/`;
   built from real-world data (scans, elevation models) wherever such data exists, not from formulas; and a natural
   skyline: never cut a range or a treeline open so the Sun rises and sets on level ground (the owner rejected that;
-  the Sun may rise over a mountain). `bake.skyline_limit` is only advice against hiding the Sun's whole day.
+  the Sun may rise over a mountain). The times stay exact to the eye because the Sun's path stands on the land's
+  own skyline where it rises and sets (`RealSky.sunLift`, `SunLift`, `SkyGeometry.y(el, fraction)`; the bench does
+  the same). `bake.skyline_limit` is only advice against hiding the Sun's whole day.
 - Pitfalls met: never write a value near 65 000 into a half-float target (0.10's Sun did, and was black on the
   owner's phone); Blender ignores `mat.cycles.displacement_method` (use `mat.displacement_method`); a generated
   image must be saved and reloaded before Cycles sees it; volume emission is per metre whatever the density;

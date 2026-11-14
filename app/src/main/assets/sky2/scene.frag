@@ -138,7 +138,9 @@ vec3 sunLight(vec3 rd, float shows) {
     vec3 col = vec3(0.0);
     if (sd < 1.3) {
         float limb = 1.0 - 0.38 * (1.0 - sqrt(max(1.0 - sd * sd, 0.0)));
-        col += c * limb * smoothstep(1.0, 0.86, sd) * shows;
+        // (The disc is there from Shuruq to Maghrib and at no other time, whatever the land in front of it is like:
+        // the Sun's true height is -0.83 degrees at both.)
+        col += c * limb * smoothstep(1.0, 0.86, sd) * shows * smoothstep(-1.10, -0.80, uSunEl);
     }
     // Round it: a tight glare, the wider glow of the air it shines through (fuller when it is low and its light
     // crosses much more air), and the fine rays a lens draws out of a point of light: by these a camera's Sun is

@@ -57,6 +57,10 @@ as it does in the world. Never cut a range, a treeline or a row of rocks open so
 set on the ground... make everything look natural"). A level horizon where the Sun rises or sets is welcome when
 the place has one (the sea, a plain), and wrong when it is forced.
 
+The prayer times stay exact to the eye all the same: the app reads from the finished picture how high the land
+stands where the Sun rises and where it sets, and stands the Sun's path on that, so the Sun clears the land exactly
+at Shuruq and goes behind it exactly at Maghrib. Nothing in the scenery has to be arranged for that.
+
 The one thing to keep in mind is the middle of the day: land so high under the arch that the Sun is hidden for most
 of its day is too much. `bake.skyline_limit(bearing)` gives a height to stay under between the two points (about two
 thirds of the arch; 11.7 degrees in the middle), and the packer prints how the skyline stands against it, as advice.

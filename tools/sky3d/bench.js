@@ -125,7 +125,11 @@ function chart() {
   const maxEl = Math.max(elevationAt(0.5), 12), minEl = Math.min(elevationAt(0), -24);
   const hy = P.horizon * H, at = P.arcTop * H, gy = P.ground * H;
   const x = f => { const uu = (-0.04 + 1.08 * warp(f)) * W; return P.rtl ? W - uu : uu; };
-  const y = el => el >= 0 ? hy - el / maxEl * (hy - at) : hy + (-el / -minEl) * (gy - hy);
+  // The path stands on the scenery's own skyline where the Sun rises and sets (SkyGeometry.y in the app).
+  const land = LAND[(BIOMES[P.biome] || BIOMES[0]).id];
+  const lifts = land && land.lift ? land.lift.map(t => t * P.focal * W) : [0, 0];
+  const lift = f => { const t = Math.min(1, Math.max(0, ((-0.04 + 1.08 * warp(f)) - 0.1976) / 0.6048)); return Math.min((hy - at) * 0.72, lifts[0] + (lifts[1] - lifts[0]) * t * t * (3 - 2 * t)); };
+  const y = (el, f) => { const b = hy - lift(f === undefined ? 0.5 : f); return el >= 0 ? b - el / maxEl * (b - at) : b + (-el / -minEl) * (gy - hy); };
   return { x, y, rise, set, fajr, isha };
 }
 function viewRay(px, py) {
@@ -138,7 +142,7 @@ function updateUniforms() {
   const ch = chart();
   const f = ((P.tod % 1) + 1) % 1;
   const el = elevationAt(f);
-  const sx = ch.x(f), sy = ch.y(el);
+  const sx = ch.x(f), sy = ch.y(el, f);
   const drawn = viewRay(sx, sy);
   const az = Math.atan2(drawn[0], drawn[2]);
   const drawnEl = Math.asin(drawn[1]) / DEG;
@@ -146,7 +150,7 @@ function updateUniforms() {
   // The moon rides the Sun's path, as far behind it as it is old.
   const age = ((P.hijriDay - 1) + 0.5) / 29.53;
   const mf = (((f - age) % 1) + 1) % 1, mel = elevationAt(mf);
-  const mx = ch.x(mf), my = ch.y(mel);
+  const mx = ch.x(mf), my = ch.y(mel, mf);
   const moonDir = viewRay(mx, my);
   const phase = 2 * Math.PI * (P.hijriDay / 29.53), pa = Math.PI - phase;
   let lx = sx - mx, ly = sy - my; const ll = Math.max(1, Math.hypot(lx, ly)); lx /= ll; ly /= ll;
@@ -244,6 +248,15 @@ async function loadLand(id) {
     for (const sun of meta.suns) L.s[sun.name] = await load('s_' + sun.name + '.webp');
     for (const n of ['gl', 'gr']) { try { L.s[n] = await load('s_' + n + '.webp'); } catch (e) { L.s[n] = T.tZero; } }
     L.m = meta.mask ? await load('m.webp') : null;
+    // How high the skyline stands where the Sun rises and sets (RealSky.sunLift in the app).
+    try {
+      const bmp = await createImageBitmap(await (await fetch(LAND_DIR + id + '/a.webp?' + Date.now())).blob(), { premultiplyAlpha: 'none' });
+      const cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height;
+      const cx = cv.getContext('2d'); cx.drawImage(bmp, 0, 0);
+      const px = cx.getImageData(0, 0, bmp.width, bmp.height).data;
+      const at = uu => { let low = 1e9; for (let c = uu - 0.0125; c <= uu + 0.0125; c += 0.0025) { const xx = Math.min(bmp.width - 1, Math.max(0, Math.floor(c * bmp.width))); let yy = 0; while (yy < bmp.height && px[(yy * bmp.width + xx) * 4 + 3] < 128) yy++; low = Math.min(low, (meta.horizon - (meta.top + yy * meta.height / bmp.height)) / (meta.focal * meta.width)); } return Math.min(0.5, Math.max(0, low)); };
+      L.lift = [at(0.5 - 0.3024), at(0.5 + 0.3024)];
+    } catch (e) { L.lift = [0, 0]; }
     L.lit = tex2D(L.a.w, L.a.h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, gl.LINEAR, gl.CLAMP_TO_EDGE);
     L.fLit = fbo(L.lit);
     LAND[id] = L;
