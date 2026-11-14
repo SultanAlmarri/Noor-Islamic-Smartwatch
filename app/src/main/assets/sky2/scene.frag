@@ -358,7 +358,13 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
 // is: waves too small to be seen from there are left out, and only roughen the reflection (`rough`).
 vec2 waterSlope(vec2 q, float t, out float rough) {
     float wind = mix(0.20, 1.0, uWater.x);
-    float px = t / uCam.x * mix(1.0, 3.2, smoothstep(0.25, 0.02, uLandInfo.y / max(t, 1.0)));
+    // What a pixel covers of the water there: so many metres across the view, and many times more along it (far
+    // water is seen at a low angle). A wave is drawn only if a pixel can show it; one coming towards us is the first
+    // to be lost, far off (drawn all the same it would flicker, in dashes of sky across the land's mirror image).
+    float px0 = t / uCam.x;
+    float squash = clamp(t / max(uLandInfo.y, 0.1), 1.0, 80.0);
+    vec2 vdir = q / max(length(q), 1e-3);
+    float px = px0 * sqrt(squash);
     vec2 g = vec2(0.0);
     float lost = 0.0;
     for (int i = 0; i < 7; i++) {
@@ -369,7 +375,7 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
         float ang = 1.05 * sin(fi * 2.4 + 0.7) + 0.25 * sin(fi * 5.1);
         vec2 dir = vec2(sin(ang), -cos(ang));
         float amp = lambda * 0.0075 * wind;
-        float seen = saturate(lambda / (px * 9.0) - 0.5);
+        float seen = saturate(lambda / (px0 * mix(1.0, squash, abs(dot(dir, vdir))) * 3.0) - 0.5);
         // (No train is endless: each swells and dies away along its crests.)
         float group = 0.55 + 0.45 * sin(dot(q, vec2(dir.y, -dir.x)) * k * 0.13 + fi * 2.1) * sin(dot(q, dir) * k * 0.07 + fi);
         float ph = dot(q, dir) * k - uTime * sqrt(9.8 * k) + fi * 1.7;
@@ -602,16 +608,30 @@ void main() {
         vec3 rs = normalize(vec3(r.x, r.y + 0.9 * sig * length(r.xz), r.z));
         vec3 rp = viewPoint(rs);
         vec2 rvp = clamp(rp.xy, vec2(0.0), vec2(uView.x, uCam.y));
-        vec3 refl = heavens(rs, rvp, 1.0, 0.0) + sunLight(r, sunShows);
+        vec3 refl = heavens(rs, rvp, 1.0, 0.0);
+        // The Sun in the water. Near us each wave throws its own glint. Far off a pixel holds many waves: there the
+        // Sun's road is their sum, the light of all the facets that happen to be turned right (drawn wave by wave it
+        // would be a flicker of white dashes).
+        float many = max(saturate(sig / 0.10), smoothstep(10.0, 40.0, tw / max(h, 0.1)));
+        refl += sunLight(r, sunShows) * (1.0 - many);
+        if (many > 0.0 && uSunDir.y > 0.0) {
+            vec3 hv = normalize(uSunDir - rd);
+            vec2 need = hv.xz / max(hv.y, 0.05);
+            float s2 = max(sig * sig, 0.0025);
+            float turned = exp(-dot(need, need) / (2.0 * s2)) / (6.2832 * s2);
+            refl += mSunDisc() * sunShows * 5.7e-4 * turned / (4.0 * max(-rd.y, 0.02) * pow(max(hv.y, 0.05), 4.0))
+                    * many * smoothstep(-1.10, -0.80, uSunEl);
+        }
         // The land beyond, mirrored: a thing at distance D is seen in the water 2h/D lower than a far thing would be.
         float te = r.y / max(length(r.xz), 1e-4);
         float D = 3000.0;
-        vec2 mluv = luv;
+        vec2 mluv = luv, mfar = vec2(-1.0);
         for (int i = 0; i < 3; i++) {
             float tl = te - 2.0 * h / D;
             vec3 dd = normalize(vec3(r.x, tl * length(r.xz), r.z));
             vec3 pp = viewPoint(dd);
             mluv = landUv(pp.xy);
+            if (i == 0) mfar = mluv;
             if (mluv.y <= 0.0 || mluv.y >= 1.0) { D = 1.0e6; break; }
             float dist = landDist(mluv) * length(dd.xz);
             D = max(dist, tw + 1.0);
@@ -619,6 +639,9 @@ void main() {
         if (D < 9.0e5 && mluv.y > 0.0) {
             float mt;
             float notWater = uLandInfo.w > 0.5 ? 1.0 - step(0.5, texture(tLandM, mluv).r) : 1.0;
+            // (A ray that leaves the water nearly level meets the far shore at its foot. The search can end on the
+            // water in front of that shore instead: then what it found first, taking the shore for far off, is right.)
+            if (notWater < 0.5 && uLandInfo.w > 0.5 && mfar.y > 0.0 && mfar.y < 1.0 && texture(tLandM, mfar).r < 0.5) { mluv = mfar; notWater = 1.0; }
             vec4 ml = landAt(mluv, r, hazeCol, mt);
             refl = mix(refl, ml.rgb, ml.a * notWater);
         }
