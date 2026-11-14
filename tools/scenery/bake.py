@@ -88,6 +88,25 @@ def check_skyline(alpha, top=0):
     return len(bad) == 0
 
 
+def sun_lift(alpha, top, horizon, focal_px, rows=None):
+    """The tangents of how high the skyline stands where the Sun rises and where it sets, as the app stands the
+    Sun's path on them (RealSky.sunLift does the same from a.webp when land.json has no `lift`): the lowest point
+    of the skyline within the Sun's own width, 30.24 % of the picture's width to either side of its middle.
+    `alpha` is the land's alpha (rows from the top; `rows` = how many rows of the frame it stands for)."""
+    h, w = alpha.shape
+    rows = h if rows is None else rows
+    out = []
+    for u in (0.5 - 0.3024, 0.5 + 0.3024):
+        low = 1.0e9
+        for i in range(11):
+            x = min(max(int((u - 0.0125 + 0.0025 * i) * w), 0), w - 1)
+            solid = np.nonzero(alpha[:, x] >= 0.5)[0]
+            y = int(solid[0]) if len(solid) else h
+            low = min(low, (horizon - (top + y * rows / h)) / focal_px)
+        out.append(float(min(max(low, 0.0), 0.5)))
+    return out
+
+
 GLOW_ANGLE = 75.0         # how broad the glow of the sky round a low Sun is taken to be (degrees across)
 
 
@@ -469,6 +488,7 @@ def bake_pack(src, dst, suns, eye, aovs=(), quality=80, frame='0001', water=None
         'water': None if water is None else float(water),
         'suns': [{'name': n.lower(), 'azimuth': az, 'elevation': el} for n, az, el in suns],
     }
+    meta['lift'] = sun_lift(alpha, top, HORIZON * k, FOCAL * alpha.shape[1])
     json.dump(meta, open(os.path.join(dst, 'land.json'), 'w'), indent=1)
     return meta
 

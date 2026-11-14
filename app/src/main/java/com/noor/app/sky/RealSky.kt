@@ -181,8 +181,9 @@ object RealSky {
 
     /**
      * How high a scenery's skyline stands where the Sun rises and where it sets: tangents of the angle over the
-     * horizon, read once from the land's own picture (where its alpha begins, 30.24 % of the width to either side of
-     * the middle; the lowest point within the Sun's own width, so the Sun is seen the moment it clears the land).
+     * horizon. The packer writes them into land.json (`lift`); for a scenery packed without them they are read once
+     * from the land's own picture (where its alpha begins, 30.24 % of the width to either side of the middle; the
+     * lowest point within the Sun's own width, so the Sun is seen the moment it clears the land).
      * Zeros when there is no picture or it cannot be read: the Sun then rises and sets on the level horizon.
      */
     fun sunLift(context: Context, biome: Biome): FloatArray = synchronized(lifts) {
@@ -190,6 +191,10 @@ object RealSky {
             runCatching {
                 val dir = "sky2/land/${biome.id}"
                 val meta = org.json.JSONObject(context.assets.open("$dir/land.json").bufferedReader().use { it.readText() })
+                meta.optJSONArray("lift")?.takeIf { it.length() == 2 }?.let { l ->
+                    return@runCatching floatArrayOf(l.getDouble(0).toFloat().coerceIn(0f, 0.5f), l.getDouble(1).toFloat().coerceIn(0f, 0.5f))
+                        .also { Log.i(TAG, "Skyline of ${biome.id}: ${it[0]} where the Sun rises, ${it[1]} where it sets") }
+                }
                 val bmp = context.assets.open("$dir/a.webp").use { android.graphics.BitmapFactory.decodeStream(it) } ?: error("unreadable")
                 val width = meta.getDouble("width"); val top = meta.getDouble("top"); val horizon = meta.getDouble("horizon")
                 val rows = meta.getDouble("height")
