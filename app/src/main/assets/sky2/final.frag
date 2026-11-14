@@ -60,6 +60,12 @@ void main() {
         vec2 ds = (vp - sp.xy) / (0.075 * uView.x);
         lim = mix(lim, 1.0, exp(-dot(ds, ds)) * step(0.0, sp.z) * smoothstep(-2.0, 1.0, uSunEl));
     }
+    // Nor the Moon: by night it is the brightest thing there is.
+    if (lim < 1.0 && uMoonLit.w > 0.0 && uNight > 0.05) {
+        vec3 mp = viewPoint(normalize(uMoon.xyz));
+        vec2 dm = (vp - mp.xy) / (0.05 * uView.x);
+        lim = mix(lim, 1.0, exp(-dot(dm, dm)) * step(0.0, mp.z) * uMoonLit.w);
+    }
     if (lim < 1.0) {
         float clouds = saturate(uCover * 2.0);
         float sunlit = luma(toneLinear(mSunCloud() + mAmbTop()));

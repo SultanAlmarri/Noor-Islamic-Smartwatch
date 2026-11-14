@@ -57,23 +57,16 @@ vec3 faintStars(vec3 d, float alt) {
     return sum;
 }
 
-// The Milky Way, where it really is: a band along the galactic plane, bright towards the centre, cut by dust.
+// The Milky Way as it is: NASA's map of the whole sky without its stars (Deep Star Maps 2020, public domain), fixed
+// to the turning sky, so the bright centre, the dust lanes and the Magellanic Clouds stand where they really do for
+// the place and the hour. (The picture runs right ascension leftwards from 0 h in its middle.)
+uniform sampler2D tMilky;
 vec3 milkyWay(vec3 d) {
-    float sb = dot(d, uGalN);
-    vec3 e2 = cross(uGalN, uGalC);
-    float l = atan(dot(d, e2), dot(d, uGalC));
-    float b = asin(clamp(sb, -1.0, 1.0));
-    float cen = exp(-sq(l / 0.9));
-    float width = mix(0.11, 0.20, cen);
-    float band = exp(-sq(b / width));
-    vec2 q = vec2(l * 3.0, b * 9.0);
-    float clumps = texture(tNoise2D, q * 0.13 + 0.3).r * 0.6 + texture(tNoise2D, q * 0.41).g * 0.4;
-    float dust = smoothstep(0.42, 0.62, texture(tNoise2D, vec2(l * 0.55, b * 2.6) + 0.17).g) * exp(-sq((b + 0.015) / (0.05 + 0.04 * cen)));
-    float grain = 0.6 + 0.8 * texture(tNoise2D, q * 1.7 + 0.5).a * texture(tNoise2D, q * 0.9).b;
-    float glow = band * (0.30 + 1.0 * cen) * (0.45 + 1.1 * clumps * clumps) * (1.0 - 0.8 * dust) * grain;
-    glow += 0.5 * exp(-sq(b / 0.09)) * exp(-sq(l / 0.22)) * (1.0 - 0.6 * dust);
-    vec3 col = mix(vec3(0.62, 0.72, 1.0), vec3(1.0, 0.86, 0.68), cen * 0.8);
-    return col * glow * 0.050;
+    vec3 c = vec3(dot(d, uCelX), dot(d, uCelY), dot(d, uCelZ));
+    vec2 uv = vec2(fract(0.5 - atan(c.y, c.x) / (2.0 * PI)), 0.5 - asin(clamp(c.z, -1.0, 1.0)) / PI);
+    vec3 t = pow(texture(tMilky, uv).rgb, vec3(2.2));
+    // (As a long exposure shows it: its bright parts brought out, its colour kept.)
+    return t * (0.55 + 1.6 * luma(t)) * 0.20;
 }
 
 // The aurora: curtains of light a hundred kilometres up and more, folded along the far sky, green at their sharp
@@ -99,25 +92,31 @@ vec3 aurora(vec3 rd, float jit) {
     return col * s * 0.30 * (0.75 + 0.25 * sin(uTime * 0.23));
 }
 
-// The moon as a lit sphere: its real phase, the grey seas, earthshine on the dark part.
+// The Moon as a lit sphere with its real face (NASA's map from the Lunar Reconnaissance Orbiter, public domain): its
+// phase, the seas and the bright rayed craters where they are, earthshine on the dark part.
+uniform sampler2D tMoon;
 vec4 moonDisc(vec3 rd) {
     float vis = uMoonLit.w;
     if (vis <= 0.0) return vec4(0.0);
     vec3 m = normalize(uMoon.xyz);
-    float rad = 0.0105;                          // drawn a little over twice its real size, as the eye remembers it
+    float rad = 0.0135;                          // drawn larger than life, as the eye remembers it (and as the Sun is)
     vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), m));
     vec3 up = cross(m, right);
     vec2 q = vec2(dot(rd, right), dot(rd, up)) / rad;
     if (uCam.w > 0.5) q.x = -q.x;
     float r2 = dot(q, q);
     if (r2 > 1.2) return vec4(0.0);
-    float edge = smoothstep(1.0, 0.94, sqrt(r2));
+    float edge = smoothstep(1.0, 0.93, sqrt(r2));
     vec3 n = vec3(q.x, -q.y, sqrt(max(1.0 - r2, 0.0)));
-    float lit = smoothstep(-0.05, 0.25, dot(n, normalize(uMoonLit.xyz)));
-    float seas = texture(tNoise2D, q * 0.11 + 0.21).r * 0.6 + texture(tNoise2D, q * 0.27 + 0.6).g * 0.4;
-    float alb = mix(0.62, 1.0, smoothstep(0.42, 0.58, seas)) * mix(0.82, 1.0, n.z);
-    vec3 col = vec3(1.0, 0.97, 0.90) * alb * (lit * (0.9 + 3.0 * uNight) + 0.02 * uNight);
-    return vec4(col * edge * vis, edge * vis * lit);
+    float lit = smoothstep(-0.04, 0.22, dot(n, normalize(uMoonLit.xyz)));
+    // The side that faces the Earth: longitude 0 in the middle of the disc.
+    vec2 uv = vec2(0.5 + atan(n.x, n.z) / (2.0 * PI), 0.5 - asin(clamp(-n.y, -1.0, 1.0)) / PI);
+    vec3 face = pow(texture(tMoon, uv).rgb, vec3(2.2));
+    // (The full Moon is flat-lit: no darkening to its limb. Its face is given a little more contrast than the map's.)
+    face = mix(face, vec3(luma(face)), 0.65);
+    vec3 alb = clamp((face - 0.03) * 3.1, 0.0, 1.6);
+    vec3 col = alb * vec3(1.0, 0.98, 0.93) * (lit * (1.2 + 4.2 * uNight) + 0.03 * uNight);
+    return vec4(col * edge * vis, edge * vis * max(lit, 0.25 * uNight));
 }
 
 // ---- The Sun ------------------------------------------------------------------------------------------------------
@@ -204,7 +203,8 @@ vec3 heavens(vec3 rd, vec2 vp, float soft, float sunShows) {
     col = col * (1.0 - moon.a * 0.85 * uNight) + moon.rgb;
     if (uMoonLit.w > 0.0) {
         float mm = dot(rd, normalize(uMoon.xyz));
-        col += vec3(0.55, 0.66, 0.9) * uMoon.w * uMoonLit.w * uNight * (0.035 * pow(saturate(mm), 90.0) + 0.012 * pow(saturate(mm), 12.0));
+        float mth = acos(clamp(mm, -1.0, 1.0));
+        col += vec3(0.62, 0.72, 0.95) * uMoon.w * uMoonLit.w * uNight * (0.22 * exp(-mth / 0.022) + 0.050 * exp(-mth / 0.09) + 0.012 * exp(-mth / 0.30));
     }
     col += sunLight(rd, sunShows);
     float through;
@@ -236,6 +236,13 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     vec2 lit = texture(tLandLit, vec2(luv.x, 1.0 - luv.y)).rg;
     float S = sq(lit.r) * uLandInfo.z, G = sq(lit.g) * uLandInfo.z;
     vec3 K = pow(texture(tLandK, luv).rgb, vec3(2.2));
+    // Winter (where the seasons are followed): snow lies on what the scenery says takes it.
+    if (uLand.z > 0.01 && uLandInfo.w > 0.5) {
+        float snow = smoothstep(0.25, 0.75, texture(tLandM, luv).b * (0.4 + 0.9 * uLand.z)) * uLand.z;
+        vec3 white = vec3(0.80, 0.83, 0.88);
+        K = mix(K, K * (luma(white) / max(luma(alb), 0.04)) * vec3(0.96, 0.99, 1.06), snow);
+        alb = mix(alb, white, snow);
+    }
     t = landDist(luv);
     vec3 p = vec3(0.0, uCam.z, 0.0) + rd * t;
     float moonW = smoothstep(-6.0, -10.0, uSunEl);
@@ -250,7 +257,8 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
         if (sp.z > 0.0) sh = 1.0 - 0.85 * layerAt(tCloud2, uCloudF2, uCloudD.z, sp.xy).a * smoothstep(0.12, 0.3, L.y);
     }
     vec3 ambTop = mAmbTop(), ambLow = mAmbLow();
-    vec3 amb = mix(ambLow, ambTop, 0.6);
+    // (At night the land is given what a long exposure finds in it by starlight: its forms, dim and blue.)
+    vec3 amb = mix(ambLow, ambTop, 0.6) + vec3(0.034, 0.052, 0.105) * uNight;
     vec3 land = alb * (S * light * sh + G * mGlow()) + K * amb;
 
     // The air between: far things fade into the colour of the sky behind them.

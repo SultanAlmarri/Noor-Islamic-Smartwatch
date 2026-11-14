@@ -352,6 +352,11 @@ async function init() {
   T.tZero = tex2D(2, 2, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, gl.LINEAR, gl.CLAMP_TO_EDGE);
   { const f = fbo(T.tZero); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); }
   for (const b of BIOMES) await loadLand(b.id);
+  try {
+    T.tMilky = await loadPicture('/app/src/main/assets/sky2/night/milkyway.webp');
+    gl.bindTexture(gl.TEXTURE_2D, T.tMilky.t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  } catch (e) { T.tMilky = T.tZero; }
+  try { T.tMoon = await loadPicture('/app/src/main/assets/sky2/night/moon.jpg'); } catch (e) { T.tMoon = T.tZero; }
   p.final = await program('final', ['common.glsl', 'atmosphere.glsl', 'final.frag']);
   p.stars = await starProgram();
   await loadStars();

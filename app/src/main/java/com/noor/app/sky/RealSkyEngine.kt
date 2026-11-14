@@ -326,6 +326,21 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         tex["tTrans"] = hdr(256, 64).also { tTrans = target(it) }
         tex["tMeter"] = hdr(10, 1, GLES30.GL_NEAREST).also { tMeter = target(it) }
         buildStars()
+        // The Milky Way and the Moon's face (NASA's maps; see tools/scenery/nightsky.py): a picture each.
+        for ((name, file) in listOf("tMilky" to "milkyway.webp", "tMoon" to "moon.jpg")) runCatching {
+            val opts = BitmapFactory.Options().apply {
+                inPremultiplied = false; inPreferredConfig = Bitmap.Config.ARGB_8888
+                inSampleSize = if (name == "tMilky" && tier.ordinal >= RealSky.Tier.MEDIUM.ordinal) 2 else 1
+            }
+            val bmp = app.assets.open("sky2/night/$file").use { BitmapFactory.decodeStream(it, null, opts) } ?: error("unreadable")
+            val buf = ByteBuffer.allocateDirect(bmp.width * bmp.height * 4)
+            bmp.copyPixelsToBuffer(buf); buf.position(0)
+            val t = tex2D(bmp.width, bmp.height, GLES30.GL_RGBA8, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, GLES30.GL_LINEAR, GLES30.GL_REPEAT)
+            GLES30.glTexSubImage2D(GLES30.GL_TEXTURE_2D, 0, 0, 0, bmp.width, bmp.height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buf)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+            bmp.recycle()
+            tex[name] = t
+        }.onFailure { Log.w(TAG, "No picture $file", it) }
         lastHaze = -1f; lightKey = ""; landKey = ""; sizedFor = ""
         glReady = true
         Log.i(TAG, "Real sky built: tier ${tier.name}, ${SystemClock.uptimeMillis() - began} ms")
