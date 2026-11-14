@@ -1,10 +1,25 @@
 # Red Rock (`canyon`): sources
 
-The scenery is made by `tools/scenery/canyon.py`. Its surfaces and everything that stands on the land are
-photogrammetry of real rock, ground and plants from **Poly Haven** (https://polyhaven.com), all of it **CC0** (public
-domain: free to use and to ship, no attribution required; it is recorded here all the same). Only pictures rendered
-from the scans are shipped (`app/src/main/assets/sky2/land/canyon`), never the scans themselves; they are fetched
-with `NoorTools/assets/polyhaven/get.py <id> <resolution>` from Poly Haven's public API.
+The scenery is **Monument Valley as it stands**, made by `tools/scenery/canyon.py`: we are on the valley floor east
+of the buttes (36.9770 N, 110.0452 W, 1 520 m), looking west-north-west (282 degrees): Mitchell Mesa at the left
+edge, Merrick Butte left of the middle, the West Mitten far off right of the middle (end on, its thumb before it),
+the East Mitten nearest, on the right.
+
+## The land's shape (USGS, public domain)
+
+| What | Where from | Licence |
+|---|---|---|
+| Heights of the land: USGS 3D Elevation Program, 1/3 arc-second (ten metres), tiles `USGS_13_n37w111`, `n38w111`, `n37w110`, `n38w110` | `https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/13/TIFF/current/<tile>/USGS_13_<tile>.tif` | public domain (U.S. Geological Survey) |
+
+`canyon_dem.py` cuts the valley out of the four tiles; `canyon_terrain.py` reads it. The heights are used as they
+are: no butte is moved, added, removed, raised or lowered, and nothing is cut open for the Sun. (The 1 m lidar of
+the 3DEP stops at the Utah line, a kilometre north of the Mittens, so the ten-metre model is the best there is for
+them.) Only pictures rendered from the model are shipped, not the model.
+
+Its surfaces and everything that stands on the land are photogrammetry of real rock, ground and plants from
+**Poly Haven** (https://polyhaven.com), all of it **CC0** (public domain: free to use and to ship, no attribution
+required; it is recorded here all the same). The scans are fetched with `NoorTools/assets/polyhaven/get.py <id>
+<resolution>` from Poly Haven's public API; none of them is shipped as such.
 
 ## Scans used (Poly Haven, CC0)
 
@@ -25,13 +40,15 @@ with `NoorTools/assets/polyhaven/get.py <id> <resolution>` from Poly Haven's pub
 The scans' colours are tinted towards the red of the Colorado Plateau (their own light and dark and their own
 detail are kept).
 
-## Made by formula (no scan exists for it)
+## Made by formula (no data exists for it)
 
-- The shape of the land: the floor's swells, washes and ledges; each butte's form (outline, talus cone, bench,
-  wall, cap) and the great joints that split its walls; the far mesas on the horizon. (No scan or elevation data of
-  a butte may be shipped with its colours as a picture of Monument Valley: the forms are our own.)
-- Brush beyond 400 m, where a bush is a few points of the picture: a lump of its colour.
-- Wind ripples in loose sand near us, and the specks that stand for brush beyond a kilometre.
+- What is finer than the model's ten metres: the joints and beds cut back into the walls it rounds off (relief on
+  the model's own walls; outlines, heights and positions stay the model's), and the smallest swells of the ground
+  near us (a hand to a knee high).
+- What the ground is made of, read from the model's shape: bare rock where it steps, a sandy bed in its hollows,
+  brush thick near the hollows.
+- Brush beyond 400 m, where a bush is a few points of the picture: a lump of its colour; wind ripples in loose
+  sand near us; the specks that stand for brush beyond a kilometre.
 
 ## Tools
 

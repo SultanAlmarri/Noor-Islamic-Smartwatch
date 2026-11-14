@@ -1,9 +1,11 @@
-"""The Red Rock scenery: sandstone buttes standing on a red desert floor, seen from a low rise of slickrock.
+"""The Red Rock scenery: Monument Valley, as it stands.
 
-Everything is made here: the floor (swells, a dry wash and its side washes, low rock benches), the buttes (each a
-true solid: a talus apron, a ledgy slope of shale, a sheer cliff of massive sandstone, a thin cap), the brush that
-dots the floor, the junipers, the foreground. The rock's layers lie at the same heights in every butte, as they do
-where one flat country has been cut into mesas: `CLIFF_BASE`, `CLIFF_TOP`.
+The land's shape is the real one: the USGS elevation model of the valley (canyon_dem.py cuts it out of its tiles,
+canyon_terrain.py reads it and says where we stand), with the Mittens, Merrick Butte and the mesas behind them where
+and as high as they are. Nothing is moved, added or cut away. On that shape lie scanned surfaces (Poly Haven:
+sandstone walls, bedded ledges, stony talus, red earth and sand), and on the ground stand scanned brush, shrubs,
+grass, stones and fallen blocks. Where the model's ten metres round a wall off, the wall's joints and beds are cut
+back into it as relief; the outlines and heights stay the model's.
 
     blender -b --factory-startup -P tools/scenery/canyon.py -- preview <out dir> [azimuth elevation]
 
@@ -18,38 +20,25 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bake                      # noqa: E402
+import canyon_terrain as T       # noqa: E402
 
-EYE_H = 1.7                       # metres above the rock we stand on
-CLIFF_BASE = 150.0                # metres above the floor: where the sheer sandstone begins, in every butte
-CLIFF_TOP = 262.0                 # ... and where the thin cap beds begin
-REPOSE = math.tan(math.radians(36.0))
+EYE_H = 1.7                       # metres above the ground we stand on
+# The valley's beds lie level: by its height above the sea a point is floor, talus, wall or cap. (Read off the model:
+# round all three buttes the slopes of rubble end and the sheer wall begins near 1 715 m, and the wall ends near 1 850.)
+WALL_FOOT, WALL_TOP = 1718.0, 1852.0
+LEVEL_Z = [1400.0, 1605.0, 1625.0, WALL_FOOT - 6.0, WALL_FOOT + 2.0, WALL_FOOT + 14.0, WALL_TOP - 6.0, WALL_TOP + 5.0, 3000.0]
+LEVEL_V = [0.0, 0.05, 0.40, 0.56, 0.61, 0.75, 0.75, 1.0, 1.0]
+CLIFF_BASE, CLIFF_TOP = 190.0, 325.0     # the same two heights above the ground we stand on (set by build())
+# The three buttes of the view (their summits in the model), for the blocks fallen on their slopes.
+BUTTES = [('West Mitten', 36.99037, -110.09546), ('East Mitten', 36.98870, -110.06889), ('Merrick Butte', 36.98019, -110.08593)]
 
-# The far floor: one picture of heights, FAR_CELL metres a pixel.
+# The valley round us on a plain grid (for what the ground is made of and where plants stand), FAR_CELL metres a cell.
 FAR_CELL = 2.5
 FAR_X0, FAR_X1, FAR_Y0, FAR_Y1 = -3200.0, 3200.0, -250.0, 8750.0
 # The ground round the camera, as a mesh of its own, NEAR_CELL metres between points.
 NEAR_CELL = 0.5
 NEAR_X0, NEAR_X1, NEAR_Y0, NEAR_Y1 = -120.0, 120.0, -30.0, 260.0
 DICE = float(os.environ.get('NOOR_DICE', 1.5))     # pixels a diced polygon may span
-
-# The buttes: name, bearing of the middle (degrees right of the view's middle), distance (m), half-widths across and
-# along the view (m), top (m above the floor), seed, and the apron's reach beyond the cliff (m).
-BUTTES = [
-    dict(name='Mitten', az=-3.95, dist=2100.0, rx=112.0, ry=150.0, top=283.0, seed=3, rough=0.16),
-    dict(name='Thumb', az=-0.2, dist=2035.0, rx=19.0, ry=23.0, top=246.0, seed=8, rough=0.10, cap=False, reach=0.55),
-    dict(name='Merrick', az=5.0, dist=2800.0, rx=150.0, ry=172.0, top=281.0, seed=5, rough=0.15),
-    dict(name='FarMesa', az=1.4, dist=7000.0, rx=640.0, ry=420.0, top=288.0, seed=11, rough=0.12),
-    dict(name='Sister', az=-10.4, dist=6100.0, rx=20.0, ry=22.0, top=236.0, seed=21, rough=0.1, cap=False, base=96.0),
-    dict(name='Sister2', az=-9.75, dist=6180.0, rx=15.0, ry=16.0, top=214.0, seed=23, rough=0.1, cap=False, base=96.0),
-    # The two at the picture's edges turn a sheer prow to the place where the Sun rises or sets (`prow`: the bearing,
-    # round the butte, of its low-footed side), so they stand tall beside it without standing in its way.
-    dict(name='LeftButte', az=-21.1, dist=2900.0, rx=150.0, ry=260.0, top=284.0, seed=14, rough=0.15, prow=20.0),
-    dict(name='RightButte', az=27.9, dist=1200.0, rx=150.0, ry=230.0, top=285.0, seed=17, rough=0.16, prow=165.0),
-]
-BENCH_FOOT = 22.0                 # a ledge of hard beds rings every butte's foot: its face, metres above the floor
-BENCH_TOP = 39.0
-TALUS = math.tan(math.radians(33.0))
-
 
 # ---- Noise ------------------------------------------------------------------------------------------------------
 
@@ -109,79 +98,6 @@ def sample(field, x0, y0, cell, X, Y):
             acc += field[row, np.clip(ix - 1 + i, 0, wd - 1)] * wx[i]
         out += acc * wy[j]
     return out
-
-
-# ---- The floor --------------------------------------------------------------------------------------------------
-
-def wash_line(X):
-    """The main dry wash crosses the view from left to right: how far forward (y) its middle runs at each x."""
-    return 430.0 + 0.10 * X + 95.0 * np.sin(X / 235.0 + 0.6) + 46.0 * np.sin(X / 88.0 + 2.1) + 18.0 * np.sin(X / 37.0)
-
-
-def side_washes(X, Y):
-    """Lesser washes that come down from the buttes and join the main one: distance (m) to the nearest."""
-    d = np.full(X.shape, 1e6, np.float32)
-    for x0, lean, wob, ph, y1 in ((-520.0, 0.16, 60.0, 0.3, 2100.0), (310.0, -0.10, 75.0, 1.7, 2900.0),
-                                  (1150.0, -0.22, 90.0, 4.0, 2500.0), (-1500.0, 0.3, 80.0, 2.2, 2600.0)):
-        xc = x0 + lean * Y + wob * np.sin(Y / 190.0 + ph) + 0.35 * wob * np.sin(Y / 61.0 + 2 * ph)
-        dd = np.abs(X - xc) / math.sqrt(1 + lean * lean)
-        dd = np.where((Y > wash_line(X) - 10.0) & (Y < y1), dd + np.maximum(Y - (y1 - 500.0), 0.0) * 0.06, 1e6)
-        d = np.minimum(d, dd)
-    return d
-
-
-def floor_height(X, Y, c, cell):
-    """Heights of the floor (m) and what it is made of there, from the control fields `c` read at the same places.
-    Returns height, rock (0 soil .. 1 bare rock), bed (1 in a wash's sandy bed), cover (how thick brush stands)."""
-    # Swells, and rills worn into them (creases where a fine field crosses zero: the lines water runs in).
-    h = 5.0 * c['swell'] + 1.7 * c['roll'] + 0.25 * c['patch'] - 0.75 * np.minimum(np.abs(c['patch']), 1.2) ** 0.8
-    wide = max(1.6, 2.6 * cell)                                    # the narrowest scarp the grid can draw
-    # Low benches of rock: where a smooth field passes a level the ground steps up, a ledge a few metres high
-    # that winds across the floor; in places a second step behind it.
-    t = c['bench'] + 0.07 * c['patch'] + 0.05 * c['roll']
-    tall = 0.55 + 0.45 * np.clip(c['roll'] * 0.5 + 0.5, 0, 1)
-    edge = c['benchgrad'] * wide + 1e-4                             # the field's change across a scarp's width
-    s1 = smooth(0.42, 0.42 + edge, t)
-    s2 = smooth(1.05, 1.05 + edge, t)
-    h += (3.4 * s1 + 2.6 * s2) * tall
-    rim = np.maximum(s1 * (1 - smooth(0.42 + edge, 0.42 + 7.0 * edge, t)), s2 * (1 - smooth(1.05 + edge, 1.05 + 7.0 * edge, t)))
-    rock = np.clip(rim * (0.6 + 0.5 * c['patch']) + (s1 * (1 - s1) + s2 * (1 - s2)) * 4.0, 0, 1)
-    # The washes: flat sandy beds a little under the floor, their banks cut steep.
-    dm = np.abs(Y - wash_line(X)) / np.sqrt(1.0 + 0.2)
-    wm = smooth(13.5 + 1.2 * wide, 13.5, dm + 5.0 * c['roll'])
-    ds = side_washes(X, Y)
-    ws = smooth(5.0 + 1.2 * wide, 5.0, ds + 2.5 * c['roll'])
-    bed = np.maximum(wm, ws)
-    h -= 2.7 * wm + 1.5 * ws * (1 - wm)
-    rock *= 1 - bed
-    # The rise we stand on: a dome of slickrock with a broad top.
-    r = np.sqrt(((X - 14.0) / 1.45) ** 2 + (Y + 34.0) ** 2) * (1.0 + 0.10 * c['roll'])
-    k = 1.0 / (1.0 + (r / 78.0) ** 3.1)
-    hk = 27.0 * k
-    kn = smooth(0.06, 0.4, k)
-    # (Worn smooth: slickrock, in long easy swells; sand lies in its hollows.)
-    hk = hk + 0.55 * c['roll'] * kn
-    h = h * (1 - kn) + hk
-    rock = np.maximum(rock * (1 - kn), kn * smooth(-0.35, 0.25, c['patch'] + 1.4 * k - 0.55))
-    bed *= 1 - kn
-    # Brush: thick along the washes and in the hollows, thin on the swells, in drifts of its own besides.
-    near_wash = np.maximum(smooth(60.0, 18.0, dm), smooth(30.0, 8.0, ds))
-    cover = np.clip(0.42 + 0.22 * c['veg'] - 0.10 * c['swell'] + 0.45 * near_wash, 0.05, 1.0) * (1 - 0.6 * kn)
-    return h.astype(np.float32), rock.astype(np.float32), bed.astype(np.float32), cover.astype(np.float32)
-
-
-def controls_far():
-    n = (int((FAR_Y1 - FAR_Y0) / FAR_CELL), int((FAR_X1 - FAR_X0) / FAR_CELL))
-    c = {
-        'swell': fractal(n, FAR_CELL, 420.0, 2600.0, 3.0, 1),
-        'roll': fractal(n, FAR_CELL, 40.0, 380.0, 2.6, 2),
-        'bench': fractal(n, FAR_CELL, 120.0, 1100.0, 3.2, 3),
-        'patch': fractal(n, FAR_CELL, 8.0, 90.0, 2.4, 4),
-        'veg': fractal(n, FAR_CELL, 30.0, 500.0, 2.2, 6),
-    }
-    gy, gx = np.gradient(c['bench'], FAR_CELL)
-    c['benchgrad'] = np.sqrt(gx * gx + gy * gy).astype(np.float32)
-    return c
 
 
 def grids(x0, x1, y0, y1, cell):
@@ -502,7 +418,7 @@ def rock_material():
     upper = n.step(0.455, 0.54, level)                                         # the talus near the wall: ledgy
     talus = n.mul(low, n.sub(1.0, wall))
     ledgy = n.mul(wall, n.sub(1.0, n.mul(great, n.step(0.5, 0.9, wall))))      # walls of thin beds: bench, foot, cap
-    skirt = n.step(0.20, 0.08, level)
+    skirt = n.math('MAXIMUM', n.step(0.20, 0.08, level), n.mul(n.step(0.955, 0.985, n.facing_up()), n.step(0.62, 0.56, level)))
 
     # Beds are not quite level: their heights wander a few metres over a butte's width.
     warp = n.noise(n.scaled(P, (1 / 420.0, 1 / 420.0, 0.0)), 1.0, 2.0)
@@ -598,7 +514,7 @@ def rock_material():
     c_talus = n.mixc(n.mul(n.mul(upper, n.step(0.35, 0.6, drape)), 0.75), c_talus, c_ledgy)
     # Brush on the lower slopes and the skirt, too far to be told apart: olive specks.
     sp = n.step(0.20, 0.06, n.voronoi(n.scaled(P, 1 / 6.5, (0.5, 0.25, 0.1)), 1.0, 'F1'))
-    c_talus = n.mixc(n.mul(n.mul(sp, 0.6), n.step(110.0, 55.0, n.z)), c_talus, (0.12, 0.115, 0.07))
+    c_talus = n.mixc(n.mul(n.mul(sp, 0.6), n.step(CLIFF_BASE - 60.0, CLIFF_BASE - 115.0, n.z)), c_talus, (0.12, 0.115, 0.07))
     c_skirt = n.ramp(tone, [(0.25, SOIL), (0.75, TALUS_A)])
     c_skirt = n.mixc(n.mul(sp, 0.6), c_skirt, (0.12, 0.115, 0.07))
     c_skirt = scanned(n, c_skirt, lt_c, 0.065, 0.45, 2.0)
@@ -616,121 +532,6 @@ def rock_material():
     n.bsdf.inputs['Specular IOR Level'].default_value = 0.22
     bake.add_mask(n.mat, wind=0.0, snow=n.step(0.62, 0.90, n.facing_up()))
     return n.mat
-
-
-def butte(spec, rock):
-    """One butte as a solid: rings round its middle from the skirt's rim up over the bench, the talus and the wall,
-    over the cap and in to the middle of its top."""
-    az = math.radians(spec['az'])
-    cx, cy = spec['dist'] * math.sin(az), spec['dist'] * math.cos(az)
-    rx, ry = spec['rx'], spec['ry']
-    top = spec['top']
-    base = spec.get('base', CLIFF_BASE)                      # (a far spire may stand on a ridge of the same beds)
-    girth = 2 * math.pi * math.sqrt(0.5 * (rx * rx + ry * ry))
-    nt = int(min(max(girth / max(1.3, spec['dist'] / 1242.0 * 1.3), 240), 1500))
-    res = float(np.clip(2600.0 / spec['dist'], 0.4, 1.0))        # rings: fewer on what stands far off
-    th = np.arange(nt) * (2 * math.pi / nt)
-    ell = rx * ry / np.sqrt((ry * np.cos(th)) ** 2 + (rx * np.sin(th)) ** 2)
-    # The wall's outline: buttresses and alcoves at every size, bays cut deeper than headlands stand out.
-    s = series(th, spec['seed'] * 7 + 1, 2, 60, 1.15)
-    s2 = series(th, spec['seed'] * 7 + 2, 9, 90, 0.9)
-    wall = ell * (1.0 + spec['rough'] * (s - 0.35 * np.abs(s2)))
-    # Where the talus stands high against the wall and where the wall goes nearer to the foot.
-    foot = base + 13.0 * series(th, spec['seed'] * 7 + 3, 2, 14, 1.0)
-    reach = spec.get('reach', 1.0)
-    skirt = 85.0 * reach * (1.0 + 0.25 * series(th, spec['seed'] * 7 + 5, 2, 10, 1.0))
-    if 'prow' in spec:
-        # On the prow's side the talus stands low and the skirt is short.
-        dth = (th - math.radians(spec['prow']) + math.pi) % (2 * math.pi) - math.pi
-        p = smooth(math.radians(95.0), math.radians(40.0), np.abs(dth))
-        foot = foot + (72.0 - foot) * p
-        skirt = skirt * (1 - 0.7 * p)
-    crest = top - 6.0 * np.abs(series(th, spec['seed'] * 7 + 4, 2, 9, 1.0))
-    gully = series(th, spec['seed'] * 7 + 6, 7, 60, 1.0)
-    fan = series(th, spec['seed'] * 7 + 7, 5, 40, 0.9)
-
-    rows_r, rows_z, rows_u, rows_v = [], [], [], []
-
-    def ring(r, z, is_wall, level):
-        rows_r.append(np.broadcast_to(np.asarray(r, np.float32), th.shape).copy())
-        rows_z.append(np.broadcast_to(np.asarray(z, np.float32), th.shape).copy())
-        rows_u.append(np.broadcast_to(np.asarray(is_wall, np.float32), th.shape).copy())
-        rows_v.append(np.broadcast_to(np.asarray(level, np.float32), th.shape).copy())
-
-    # The bench round the foot is no ring: it stands higher here and lower there, and in places rubble has buried it.
-    bench_top = BENCH_TOP + 9.0 * series(th, spec['seed'] * 7 + 10, 2, 16, 1.0)
-    bury = smooth(0.15, 0.9, series(th, spec['seed'] * 7 + 11, 3, 22, 0.9))
-    face_w = 3.0 + 24.0 * bury
-    slope_w = (foot - (bench_top + 3.0)) / TALUS * reach
-    tread = 15.0 * reach * (1.0 + 0.5 * fan) * (1 - 0.8 * bury)
-    hold = ell * 0.3 + wall * 0.7
-    spur = np.maximum(series(th, spec['seed'] * 7 + 12, 4, 30, 0.8), 0.0)
-    skirt = skirt * (1.0 + 0.9 * spur)
-    # The skirt: from under the floor up to the foot of the bench.
-    for u in np.linspace(0.0, 1.0, max(int(30 * res), 8))[:-1]:
-        d = slope_w + tread + face_w + skirt * (1 - u)
-        ring(hold + d, -3.0 + (BENCH_FOOT + 3.0) * u ** 1.4 + (1.2 * gully + 2.5 * spur) * u * (1 - u) * 4.0, 0, 0.1 * u)
-    # The bench: a low cliff of thin hard beds, and its tread.
-    for u in np.linspace(0.0, 1.0, 14)[:-1]:
-        ring(hold + slope_w + tread + face_w * (1 - u), BENCH_FOOT + (bench_top - BENCH_FOOT) * u, 1 - bury, 0.25)
-    for u in np.linspace(0.0, 1.0, 10)[:-1]:
-        ring(hold + slope_w + tread * (1 - u), bench_top + 3.0 * u, 0, 0.36)
-    # The slope under the wall: rubble at the angle it rests at, and hard beds standing out of it as ledges, five
-    # or so up the slope, plainer on some sides than on others; fans and gullies over all.
-    ledges = 7.5 + 1.0 * math.sin(spec['seed'])
-    show = np.clip(0.42 + 0.33 * series(th, spec['seed'] * 7 + 13, 2, 12, 0.9), 0.05, 0.78)
-    lag = 0.9 * series(th, spec['seed'] * 7 + 14, 2, 18, 1.0)             # no bed keeps one height all the way round
-    for u in np.linspace(0.0, 1.0, max(int(110 * res), 24))[:-1]:
-        ph = 2 * math.pi * ledges * u + lag
-        f = u - show * (np.sin(ph) - np.sin(lag)) / (2 * math.pi * ledges) * (1 - u)   # where f runs slowly: a riser
-        riser = np.clip(show * np.cos(ph), 0.0, 1.0) * float(smooth(0.02, 0.1, u))
-        blend = 0.7 + 0.3 * u
-        ring(ell * (1 - blend) + wall * blend + slope_w * (1 - f),
-             bench_top + 3.0 + (foot - bench_top - 3.0) * u + (0.4 * gully + 1.6 * fan) * math.sin(math.pi * u), 0.85 * riser, 0.40 + 0.16 * u)
-    # Ledges at the wall's foot, then the wall: sheer, leaning back a little.
-    for u in np.linspace(0.0, 1.0, 12)[:-1]:
-        st = math.floor(u * 2.0) + float(smooth(0.6, 0.95, u * 2.0 - math.floor(u * 2.0)))
-        ring(wall - 3.5 * st, foot + 14.0 * u, 1, 0.61)
-    hc = (CLIFF_TOP if spec.get('cap', True) else top) - foot - 14.0
-    for u in np.linspace(0.0, 1.0, max(int(80 * res), 20)):
-        ring(wall - 7.0 - 0.04 * hc * u, foot + 14.0 + hc * u, 1, 0.75)
-    back = 7.0 + 0.04 * hc
-    if spec.get('cap', True):
-        # The cap: thin beds stepping back to the top.
-        for u in np.linspace(0.0, 1.0, 22)[1:]:
-            ring(wall - back - 24.0 * u, CLIFF_TOP + (crest - CLIFF_TOP) * (u ** 0.8), 1, 1.0)
-        inner = wall - back - 24.0
-        relief = 2.0 * series(th, spec['seed'] * 7 + 9, 3, 30, 1.0)
-        for u in np.linspace(0.0, 1.0, max(int(26 * res), 8))[1:]:
-            ring(np.maximum(inner * (1 - u), 0.4), crest + relief * (1 - u) * u * 2.0 + 1.5 * u, 0, 1.0)
-    else:
-        # A spire: its top is a broken point.
-        inner = np.maximum(wall - back, 2.0)
-        for u in np.linspace(0.0, 1.0, 14)[1:]:
-            ring(np.maximum(inner * (1 - u) ** 0.8, 0.3), top + 7.0 * u ** 0.7, 1, 0.75)
-    R = np.stack(rows_r)
-    Z = np.stack(rows_z)
-    X = cx + R * np.cos(th)[None, :]
-    Y = cy + R * np.sin(th)[None, :]
-    nr = R.shape[0]
-    co = np.stack([X, Y, Z], -1).reshape(-1, 3).astype(np.float32)
-    i = np.arange((nr - 1) * nt)
-    r, c = i // nt, i % nt
-    a = r * nt + c
-    b = r * nt + (c + 1) % nt
-    faces = np.stack([a, b, b + nt, a + nt], -1).astype(np.int32)
-    ob = mesh_object(spec['name'], co, faces)
-    # What each point is, for the rock's material.
-    uvl = ob.data.uv_layers.new(name='zone')
-    uu = np.stack(rows_u).ravel()
-    vv = np.stack(rows_v).ravel()
-    loops = faces.ravel()
-    uvl.data.foreach_set('uv', np.stack([uu[loops], vv[loops]], -1).ravel())
-    ob.data.materials.append(rock)
-    bake.adaptive(ob, DICE)
-    lev = np.stack(rows_v)
-    talus = co.reshape(nr, nt, 3)[(lev > 0.43) & (lev < 0.565)]
-    return ob, co, talus
 
 
 def mesh_object(name, co, faces, smooth_shading=True):
@@ -835,45 +636,6 @@ def floor_material(n, height, mask, far):
     n.bsdf.inputs['Specular IOR Level'].default_value = 0.25
     bake.add_mask(n.mat, wind=0.0, snow=n.step(0.70, 0.92, n.facing_up()))
     return n.mat
-
-
-def far_mesas(eye_z):
-    """Mesas beyond the plain, low on the horizon: flat-topped, stepped, and lower still where the Sun rises and
-    sets."""
-    rng = np.random.default_rng(31)
-    nx, ny = 900, 60
-    az = np.radians(np.linspace(-30.0, 30.0, nx))
-    r = np.linspace(20000.0, 46000.0, ny)
-    A, Rr = np.meshgrid(az, r)
-    X, Y = Rr * np.sin(A), Rr * np.cos(A)
-    f = np.zeros_like(X)
-    for wl, amp in ((14000.0, 1.0), (6000.0, 0.6), (2500.0, 0.3), (900.0, 0.12)):
-        ph = rng.uniform(0, 100, 4)
-        f += amp * np.sin(X / wl * 2.1 + ph[0] + 1.2 * np.sin(Y / wl * 1.3 + ph[1])) * np.cos(Y / wl * 1.7 + ph[2] + np.sin(X / wl * 0.9 + ph[3]))
-    # Flat tops at two levels, cliffs between.
-    h = 330.0 * smooth(0.25, 0.33, f) + 240.0 * smooth(0.75, 0.82, f)
-    depth = (Rr - r[0]) / (r[-1] - r[0])
-    h *= np.clip(np.sin(math.pi * depth), 0, 1) ** 0.5
-    # The Earth's curve hides the foot of what stands far off.
-    h -= (Rr ** 2) / (2 * 6371000.0) * 0.85
-    deg = np.degrees(np.abs(A))
-    lim = np.where(np.abs(deg - bake.RISE_AZIMUTH) < 2.6, 0.16, np.where(deg < bake.RISE_AZIMUTH, 1.0, 1.5))
-    lim = np.minimum(lim, 0.16 + np.clip(np.abs(deg - bake.RISE_AZIMUTH) - 2.2, 0, 99) * 0.5)
-    h = np.minimum(h, eye_z + Rr * np.tan(np.radians(lim)))
-    co = np.stack([X, Y, h], -1).reshape(-1, 3).astype(np.float32)
-    i = np.arange((ny - 1) * (nx - 1))
-    rr, cc = i // (nx - 1), i % (nx - 1)
-    a = rr * nx + cc
-    faces = np.stack([a, a + 1, a + nx + 1, a + nx], -1).astype(np.int32)
-    ob = mesh_object('FarMesas', co, faces)
-    mat = bpy.data.materials.new('FarRock')
-    mat.use_nodes = True
-    b = mat.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (0.38, 0.12, 0.06, 1)
-    b.inputs['Roughness'].default_value = 0.9
-    ob.data.materials.append(mat)
-    bake.add_mask(mat)
-    return ob, co
 
 
 # ---- Plants and stones ------------------------------------------------------------------------------------------
@@ -1016,12 +778,14 @@ def plants(ground, eye, taluses):
     names = ['wild_rooibos_bush_a_LOD3', 'wild_rooibos_bush_b_LOD3', 'wild_rooibos_bush_c_LOD3']
     src = scans('wild_rooibos_bush', names)
     for ob in src:
-        tinted(ob, [(0.0, (0.8, 0.88, 0.76)), (0.45, (1.05, 1.1, 1.02)), (0.8, (1.3, 1.1, 0.78)), (1.0, (1.0, 0.76, 0.58))], 1.8, wind=0.8, snow=0.4)
+        tinted(ob, [(0.0, (0.86, 0.86, 0.78)), (0.45, (1.08, 1.05, 1.0)), (0.8, (1.3, 1.08, 0.8)), (1.0, (1.05, 0.8, 0.62))], 1.45, wind=0.8, snow=0.4)
     half = np.array([0.36, 0.26, 0.23])
     k = int(nearb.sum())
     pick = rng.integers(0, 3, k)
     pos = np.stack([x[nearb], y[nearb], h[nearb] - 0.03], -1)
-    stand('Brush', src, pick, pos, size[nearb] * 1.35 / half[pick], turn[nearb], 0.06, 1)
+    tall_of = np.array([0.54, 0.50, 0.45])                    # the scans' own heights: no bush taller than a man's chest
+    sc = np.minimum(size[nearb] * 1.35 / half[pick], 1.25 / tall_of[pick])
+    stand('Brush', src, pick, pos, sc, turn[nearb], 0.06, 1)
     # Farther off a bush is a few points of the picture: a lump of its colour stands for it.
     far = ~nearb
     kind = rng.uniform(0, 1, n)
@@ -1066,7 +830,7 @@ def plants(ground, eye, taluses):
     n = len(x)
     src = scans('grass_medium_01', ['grass_medium_01_tall_a_LOD1', 'grass_medium_01_tall_b_LOD1', 'grass_medium_01_tall_c_LOD1', 'grass_medium_01_mid_a_LOD1'])
     for ob in src:
-        tinted(ob, [(0.0, (2.2, 1.8, 0.9)), (0.7, (3.4, 2.2, 0.9)), (1.0, (1.5, 1.6, 0.8))], 1.6, wind=1.0, snow=0.3)
+        tinted(ob, [(0.0, (2.6, 1.7, 0.75)), (0.7, (3.4, 2.0, 0.75)), (1.0, (2.0, 1.6, 0.7))], 1.5, wind=1.0, snow=0.3)
     stand('Grass', src, rng.integers(0, 4, n), np.stack([x, y, h - 0.01], -1), rng.uniform(1.4, 3.0, n), rng.uniform(0, 6.28, n), 0.08, 3)
     print('grass', n, flush=True)
 
@@ -1110,7 +874,7 @@ def plants(ground, eye, taluses):
 
     # ---- The buttes' talus: blocks fallen from the wall, most of them near its foot, some as big as houses.
     for name, pts, dist in taluses:
-        m = int(np.clip(260.0 * (2600.0 / dist) ** 0.7, 40, 420)) if len(pts) > 20000 else 40
+        m = int(np.clip(260.0 * (2600.0 / dist) ** 0.7, 40, 420))
         idx = rng.integers(0, len(pts), m)
         p = pts[idx]
         sc = np.exp(rng.normal(math.log(4.0), 0.55, m))
@@ -1119,30 +883,67 @@ def plants(ground, eye, taluses):
     return tall
 
 
-def check_skyline(parts, eye):
-    """Do the solids keep under the Sun's path? From their points alone (their relief may add `margin` metres)."""
-    worst = None
-    for name, co in parts:
-        margin = 0.0 if name.startswith(('Brush', 'Junipers')) else 5.0
-        d = co - np.asarray(eye, np.float32)
-        fwd = d[:, 1] > 1.0
-        az = np.degrees(np.arctan2(d[fwd, 0], d[fwd, 1]))
-        el = np.degrees(np.arctan2(d[fwd, 2] + margin, np.hypot(d[fwd, 0], d[fwd, 1])))
-        inside = np.abs(az) < 23.6
-        if not inside.any():
-            continue
-        lim = np.array([bake.skyline_limit(a) for a in az[inside]])
-        over = el[inside] - lim
-        k = int(np.argmax(over))
-        print('  %-10s highest %.2f deg; nearest the limit at bearing %.1f: %.2f deg %s' % (
-            name, el[inside].max(), az[inside][k], over[k], 'OVER' if over[k] > 0 else 'under'), flush=True)
-        if worst is None or over[k] > worst:
-            worst = over[k]
-    print('skyline (from the solids): ' + ('TOO HIGH by %.2f deg' % worst if worst and worst > 0 else 'within its limits'), flush=True)
+def blur(a, radius):
+    """A field smoothed over `radius` cells (Gaussian; the field is taken to wrap round)."""
+    ky = np.fft.fftfreq(a.shape[0])[:, None]
+    kx = np.fft.rfftfreq(a.shape[1])[None, :]
+    return np.fft.irfft2(np.fft.rfft2(a) * np.exp(-2 * (math.pi * radius) ** 2 * (kx * kx + ky * ky)), s=a.shape).astype(np.float32)
+
+
+def land_maps(X, Y, h, cell, veg, patch):
+    """What the real ground is made of, read from its own shape: bare rock where it steps or steepens (ledges, the
+    rims of washes), a sandy bed along the lines water runs in (the hollows of the model), brush thick near those
+    lines and thin on the swells. Returns rock, bed, cover (0..1 each)."""
+    gy, gx = np.gradient(h, cell)
+    slope = np.hypot(gx, gy)
+    rock = smooth(0.16, 0.42, blur(slope, 3.0 / cell)) * np.clip(0.75 + 0.5 * patch, 0.0, 1.0)
+    hollow = blur(h, 45.0 / cell) - blur(h, 9.0 / cell)              # positive where the ground lies in a hollow
+    bed = smooth(0.35, 1.1, hollow) * smooth(0.22, 0.08, slope)
+    near_bed = smooth(0.0, 0.5, blur(bed, 14.0 / cell))
+    cover = np.clip(0.40 + 0.22 * veg + 0.40 * near_bed, 0.05, 1.0) * smooth(0.6, 0.25, slope)
+    return rock.astype(np.float32), bed.astype(np.float32), cover.astype(np.float32)
+
+
+def zone_of(z_abs, slope):
+    """What a point of the real land is, for the rock's material (its 'zone' map): u = how much of a wall it is,
+    by its steepness; v = its bed, by its height above the sea (the beds lie level across the valley)."""
+    return smooth(0.8, 1.4, slope).astype(np.float32), np.interp(z_abs, LEVEL_Z, LEVEL_V).astype(np.float32)
+
+
+def fan(name, r0, r1, rings, cols, base, sink=None):
+    """A part of the real land as a fan of rings round the camera, closer together near it, the model's heights in
+    its points (so every cliff is a true wall of polygons, diced as it is seen)."""
+    rr = np.geomspace(r0, r1, rings)
+    aa = np.radians(np.linspace(-29.0, 29.0, cols))
+    RR, AA = np.meshgrid(rr, aa, indexing='ij')
+    FX, FY = RR * np.sin(AA), RR * np.cos(AA)
+    z_abs = T.heights(FX, FY, T.SITE)
+    fz = (z_abs - base - (FX * FX + FY * FY) / (2 * T.EARTH) * 0.87).astype(np.float32)
+    # Its steepness, from the model's heights a few metres to each side.
+    e = 6.0
+    sl = np.hypot(T.heights(FX + e, FY, T.SITE, False) - T.heights(FX - e, FY, T.SITE, False),
+                  T.heights(FX, FY + e, T.SITE, False) - T.heights(FX, FY - e, T.SITE, False)) / (2 * e)
+    wall, level = zone_of(z_abs, sl)
+    if sink is not None:
+        fz -= sink(FX, FY, RR)
+    nr_, na_ = RR.shape
+    co = np.stack([FX, FY, fz], -1).reshape(-1, 3).astype(np.float32)
+    i = np.arange((nr_ - 1) * (na_ - 1))
+    r, cc = i // (na_ - 1), i % (na_ - 1)
+    a = r * na_ + cc
+    faces = np.stack([a, a + 1, a + na_ + 1, a + na_], -1).astype(np.int32)
+    ob = mesh_object(name, co, faces)
+    uvl = ob.data.uv_layers.new(name='zone')
+    loops = faces.ravel()
+    uvl.data.foreach_set('uv', np.stack([wall.ravel()[loops], level.ravel()[loops]], -1).ravel())
+    # Rock where the land is a butte's (its beds, by height) or steep; the floor's earth elsewhere.
+    rocky = ((level.ravel() > 0.2) | (sl.ravel() > 0.5)).astype(np.float32)
+    ob.data.polygons.foreach_set('material_index', (rocky[faces].mean(axis=1) > 0.5).astype(np.int32))
+    return ob, co, sl.ravel(), level.ravel()
 
 
 def build():
-    global EYE
+    global EYE, CLIFF_BASE, CLIFF_TOP
     out = bake.args()[1]
     if os.environ.get('NOOR_SAMPLES'):
         bpy.context.scene.cycles.samples = int(os.environ['NOOR_SAMPLES'])
@@ -1151,79 +952,70 @@ def build():
         rs = bpy.context.scene.render
         rs.use_border, rs.use_crop_to_border = True, True
         rs.border_min_x, rs.border_max_x, rs.border_min_y, rs.border_max_y = l, r, 1.0 - b, 1.0 - t
-    c = controls_far()
+    base = T.ground(T.SITE)
+    CLIFF_BASE, CLIFF_TOP = WALL_FOOT - base, WALL_TOP - base
+    print('we stand at %.4f N %.4f W, %.0f m above the sea, looking %.0f degrees from north' % (
+        T.SITE['lat'], -T.SITE['lon'], base, T.SITE['bearing']), flush=True)
+
+    # The valley round us on a plain grid: its heights, and what it is made of.
     xs, ys, X, Y = grids(FAR_X0, FAR_X1, FAR_Y0, FAR_Y1, FAR_CELL)
-    hf, rockf, bedf, coverf = floor_height(X, Y, c, FAR_CELL)
-    # The ground round the camera, finer: the same fields read smoothly between their points.
+    hf = T.scene_z(X, Y, T.SITE, True, base)
+    shape = hf.shape
+    veg = fractal(shape, FAR_CELL, 30.0, 500.0, 2.2, 6)
+    patch = fractal(shape, FAR_CELL, 8.0, 90.0, 2.4, 4)
+    rockf, bedf, coverf = land_maps(X, Y, hf, FAR_CELL, veg, patch)
+    # The ground round the camera, finer. The model has a height every ten metres; between them the ground is given
+    # the small swells and hummocks every desert floor has (a hand high to knee high), no more.
     nxs, nys, NX, NY = grids(NEAR_X0, NEAR_X1, NEAR_Y0, NEAR_Y1, NEAR_CELL)
-    cn = {k: sample(v, FAR_X0, FAR_Y0, FAR_CELL, NX, NY) for k, v in c.items()}
+    hn = T.scene_z(NX, NY, T.SITE, True, base)
     fine = fractal(NX.shape, NEAR_CELL, 1.0, 9.0, 2.2, 9)
-    cn['patch'] = cn['patch'] + 0.35 * fine
-    hn, rockn, bedn, covern = floor_height(NX, NY, cn, NEAR_CELL)
-    hn += 0.05 * fine * (1 - rockn)
+    swell = fractal(NX.shape, NEAR_CELL, 8.0, 45.0, 2.6, 10)
+    rockn, bedn, covern = (sample(v, FAR_X0, FAR_Y0, FAR_CELL, NX, NY) for v in (rockf, bedf, coverf))
+    rockn = np.clip(rockn + 0.25 * smooth(0.8, 1.6, fine + 0.6 * swell), 0.0, 1.0)
+    hn = hn + (0.05 * fine + 0.22 * swell) * (1 - 0.5 * rockn)
     j0, i0 = int((0.0 - NEAR_Y0) / NEAR_CELL), int((0.0 - NEAR_X0) / NEAR_CELL)
-    ground_z = float(hn[j0, i0])
-    EYE = (0.0, 0.0, ground_z + EYE_H)
+    EYE = (0.0, 0.0, float(hn[j0, i0]) + EYE_H)
     print('eye', EYE, flush=True)
 
     mimg = bake.float_image('floor_mask', np.stack([rockf, bedf, coverf], -1), os.path.join(out, 'floor_mask.exr'))
     nimg = bake.float_image('near_mask', np.stack([rockn, bedn, covern], -1), os.path.join(out, 'near_mask.exr'))
-
-    # The far floor: a fan of rings round the camera, closer together near it, with the heights in its points (a
-    # flat sheet lifted by a picture would be diced as the flat sheet is seen, and every bank that faces us would
-    # come out in long slats).
     n = Nodes('Floor')
     uv = n.scaled(n.pos, (1.0 / (FAR_X1 - FAR_X0), 1.0 / (FAR_Y1 - FAR_Y0), 0.0), (-FAR_X0 / (FAR_X1 - FAR_X0), -FAR_Y0 / (FAR_Y1 - FAR_Y0), 0.0))
     fmat = floor_material(n, None, n.image(mimg, uv, 'Linear'), False)
-    for name, r0, r1, rings, cols, dice in (('Floor', 90.0, 2300.0, 600, 751, True), ('FloorFar', 2290.0, 27000.0, 170, 301, False)):
-        rr = np.geomspace(r0, r1, rings).astype(np.float32)
-        aa = np.radians(np.linspace(-29.0, 29.0, cols)).astype(np.float32)
-        RR, AA = np.meshgrid(rr, aa, indexing='ij')
-        FX, FY = RR * np.sin(AA), RR * np.cos(AA)
-        fz = sample(hf, FAR_X0, FAR_Y0, FAR_CELL, FX, FY)
-        # Under the mesh round the camera it lies low, out of the way.
+    rock = rock_material()
+
+    # The land: the model's heights from near us to the far skyline.
+    def under_near(FX, FY, RR):
         inx = np.abs(FX - 0.5 * (NEAR_X0 + NEAR_X1))
         iny = np.abs(FY - 0.5 * (NEAR_Y0 + NEAR_Y1))
-        fz -= 2.5 * smooth(0.5 * (NEAR_X1 - NEAR_X0) - 4.0, 0.5 * (NEAR_X1 - NEAR_X0) - 14.0, inx) * \
-            smooth(0.5 * (NEAR_Y1 - NEAR_Y0) - 4.0, 0.5 * (NEAR_Y1 - NEAR_Y0) - 14.0, iny)
-        if not dice:
-            fz -= 0.4 * smooth(r0 + 40.0, r0, RR)                    # its near rim under the nearer part
-        nr_, na_ = RR.shape
-        co = np.stack([FX, FY, fz], -1).reshape(-1, 3)
-        i = np.arange((nr_ - 1) * (na_ - 1))
-        r, cc = i // (na_ - 1), i % (na_ - 1)
-        a = r * na_ + cc
-        faces = np.stack([a, a + 1, a + na_ + 1, a + na_], -1).astype(np.int32)
-        sheet = mesh_object(name, co, faces)
-        if dice:
-            bake.adaptive(sheet, DICE)
-        sheet.data.materials.append(fmat)
+        return (2.5 * smooth(0.5 * (NEAR_X1 - NEAR_X0) - 4.0, 0.5 * (NEAR_X1 - NEAR_X0) - 14.0, inx) *
+                smooth(0.5 * (NEAR_Y1 - NEAR_Y0) - 4.0, 0.5 * (NEAR_Y1 - NEAR_Y0) - 14.0, iny)).astype(np.float32)
 
-    # The ground round the camera: its heights in its points; its rim dips under the sheet.
+    land, co, sl, level = fan('Land', 90.0, 9000.0, 1154, 751, base, under_near)
+    bake.adaptive(land, DICE)
+    land.data.materials.append(fmat)
+    land.data.materials.append(rock)
+    # Beyond nine kilometres a polygon is smaller than a point of the picture: no dicing, relief as shading only.
+    far, _, _, _ = fan('LandFar', 8990.0, 61000.0, 250, 451, base, lambda FX, FY, RR: 3.0 * smooth(9200.0, 8990.0, RR))
+    for m in (fmat, rock):
+        m2 = m.copy()
+        m2.displacement_method = 'BUMP'
+        far.data.materials.append(m2)
+
+    # The ground round the camera: its heights in its points; its rim dips under the land's.
     rim = np.minimum(np.minimum(NX - NEAR_X0, NEAR_X1 - NX), np.minimum(NY - NEAR_Y0, NEAR_Y1 - NY))
     zn = hn - 1.2 * smooth(9.0, 1.0, rim)
-    co = np.stack([NX, NY, zn], -1).reshape(-1, 3)
+    cn = np.stack([NX, NY, zn], -1).reshape(-1, 3)
     ny_, nx_ = NX.shape
     i = np.arange((ny_ - 1) * (nx_ - 1))
     r, cc = i // (nx_ - 1), i % (nx_ - 1)
     a = r * nx_ + cc
     faces = np.stack([a, a + 1, a + nx_ + 1, a + nx_], -1).astype(np.int32)
-    near = mesh_object('Near', co, faces)
+    near = mesh_object('Near', cn, faces)
     bake.adaptive(near, DICE)
     n2 = Nodes('Near')
     uvn = n2.scaled(n2.pos, (1.0 / (NEAR_X1 - NEAR_X0), 1.0 / (NEAR_Y1 - NEAR_Y0), 0.0), (-NEAR_X0 / (NEAR_X1 - NEAR_X0), -NEAR_Y0 / (NEAR_Y1 - NEAR_Y0), 0.0))
     near.data.materials.append(floor_material(n2, None, n2.image(nimg, uvn, 'Linear'), False))
-
-    rock = rock_material()
-    parts = []
-    taluses = []
-    for spec in BUTTES:
-        ob, pts, tal = butte(spec, rock)
-        parts.append((spec['name'], pts))
-        if spec['dist'] < 4000.0:
-            taluses.append((spec['name'], tal, spec['dist']))
-    ob, pts = far_mesas(EYE[2])
-    parts.append(('FarMesas', pts))
 
     def ground(x, y):
         """Height, rock, wash bed and brush cover at places: from the mesh round the camera where it reaches."""
@@ -1238,9 +1030,17 @@ def build():
             res.append(v)
         return res
 
+    # The slopes under the buttes' walls, for the blocks that have fallen on them: each butte's own.
+    taluses = []
+    slopes = (level > 0.42) & (level < 0.58) & (sl > 0.3) & (sl < 0.95)
+    for name, lat, lon in BUTTES:
+        bx, by = T.scene_xy(lat, lon, T.SITE)
+        pick = slopes & (np.hypot(co[:, 0] - bx, co[:, 1] - by) < 900.0)
+        print('%-12s bearing %+.1f, %.0f m away, %d points of talus' % (name, math.degrees(math.atan2(bx, by)), math.hypot(bx, by), int(pick.sum())), flush=True)
+        if pick.sum() > 50:
+            taluses.append((name.replace(' ', ''), co[pick], math.hypot(bx, by)))
     if not os.environ.get('NOOR_BARE'):
-        parts += plants(ground, EYE, taluses)
-    check_skyline(parts, EYE)
+        plants(ground, EYE, taluses)
 
 
 def main():
