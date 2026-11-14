@@ -2,13 +2,13 @@
  "layer": "low",
  "altitude": 1.3,
  "kind": "sheet",
- "width": 405,
- "height": 324,
- "horizon": 316.8,
- "viewWidth": 324.0,
+ "width": 810,
+ "height": 648,
+ "horizon": 633.6,
+ "viewWidth": 648.0,
  "rMax": 4.0,
  "farKm": 30.0,
- "cover": 0.904482901096344,
+ "cover": 0.8722264170646667,
  "suns": [
   {
    "name": "l0",
@@ -125,5 +125,6 @@
    "azimuth": 14.7,
    "elevation": -4.0
   }
- ]
+ ],
+ "groundShade": 0.3757108626453185
 }
