@@ -13,6 +13,10 @@ uniform vec4 uLay;           // brightest light stored, layer (0 low, 1 middle, 
 uniform vec4 uLayFrame;      // of the set's picture: px across the phone's view, row of the horizon, width, height
 out vec4 o;
 
+// How much of the air's haze a sight line meets that climbs x scale heights on its way: all of it along the ground,
+// little of it up to a high cloud.
+float thinning(float x) { return x < 1e-3 ? 1.0 : (1.0 - exp(-x)) / x; }
+
 void main() {
     vec2 uv = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) / uRes;
     vec2 tuv = uLay.w > 0.5 ? vec2(1.0 - uv.x, uv.y) : uv;
@@ -31,11 +35,16 @@ void main() {
     // (Clouds are exposed a little up, as the land is held a little down: in a photograph they are the brightest things.)
     vec3 c = (sun * direct + glow * mGlow()) * 1.5 + fromSky * dome + fromGround * ground;
 
-    // Far clouds fade into the air in front of them, which has the colour of the sky at the horizon behind.
+    // Far clouds fade into the air in front of them, which has the colour of the sky behind them. The haze lies low:
+    // the foot of a far tower dissolves in it while its head, seen through thin air high up, stays crisp and white.
     float vx = (uv.x - 0.5) * uLayFrame.z / uLayFrame.x;                      // across the view, 0 = its middle
-    vec3 haze = texture(tSky, vec2(clamp(0.5 + vx, 0.02, 0.98), 1.0 - (uCam.y - 0.012 * uView.y) / uView.y)).rgb;
+    float te = (uLayFrame.y - uv.y * uLayFrame.w) / (1.15 * uLayFrame.x);     // the tangent of its height over the horizon
+    float row = min(uCam.y - te * 1.15 * uView.x, uCam.y - 0.012 * uView.y);
+    vec3 haze = texture(tSky, vec2(clamp(0.5 + vx, 0.02, 0.98), 1.0 - row / uView.y)).rgb;
     float far = texture(tF, tuv).r;
-    float fog = 1.0 - pow(max(1.0 - far, 1e-3), 0.55 * uHaze + 0.25);
+    float km = -30.0 * log(max(1.0 - far, 1e-3));
+    float up = km * max(te, 0.0) / sqrt(1.0 + te * te);
+    float fog = 1.0 - exp(-(0.55 * uHaze + 0.25) * km / 30.0 * (0.25 * thinning(up / 8.0) + 0.75 * thinning(up / 1.6)));
     c = mix(c, haze * a, fog * 0.92);
     o = vec4(c, a) * uLay.z;
 }
