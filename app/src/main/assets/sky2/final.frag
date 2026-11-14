@@ -56,18 +56,20 @@ void main() {
     // keep their relations; only then is anything still too bright eased down.
     float lim = textLimit(vp.y);
     // The Sun itself is never dimmed: at midday it stands just under the text, and a dimmed Sun is a smudge. Its
-    // disc and the glare close round it keep their light; the letters' own shadow carries them there.
+    // disc, its rays and the glare round it keep all their light (what the filter would have made of them is simply
+    // not used there); the letters' own shadow carries them. Nor is the Moon, the brightest thing of the night.
+    float keep = 0.0;
     if (lim < 1.0 && uSunEl > -2.0) {
         vec3 sp = viewPoint(uSunDir);
-        vec2 ds = (vp - sp.xy) / (0.075 * uView.x);
-        lim = mix(lim, 1.0, exp(-dot(ds, ds)) * step(0.0, sp.z) * smoothstep(-2.0, 1.0, uSunEl));
+        vec2 ds = (vp - sp.xy) / (0.13 * uView.x);
+        keep = exp(-dot(ds, ds)) * step(0.0, sp.z) * smoothstep(-2.0, 1.0, uSunEl);
     }
-    // Nor the Moon: by night it is the brightest thing there is.
     if (lim < 1.0 && uMoonLit.w > 0.0 && uNight > 0.05) {
         vec3 mp = viewPoint(normalize(uMoon.xyz));
-        vec2 dm = (vp - mp.xy) / (0.05 * uView.x);
-        lim = mix(lim, 1.0, exp(-dot(dm, dm)) * step(0.0, mp.z) * uMoonLit.w);
+        vec2 dm = (vp - mp.xy) / (0.06 * uView.x);
+        keep = max(keep, exp(-dot(dm, dm)) * step(0.0, mp.z) * uMoonLit.w);
     }
+    vec3 open = d;
     if (lim < 1.0) {
         float clouds = saturate(uCover * 2.0);
         float sunlit = luma(toneLinear(mSunCloud() + mAmbTop()));
@@ -80,6 +82,7 @@ void main() {
         // Dimmed warm light turns muddy; as the eye sees shade, it is cool. Lean the darkened part towards blue.
         d = mix(d, luma(d) * vec3(0.88, 0.97, 1.16), 0.5 * (1.0 - k));
         d = easeTo(d, lim);
+        d = mix(d, open, keep);
     }
 
     if (inPanel > 0.0) {
