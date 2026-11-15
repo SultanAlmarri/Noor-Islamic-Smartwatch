@@ -917,7 +917,9 @@ compiled programs); how long it takes there is not known.
   small step; a set appears or disappears only where it has no part of the view; the Sun's window, the land's
   shade and the overcast change by small steps. `theDirectorChoosesCloudSetsThatExist` also checks that the
   shaders' `SKY_PITCH` is the director's `PITCH`.
-- Both release builds on the PC, and GitHub's build of `main`.
+- Both release builds on the PC, and GitHub's build of `main` (run 43741720244, 15 November 2026: every test,
+  both APKs, the watch face's validation; `dev-latest` republished with 0.13.0). The Adhan test on emulators
+  (`device-alerts.yml`, Android 14, 15 and 17) passed on the same commit.
 - The design bench: the day's exposure on all six sceneries and through the morning and evening; the water of the
   forest lake, the arctic, the green hills and the sea at full size; one set passing into the next (broken into
   overcast, a middle sheet into patches); the same sky 0, 20 and 60 seconds apart; lightning by day, at dusk and
