@@ -827,6 +827,13 @@ The twelve sets of 0.11 are no longer in the app (kept in `NoorTools/work/clouds
   launcher frozen, Noor "timed out while trying to bind" at start). So the arctic and the sea were seen on Android
   only under those dialogs.
 
+- The Adhan test on emulators (`device-alerts.yml`, Android 14, 15 and 17): its first run on this release failed
+  one scenario of five on each emulator, the one that was running at 13:35 UTC, 5:35 pm in Dubai: that day's
+  Maghrib. The emulator's real Maghrib alarm fired with the test's own alarm, both records stayed at `STARTING`,
+  and the test did not find `PLAYED`. Run again a few minutes later it passed on all three. So: a run of that
+  workflow that overlaps a prayer time in Dubai can fail one scenario; run it again before looking for a fault.
+  (What Noor does when a test Adhan and a real one start in the same second has not been looked at.)
+
 **What was not tested**
 
 - Nothing of 0.12 has been seen on a real phone. In particular: how the clouds look at the phone's own sharpness,
