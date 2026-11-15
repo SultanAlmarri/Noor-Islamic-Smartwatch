@@ -19,6 +19,13 @@ vec3 easeTo(vec3 c, float lim) {
     return c * (y / l);
 }
 
+// The exposure of the day (0.13). With the Sun high everything is bright, and the filmic curve's shoulder pressed the
+// sunlit clouds, their shaded sides and the blue of the sky into one pale range: 0.12's clouds were flat at midday,
+// though their pictures hold a light and shade of ten to one. So the day is exposed for its brightest things, as a
+// photographer exposes a sky: the blue deepens and the clouds keep their modelling. The hours of colour and the
+// night keep the exposure they had.
+float exposure() { return mix(1.0, 0.70, smoothstep(6.0, 28.0, uSunEl)); }
+
 // How bright the sky may be at a height of the view where text is written on it. The letters carry a soft dark
 // shadow of their own (TodayScreen, SkyText), so the sky behind them need not be as dark as bare white text would
 // ask: at most 0.26 behind the small text (3.4:1 before the shadow), 0.40 behind the large countdown. Below the
@@ -50,7 +57,8 @@ void main() {
         inPanel = saturate(d + 0.5);
     }
 
-    vec3 d = toneLinear(c);
+    float ex = exposure();
+    vec3 d = toneLinear(c * ex);
     // The hour of colour is printed as a photographer prints it: a little richer than the rest of the day.
     d = clamp(mix(vec3(luma(d)), d, 1.07 + 0.24 * smoothstep(14.0, 3.0, uSunEl) * (1.0 - uNight)), 0.0, 1.0);
     // The graduated filter: one smooth darkening towards the text, as strong as the brightest thing likely to stand
@@ -74,8 +82,8 @@ void main() {
     vec3 open = d;
     if (lim < 1.0) {
         float clouds = saturate(uCover * 2.0);
-        float sunlit = luma(toneLinear(mSunCloud() + mAmbTop()));
-        float clear = luma(toneLinear(mAmbTop() * 1.25 + mAmbLow() * 0.25));
+        float sunlit = luma(toneLinear((mSunCloud() + mAmbTop()) * ex));
+        float clear = luma(toneLinear((mAmbTop() * 1.25 + mAmbLow() * 0.25) * ex));
         float ref = max(mix(clear, max(sunlit, clear), smoothstep(0.0, 0.3, clouds)), 1e-3);
         // (Only part of the way by the filter: a sky dimmed all the way to what its brightest cloud asks is a dull
         // sky. The rest is taken from the brightest parts alone.)
@@ -88,7 +96,7 @@ void main() {
     }
 
     if (inPanel > 0.0) {
-        vec3 g = toneLinear(b);
+        vec3 g = toneLinear(b * ex);
         vec3 tint = pow(uPanelTint, vec3(2.2));
         if (uPanel.w > 0.5) {
             // Light glass: dark ink must read on it, so it never falls below a bright haze. The scene behind it is
@@ -112,7 +120,7 @@ void main() {
             float ref = 0.0;
             for (int i = 0; i < 6; i++) {
                 vec2 at = vec2(0.18 + 0.32 * float(i % 3), top * (i < 3 ? 0.30 : 0.78));
-                ref = max(ref, luma(toneLinear(texture(tBlur, at).rgb)));
+                ref = max(ref, luma(toneLinear(texture(tBlur, at).rgb * ex)));
             }
             g *= min(0.82, 0.20 / max(ref, 1e-3));
             // (Dimmed warm light alone turns to mud: the glass cools what it dims, a little.)

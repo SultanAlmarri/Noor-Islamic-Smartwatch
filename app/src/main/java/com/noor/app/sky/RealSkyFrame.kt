@@ -373,7 +373,7 @@ internal object SkyDirector {
         fun closed(level: Int) = clouds[level].sumOf { (it.weight * (CLOSES[it.set] ?: 0f)).toDouble() }.toFloat().coerceIn(0f, 1f)
         val overcast = 1f - (1f - closed(2)) * (1f - closed(1))
         // (Nor does a thunderhead stand apart for the Sun: where it is in front of it, the Sun is behind it.)
-        val full = clouds[2].sumOf { (it.weight * (if (it.set == "lo_overcast") 1f else if (it.set == "lo_storm") 0.85f else 0f)).toDouble() }.toFloat().coerceIn(0f, 1f)
+        val full = clouds[2].sumOf { (it.weight * (if (it.set == "lo_overcast" || it.set == "lo_storm") 1f else 0f)).toDouble() }.toFloat().coerceIn(0f, 1f)
         val sunPart = ((1f - covered) * (1f - smooth(0.5f, 0.75f, s.overcast)) * (1f - full)).coerceIn(0f, 1f)
         val shade = max(overcast, 0.6f * (1f - sunPart))
         val halo = clouds[0].sumOf { (it.weight * (if (it.set == "hi_veil") 1f else if (it.set == "hi_mixed") 0.4f else 0f)).toDouble() }.toFloat().coerceIn(0f, 1f)

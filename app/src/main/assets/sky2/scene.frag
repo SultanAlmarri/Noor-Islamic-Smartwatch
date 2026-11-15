@@ -364,7 +364,8 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     vec3 p = vec3(0.0, uCam.z, 0.0) + rd * t;
     float moonW = smoothstep(-6.0, -10.0, uSunEl);
     // (Lit land is held a little under the sky, as a photographer exposes: its colour stays rich.)
-    vec3 light = mSunGround() * 0.70 * (1.0 - moonW) + mMoonLight() * moonW;
+    // (By day the whole picture is exposed down for the sky (final.frag, `exposure`): the land is given some of it back.)
+    vec3 light = mSunGround() * mix(0.70, 0.84, smoothstep(6.0, 28.0, uSunEl)) * (1.0 - moonW) + mMoonLight() * moonW;
     // The shadows of the low clouds, cast from where they stand in the picture. The cloud a sunbeam meets is often
     // outside the picture (overhead, or behind us): there the land gets what the sky as a whole takes from the Sun
     // (uSunPart.z: an overcast, or a cloud standing over the Sun just now). A Sun on the horizon shines in under

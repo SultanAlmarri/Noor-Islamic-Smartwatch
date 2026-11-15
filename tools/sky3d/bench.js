@@ -549,6 +549,15 @@ const bench = {
     await fetch('/save/' + name, { method: 'POST', body: c.toDataURL(mime, 0.86) });
     return name;
   },
+  // The light of the moment as the shaders have it (tMeter: skylight from above and from the horizon, sunlight on the
+  // ground, at the three cloud levels, the disc, moonlight, the glow): for looking into what a picture is made of.
+  meter() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, G.fMeter.f);
+    const a = new Float32Array(40);
+    gl.readPixels(0, 0, 10, 1, gl.RGBA, gl.FLOAT, a);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return Array.from({ length: 10 }, (_, i) => Array.from(a.slice(i * 4, i * 4 + 3)).map(v => +v.toFixed(3)));
+  },
   compileTimes() { return Object.values(G.progs).map(p => p && `${p.label}: ${p.ms.toFixed(0)} ms, ${p.chars} chars`).join('\n'); },
 };
 bench.loadSky = loadSky; bench.SKIES = SKIES; bench.LAND = LAND;
