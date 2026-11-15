@@ -135,6 +135,9 @@ clouds, on any phone, because all the phone does is add pictures together.
 
 The 0.9 scene is kept, untouched, as the fallback ("Classic") where the new one cannot run.
 
+**The header's text on a bright sky (0.12).** The sky is darkened only in a soft oval behind the text itself (the
+letters also carry their own shadow). 0.11 darkened the whole upper sky, which turned every bright cloud there grey.
+
 **The whole screen is the window.** The scene fills the screen behind everything. The next prayer and the countdown
 are written on its sky; the day's six times stand on clear dark glass over its lower part (the land is seen through
 it as through sunglasses). The sun path and the prayers on it are drawn over the scene as before.
@@ -163,27 +166,50 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   level horizon as before. The disc itself is drawn only between those two moments (its true height is -0.83
   degrees at both), so no gap in the land can show it early or late; its glow behind the land is the dawn and the
   dusk. The colour of the sky and of the light still comes from the Sun's true height.
-- **Clouds of twelve kinds**, each a set of path-traced volumes (`skybake.py`). The heaped kinds are built of
-  film-quality cumulus volumes (CGHEVEN's free cloud VDBs, see `tools/scenery/sources/clouds_low.md`; only pictures
-  rendered from them are shipped): set out as fields on one base for the low clouds, and as hundreds or thousands of
-  small cloudlets in ranks, rolls and ripples for altocumulus and cirrocumulus. (The first clouds, shaped by noise
-  formulas, read as computer-made beside photographs and were thrown away.) The kinds: low (fair-weather cumulus, a cumulus
-  field, towering cumulus, a thunderhead with its anvil, a stratocumulus sheet, an overcast), middle (altocumulus in
-  flocks and in rolls, an altostratus veil) and high (cirrus, cirrocumulus, a cirrostratus veil). The phone shows a
-  low, a middle and a high set over one another, slides them slowly with the wind, and fades from one set to the
-  next as the weather changes. Each is lit by the Sun as it stands at that layer's own height (high cloud still
-  glows after low cloud has gone grey), from under the horizon after sunset (red light on the bases), by the glow of
-  the twilight sky, by the blue of the sky above and by the light the ground throws up. Low clouds shade the land
-  under them and every layer is mirrored in water.
+- **Clouds as real skies have them (0.12).** Seventeen skies, each a path-traced set of volumes (`skybake.py`,
+  `sky_lo.py`, `sky_mh.py`): eight low (a few isolated cumulus; scattered; scattered with towers; a broken sky; a
+  bank thickening to one side; a thunderhead; an overcast with breaks; a full overcast), four middle (altocumulus in
+  mats; in bands; a dense sheet; an altostratus veil) and five high (cirrus tufts; long sprays; a cirrostratus veil;
+  cirrocumulus; a mixed sky). Each is composed the way photographs show skies: structure first (fields and empty
+  quarters, streets, mats with frayed edges, a dense side and an open side), then the clouds, of very mixed sizes
+  and several kinds together; never an even sprinkling (the owner, of 0.11: "they're all evenly spaced apart... that
+  looks fake"). The heaped clouds are film-quality cumulus volumes (CGHEVEN's free cloud VDBs; only pictures
+  rendered from them are shipped). Each is lit by the Sun as it stands at that level's own height, from under the
+  horizon after sunset, by the glow of the twilight sky, by the blue above and the light the ground throws up; low
+  clouds shade the land and every level is mirrored in water.
+- **They drift, and never jump (0.12).** A set is a window of the sky twice as wide as the view (94 degrees, in
+  equal angles). The day is cut into legs for each level (3.1 hours for the high clouds, 2.3 for the middle, 1.6 for
+  the low, each with its own start): a set comes in over the last fifth of the leg before its own, drifts 41
+  degrees across the view, and gives way over its last fifth. So one sky turns slowly into the next, level by
+  level, and no two levels change together. Which set a leg shows comes from the weather in the middle of that leg
+  and a throw of the dice; it never depends on the Sun's height or on a prayer time (0.11 chose again whenever the
+  Sun crossed certain heights and swapped all three levels in seven seconds: "the entire sky... suddenly
+  transforms"). `SkyDirector.legs`, `setFor`; `SkyDirectorTest.theCloudsNeverChangeAtAStroke`.
+- **The Sun and the clouds (0.12).** The Sun is drawn low in the picture, where far clouds crowd together, though
+  it stands high in the real sky, where gaps are wide: left to the picture it was nearly always hidden. So whether
+  a cloud is in front of the Sun is the weather's say (`SkyState.sunPart`): clouds pass over it now and then, the
+  more often the more of them there are, and under an overcast it is gone. Otherwise the low and middle clouds
+  stand apart round it: in a wide ring only their thin parts go (their thick hearts stay), and only close to the
+  Sun does cloud give way altogether (`parted` in `scene.frag`). High cloud is never parted: through thin cirrus the
+  Sun shines on, through an altostratus veil it is a dim disc, and a veil of ice draws the 22-degree halo.
+- **The land under the clouds (0.12).** The shadow of a low cloud falls on the land where that cloud stands in the
+  picture. The cloud a sunbeam meets is often outside the picture (overhead, behind us): there the land gets what
+  the sky as a whole takes from the Sun (`SkyState.shade`): under a full overcast no sunshine at all, under a
+  broken sky some, and when a cloud passes over the Sun the land near us dims with it. Under a closed sky
+  (`SkyState.overcast`, from the sets on show: `SkyDirector.CLOSES`) the land's light comes evenly from the whole
+  grey sky, without the blue of an open one. A full overcast and a thunderhead never stand apart for the Sun.
+  (Before this the land under a grey overcast was in full sunshine with hard shadows.)
 - **The Sun, bold.** Its disc is drawn a little over twice its real size (it is also the hand of this clock), white-hot
   when high and a red-gold ball when the air has dimmed it, with the glare and the fine rays a lens draws round a
   point of light. Nothing in the picture is brighter than a fiftieth of what a half-float can hold (0.10's Sun was
   written at up to 60 000, which overflows half-floats on some phone GPUs and turns to black: the likely reason it
   could not be seen).
-- **The night as it is.** The Milky Way is NASA's map of the whole sky (Deep Star Maps 2020) fixed to the turning
-  sky, so its bright centre and dust lanes stand where they really do for the place and the hour; the Moon carries
-  its real face (NASA's Lunar Reconnaissance Orbiter map) and phase; the 1,600 catalogue stars are points; the land
-  is seen by starlight, as a long exposure finds it. A shooting star falls now and then.
+- **The night (0.12).** Round the galactic centre, where the finest night looks, the sky is NASA's star map at the
+  screen's own sharpness (Deep Star Maps 2020, 8k: the Milky Way's glow with its dust lanes, and the real stars
+  over it, `night/starfield.webp`); the whole-sky map stays for everywhere else, and for "Real stars". The 1,600
+  catalogue stars are points over it (faint ones faint, a wide range of sizes), the Moon carries its real face (NASA's
+  Lunar Reconnaissance Orbiter map) and phase, the land is seen by starlight as a long exposure finds it. A shooting
+  star falls now and then.
 - **Water, live.** Still or ruffled, it mirrors the sky, the clouds and the land beyond (a thing mirrored at the
   right height for its distance), shows its bed through clear shallows, and carries the Sun's and the Moon's road.
 - **A beach with waves** (the Ocean scenery; `uShore` in `scene.frag`, written into `land.json` by `ocean.py`). The

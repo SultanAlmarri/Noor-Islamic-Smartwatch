@@ -31,8 +31,14 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bake      # noqa: E402
 
-PAN = 1.25                     # the picture is this many times wider than the phone's view
-ROWS = bake.HORIZON + 24       # rows of Noor's frame that are kept (the horizon and a little under it)
+PAN = 1.25                     # (the old flat picture: this many times wider than the phone's view)
+ROWS = bake.HORIZON + 24       # (the old flat picture: rows of Noor's frame that are kept)
+# The wide sky (0.12): a window of the sky in equal angles. The phone's view is 47 degrees across; a set is twice
+# that, so it can drift across the view for an hour or two before the next set takes its place.
+WIDE = os.environ.get('NOOR_FLAT', '') == ''          # the wide sky unless NOOR_FLAT is set
+AZ_HALF = 47.0                 # degrees to either side of the view's middle
+EL_MIN, EL_MAX = -1.0, 40.0    # degrees over the horizon
+PX_PER_DEGREE = 22.0           # as the phone's view has in its middle (1080 px across 47 degrees)
 R_MAX = 4.0
 FAR_KM = 30.0
 UNDER = [('LU0', -bake.RISE_AZIMUTH, -1.5), ('LU1', -bake.RISE_AZIMUTH, -4.0),
@@ -56,6 +62,22 @@ def drop(distance):
 
 def camera(eye=(0.0, 0.0, 2.0)):
     s = bpy.context.scene
+    if WIDE:
+        cam = bpy.data.cameras.new('NoorSkyCamera')
+        cam.type = 'PANO'
+        cam.panorama_type = 'EQUIRECTANGULAR'
+        cam.longitude_min, cam.longitude_max = math.radians(-AZ_HALF), math.radians(AZ_HALF)
+        cam.latitude_min, cam.latitude_max = math.radians(EL_MIN), math.radians(EL_MAX)
+        cam.clip_start = 1.0
+        cam.clip_end = 600000.0
+        ob = bpy.data.objects.new('NoorSkyCamera', cam)
+        ob.location = eye
+        ob.rotation_euler = (math.pi / 2, 0.0, 0.0)
+        s.collection.objects.link(ob)
+        s.camera = ob
+        s.render.resolution_x = int(round(2 * AZ_HALF * PX_PER_DEGREE))
+        s.render.resolution_y = int(round((EL_MAX - EL_MIN) * PX_PER_DEGREE))
+        return ob
     width = int(round(bake.W * PAN * s.render.resolution_percentage / 100.0))
     cam = bpy.data.cameras.new('NoorSkyCamera')
     cam.sensor_fit = 'HORIZONTAL'
@@ -253,6 +275,12 @@ def bake_pack(src, dst, ls, info, quality=78, frame='0001'):
         bake.save8(os.path.join(dst, 's_%s.webp' % name.lower()), light('sun_' + name), quality=quality)
     k = alpha.shape[1] / (bake.W * PAN)
     meta = dict(info)
+    if WIDE:
+        # (How much of the sky the set covers in the part of it the phone shows: 2 to 30 degrees up.)
+        h = alpha.shape[0]
+        r0, r1 = int(h * (EL_MAX - 30.0) / (EL_MAX - EL_MIN)), int(h * (EL_MAX - 2.0) / (EL_MAX - EL_MIN))
+        meta.update({'projection': 'equirect', 'azHalf': AZ_HALF, 'elMin': EL_MIN, 'elMax': EL_MAX,
+                     'coverSeen': float(alpha[r0:r1].mean())})
     meta.update({
         'width': int(alpha.shape[1]), 'height': int(alpha.shape[0]), 'horizon': bake.HORIZON * k,
         'viewWidth': bake.W * k, 'rMax': R_MAX, 'farKm': FAR_KM, 'cover': float(alpha.mean()),

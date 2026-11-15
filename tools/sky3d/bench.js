@@ -85,7 +85,9 @@ const P = {
   aurora: 0.0, flash: 0.0, rainbow: 0.0, waterRough: 0.3, waterClear: 0.2,
   trueStars: false,                              // the stars where they truly are (off: the finest night sky)
   birds: -1, birdsHeight: 0.14, meteor: 0,       // a flock (0..1 across the sky; -1 none), a shooting star (0..1; 0 none)
-  skyHigh: null, skyMid: null, skyLow: null, slideHigh: 0, slideMid: 0, slideLow: 0,     // cloud sets (ids) and how far each has slid (px)
+  skyHigh: null, skyMid: null, skyLow: null, slideHigh: 0, slideMid: 0, slideLow: 0,     // cloud sets (ids) and how far each has drifted (degrees: where the view's middle stands in the set, -20..20)
+  skyHigh2: null, skyMid2: null, skyLow2: null, mixHigh: 0, mixMid: 0, mixLow: 0,         // a second set coming in over the first (its share 0..1; it stands at the other end of its drift)
+  sunPart: 1, halo: 0, shade: 0, overcast: 0,                                                                   // the low clouds stand apart round the Sun; a halo
   focal: 1.15, eye: 60.0, horizon: 911 / 2340, arcTop: 596 / 2340, ground: 1110 / 2340, textBottom: 554 / 2340, panelTop: 1126 / 2340,
   panelTint: 0.5, light: 0, cloudScale: 1.0, sceneScale: 1.0, steps: 1.0, text: 1, panel: 1,
 };
@@ -186,7 +188,7 @@ function updateUniforms() {
     uSteps: P.steps,
     uSky: [P.aurora, 0, P.flash, P.rainbow], uLand: [P.biome, P.season, P.snow, P.wet], uAir: [P.mist, P.rain, P.windForce, P.dust],
     uTouch: [0, 0, 1e3, 0], uBiome: P.biome,
-    uBirds: [P.birds, P.birdsHeight, P.seed, 1], uMeteor: [P.meteor, 0.62, 0.10, 0.9],
+    uSunPart: [P.sunPart, P.halo, P.shade, P.overcast], uBirds: [P.birds, P.birdsHeight, P.seed, 1], uMeteor: [P.meteor, 0.62, 0.10, 0.9],
     uText: [P.text ? P.textBottom * H : 0, 0, 0, 0],
     uPanel: [P.panel ? P.panelTop * H : H * 2, 30 * 2.625, P.panelTint, P.light],
     uPanelTint: P.light ? [0.965, 0.955, 0.935] : [0.027, 0.039, 0.078], uFade: 1,
@@ -394,6 +396,7 @@ async function init() {
     T.tMilky = await loadPicture('/app/src/main/assets/sky2/night/milkyway.webp');
     gl.bindTexture(gl.TEXTURE_2D, T.tMilky.t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
   } catch (e) { T.tMilky = T.tZero; }
+  try { T.tMilkyHi = await loadPicture('/app/src/main/assets/sky2/night/starfield.webp'); } catch (e) { T.tMilkyHi = T.tZero; }
   try { T.tMoon = await loadPicture('/app/src/main/assets/sky2/night/moon.jpg'); } catch (e) { T.tMoon = T.tZero; }
   p.final = await program('final', ['common.glsl', 'atmosphere.glsl', 'final.frag']);
   p.stars = await starProgram();
@@ -462,19 +465,28 @@ function frame(amort = 16) {
   } else { u.uShore = [0, 0, 0, 0]; u.uLandFrame = [1080, 1056, 0, 1]; u.uLandInfo = [0, 0, 2, 0]; T.tLandA = T.tZero; T.tLandK = T.tZero; T.tLandG = T.tZero; T.tLandLit = T.tZero; T.tLandM = T.tZero; }
   // The three layers of cloud, each in the light of the moment.
   let cover = 0, any = 0;
-  [P.skyHigh, P.skyMid, P.skyLow].forEach((id, i) => {
-    const S = id ? SKIES[id] : null;
-    if (!S) { T['tCloud' + i] = T.tZero; u['uCloudF' + i] = [1080, 1056, 1350, 1080]; return; }
-    const m = S.meta;
-    lit(S, G.cloudLight, S.fLit);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, S.fOut.f); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-    use(p.layer, S.fOut, { tA: S.a, tF: S.f, tK: S.k, tG: S.g, tLit: S.lit, uLay: [m.rMax, m.layer === 'high' ? 2 : m.layer === 'mid' ? 1 : 0, 1, P.rtl ? 1 : 0],
-      uLayFrame: [m.viewWidth, m.horizon, m.width, m.height] });
-    draw();
-    T['tCloud' + i] = S.out; u['uCloudF' + i] = [m.viewWidth, m.horizon, m.width, m.height];
-    cover = 1 - (1 - cover) * (1 - m.cover); any = 1;
+  // (Each layer is drawn into a window of the sky round the view; a set is a wider window, turned by its drift.)
+  if (!G.win) G.win = [0, 1, 2].map(() => { const t = hdr(1144, 902); return { t, f: fbo(t) }; });
+  [[P.skyHigh, P.slideHigh, P.skyHigh2, P.mixHigh], [P.skyMid, P.slideMid, P.skyMid2, P.mixMid], [P.skyLow, P.slideLow, P.skyLow2, P.mixLow]].forEach(([id, slide, id2, mix], i) => {
+    const sets = [[id, slide, 1 - (id2 ? mix : 0)], [id2, -20.5, mix]].filter(e => e[0] && SKIES[e[0]] && e[2] > 0.004);
+    if (!sets.length) { T['tCloud' + i] = T.tZero; return; }
+    sets.forEach(([sid]) => lit(SKIES[sid], G.cloudLight, SKIES[sid].fLit));
+    const W = G.win[i];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, W.f.f); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+    sets.forEach(([sid, sl, share]) => {
+      const S = SKIES[sid], m = S.meta;
+      const level = typeof m.layer === 'number' ? m.layer : m.layer === 'high' ? 2 : m.layer === 'mid' ? 1 : 0;
+      use(p.layer, W.f, { tA: S.a, tF: S.f, tK: S.k, tG: S.g, tLit: S.lit, uLay: [m.rMax, level, share, P.rtl ? 1 : 0],
+        uLayFrame: [m.azHalf || 29.4, m.elMin === undefined ? -1 : m.elMin, m.elMax || 40, sl] });
+      draw();
+      cover = 1 - (1 - cover) * (1 - (m.coverSeen === undefined ? m.cover : m.coverSeen) * share);
+    });
+    gl.disable(gl.BLEND);
+    T['tCloud' + i] = W.t; any = 1;
   });
-  u.uCloudD = [P.slideHigh, P.slideMid, P.slideLow, any];
+  u.uCloudD = [0, 0, 0, any];
+  u.uCloudF0 = u.uCloudF1 = u.uCloudF2 = [1080, 1056, 1350, 1080];
   u.uCover = cover;
   use(p.scene, G.fScene); draw();
   if (u.uNight > 0.05 && G.stars) {

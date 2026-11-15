@@ -1,6 +1,6 @@
 # Noor architecture
 
-Living document: each development phase adds its section. Last updated 14 November 2026 (phone 0.11.0: the real sky from path-traced pictures, see below and DESIGN.md; watch 0.9.12).
+Living document: each development phase adds its section. Last updated 15 November 2026 (phone 0.12.0: clouds that vary and drift, the Sun through them, a sharp night, see DESIGN.md; 0.11.0: the real sky from path-traced pictures; watch 0.9.12).
 
 ## Modules
 

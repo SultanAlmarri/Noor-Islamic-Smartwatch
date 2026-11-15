@@ -6,6 +6,11 @@
 
 #define PI 3.14159265359
 #define DEG 0.01745329252
+// The window of the sky each layer of cloud is drawn into (layer.frag) and read from (scene.frag): degrees to either
+// side of the view's middle, and from how far under the horizon to how far over it.
+#define SKYWIN_AZ 26.0
+#define SKYWIN_EL0 -1.0
+#define SKYWIN_EL1 40.0
 
 uniform vec2 uRes;        // size of the target this pass draws into, px
 uniform vec2 uView;       // size of the whole scene on screen, px

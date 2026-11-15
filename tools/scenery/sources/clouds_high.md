@@ -41,3 +41,35 @@ blender -b --factory-startup -P tools/scenery/sky_high.py -- bake <work dir>
 then copy `<work dir>/sky/*` into `app/src/main/assets/sky2/clouds/<id>/`. (`NOOR_SCALE=0.75` was used for the
 bakes; `python tools/scenery/sky_high.py -- plan <work dir>` shows a procedural pattern in seconds, without path
 tracing; `tools/scenery/skyview_high.py` shows a baked set roughly as the phone will light it.)
+
+## The skies of 0.12 (`mi_*`, `hi_*`): composed skies in the wide format
+
+Sets: `mi_patches`, `mi_bands`, `mi_sheet`, `mi_veil` (middle layer) and `hi_wisps`, `hi_sprays`, `hi_veil`,
+`hi_ripples`, `hi_mixed` (high layer), made by `tools/scenery/sky_mh.py`. They use the same two kinds of material
+as the sets above and nothing else:
+
+- **Cells**: the same eight CGHEVEN cumulus volumes (same author, licence and rule: free to use in finished work
+  including renders, also commercially; the files may not be redistributed; no `.vdb` in the repository; the
+  reduced copies are in `...\NoorTools\work\clouds_mh\puffs\`). Used, made small, as the cells of the mats of
+  `mi_patches` (five mats) and `mi_bands` (bands of rolls and flocks) and as the grains of cirrocumulus in
+  `hi_ripples` and `hi_mixed`.
+- **Everything else is this project's own procedural work** (`cloudgen_high.py`, `sky_mh.py`): where the mats,
+  bands, holes and edges lie (`Mat`); the thin cloud the cells stand in; the whole of `mi_sheet` (a deck of pads
+  grown together, made as one layer: no modelled cells) and of `mi_veil` (altostratus); all the cirrus and
+  cirrostratus (`hi_wisps`, `hi_sprays`, `hi_veil`, and the streaks and veils of `hi_ripples` and `hi_mixed`).
+
+Photographs looked at to compose and judge them (none copied, traced or used as data): Wikimedia Commons, fetched
+through its API as thumbnails: altocumulus stratiformis, floccus and undulatus, altostratus, cirrus uncinus and
+fibratus, cirrostratus, cirrocumulus stratiformis, and the featured sky pictures in
+`...\NoorTools\work\refs2` and `...\NoorTools\work\refs_mh`.
+
+To make one again (the wide sky: 94 degrees across, see `skybake.WIDE`):
+
+```
+set NOOR_SET=mi_patches
+python tools/scenery/sky_mh.py -- plan <work dir>          (where its clouds stand, in seconds; NOOR_SEED tries another sky)
+blender -b --factory-startup -P tools/scenery/sky_mh.py -- bake <work dir>      (NOOR_SCALE=0.75 was used)
+blender -b --factory-startup -P tools/scenery/skyview_mh.py -- <work dir>/sky <sheet.jpg>
+```
+
+then copy `<work dir>/sky/*` into `app/src/main/assets/sky2/clouds/<id>/`.

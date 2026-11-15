@@ -7,6 +7,9 @@ uniform sampler2D tCloud0;    // the three layers of cloud, lit (layer.frag): hi
 uniform sampler2D tCloud1;
 uniform sampler2D tCloud2;
 uniform vec4 uCloudF0, uCloudF1, uCloudF2;   // each layer's picture: px across the phone's view, row of the horizon, width, height
+uniform vec4 uSunPart;        // how far the low clouds stand apart round the Sun (0..1); how strong a halo the ice above draws;
+                              // how much of the Sun's light the sky as a whole takes from the land (an overcast, a cloud
+                              // over the Sun); how overcast the sky is
 uniform vec4 uCloudD;         // how far the wind has slid each layer (px of its picture); 1 = there are clouds at all
 uniform sampler2D tLandA;     // the land: its colour under white light, and where it is (alpha)
 uniform sampler2D tLandK;     // the land lit by a plain white sky
@@ -65,12 +68,25 @@ vec3 faintStars(vec3 d, float alt) {
 // to the turning sky, so the bright centre, the dust lanes and the Magellanic Clouds stand where they really do for
 // the place and the hour. (The picture runs right ascension leftwards from 0 h in its middle.)
 uniform sampler2D tMilky;
-vec3 milkyWay(vec3 d) {
+uniform sampler2D tMilkyHi;     // the sky round the galactic centre, sharp, with its stars (nightsky.py `hi`)
+// Where that cut lies in the whole map (u0, v0, du, dv), and how its brightness compares with the whole map's.
+const vec4 MILKY_HI = vec4(0.635, 0.411, 0.250, 0.500);
+const float MILKY_HI_GAIN = 1.667;       // (the cut holds 0.6 of the glow in the whole map's units, and the stars over it)
+
+// The Milky Way and, where the sharp cut covers it, the stars themselves; a = how much of this is the sharp cut.
+vec4 milkyWay(vec3 d) {
     vec3 c = vec3(dot(d, uCelX), dot(d, uCelY), dot(d, uCelZ));
     vec2 uv = vec2(fract(0.5 - atan(c.y, c.x) / (2.0 * PI)), 0.5 - asin(clamp(c.z, -1.0, 1.0)) / PI);
     vec3 t = pow(texture(tMilky, uv).rgb, vec3(2.2));
     // (As a long exposure shows it: its bright parts brought out, its colour kept.)
-    return t * (0.55 + 1.6 * luma(t)) * 0.20;
+    t = t * (0.55 + 1.6 * luma(t)) * 0.20;
+    vec2 h = (uv - MILKY_HI.xy) / MILKY_HI.zw;
+    float sharp = smoothstep(0.0, 0.07, h.x) * smoothstep(1.0, 0.93, h.x) * smoothstep(0.0, 0.07, h.y) * smoothstep(1.0, 0.93, h.y);
+    if (sharp > 0.0) {
+        vec3 s = pow(texture(tMilkyHi, h).rgb, vec3(2.2)) * MILKY_HI_GAIN;
+        t = mix(t, s * (0.55 + 1.6 * min(luma(s), 1.0)) * 0.20, sharp);
+    }
+    return vec4(t, sharp);
 }
 
 // The aurora: curtains of light a hundred kilometres up and more, folded along the far sky, green at their sharp
@@ -166,10 +182,24 @@ vec3 sunLight(vec3 rd, float shows) {
 
 // A layer of cloud at a point of the view: colour (already multiplied by opacity) and opacity.
 vec4 layerAt(sampler2D t, vec4 f, float slide, vec2 vp) {
-    float k = f.x / uView.x;
-    vec2 uv = vec2(0.5 + ((vp.x - 0.5 * uView.x) * k + slide) / f.z, (f.y + (vp.y - uCam.y) * k) / f.w);
-    if (uv.y >= 1.0 || uv.y <= 0.0) return vec4(0.0);
+    // Each layer is kept as a window of the sky in equal angles (layer.frag): the point of the view, as a direction.
+    float fpx = 1.15 * uView.x, dx = vp.x - 0.5 * uView.x;
+    float az = atan(dx / fpx) / DEG, el = atan((uCam.y - vp.y) / sqrt(fpx * fpx + dx * dx)) / DEG;
+    vec2 uv = vec2(0.5 + az / (2.0 * SKYWIN_AZ), (SKYWIN_EL1 - el) / (SKYWIN_EL1 - SKYWIN_EL0));
+    if (uv.y >= 1.0 || uv.y <= 0.0 || uv.x <= 0.0 || uv.x >= 1.0) return vec4(0.0);
     return texture(t, vec2(uv.x, 1.0 - uv.y));
+}
+
+// Round the Sun the lower clouds stand apart when the weather lets it through (uSunPart.x). Not as a round hole: in
+// a wide ring round the Sun only the thin parts of the cloud go (its thick hearts stay, with sky between them), and
+// only close to the Sun itself does the cloud give way altogether. (Towards the Sun a camera's glare eats the
+// clouds' thin edges anyway.) Returns the layer as it is left: colour (times opacity) and opacity.
+vec4 parted(vec4 c, vec2 vp, float share) {
+    if (uSunPart.x <= 0.0 || c.a <= 0.0) return c;
+    float th = acos(clamp(dot(viewRay(vp), uSunDir), -1.0, 1.0));
+    float thin = 0.85 * share * uSunPart.x * exp(-sq(th / 0.21));
+    float a = clamp((c.a - thin) / (1.0 - thin), 0.0, 1.0) * (1.0 - share * uSunPart.x * exp(-sq(th / 0.075)));
+    return c * (a / c.a);
 }
 
 // All three laid over a colour, the highest first.
@@ -178,9 +208,9 @@ vec3 cloudsOver(vec3 col, vec2 vp, out float through) {
     if (uCloudD.w < 0.5) return col;
     vec4 c = layerAt(tCloud0, uCloudF0, uCloudD.x, vp);
     col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
-    c = layerAt(tCloud1, uCloudF1, uCloudD.y, vp);
+    c = parted(layerAt(tCloud1, uCloudF1, uCloudD.y, vp), vp, 0.6);
     col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
-    c = layerAt(tCloud2, uCloudF2, uCloudD.z, vp);
+    c = parted(layerAt(tCloud2, uCloudF2, uCloudD.z, vp), vp, 1.0);
     col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
     return col;
 }
@@ -190,8 +220,8 @@ float cloudGap(vec3 d) {
     if (uCloudD.w < 0.5) return 1.0;
     vec3 p = viewPoint(d);
     if (p.z <= 0.0) return 1.0;
-    return (1.0 - layerAt(tCloud0, uCloudF0, uCloudD.x, p.xy).a) * (1.0 - layerAt(tCloud1, uCloudF1, uCloudD.y, p.xy).a)
-         * (1.0 - layerAt(tCloud2, uCloudF2, uCloudD.z, p.xy).a);
+    return (1.0 - layerAt(tCloud0, uCloudF0, uCloudD.x, p.xy).a) * (1.0 - parted(layerAt(tCloud1, uCloudF1, uCloudD.y, p.xy), p.xy, 0.6).a)
+         * (1.0 - parted(layerAt(tCloud2, uCloudF2, uCloudD.z, p.xy), p.xy, 1.0).a);
 }
 
 // ---- Life ---------------------------------------------------------------------------------------------------------
@@ -256,8 +286,10 @@ vec3 heavens(vec3 rd, vec2 vp, float soft, float sunShows) {
     if (uNight > 0.01) {
         float clear = smoothstep(0.5, 14.0, alt);
         float dark = uNight * uNight * (1.0 - 0.6 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
-        col += milkyWay(rd) * smoothstep(0.55, 1.0, uNight) * clear * (1.0 - 0.7 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
-        if (soft < 0.5) col += faintStars(rd, alt) * dark * clear;
+        vec4 mw = milkyWay(rd);
+        col += mw.rgb * smoothstep(0.55, 1.0, uNight) * clear * (1.0 - 0.7 * uMoon.w * smoothstep(0.0, 0.2, uMoon.y));
+        // (Where the sharp cut has the real stars, none are made up.)
+        if (soft < 0.5) col += faintStars(rd, alt) * dark * clear * (1.0 - mw.a);
         col += aurora(rd, ign(gl_FragCoord.xy)) * uNight * uNight;
     }
     vec4 moon = moonDisc(rd);
@@ -268,6 +300,13 @@ vec3 heavens(vec3 rd, vec2 vp, float soft, float sunShows) {
         col += vec3(0.62, 0.72, 0.95) * uMoon.w * uMoonLit.w * uNight * (0.22 * exp(-mth / 0.022) + 0.050 * exp(-mth / 0.09) + 0.012 * exp(-mth / 0.30));
     }
     col += sunLight(rd, sunShows);
+    // A veil of ice crystals draws a ring round the Sun, 22 degrees out: sharp and reddish on its inner edge, fading
+    // outward, the sky inside it a little darker than outside.
+    if (uSunPart.y > 0.0 && uSunEl > -1.0) {
+        float th = acos(clamp(dot(rd, uSunDir), -1.0, 1.0)) / DEG;
+        float ring = th < 21.8 ? exp(-sq((th - 21.8) / 0.45)) : exp(-(th - 21.8) / 2.6);
+        col += mSunDisc() * (0.0065 * uSunPart.y * sunShows) * ring * mix(vec3(1.0, 0.72, 0.52), vec3(0.92, 0.96, 1.0), smoothstep(21.4, 23.5, th));
+    }
     if (soft < 0.5) col += meteor(vp) * uNight;
     float through;
     col = cloudsOver(col, vp, through);
@@ -326,17 +365,32 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     float moonW = smoothstep(-6.0, -10.0, uSunEl);
     // (Lit land is held a little under the sky, as a photographer exposes: its colour stays rich.)
     vec3 light = mSunGround() * 0.70 * (1.0 - moonW) + mMoonLight() * moonW;
-    // The shadows of the low clouds, cast from where they stand in the picture.
+    // The shadows of the low clouds, cast from where they stand in the picture. The cloud a sunbeam meets is often
+    // outside the picture (overhead, or behind us): there the land gets what the sky as a whole takes from the Sun
+    // (uSunPart.z: an overcast, or a cloud standing over the Sun just now). A Sun on the horizon shines in under
+    // the clouds.
     float sh = 1.0;
     vec3 L = uLightDir;
-    if (uCloudD.w > 0.5 && L.y > 0.12) {
-        vec3 q = p + L * ((1500.0 - p.y) / L.y);
-        vec3 sp = viewPoint(normalize(q - vec3(0.0, uCam.z, 0.0)));
-        if (sp.z > 0.0) sh = 1.0 - 0.85 * layerAt(tCloud2, uCloudF2, uCloudD.z, sp.xy).a * smoothstep(0.12, 0.3, L.y);
+    if (uCloudD.w > 0.5) {
+        float taken = uSunPart.z * smoothstep(0.03, 0.12, L.y);
+        if (L.y > 0.12) {
+            vec3 q = p + L * ((1500.0 - p.y) / L.y);
+            vec3 sp = viewPoint(normalize(q - vec3(0.0, uCam.z, 0.0)));
+            if (sp.z > 0.0) {
+                float fpx = 1.15 * uView.x, dx = sp.x - 0.5 * uView.x;
+                float az = atan(dx / fpx) / DEG, el = atan((uCam.y - sp.y) / sqrt(fpx * fpx + dx * dx)) / DEG;
+                float inside = smoothstep(SKYWIN_AZ, SKYWIN_AZ - 6.0, abs(az)) * smoothstep(SKYWIN_EL1, SKYWIN_EL1 - 8.0, el)
+                    * smoothstep(0.12, 0.3, L.y);
+                if (inside > 0.0) taken = mix(taken, layerAt(tCloud2, uCloudF2, uCloudD.z, sp.xy).a, inside);
+            }
+        }
+        sh = 1.0 - 0.85 * taken;
     }
     vec3 ambTop = mAmbTop(), ambLow = mAmbLow();
     // (At night the land is given what a long exposure finds in it by starlight: its forms, dim and blue.)
     vec3 amb = mix(ambLow, ambTop, 0.6) + vec3(0.034, 0.052, 0.105) * uNight;
+    // (Under an overcast the light comes from the whole grey sky: even, and without the blue of an open one.)
+    amb = mix(amb, vec3(luma(amb)) * 2.3, uSunPart.w);
     // (Skylight in the shade is held a little under what the sky gives: a photograph keeps its shadows.)
     vec3 land = alb * (S * light * sh + G * mGlow()) + K * amb * mix(0.78, 1.0, max(uNight, smoothstep(10.0, 0.0, uSunEl)));
 

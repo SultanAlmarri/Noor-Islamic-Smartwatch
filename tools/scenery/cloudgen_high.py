@@ -286,17 +286,28 @@ def reduce_vdb(src, dst, across=72):
     return nx * v, ny * v, nz * v
 
 
-def rank_points(seed, cell, long, turn, near, far, jitter=0.4, bend=6500.0, stagger=0.5):
+def rank_points(seed, cell, long, turn, near, far, jitter=0.4, bend=6500.0, stagger=0.5, box=None):
     """Where the cloudlets of a layer stand: a lattice of ranks (`cell` metres from rank to rank, `long` times
     that from one cloudlet to the next along a rank, the ranks lying `turn` degrees off the x axis), every point a
     little out of place and the whole bent gently across the sky; only the picture's wedge between `near` and `far`.
     `stagger`: how far every second cloudlet of a rank stands out of it, in cells (0.5: no ranks but a honeycomb;
     0: clean ranks, for rolls).
+    `box` (x0, x1, y0, y1 in metres): only the part of the lattice that can fall inside it is made (the same
+    points as without it: for a patch of cloud far smaller than the sky).
     Returns x, y and three random numbers 0..1 for each point."""
     a = math.radians(turn)
     reach = far / math.cos(HALF_ANGLE) + bend
     nu, nw = int(2 * reach / cell) + 2, int(2 * reach / (long * cell)) + 2
-    I, J = np.meshgrid(np.arange(nu) - nu // 2, np.arange(nw) - nw // 2, indexing='ij')
+    i0, i1, j0, j1 = -(nu // 2), nu - nu // 2, -(nw // 2), nw - nw // 2
+    if box is not None:
+        cs, sn = math.cos(a), math.sin(a)
+        us = [x * cs + y * sn for x in box[:2] for y in box[2:]]
+        ws = [-x * sn + y * cs for x in box[:2] for y in box[2:]]
+        i0 = max(i0, int(math.floor((min(us) - bend) / cell)) - 2)
+        i1 = min(i1, int(math.ceil((max(us) + bend) / cell)) + 2)
+        j0 = max(j0, int(math.floor((min(ws) - bend) / (long * cell))) - 2)
+        j1 = min(j1, int(math.ceil((max(ws) + bend) / (long * cell))) + 2)
+    I, J = np.meshgrid(np.arange(i0, max(i1, i0 + 1)), np.arange(j0, max(j1, j0 + 1)), indexing='ij')
     r1, r2, r3 = _hash(I, J, seed + 1), _hash(I, J, seed + 2), _hash(I, J, seed + 3)
     u = (I + (_hash(I, J, seed + 4) - 0.5) * jitter + stagger * (J % 2)) * cell
     w = (J + (_hash(I, J, seed + 5) - 0.5) * jitter) * long * cell

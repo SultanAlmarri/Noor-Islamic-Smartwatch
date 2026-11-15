@@ -133,7 +133,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         progs.clear(); tex.clear()
         tTrans = null; tMeter = null; tSky = null; tScene = null; tB4 = null; tB8a = null; tB8b = null
         b4 = null; b8a = null; b8b = null; zero = null
-        baked.clear(); loaded.clear(); slots.forEach { it.cur = null; it.prev = null; it.out = null; it.outT = null }
+        baked.clear(); loaded.clear(); slots.forEach { it.live = emptyList(); it.out = null; it.outT = null }
         sizedFor = ""; landKey = ""; lightKey = ""; starVao = 0; starCount = 0; stillDrawn = null
     }
 
@@ -327,10 +327,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         tex["tMeter"] = hdr(10, 1, GLES30.GL_NEAREST).also { tMeter = target(it) }
         buildStars()
         // The Milky Way and the Moon's face (NASA's maps; see tools/scenery/nightsky.py): a picture each.
-        for ((name, file) in listOf("tMilky" to "milkyway.webp", "tMoon" to "moon.jpg")) runCatching {
+        for ((name, file) in listOf("tMilky" to "milkyway.webp", "tMilkyHi" to "starfield.webp", "tMoon" to "moon.jpg")) runCatching {
             val opts = BitmapFactory.Options().apply {
                 inPremultiplied = false; inPreferredConfig = Bitmap.Config.ARGB_8888
-                inSampleSize = if (name == "tMilky" && tier.ordinal >= RealSky.Tier.MEDIUM.ordinal) 2 else 1
+                inSampleSize = if (name != "tMoon" && tier.ordinal >= RealSky.Tier.MEDIUM.ordinal) 2 else 1
             }
             val bmp = app.assets.open("sky2/night/$file").use { BitmapFactory.decodeStream(it, null, opts) } ?: error("unreadable")
             val buf = ByteBuffer.allocateDirect(bmp.width * bmp.height * 4)
@@ -454,7 +454,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         fun num(name: String, or: Double = 0.0) = meta.optDouble(name, or).toFloat()
     }
     private class Loaded(val set: Baked, val name: String, val w: Int, val h: Int, val grey: Boolean, val nearest: Boolean, val pixels: ByteBuffer?)
-    private class Slot { var cur: Baked? = null; var prev: Baked? = null; var fade = 1f; var amount = 0f; var out: Tex? = null; var outT: Target? = null }
+    private class Slot { var live: List<Baked> = emptyList(); var out: Tex? = null; var outT: Target? = null }
 
     private val baked = HashMap<String, Baked?>()
     private val loaded = ConcurrentLinkedQueue<Loaded>()
@@ -574,62 +574,54 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         return ok && b.tex["a"] != null
     }
 
-    private fun drawSet(b: Baked, slot: Slot, layer: Int, share: Float, flip: Boolean) {
-        val m = b.meta
+    private fun drawSet(b: Baked, slot: Slot, level: Int, share: Float, offset: Float, flip: Boolean) {
         use(progs.getValue("layer"), slot.outT, mapOf(
             "tA" to (b.tex["a"] ?: zero!!), "tF" to (b.tex["f"] ?: zero!!), "tK" to (b.tex["k"] ?: zero!!), "tG" to (b.tex["g"] ?: zero!!), "tLit" to (b.lit ?: zero!!),
-            "uLay" to floatArrayOf(b.num("rMax", 4.0), layer.toFloat(), share, if (flip) 1f else 0f),
-            "uLayFrame" to floatArrayOf(b.num("viewWidth", 1080.0), b.num("horizon", 1056.0), b.num("width", 1350.0), b.num("height", 1080.0)),
+            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), share, if (flip) 1f else 0f),
+            "uLayFrame" to floatArrayOf(b.num("azHalf", 29.4), b.num("elMin", -1.0), b.num("elMax", 40.0), offset),
         ))
         draw()
     }
 
     /**
-     * One layer of cloud (0 high, 1 middle, 2 low): the set the weather asks for comes in over the one before, each
-     * lit for the moment. Returns false only while the first set of a fresh start is still being read.
+     * One level of cloud (0 high, 1 middle, 2 low): the sets the director has on show ([CloudLeg]), each lit for the
+     * moment and drawn where its drift has brought it, into that level's window of the sky. Returns false only while
+     * a set of a fresh start is still being read.
      */
-    private fun layer(i: Int, id: String?, amount: Float, f: RealSkyFrame, now: Long, dt: Float, instant: Boolean): Boolean {
+    private fun layer(i: Int, legs: List<CloudLeg>, f: RealSkyFrame, now: Long): Boolean {
         val slot = slots[i]
-        // (A set whose pictures cannot be read is as good as no set: nothing waits for it.)
-        val wanted = id?.let { bakedSet("clouds/$it", false) }?.takeIf { "a" !in it.missing }
         var waiting = false
-        if (wanted != null && wanted !== slot.cur) {
-            if (setReady(wanted, f.cloudLight, f.flip, now)) {
-                slot.prev = if (slot.amount > 0.01f) slot.cur else null
-                slot.cur = wanted
-                slot.fade = if (instant || slot.prev == null) 1f else 0f
-                if (slot.prev == null && !instant) slot.amount = 0f
-            } else waiting = slot.cur == null
+        val show = ArrayList<Pair<Baked, CloudLeg>>(2)
+        for (leg in legs) {
+            if (leg.weight < 0.004f) continue
+            // (A set whose pictures cannot be read is as good as no set: nothing waits for it.)
+            val b = bakedSet("clouds/${leg.set}", false)?.takeIf { "a" !in it.missing } ?: continue
+            if (setReady(b, f.cloudLight, f.flip, now)) show += b to leg else waiting = true
         }
-        val goal = if (wanted == null) 0f else amount
-        slot.amount = if (instant) goal else slot.amount + (goal - slot.amount) * min(1f, dt / 3f)
-        slot.fade = min(1f, slot.fade + dt / 7f)
-        if (slot.fade >= 1f) slot.prev = null
-        val cur = slot.cur
-        if (cur == null || slot.amount < 0.004f) {
+        slot.live = show.map { it.first }
+        if (show.isEmpty()) {
             tex["tCloud$i"] = zero!!
             u["uCloudF$i"] = floatArrayOf(1080f, 1056f, 1350f, 1080f)
             return !waiting
         }
-        cur.lastUsed = now; slot.prev?.lastUsed = now
-        light(cur, f.cloudLight, f.flip, now)
-        slot.prev?.let { light(it, f.cloudLight, f.flip, now) }
-        val a = cur.tex["a"] ?: return !waiting
-        if (slot.out == null || slot.out!!.w != a.w || slot.out!!.h != a.h) {
+        for ((b, _) in show) { b.lastUsed = now; light(b, f.cloudLight, f.flip, now) }
+        val w = 1144 / tier.cloudSample; val h = 902 / tier.cloudSample
+        if (slot.out == null || slot.out!!.w != w || slot.out!!.h != h) {
             delete(slot.outT); delete(slot.out)
-            slot.out = hdr(a.w, a.h).also { slot.outT = target(it) }
+            slot.out = hdr(w, h).also { slot.outT = target(it) }
         }
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, slot.outT!!.fbo)
         GLES30.glClearColor(0f, 0f, 0f, 0f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
         GLES30.glEnable(GLES30.GL_BLEND); GLES30.glBlendFunc(GLES30.GL_ONE, GLES30.GL_ONE)
-        slot.prev?.let { if (it.tex["a"] != null) drawSet(it, slot, i, (1f - slot.fade) * slot.amount, f.flip) }
-        drawSet(cur, slot, i, slot.fade * slot.amount, f.flip)
+        for ((b, leg) in show) {
+            if (b.tex["a"] == null) continue
+            // (A breath of wind from a touch carries the clouds a little further along.)
+            drawSet(b, slot, i, leg.weight, leg.offset + travelNow * 6f, f.flip)
+            coverNow = 1f - (1f - coverNow) * (1f - b.num("coverSeen", b.num("cover", 0.3).toDouble()) * leg.weight)
+        }
         GLES30.glDisable(GLES30.GL_BLEND)
         tex["tCloud$i"] = slot.out!!
-        val vw = cur.num("viewWidth", 1080.0); val w = cur.num("width", 1350.0)
-        u["uCloudF$i"] = floatArrayOf(vw, cur.num("horizon", 1056.0), w, cur.num("height", 1080.0))
-        slides[i] = f.slide(i, (now - epoch) / 1000f, travelNow) * 0.5f * (w - vw)
-        coverNow = 1f - (1f - coverNow) * (1f - cur.num("cover", 0.3) * slot.amount)
+        u["uCloudF$i"] = floatArrayOf(1080f, 1056f, 1350f, 1080f)
         return !waiting
     }
     private val slides = FloatArray(3)
@@ -640,7 +632,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private fun tidy(now: Long) {
         if (now - lastTidy < 5000) return
         lastTidy = now
-        val live = slots.flatMap { listOfNotNull(it.cur, it.prev) }.toSet()
+        val live = slots.flatMap { it.live }.toSet()
         val it = baked.entries.iterator()
         while (it.hasNext()) {
             val b = it.next().value ?: continue
@@ -711,13 +703,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         }
 
         // The clouds: three layers, each a set in the light of the moment.
-        val instant = !shown || f.still || f.busy
         coverNow = 0f
         val s = f.state
-        if (!layer(0, s.highSet, s.highAmount, f, now, dt, instant)) ready = false
-        if (!layer(1, s.midSet, s.midAmount, f, now, dt, instant)) ready = false
-        if (!layer(2, s.lowSet, s.lowAmount, f, now, dt, instant)) ready = false
-        u["uCloudD"] = floatArrayOf(slides[0], slides[1], slides[2], if (slots.any { it.cur != null && it.amount >= 0.004f }) 1f else 0f)
+        for (i in 0..2) if (!layer(i, s.clouds[i], f, now)) ready = false
+        u["uCloudD"] = floatArrayOf(0f, 0f, 0f, if (slots.any { it.live.isNotEmpty() }) 1f else 0f)
         u["uCover"] = floatArrayOf(coverNow)
         tidy(now)
 

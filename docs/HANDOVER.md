@@ -755,3 +755,86 @@ light theme on a device, TalkBack.
 4. Real local weather as an option (`SkyDirector.at`); the widgets and the notification still use the 0.9
    pictures; the watch has no part in any of this.
 5. The work branches of this version (`sky/photoreal`) can be deleted once merged.
+
+## 22. The sky: clouds that vary and drift, the Sun through them, a sharp night (0.12.0, 15 November 2026, phone only)
+
+The owner installed 0.11.0 on his phone: it works, and the Sun shows (0.10's did not). His verdict, which set this
+version: the clouds are the hardest thing and the next update must be "totally" about them. "During some times of the
+day, the entire sky, all the clouds in the sky suddenly transform into a different type of cloud." "It's not the
+entire sky is just one type of cloud and they're all evenly spaced apart. No, that looks fake and artificial and
+bland. In real life there's variety... isolated clouds, scattered clouds, broken clouds, and then overcast... There's
+randomness." The Sun "is close to being invisible, as it always appears behind clouds". The night: "the direction
+you are going is nice, but it's not up to my level". And: "you are the decision maker... finish the job."
+
+**What was wrong, and what replaced it** ([DESIGN.md](DESIGN.md#the-real-sky-011), the 0.12 paragraphs)
+
+| Complaint | Cause | Now |
+|---|---|---|
+| The whole sky transforms at certain times | `SkyDirector.at` chose the cloud sets again from values that depend on the Sun's height (the hour of colour, after sunset, night), and the renderer cross-faded all three levels in seven seconds | Each level's sets are legs of a slow drift (`SkyDirector.legs`): a set crosses the view in 1.6 to 3.1 hours and gives way over a fifth of that; the choice never depends on the Sun; a test forbids any step |
+| One kind of cloud, evenly spaced | Each set was one kind, scattered evenly; three sets at once, each thinned by an amount | Seventeen composed skies (structure first, mixed kinds and sizes), twice the view wide, drifting |
+| The Sun always behind cloud | It is drawn within 14 degrees of the horizon, where far clouds stack up | The weather decides whether it is covered (`sunPart`); otherwise low and middle cloud stands apart round it, thin parts first |
+| Clouds bland on the phone | The filter that keeps the header's white text readable darkened the whole upper sky to a third: every bright cloud there was grey | The darkening is a soft oval behind the text only |
+| The night not good enough | The Milky Way was a 2048-pixel map of the whole sky: 270 pixels across the screen | NASA's 8k star map at the screen's sharpness round the galactic centre, glow and real stars |
+
+**How the cloud sets are made now.** `skybake.py` bakes "the wide sky": an equal-angle window, 47 degrees to either
+side of the view's middle and from 1 degree under the horizon to 40 over it (2068 x 902), so that a set can turn
+past the view as the sky does (`sky.json`: `projection`, `azHalf`, `elMin`, `elMax`, `coverSeen`). `layer.frag`
+draws each level's sets, each turned by its drift, into a window of the sky round the view (26 degrees to either
+side: `SKYWIN_*` in `common.glsl`), and `scene.frag` reads the three windows. `sky_lo.py` composes the low sets,
+`sky_mh.py` the middle and high ones (both have a `plan` step that draws the structure before anything is baked).
+The twelve sets of 0.11 are no longer in the app (kept in `NoorTools/work/clouds_011`).
+
+**Found on the way**
+
+- The helpers' first new sets repeated the fault (a sprinkling of equal puffs). What worked was the instruction
+  "structure first": a large-scale mask of where cloud is, then the filling.
+- Far towers were flat ghosts in 0.11's first tests because `layer.frag` hazed every far cloud equally; haze now
+  thins with height.
+- `layer.frag` took a set's level from its slot (0 high) while it meant 0 low: high clouds were lit with the low
+  clouds' sunlight. It now reads the set's own `layer`.
+- `stars.vert` has its own copy of the cloud lookup: it has to be changed with `layerAt`.
+- Under the full overcast the land was in full sunshine with hard shadows: a cloud's shadow was looked up where the
+  cloud stands in the picture, and the cloud that shades the land near us is overhead, outside it. The land now
+  also gets what the sky as a whole takes from the Sun (`SkyState.shade`, `overcast`; `uSunPart.z`, `.w`), and a
+  closed sky lights it evenly in grey ([DESIGN.md](DESIGN.md), "The land under the clouds").
+- `mi_sheet` (the dense middle sheet) took four tries. Cellular pads read as bubble wrap; a deck with too high a
+  floor of thickness was a flat slab. What shipped is a fractal deck thinning gradually into a few breaks. Its
+  weak points: little relief at midday (it is fine with a low Sun) and a straight end at the far right of its
+  window, seen only at the very end of its drift while it is already fading. `hi_ripples` needed real grain
+  (cells in ripple rows); the first was a smooth sheet.
+- In the bench, drawing a sheet before the page says "ready" leaves every later picture black: reload.
+- On this PC `python3` in Git Bash is the Microsoft Store stub and does nothing, silently: a patch script run that
+  way changes no file. Use the Edit tool, or Blender's Python by its full path.
+
+**How it was tested**
+
+- Unit tests on the owner's PC, on the final content: phone 72, watch 29, alerts 16, no failures (the prayer engine
+  was not touched; its 105 tests were not run again). `SkyDirectorTest` has two new locks: every set the director
+  can choose has its day and exists (`theDirectorChoosesCloudSetsThatExist`, which also checks that under a full
+  overcast the Sun is not seen and the land is not in sunshine), and from one minute to the next no set comes or
+  goes by more than a small step, at any hour, in any weather (`theCloudsNeverChangeAtAStroke`).
+- Both release builds on the PC, and GitHub's build of `main`.
+- The design bench (the phone's shader files and pictures in a web page): every one of the seventeen sets at three
+  places of its drift and four hours, whole skies of three levels with the header's text over them, the overcast
+  over all six sceneries, the night. Sheets in `tools/sky3d/out` (not in the repository).
+- An Android 14 emulator on GitHub (`real-sky.yml`, software GPU): the shaders build and the sky is shown for all
+  six sceneries at sunrise, afternoon, sunset and night. In the long run (24 pictures) the emulator starved: the
+  system's "Pixel Launcher isn't responding" dialog lies over every picture, and "Noor isn't responding" over
+  three ("GPU hang", "timed out while trying to bind": the software GPU needs 85 seconds for a first picture).
+  The short runs (two sceneries, two moments) are clean.
+
+**What was not tested**
+
+- Nothing of 0.12 has been seen on a real phone. In particular: how the clouds look at the phone's own sharpness,
+  the drift and the hand-over between sets in real time (a set takes hours to cross; the bench and the emulator
+  show stills), the cost on a real GPU of drawing each level's window, and whether the emulator's "not responding"
+  is only the emulator's (0.11 showed the same dialogs there and ran well on the owner's phone).
+- The weather director's choices over many real days were tested as numbers, not looked at as pictures.
+
+**Open after 0.12**
+
+- `mi_sheet` at midday and the body of `lo_storm`'s anvil are the two weakest pictures; `mi_patches` could carry
+  more shading at midday.
+- The Sun still shows faintly through the storm's tower (the tower's picture is not fully opaque there).
+- Leftovers in the code from 0.11's cloud lay-out (`slides`, `uCloudF*`, `SkyDirector.slide`) do nothing and can go.
+- Reflections of the sky on rippled water still break into hard dashes (known since 0.11).

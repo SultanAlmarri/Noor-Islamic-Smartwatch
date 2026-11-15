@@ -38,3 +38,27 @@ The cumulus and towering cumulus in these sets are rendered from volumetric clou
 - Rendering: Blender 4.5 LTS, Cycles, through `tools/scenery/skybake.py`.
 
 No photograph is used or shipped. Reference photographs of real skies were only looked at.
+
+## The low skies of 0.12 (`lo_*`, `tools/scenery/sky_lo.py`)
+
+The same CGHEVEN volumes, under the same terms (only pictures rendered from them are shipped; the files stay
+outside the repository), set out as eight composed skies in the wide format of `skybake.py`:
+
+| Set | CGHEVEN clouds used | Ours |
+|---|---|---|
+| `lo_few` | cumulus 32, 35, 39, 43 (the shallow ones), a few of 01 and 11 | where they stand (groups, a far line) |
+| `lo_scattered` | the eight cumulus | the structure (fields, empty quarters, streets), two large clouds by hand |
+| `lo_towers` | the six congestus (the group of towers), the eight cumulus | the same |
+| `lo_broken` | the eight cumulus, the six congestus (a few, far off) | the rafts and holes; the sheet that closes the rafts beyond 12 km (maps) |
+| `lo_front` | the eight cumulus, the six congestus (along the bank's edge) | the bank and its edge; its sheet beyond 12 km (maps) |
+| `lo_storm` | congestus 27, 23, 21, 47 grown together (the storm's towers), the six congestus (flanking line and the turrets on its near side), the eight cumulus, cumulus 32, 35, 39, 43 flattened (scud) | the anvil (a volume from maps: domed, swelling, fibrous, pouched beneath), the dark shelf of the storm's base (a volume from maps) |
+| `lo_overcast_breaks` | the eight cumulus, flattened (the deck's cells) | the thinner sheet over the cells that closes the cracks (maps); the breaks; where the deck ends over the horizon |
+| `lo_overcast` | cumulus 32, 35, 39, 43, flattened and thinned (scud) | the whole layer (sky_low2's maps); its own pattern of light and dark laid on its lit pictures again when it is packed (`structure` in `sky.json`): in the bake a thin place is only a sixth brighter than a thick one, and on the phone that was one even grey |
+
+Under `lo_broken`, `lo_overcast_breaks` and `lo_overcast` the ground's light (`g.webp`) is darkened as for
+`sc_sheet` (`groundShade` in `sky.json`: the share of light that reaches the ground through the set). The other
+five are packed with the ground's light at a fixed share too (0.85 for `lo_few` down to 0.45 for `lo_storm`): the
+ground under a cloud lies in that cloud's shadow, the more of it the larger the cloud, and the bake lights every
+base by ground in the open. In `lo_towers`, `lo_storm`, `lo_front` and `lo_broken` the towering clouds are set out
+nearly as dense as the small ones (0.85; `sky_low.py` set them out at half), so their shaded sides are grey. Reference photographs (Wikimedia Commons, fetched through its API) were
+only looked at.

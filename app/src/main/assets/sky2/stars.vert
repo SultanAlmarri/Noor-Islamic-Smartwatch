@@ -15,10 +15,14 @@ uniform sampler2D tLandA;
 uniform vec4 uLandFrame;
 out vec4 vCol;
 
+// How much sky a layer of cloud leaves open at a point of the view. (Each layer is kept as a window of the sky in
+// equal angles, 26 degrees to either side of the view's middle and from 1 degree under the horizon to 40 over it:
+// see layer.frag and scene.frag's layerAt.)
 float gap(sampler2D t, vec4 f, float slide, vec2 vp) {
-    float k = f.x / uView.x;
-    vec2 uv = vec2(0.5 + ((vp.x - 0.5 * uView.x) * k + slide) / f.z, (f.y + (vp.y - uCam.y) * k) / f.w);
-    if (uv.y >= 1.0 || uv.y <= 0.0) return 1.0;
+    float fpx = uCam.x, dx = vp.x - 0.5 * uView.x;
+    float az = atan(dx / fpx) * 57.29578, el = atan((uCam.y - vp.y) / sqrt(fpx * fpx + dx * dx)) * 57.29578;
+    vec2 uv = vec2(0.5 + az / 52.0, (40.0 - el) / 41.0);
+    if (uv.y >= 1.0 || uv.y <= 0.0 || uv.x <= 0.0 || uv.x >= 1.0) return 1.0;
     return 1.0 - textureLod(t, vec2(uv.x, 1.0 - uv.y), 0.0).a;
 }
 
@@ -42,10 +46,11 @@ void main() {
     // Each magnitude is 2.5 times dimmer; the air near the horizon dims them further.
     float air = pow(clamp((alt - 0.5) / 12.0, 0.0, 1.0), 0.7);
     float flux = min(pow(10.0, -0.4 * (aLook.x - 1.0)), 4.0) * air;
-    float a = min(0.12 + 0.60 * sqrt(flux), 1.0);
+    // (The faint ones are faint: a sky of equal dots is a drawing, not a sky.)
+    float a = min(0.04 + 0.85 * pow(flux, 0.62), 1.0);
     float id = float(gl_VertexID);
     float tw = 0.82 + 0.18 * sin(uTime * (2.0 + 5.0 * fract(id * 0.618)) + id) * smoothstep(45.0, 8.0, alt);
     vCol = vec4(aLook.yzw * a * tw * uNight * uNight * through * step(land, 0.03), 1.0);
     gl_Position = vis ? vec4(uv * 2.0 - 1.0, 0.0, 1.0) : vec4(2.0, 2.0, 2.0, 1.0);
-    gl_PointSize = (2.4 + 3.4 * pow(flux, 0.4)) * uRes.x / 1080.0;
+    gl_PointSize = (1.8 + 3.6 * pow(flux, 0.45)) * uRes.x / 1080.0;
 }

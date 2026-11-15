@@ -23,12 +23,14 @@ vec3 easeTo(vec3 c, float lim) {
 // shadow of their own (TodayScreen, SkyText), so the sky behind them need not be as dark as bare white text would
 // ask: at most 0.26 behind the small text (3.4:1 before the shadow), 0.40 behind the large countdown. Below the
 // text the limit lifts gradually, so it reads as the natural darkening of the upper sky and not as a band.
-float textLimit(float y) {
+// (0.12: the darkening is a soft shade behind the text itself, an oval that fades out on every side. Darkening the
+// whole upper sky turned every bright cloud in it grey, on the very part of the screen where the clouds are: the
+// owner found the clouds bland.)
+float textLimit(vec2 vp) {
     float cap = uText.x;
     if (cap <= 0.0) return 1.0;
-    float span = 0.12 * uView.y;
-    if (y <= cap) return mix(0.50, 0.34, smoothstep(cap, cap - 0.9 * span, y));
-    return mix(0.50, 1.0, smoothstep(cap, cap + 1.9 * span, y));
+    vec2 q = (vp - vec2(0.5 * uView.x, cap - 0.085 * uView.y)) / vec2(0.44 * uView.x, 0.125 * uView.y);
+    return mix(1.0, 0.58, smoothstep(1.70, 0.25, length(q)));
 }
 
 void main() {
@@ -54,7 +56,7 @@ void main() {
     // The graduated filter: one smooth darkening towards the text, as strong as the brightest thing likely to stand
     // behind it needs (a sunlit cloud when there are clouds, the sky itself when it is clear). Shapes and colours
     // keep their relations; only then is anything still too bright eased down.
-    float lim = textLimit(vp.y);
+    float lim = textLimit(vp);
     // The Sun itself is never dimmed: at midday it stands just under the text, and a dimmed Sun is a smudge. Its
     // disc, its rays and the glare round it keep all their light (what the filter would have made of them is simply
     // not used there); the letters' own shadow carries them. Nor is the Moon, the brightest thing of the night.
