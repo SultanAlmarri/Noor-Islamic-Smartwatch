@@ -849,3 +849,49 @@ The twelve sets of 0.11 are no longer in the app (kept in `NoorTools/work/clouds
 - The Sun still shows faintly through the storm's tower (the tower's picture is not fully opaque there).
 - Leftovers in the code from 0.11's cloud lay-out (`slides`, `uCloudF*`, `SkyDirector.slide`) do nothing and can go.
 - Reflections of the sky on rippled water still break into hard dashes (known since 0.11).
+
+## 23. A living sky: depth at midday, water's mirror, clouds that pass and change (0.13.0, 15 November 2026, phone only)
+
+After 0.12.0 was released (not yet seen on his phone) the owner asked where to go next. Three things were proposed
+and he said: "Ok do all three." He also said "Delete them" of the merged work branches.
+
+**Branches.** Twelve branches whose content is in `main` (checked: an ancestor of `main`, or the same tree as a
+commit of `main`) were deleted on GitHub and on the PC. Three hold work that never reached `main` and were left:
+`probe/emu37`, `adhan/097-repro` (abandoned emulator experiments) and `noor/0912` (a first widget countdown that
+0.9.13 replaced). Deleting those needs his yes.
+
+**1. Clouds at midday** ([DESIGN.md](DESIGN.md#the-real-sky-011), "The day's exposure")
+
+The helper who baked the low clouds had noted that their pictures hold strong modelling and that the flatness was
+the phone's. Measured in the bench (`bench.meter()`, new): on a solid cloud the Sun's light runs from 0.01 to 0.5
+and the light from sky and ground adds 0.2: ten to one. The filmic curve then maps 0.25 to 1.25 onto 0.65 to 0.93
+of the display: the whole midday picture sat on the curve's shoulder. Lowering the ambient light changed nothing
+visible; exposing the day at 0.7 did (a deeper blue, shaded sides, white tops). The land gets some of it back.
+A thunderhead now hides the Sun altogether (0.12 let 15 % of the disc through its tower).
+
+**2. Water** ("Water, live")
+
+The hard dashes were not aliasing of the waves but of the mirror: each pixel asked the land's picture once, so the
+image of a treeline was there or not there. Now four heights across what the pixel's facets and its unseen ripples
+spread, each read from a mipmap of the land's picture (`a` and `m` now have mipmaps; the land itself is read with
+`textureLod(..., 0.0)`, as before). Tried and dropped on the way: eight sharp samples with a dither (a stipple
+under the far shore); smearing by the sea's own roughness (`rough`: the mirror vanished, since that number was
+tuned for the sea's look, not as a slope; `smear` is the separate, physical one). Waves are drawn from fifteen
+pixels of length (they were a ruling of lines at three), ripples are judged by a pixel's long side.
+
+**3. Life** ("They pass, and never jump", "They are alive", "Rain and snow")
+
+- 0.12's drift was 41 degrees in 1.6 to 3.1 hours: a tenth of a pixel a second, and since the home screen tells the
+  moment once a minute, a hop of ten pixels each minute. Now the sets pass side by side, the low ones at a thirtieth
+  of a degree a second, and the renderer carries them on between frames (`CloudLeg.speed`, `shownAtMs`).
+- The join between two sets took four tries: an upright ragged end (a wall with a white rim), a leaning seam that
+  both sets knew by a number (still a line; the 94-degree window leaves too little room to lean it far), a noise
+  threshold of smooth fields (a wavy coast), and what shipped: the noise tile's cells with large lobes, so the
+  sheet ends in patches. An overcast is also never next to an open sky now.
+- The first swirl and feed could not be seen at all: the tile's smooth fields vary by about 0.2 round 0.5, not
+  by 0.5. Its channels are: R, G smooth (4 and 8 cells to the tile), B cells, A grain.
+- `uSky.z` (lightning) had been set since 0.10 and read by no shader. `uFlash` is the stroke's direction and
+  strength; it strikes only while `lo_storm` is in the view, where its tower stands in the set.
+- `sq` is a function in common.glsl: a local variable of that name (waterSlope has one) hides it. `half` and `out`
+  are reserved words in GLSL ES.
+

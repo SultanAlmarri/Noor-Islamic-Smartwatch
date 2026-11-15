@@ -14,11 +14,12 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.12.0** (versionCode 26), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
-0.9.13, 0.9.14, 0.10.0, 0.11.0 and 0.12.0 changed only the phone. Everything is on `main`. The work branches `sky/096`, `sky/097`,
-`phone/097`, `adhan/097`, `noor/098`, `noor/099`, `sky/real` (0.10), `sky/photoreal` (0.11) and `sky/clouds` (0.12) are fully merged;
-`probe/emu37` and `adhan/097-repro` hold only abandoned Android 17 emulator experiments (that image does not run
-reliably on GitHub's machines). All of them can be deleted (a cloud session is not allowed to delete branches).
+Current version: phone **0.13.0** (versionCode 27), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
+0.9.13, 0.9.14, 0.10.0, 0.11.0, 0.12.0 and 0.13.0 changed only the phone. Everything is on `main`. The merged work
+branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
+branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
+Android 17 emulator experiments: that image does not run reliably on GitHub's machines) and `noor/0912` (a first
+widget countdown, replaced by 0.9.13's). Deleting those needs the owner's yes.
 
 Development also happens on the owner's Windows PC (Claude Code desktop, checkout in `ProjectMinhad\Noor`). There:
 JDK 17 in `%USERPROFILE%\.jdks\temurin-17` (listed in `~/.gradle/gradle.properties` as
@@ -151,10 +152,15 @@ phone) as bland and fake: never call a render beautiful on your own judgment; pu
   stay the same as `RealSkyEngine.frame`; a uniform is set by name in both (`RealSkyFrame.fill` / the engine, and
   `bench.js`): add it in both. `LightWeights` (Kotlin) and `lightWeights` (bench) must agree.
 - Clouds (0.12): a set is a "wide sky" (`skybake.py`: an equal-angle window twice the view across), composed
-  structure first (`sky_lo.py`, `sky_mh.py`: never an even sprinkling of one kind, the owner rejected that), and
-  the director lays sets out as legs of a slow drift (`SkyDirector.legs`). Nothing in the sky may change at a
-  stroke or because the Sun reached some height: `SkyDirectorTest.theCloudsNeverChangeAtAStroke` locks it.
-  `layerAt` (scene.frag), `gap` (stars.vert), `layer.frag` and the bench share one mapping (`SKYWIN_*`).
+  structure first (`sky_lo.py`, `sky_mh.py`: never an even sprinkling of one kind, the owner rejected that). Since
+  0.13 the sets of a level pass side by side across the sky (`SkyDirector.legs`, `PITCH` = `SKY_PITCH` in
+  common.glsl) and the renderer carries them on between the home screen's once-a-minute frames, so they glide.
+  Nothing in the sky may change at a stroke, fade in or out, or change because the Sun reached some height:
+  `SkyDirectorTest.theCloudsNeverChangeAtAStroke` locks it. `layerAt` (scene.frag), `gap` (stars.vert),
+  `layer.frag` and the bench share one mapping (`SKYWIN_*`).
+- Editing files from Git Bash on the owner's PC: `python3` there is the Microsoft Store stub (it does nothing,
+  silently), and a perl `s|...|...|` whose text holds `||` or braces has twice written into the wrong place. Use
+  the Edit tool, or a script that finds the old text with `index()` and stops if it is not there.
 - Rules a scenery must keep: nature only; every source and licence written down in `tools/scenery/sources/`;
   built from real-world data (scans, elevation models) wherever such data exists, not from formulas; and a natural
   skyline: never cut a range or a treeline open so the Sun rises and sets on level ground (the owner rejected that;
