@@ -813,7 +813,8 @@ The twelve sets of 0.11 are no longer in the app (kept in `NoorTools/work/clouds
   can choose has its day and exists (`theDirectorChoosesCloudSetsThatExist`, which also checks that under a full
   overcast the Sun is not seen and the land is not in sunshine), and from one minute to the next no set comes or
   goes by more than a small step, at any hour, in any weather (`theCloudsNeverChangeAtAStroke`).
-- Both release builds on the PC, and GitHub's build of `main`.
+- Both release builds on the PC, and GitHub's build of `main` (run 43719326009, 15 November 2026: every test,
+  both APKs, the watch face's validation; `dev-latest` republished with 0.12.0).
 - The design bench (the phone's shader files and pictures in a web page): every one of the seventeen sets at three
   places of its drift and four hours, whole skies of three levels with the header's text over them, the overcast
   over all six sceneries, the night. Sheets in `tools/sky3d/out` (not in the repository).
@@ -821,7 +822,10 @@ The twelve sets of 0.11 are no longer in the app (kept in `NoorTools/work/clouds
   six sceneries at sunrise, afternoon, sunset and night. In the long run (24 pictures) the emulator starved: the
   system's "Pixel Launcher isn't responding" dialog lies over every picture, and "Noor isn't responding" over
   three ("GPU hang", "timed out while trying to bind": the software GPU needs 85 seconds for a first picture).
-  The short runs (two sceneries, two moments) are clean.
+  Of the five short runs (two sceneries, two moments) four are clean (dunes and the forest lake three times, the
+  canyon and the green hills once) and one starved as well (arctic and sea: 93 seconds for a first picture, the
+  launcher frozen, Noor "timed out while trying to bind" at start). So the arctic and the sea were seen on Android
+  only under those dialogs.
 
 **What was not tested**
 
