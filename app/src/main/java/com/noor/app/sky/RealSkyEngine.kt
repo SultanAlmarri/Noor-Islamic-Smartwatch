@@ -618,9 +618,9 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         GLES30.glClearColor(0f, 0f, 0f, 0f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
         GLES30.glEnable(GLES30.GL_BLEND); GLES30.glBlendFunc(GLES30.GL_ONE, GLES30.GL_ONE)
         // The home screen tells the moment once a minute. While that moment is now, the clouds are carried on from it
-        // at their own speed, so that they glide (not while the Sun is dragged to another hour, nor with animations
-        // off).
-        val lead = if (f.busy || f.still || f.shownAtMs <= 0L) 0f else ((System.currentTimeMillis() - f.shownAtMs) / 1000f).let { if (it in 0f..150f) it else 0f }
+        // at their own speed, so that they glide (a moment the Sun has been dragged to is not now: it stands as it
+        // is told; so does everything with animations off).
+        val lead = if (f.still || f.shownAtMs <= 0L) 0f else ((System.currentTimeMillis() - f.shownAtMs) / 1000f).let { if (it in 0f..150f) it else 0f }
         for ((b, leg) in show) {
             if (b.tex["a"] == null) continue
             // (A breath of wind from a touch carries the clouds a little further along.)
