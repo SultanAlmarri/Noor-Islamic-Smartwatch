@@ -27,15 +27,19 @@ void main() {
     float saz = (uLay.w > 0.5 ? -az : az) + uLayFrame.w;
     vec2 tuv = vec2(0.5 + saz / (2.0 * uLayFrame.x), (uLayFrame.z - el) / (uLayFrame.z - uLayFrame.y));
     if (tuv.x <= 0.0 || tuv.x >= 1.0 || tuv.y <= 0.0 || tuv.y >= 1.0) { o = vec4(0.0); return; }
+    // (Where this set has given way to its neighbour altogether, there is nothing to work out: see below.)
+    float gone = smoothstep(0.5 * SKY_PITCH - 14.0, 0.5 * SKY_PITCH + 14.0, abs(saz) + sign(saz) * 0.2 * (el - 18.0));
+    if (gone >= 1.0) { o = vec4(0.0); return; }
     // (0.13) Clouds are never still in themselves. A slow swirl carries every part of the picture a little this way
     // and that (a third of a degree at most), so that outlines swell and sink as a cloud's do; and their thin parts
     // form and melt away while their hearts stay: a slow pattern drifts through the set and feeds or starves what
     // is neither clear sky nor solid cloud.
     vec2 np = vec2(saz, el) * 0.033;
     vec2 swirl = (texture(tNoise2D, np * 1.3 + vec2(uTime * 0.0040, uTime * 0.0027)).rg - 0.5) * 1.5
-               + (texture(tNoise2D, np * 3.7 - vec2(uTime * 0.0090, uTime * 0.0060)).rg - 0.5) * 0.45;
+               + (texture(tNoise2D, np * 3.7 - vec2(uTime * 0.0090, uTime * 0.0060)).rg - 0.5) * 0.20;
     tuv += swirl / vec2(2.0 * uLayFrame.x, uLayFrame.z - uLayFrame.y);
     float a0 = texture(tA, tuv).r;
+    if (a0 < 0.002) { o = vec4(0.0); return; }             // (open sky: most of most sets)
     float feed = texture(tNoise2D, np + vec2(uTime * 0.0021, uTime * 0.0013)).g * 0.62 + texture(tNoise2D, np * 2.9 - vec2(uTime * 0.0034, 0.0)).b * 0.38;
     float a = clamp(a0 + (feed - 0.5) * 4.0 * a0 * (1.0 - a0), 0.0, 1.0);
     // The sets of a level pass side by side (SkyDirector.legs), SKY_PITCH degrees from one middle to the next, each
@@ -43,7 +47,6 @@ void main() {
     // a line (the edge of an overcast would cross the sky as a wall): in patches, as a sheet of cloud really ends,
     // the gaps growing until nothing is left.
     // (The line the patches thin out along leans, the same way at both ends of a set, so that neighbours fit.)
-    float gone = smoothstep(0.5 * SKY_PITCH - 14.0, 0.5 * SKY_PITCH + 14.0, abs(saz) + sign(saz) * 0.2 * (el - 18.0));
     if (gone > 0.0) {
         // (Large lobes, patches and a ragged fringe: three sizes of the same grain.)
         vec2 bp = vec2(saz * 0.021, el * 0.050 + 0.37 * uLay.y);

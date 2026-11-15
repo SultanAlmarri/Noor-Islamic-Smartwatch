@@ -454,7 +454,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         fun num(name: String, or: Double = 0.0) = meta.optDouble(name, or).toFloat()
     }
     private class Loaded(val set: Baked, val name: String, val w: Int, val h: Int, val grey: Boolean, val nearest: Boolean, val pixels: ByteBuffer?)
-    private class Slot { var live: List<Baked> = emptyList(); var out: Tex? = null; var outT: Target? = null }
+    private class Slot { var live: List<Baked> = emptyList(); var out: Tex? = null; var outT: Target? = null; var drawnKey = ""; var drawnAt = 0L }
 
     private val baked = HashMap<String, Baked?>()
     private val loaded = ConcurrentLinkedQueue<Loaded>()
@@ -613,7 +613,17 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         if (slot.out == null || slot.out!!.w != w || slot.out!!.h != h) {
             delete(slot.outT); delete(slot.out)
             slot.out = hdr(w, h).also { slot.outT = target(it) }
+            slot.drawnKey = ""
         }
+        for ((b, leg) in show) coverNow = 1f - (1f - coverNow) * (1f - b.num("coverSeen", b.num("cover", 0.3).toDouble()) * leg.weight * SkyDirector.share(leg.offset))
+        tex["tCloud$i"] = slot.out!!
+        u["uCloudF$i"] = floatArrayOf(1080f, 1056f, 1350f, 1080f)
+        // The clouds move by less than a pixel a second: a level's window is drawn again five times a second, not at
+        // every frame; and at once when something else has changed (the light, the sets on show, their amounts), and at
+        // every frame while the Sun is dragged or a breath of wind runs through.
+        val key = show.joinToString("|") { (b, leg) -> "${b.dir} ${b.litKey} ${(leg.weight * 200).toInt()}" } + " $w ${f.flip}"
+        if (slot.drawnKey == key && !busyNow && now - slot.drawnAt < 200) return !waiting
+        slot.drawnKey = key; slot.drawnAt = now
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, slot.outT!!.fbo)
         GLES30.glClearColor(0f, 0f, 0f, 0f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
         GLES30.glEnable(GLES30.GL_BLEND); GLES30.glBlendFunc(GLES30.GL_ONE, GLES30.GL_ONE)
@@ -625,14 +635,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             if (b.tex["a"] == null) continue
             // (A breath of wind from a touch carries the clouds a little further along.)
             drawSet(b, slot, i, leg, leg.offset + leg.speed * lead + travelNow * 6f, f.flip)
-            coverNow = 1f - (1f - coverNow) * (1f - b.num("coverSeen", b.num("cover", 0.3).toDouble()) * leg.weight * SkyDirector.share(leg.offset))
         }
         GLES30.glDisable(GLES30.GL_BLEND)
-        tex["tCloud$i"] = slot.out!!
-        u["uCloudF$i"] = floatArrayOf(1080f, 1056f, 1350f, 1080f)
         return !waiting
     }
-    private val slides = FloatArray(3)
     private var coverNow = 0f
     private var travelNow = 0f
 
