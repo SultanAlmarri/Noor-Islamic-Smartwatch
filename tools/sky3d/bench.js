@@ -82,11 +82,11 @@ const P = {
   cover: 0.42, kind: 0.42, base: 1.4, density: 60, mid: 0.0, midForm: 0.3, cluster: 0.5, anvil: 1.0,
   cirrus: 0.35, veil: 0.0, showers: 0.0, seed: 3.0, haze: 1.0, time: 100, windLow: 0.012, windMid: 0.02,
   biome: 0, season: 0.3, snow: 0.0, wet: 0.0, mist: 0.0, rain: 0.0, windForce: 0.3, dust: 0.0,
-  aurora: 0.0, flash: 0.0, rainbow: 0.0, waterRough: 0.3, waterClear: 0.2,
+  aurora: 0.0, flash: 0.0, flashAz: 10, flashEl: 9, rainbow: 0.0, waterRough: 0.3, waterClear: 0.2,
   trueStars: false,                              // the stars where they truly are (off: the finest night sky)
   birds: -1, birdsHeight: 0.14, meteor: 0,       // a flock (0..1 across the sky; -1 none), a shooting star (0..1; 0 none)
-  skyHigh: null, skyMid: null, skyLow: null, slideHigh: 0, slideMid: 0, slideLow: 0,     // cloud sets (ids) and how far each has drifted (degrees: where the view's middle stands in the set, -20..20)
-  skyHigh2: null, skyMid2: null, skyLow2: null, mixHigh: 0, mixMid: 0, mixLow: 0,         // a second set coming in over the first (its share 0..1; it stands at the other end of its drift)
+  skyHigh: null, skyMid: null, skyLow: null, slideHigh: 0, slideMid: 0, slideLow: 0,     // cloud sets (ids) and where each stands (degrees: how far right of the set's middle the view's middle is, -32..32)
+  skyHigh2: null, skyMid2: null, skyLow2: null, mixHigh: 0, mixMid: 0, mixLow: 0,         // the next set on the way (it stands 64 degrees along; seen once the first has passed far enough). mix*: unused
   sunPart: 1, halo: 0, shade: 0, overcast: 0,                                                                   // the low clouds stand apart round the Sun; a halo
   focal: 1.15, eye: 60.0, horizon: 911 / 2340, arcTop: 596 / 2340, ground: 1110 / 2340, textBottom: 554 / 2340, panelTop: 1126 / 2340,
   panelTint: 0.5, light: 0, cloudScale: 1.0, sceneScale: 1.0, steps: 1.0, text: 1, panel: 1,
@@ -186,7 +186,7 @@ function updateUniforms() {
     uCloudC: [P.seed, P.cirrus, P.veil, P.showers],
     uWind: [P.time * P.windLow + P.tod * 24 * 9, P.time * P.windLow * 0.25, P.time * P.windMid + P.tod * 24 * 14, P.time * P.windMid * 0.2],
     uSteps: P.steps,
-    uSky: [P.aurora, 0, P.flash, P.rainbow], uLand: [P.biome, P.season, P.snow, P.wet], uAir: [P.mist, P.rain, P.windForce, P.dust],
+    uSky: [P.aurora, 0, P.flash, P.rainbow], uFlash: [Math.sin(P.flashAz * DEG) * Math.cos(P.flashEl * DEG), Math.sin(P.flashEl * DEG), Math.cos(P.flashAz * DEG) * Math.cos(P.flashEl * DEG), P.flash], uLand: [P.biome, P.season, P.snow, P.wet], uAir: [P.mist, P.rain, P.windForce, P.dust],
     uTouch: [0, 0, 1e3, 0], uBiome: P.biome,
     uSunPart: [P.sunPart, P.halo, P.shade, P.overcast], uBirds: [P.birds, P.birdsHeight, P.seed, 1], uMeteor: [P.meteor, 0.62, 0.10, 0.9],
     uText: [P.text ? P.textBottom * H : 0, 0, 0, 0],
@@ -229,13 +229,14 @@ function lightWeights(el, side, under) {
   return { names, w, glow: [wl, wr], dir: norm(d) };
 }
 
-async function loadPicture(url, filter = gl.LINEAR) {
+async function loadPicture(url, filter = gl.LINEAR, mips = false) {
   const bmp = await createImageBitmap(await (await fetch(url + '?' + Date.now())).blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
   const t = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, t);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+  if (mips) gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mips ? gl.LINEAR_MIPMAP_LINEAR : filter); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   return { t, w: bmp.width, h: bmp.height, target: gl.TEXTURE_2D };
 }
@@ -245,11 +246,12 @@ async function loadLand(id) {
   LAND[id] = null;
   try {
     const meta = await (await fetch(LAND_DIR + id + '/land.json?' + Date.now())).json();
-    const load = (name, filter) => loadPicture(LAND_DIR + id + '/' + name, filter);
-    const L = { meta, a: await load('a.webp'), k: await load('k.webp'), g: await load('g.png', gl.NEAREST), s: {} };
+    const load = (name, filter, mips) => loadPicture(LAND_DIR + id + '/' + name, filter, mips);
+    // (The land's picture and its mask also in smaller, softer copies: water mirrors the land blurred by its ripples.)
+    const L = { meta, a: await load('a.webp', gl.LINEAR, true), k: await load('k.webp'), g: await load('g.png', gl.NEAREST), s: {} };
     for (const sun of meta.suns) L.s[sun.name] = await load('s_' + sun.name + '.webp');
     for (const n of ['gl', 'gr']) { try { L.s[n] = await load('s_' + n + '.webp'); } catch (e) { L.s[n] = T.tZero; } }
-    L.m = meta.mask ? await load('m.webp') : null;
+    L.m = meta.mask ? await load('m.webp', gl.LINEAR, true) : null;
     // How high the skyline stands where the Sun rises and sets (RealSky.sunLift in the app).
     try {
       const bmp = await createImageBitmap(await (await fetch(LAND_DIR + id + '/a.webp?' + Date.now())).blob(), { premultiplyAlpha: 'none' });
@@ -468,7 +470,8 @@ function frame(amort = 16) {
   // (Each layer is drawn into a window of the sky round the view; a set is a wider window, turned by its drift.)
   if (!G.win) G.win = [0, 1, 2].map(() => { const t = hdr(1144, 902); return { t, f: fbo(t) }; });
   [[P.skyHigh, P.slideHigh, P.skyHigh2, P.mixHigh], [P.skyMid, P.slideMid, P.skyMid2, P.mixMid], [P.skyLow, P.slideLow, P.skyLow2, P.mixLow]].forEach(([id, slide, id2, mix], i) => {
-    const sets = [[id, slide, 1 - (id2 ? mix : 0)], [id2, -20.5, mix]].filter(e => e[0] && SKIES[e[0]] && e[2] > 0.004);
+    // (The sets of a level pass side by side, 64 degrees from one middle to the next: the second is the next on the way.)
+    const sets = [[id, slide, 1], [id2, slide - 64, 1]].filter(e => e[0] && SKIES[e[0]] && Math.abs(e[1]) < 73);
     if (!sets.length) { T['tCloud' + i] = T.tZero; return; }
     sets.forEach(([sid]) => lit(SKIES[sid], G.cloudLight, SKIES[sid].fLit));
     const W = G.win[i];
@@ -480,7 +483,7 @@ function frame(amort = 16) {
       use(p.layer, W.f, { tA: S.a, tF: S.f, tK: S.k, tG: S.g, tLit: S.lit, uLay: [m.rMax, level, share, P.rtl ? 1 : 0],
         uLayFrame: [m.azHalf || 29.4, m.elMin === undefined ? -1 : m.elMin, m.elMax || 40, sl] });
       draw();
-      cover = 1 - (1 - cover) * (1 - (m.coverSeen === undefined ? m.cover : m.coverSeen) * share);
+      cover = 1 - (1 - cover) * (1 - (m.coverSeen === undefined ? m.cover : m.coverSeen) * share * Math.min(1, Math.max(0, (Math.min(26, 32 - sl) - Math.max(-26, -32 - sl)) / 52)));
     });
     gl.disable(gl.BLEND);
     T['tCloud' + i] = W.t; any = 1;
@@ -548,6 +551,15 @@ const bench = {
     const mime = name.endsWith('.webp') ? 'image/webp' : name.endsWith('.jpg') ? 'image/jpeg' : 'image/png';
     await fetch('/save/' + name, { method: 'POST', body: c.toDataURL(mime, 0.86) });
     return name;
+  },
+  // The light of the moment as the shaders have it (tMeter: skylight from above and from the horizon, sunlight on the
+  // ground, at the three cloud levels, the disc, moonlight, the glow): for looking into what a picture is made of.
+  meter() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, G.fMeter.f);
+    const a = new Float32Array(40);
+    gl.readPixels(0, 0, 10, 1, gl.RGBA, gl.FLOAT, a);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return Array.from({ length: 10 }, (_, i) => Array.from(a.slice(i * 4, i * 4 + 3)).map(v => +v.toFixed(3)));
   },
   compileTimes() { return Object.values(G.progs).map(p => p && `${p.label}: ${p.ms.toFixed(0)} ms, ${p.chars} chars`).join('\n'); },
 };

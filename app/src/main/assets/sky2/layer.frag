@@ -9,6 +9,7 @@ uniform sampler2D tK;        // lit by a white sky above
 uniform sampler2D tG;        // lit by white ground below
 uniform sampler2D tLit;      // lit by the Sun and by the glow of the moment (lit.frag)
 uniform sampler2D tSky;      // the clear sky (for the colour far clouds fade into)
+uniform sampler2D tNoise2D;  // the flat noise tile
 uniform vec4 uLay;           // brightest light stored, the set's level (0 low, 1 middle, 2 high), share of this set, 1 = mirrored
 uniform vec4 uLayFrame;      // the set's own window of the sky: degrees to either side of its middle, its lowest and
                              // highest degrees over the horizon; how far right of its middle the view's middle stands now
@@ -26,8 +27,34 @@ void main() {
     float saz = (uLay.w > 0.5 ? -az : az) + uLayFrame.w;
     vec2 tuv = vec2(0.5 + saz / (2.0 * uLayFrame.x), (uLayFrame.z - el) / (uLayFrame.z - uLayFrame.y));
     if (tuv.x <= 0.0 || tuv.x >= 1.0 || tuv.y <= 0.0 || tuv.y >= 1.0) { o = vec4(0.0); return; }
-    // (A set ends softly: the next one is coming in over it there.)
-    float a = texture(tA, tuv).r * smoothstep(0.0, 3.0, (0.5 - abs(tuv.x - 0.5)) * 2.0 * uLayFrame.x);
+    // (Where this set has given way to its neighbour altogether, there is nothing to work out: see below.)
+    float gone = smoothstep(0.5 * SKY_PITCH - 14.0, 0.5 * SKY_PITCH + 14.0, abs(saz) + sign(saz) * 0.2 * (el - 18.0));
+    if (gone >= 1.0) { o = vec4(0.0); return; }
+    // (0.13) Clouds are never still in themselves. A slow swirl carries every part of the picture a little this way
+    // and that (a third of a degree at most), so that outlines swell and sink as a cloud's do; and their thin parts
+    // form and melt away while their hearts stay: a slow pattern drifts through the set and feeds or starves what
+    // is neither clear sky nor solid cloud.
+    vec2 np = vec2(saz, el) * 0.033;
+    vec2 swirl = (texture(tNoise2D, np * 1.3 + vec2(uTime * 0.0040, uTime * 0.0027)).rg - 0.5) * 1.5
+               + (texture(tNoise2D, np * 3.7 - vec2(uTime * 0.0090, uTime * 0.0060)).rg - 0.5) * 0.20;
+    tuv += swirl / vec2(2.0 * uLayFrame.x, uLayFrame.z - uLayFrame.y);
+    float a0 = texture(tA, tuv).r;
+    if (a0 < 0.002) { o = vec4(0.0); return; }             // (open sky: most of most sets)
+    float feed = texture(tNoise2D, np + vec2(uTime * 0.0021, uTime * 0.0013)).g * 0.62 + texture(tNoise2D, np * 2.9 - vec2(uTime * 0.0034, 0.0)).b * 0.38;
+    float a = clamp(a0 + (feed - 0.5) * 4.0 * a0 * (1.0 - a0), 0.0, 1.0);
+    // The sets of a level pass side by side (SkyDirector.legs), SKY_PITCH degrees from one middle to the next, each
+    // 94 degrees wide: over the 28 degrees they share, the one breaks up and thins out as the other gathers. Not along
+    // a line (the edge of an overcast would cross the sky as a wall): in patches, as a sheet of cloud really ends,
+    // the gaps growing until nothing is left.
+    // (The line the patches thin out along leans, the same way at both ends of a set, so that neighbours fit.)
+    if (gone > 0.0) {
+        // (Large lobes, patches and a ragged fringe: three sizes of the same grain.)
+        vec2 bp = vec2(saz * 0.021, el * 0.050 + 0.37 * uLay.y);
+        float lobes = (texture(tNoise2D, bp * 0.31 + 0.17).r - 0.5) * 3.2;
+        float cells = texture(tNoise2D, bp * 0.9).b * 0.7 + texture(tNoise2D, bp * 2.7 + 0.4).b * 0.3;
+        float patches = clamp(0.5 + lobes * 0.55 + (cells - 0.45) * 1.5, 0.0, 1.0);
+        a *= smoothstep(-0.20, 0.16, patches - 1.4 * gone + 0.16);
+    }
     if (a < 0.002) { o = vec4(0.0); return; }
     vec2 lit = texture(tLit, vec2(uLay.w > 0.5 ? 1.0 - tuv.x : tuv.x, 1.0 - tuv.y)).rg;
     float sun = sq(lit.r) * uLay.x, glow = sq(lit.g) * uLay.x;

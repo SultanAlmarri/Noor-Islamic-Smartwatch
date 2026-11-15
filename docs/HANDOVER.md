@@ -849,3 +849,96 @@ The twelve sets of 0.11 are no longer in the app (kept in `NoorTools/work/clouds
 - The Sun still shows faintly through the storm's tower (the tower's picture is not fully opaque there).
 - Leftovers in the code from 0.11's cloud lay-out (`slides`, `uCloudF*`, `SkyDirector.slide`) do nothing and can go.
 - Reflections of the sky on rippled water still break into hard dashes (known since 0.11).
+
+## 23. A living sky: depth at midday, water's mirror, clouds that pass and change (0.13.0, 15 November 2026, phone only)
+
+After 0.12.0 was released (not yet seen on his phone) the owner asked where to go next. Three things were proposed
+and he said: "Ok do all three." He also said "Delete them" of the merged work branches.
+
+**Branches.** Twelve branches whose content is in `main` (checked: an ancestor of `main`, or the same tree as a
+commit of `main`) were deleted on GitHub and on the PC. Three hold work that never reached `main` and were left:
+`probe/emu37`, `adhan/097-repro` (abandoned emulator experiments) and `noor/0912` (a first widget countdown that
+0.9.13 replaced). Deleting those needs his yes.
+
+**1. Clouds at midday** ([DESIGN.md](DESIGN.md#the-real-sky-011), "The day's exposure")
+
+The helper who baked the low clouds had noted that their pictures hold strong modelling and that the flatness was
+the phone's. Measured in the bench (`bench.meter()`, new): on a solid cloud the Sun's light runs from 0.01 to 0.5
+and the light from sky and ground adds 0.2: ten to one. The filmic curve then maps 0.25 to 1.25 onto 0.65 to 0.93
+of the display: the whole midday picture sat on the curve's shoulder. Lowering the ambient light changed nothing
+visible; exposing the day at 0.7 did (a deeper blue, shaded sides, white tops). The land gets some of it back.
+A thunderhead now hides the Sun altogether (0.12 let 15 % of the disc through its tower).
+
+**2. Water** ("Water, live")
+
+The hard dashes were not aliasing of the waves but of the mirror: each pixel asked the land's picture once, so the
+image of a treeline was there or not there. Now four heights across what the pixel's facets and its unseen ripples
+spread, each read from a mipmap of the land's picture (`a` and `m` now have mipmaps; the land itself is read with
+`textureLod(..., 0.0)`, as before). Tried and dropped on the way: eight sharp samples with a dither (a stipple
+under the far shore); smearing by the sea's own roughness (`rough`: the mirror vanished, since that number was
+tuned for the sea's look, not as a slope; `smear` is the separate, physical one). Waves are drawn from fifteen
+pixels of length (they were a ruling of lines at three), ripples are judged by a pixel's long side.
+
+**3. Life** ("They pass, and never jump", "They are alive", "Rain and snow")
+
+- 0.12's drift was 41 degrees in 1.6 to 3.1 hours: a tenth of a pixel a second, and since the home screen tells the
+  moment once a minute, a hop of ten pixels each minute. Now the sets pass side by side, the low ones at a thirtieth
+  of a degree a second, and the renderer carries them on between frames (`CloudLeg.speed`, `shownAtMs`).
+- The join between two sets took four tries: an upright ragged end (a wall with a white rim), a leaning seam that
+  both sets knew by a number (still a line; the 94-degree window leaves too little room to lean it far), a noise
+  threshold of smooth fields (a wavy coast), and what shipped: the noise tile's cells with large lobes, so the
+  sheet ends in patches. An overcast is also never next to an open sky now.
+- The first swirl and feed could not be seen at all: the tile's smooth fields vary by about 0.2 round 0.5, not
+  by 0.5. Its channels are: R, G smooth (4 and 8 cells to the tile), B cells, A grain.
+- `uSky.z` (lightning) had been set since 0.10 and read by no shader. `uFlash` is the stroke's direction and
+  strength; it strikes only while `lo_storm` is in the view, where its tower stands in the set.
+- `sq` is a function in common.glsl: a local variable of that name (waterSlope has one) hides it. `half` and `out`
+  are reserved words in GLSL ES.
+
+**What the emulator's timings showed, and what was done**
+
+The first emulator run of 0.13 took 2.6 to 2.9 seconds for a picture after the first (0.12: 0.7 to 1.1): two or
+three sets of each level are on show now (0.12: one, two while it changed), each with more to work out, and the
+levels' windows were drawn again at every frame. So: a level's window is drawn again five times a second (the
+clouds move under a pixel a second; at once when the light or the sets change, at every frame while the Sun is
+dragged), and a set works nothing out where it has given way to its neighbour or where its sky is open. On the
+emulator that gave 1.5 to 2.2 seconds (it is too slow for the five-a-second gate to bite: every frame of its is
+later than that). On a phone the windows cost less than in 0.12, which drew them at every frame; the scene pass
+itself is heavier where there is water (the mirror's four heights, the second slope for the pixel below). The
+first picture, where the emulator compiles the scene shader, took 102 to 111 seconds (0.12: 67 to 93): the shader
+is longer. On a phone that is the GPU driver's compile at the first start after the update (Noor keeps the
+compiled programs); how long it takes there is not known.
+
+**How it was tested**
+
+- Unit tests on the owner's PC, on the final content: phone 72, watch 29, alerts 16, prayer engine 105, no
+  failures. `SkyDirectorTest.theCloudsNeverChangeAtAStroke` was rewritten for the new order: from one minute to
+  the next every set has only moved on at its own speed (never more than 2.5 degrees) and changed its amount by a
+  small step; a set appears or disappears only where it has no part of the view; the Sun's window, the land's
+  shade and the overcast change by small steps. `theDirectorChoosesCloudSetsThatExist` also checks that the
+  shaders' `SKY_PITCH` is the director's `PITCH`.
+- Both release builds on the PC, and GitHub's build of `main`.
+- The design bench: the day's exposure on all six sceneries and through the morning and evening; the water of the
+  forest lake, the arctic, the green hills and the sea at full size; one set passing into the next (broken into
+  overcast, a middle sheet into patches); the same sky 0, 20 and 60 seconds apart; lightning by day, at dusk and
+  at night; rain and snow. Stills only: the bench does not run the clock.
+- An Android 14 emulator on GitHub (`real-sky.yml`), three runs of two sceneries at two moments: the shaders build
+  and the sky is shown, no GL errors. The emulator starved in all three (the launcher's "isn't responding" dialog
+  over every picture; once Noor's own, "timed out while trying to bind" at start, with Google's services timing
+  out beside it), so no picture of 0.13 from Android can be judged.
+
+**What was not tested**
+
+- Nothing of 0.13 has been seen on a real phone, and nothing of it has been seen moving anywhere: the glide, the
+  swirl and the lightning's flicker were checked as numbers and as stills. Whether the swirl reads as a cloud
+  billowing or as a picture wobbling is the first thing to ask the owner.
+- The cost on a real GPU, the first start's compile time, heat and battery.
+- 0.12 itself had not been seen on the owner's phone when 0.13 was built on it.
+
+**Open after 0.13**
+
+- The Sun in near water is still a few hard white patches (it lies under the glass panel at midday).
+- `mi_sheet` at midday and the body of `lo_storm`'s anvil (as after 0.12).
+- Leftovers that do nothing: `uCloudF*`, the bench's `mix*` values, `uSky.z` (the flash is `uFlash` now).
+- A thunderhead's tower is taken to stand 14 degrees right of its set's middle (the helper's note); the stroke is
+  placed by that number, not by the picture.

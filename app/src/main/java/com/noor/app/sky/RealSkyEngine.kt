@@ -454,7 +454,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         fun num(name: String, or: Double = 0.0) = meta.optDouble(name, or).toFloat()
     }
     private class Loaded(val set: Baked, val name: String, val w: Int, val h: Int, val grey: Boolean, val nearest: Boolean, val pixels: ByteBuffer?)
-    private class Slot { var live: List<Baked> = emptyList(); var out: Tex? = null; var outT: Target? = null }
+    private class Slot { var live: List<Baked> = emptyList(); var out: Tex? = null; var outT: Target? = null; var drawnKey = ""; var drawnAt = 0L }
 
     private val baked = HashMap<String, Baked?>()
     private val loaded = ConcurrentLinkedQueue<Loaded>()
@@ -519,7 +519,11 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             if (l.grey) GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_R8, l.w, l.h, 0, GLES30.GL_RED, GLES30.GL_UNSIGNED_BYTE, l.pixels)
             else GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_RGBA8, l.w, l.h, 0, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, l.pixels)
             val filter = if (l.nearest) GLES30.GL_NEAREST else GLES30.GL_LINEAR
-            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, filter)
+            // The land's own picture and its mask are also kept in smaller, softer copies: water mirrors the land through
+            // its ripples, blurred (scene.frag asks for a copy by its size; the land itself is drawn from the full one).
+            val mips = l.set.land && (l.name == "a" || l.name == "m")
+            if (mips) GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, if (mips) GLES30.GL_LINEAR_MIPMAP_LINEAR else filter)
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, filter)
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
@@ -574,10 +578,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         return ok && b.tex["a"] != null
     }
 
-    private fun drawSet(b: Baked, slot: Slot, level: Int, share: Float, offset: Float, flip: Boolean) {
+    private fun drawSet(b: Baked, slot: Slot, level: Int, leg: CloudLeg, offset: Float, flip: Boolean) {
         use(progs.getValue("layer"), slot.outT, mapOf(
             "tA" to (b.tex["a"] ?: zero!!), "tF" to (b.tex["f"] ?: zero!!), "tK" to (b.tex["k"] ?: zero!!), "tG" to (b.tex["g"] ?: zero!!), "tLit" to (b.lit ?: zero!!),
-            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), share, if (flip) 1f else 0f),
+            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), leg.weight, if (flip) 1f else 0f),
             "uLayFrame" to floatArrayOf(b.num("azHalf", 29.4), b.num("elMin", -1.0), b.num("elMax", 40.0), offset),
         ))
         draw()
@@ -609,22 +613,32 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         if (slot.out == null || slot.out!!.w != w || slot.out!!.h != h) {
             delete(slot.outT); delete(slot.out)
             slot.out = hdr(w, h).also { slot.outT = target(it) }
+            slot.drawnKey = ""
         }
+        for ((b, leg) in show) coverNow = 1f - (1f - coverNow) * (1f - b.num("coverSeen", b.num("cover", 0.3).toDouble()) * leg.weight * SkyDirector.share(leg.offset))
+        tex["tCloud$i"] = slot.out!!
+        u["uCloudF$i"] = floatArrayOf(1080f, 1056f, 1350f, 1080f)
+        // The clouds move by less than a pixel a second: a level's window is drawn again five times a second, not at
+        // every frame; and at once when something else has changed (the light, the sets on show, their amounts), and at
+        // every frame while the Sun is dragged or a breath of wind runs through.
+        val key = show.joinToString("|") { (b, leg) -> "${b.dir} ${b.litKey} ${(leg.weight * 200).toInt()}" } + " $w ${f.flip}"
+        if (slot.drawnKey == key && !busyNow && now - slot.drawnAt < 200) return !waiting
+        slot.drawnKey = key; slot.drawnAt = now
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, slot.outT!!.fbo)
         GLES30.glClearColor(0f, 0f, 0f, 0f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
         GLES30.glEnable(GLES30.GL_BLEND); GLES30.glBlendFunc(GLES30.GL_ONE, GLES30.GL_ONE)
+        // The home screen tells the moment once a minute. While that moment is now, the clouds are carried on from it
+        // at their own speed, so that they glide (a moment the Sun has been dragged to is not now: it stands as it
+        // is told; so does everything with animations off).
+        val lead = if (f.still || f.shownAtMs <= 0L) 0f else ((System.currentTimeMillis() - f.shownAtMs) / 1000f).let { if (it in 0f..150f) it else 0f }
         for ((b, leg) in show) {
             if (b.tex["a"] == null) continue
             // (A breath of wind from a touch carries the clouds a little further along.)
-            drawSet(b, slot, i, leg.weight, leg.offset + travelNow * 6f, f.flip)
-            coverNow = 1f - (1f - coverNow) * (1f - b.num("coverSeen", b.num("cover", 0.3).toDouble()) * leg.weight)
+            drawSet(b, slot, i, leg, leg.offset + leg.speed * lead + travelNow * 6f, f.flip)
         }
         GLES30.glDisable(GLES30.GL_BLEND)
-        tex["tCloud$i"] = slot.out!!
-        u["uCloudF$i"] = floatArrayOf(1080f, 1056f, 1350f, 1080f)
         return !waiting
     }
-    private val slides = FloatArray(3)
     private var coverNow = 0f
     private var travelNow = 0f
 

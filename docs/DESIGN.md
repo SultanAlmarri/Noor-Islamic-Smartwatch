@@ -177,14 +177,36 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   rendered from them are shipped). Each is lit by the Sun as it stands at that level's own height, from under the
   horizon after sunset, by the glow of the twilight sky, by the blue above and the light the ground throws up; low
   clouds shade the land and every level is mirrored in water.
-- **They drift, and never jump (0.12).** A set is a window of the sky twice as wide as the view (94 degrees, in
-  equal angles). The day is cut into legs for each level (3.1 hours for the high clouds, 2.3 for the middle, 1.6 for
-  the low, each with its own start): a set comes in over the last fifth of the leg before its own, drifts 41
-  degrees across the view, and gives way over its last fifth. So one sky turns slowly into the next, level by
-  level, and no two levels change together. Which set a leg shows comes from the weather in the middle of that leg
-  and a throw of the dice; it never depends on the Sun's height or on a prayer time (0.11 chose again whenever the
-  Sun crossed certain heights and swapped all three levels in seven seconds: "the entire sky... suddenly
-  transforms"). `SkyDirector.legs`, `setFor`; `SkyDirectorTest.theCloudsNeverChangeAtAStroke`.
+- **They pass, and never jump (0.12, 0.13).** A set is a window of the sky twice as wide as the view (94 degrees,
+  in equal angles). The sets of a level follow one another across the sky side by side, 64 degrees from one middle
+  to the next, as the clouds of a real day do: one passes out of the view on one side while the next comes in on
+  the other. Each level has its own pace and start (a set of the low clouds passes in 33 minutes, of the middle in
+  an hour, of the high in almost two), so no two levels change together, and the nearer clouds overtake the far
+  ones. Nothing fades in or out. Over the 28 degrees two neighbours share, the one breaks up into patches and
+  thins out as the other gathers (`layer.frag`: lobes, cells and a fringe of the noise tile), as a sheet of cloud
+  really ends; never along a line, which brought the edge of an overcast across the sky as a wall. And a closed
+  sky never stands beside an open one: the set next to an overcast is at least a broken sky (`SkyDirector.setFor`).
+  Which set comes comes from the weather when it passes and a throw of the dice; never from the Sun's height or a
+  prayer time (0.11 chose again whenever the Sun crossed certain heights and swapped all three levels in seven
+  seconds: "the entire sky... suddenly transforms"; 0.12 let a set drift 41 degrees over hours, too slowly to be
+  seen, and then dissolved it into the next). `SkyDirector.legs`; `SkyDirectorTest.theCloudsNeverChangeAtAStroke`.
+- **They are alive (0.13).** The low clouds cross the view at a thirtieth of a degree a second: slow, and seen.
+  The home screen tells the moment once a minute; between its frames the renderer carries each set on at its own
+  speed (`CloudLeg.speed`, `RealSkyFrame.shownAtMs`), so they glide. In themselves they are never still either: a
+  slow swirl carries every part of a set a third of a degree this way and that, so outlines swell and sink, and
+  their thin parts form and melt (`layer.frag`). Lightning lights a thunderhead from within, where its tower
+  stands: a pale glow by day, the brightest thing in the sky at dusk and by night, and the land flashes with it
+  (`uFlash`; until 0.13 the flash was worked out and never drawn).
+- **Rain and snow (0.13).** What is far off stands behind more rain: the land fades into a grey veil with its
+  distance (a wood across a lake is a shape, a far ridge is gone), as rain is in a photograph. In front of it,
+  drops near the eye: short fine streaks of five sizes, leaning with the wind. Snow: flakes large and soft near
+  the eye, small far off, swaying down.
+- **The day's exposure (0.13).** With the Sun high everything is bright, and the filmic curve's shoulder pressed
+  sunlit cloud, its shaded side and the blue of the sky into one pale range: 0.12's clouds were flat at midday,
+  though their pictures hold a light and shade of ten to one (measured: `bench.meter()`). So the day is exposed for
+  its brightest things (`exposure` in `final.frag`: 0.7 once the Sun is 28 degrees up, eased in from 6): the blue
+  deepens, the clouds keep their modelling, and the land is given some of the light back (`landAt`). The hours of
+  colour and the night keep the exposure they had.
 - **The Sun and the clouds (0.12).** The Sun is drawn low in the picture, where far clouds crowd together, though
   it stands high in the real sky, where gaps are wide: left to the picture it was nearly always hidden. So whether
   a cloud is in front of the Sun is the weather's say (`SkyState.sunPart`): clouds pass over it now and then, the
@@ -212,6 +234,12 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   star falls now and then.
 - **Water, live.** Still or ruffled, it mirrors the sky, the clouds and the land beyond (a thing mirrored at the
   right height for its distance), shows its bed through clear shallows, and carries the Sun's and the Moon's road.
+  A pixel of water is never one facet (0.13): the height it mirrors wanders within the pixel, and by the ripples too
+  small to be seen. So the mirror is asked at four heights across that spread, each from a copy of the land's
+  picture as soft as the step between them (its mipmaps), and the land's image is as strong as the share that found
+  land. Asked once, as until 0.12, the image of a treeline was all there or not there pixel by pixel: hard dashes
+  of sky across it and stair steps along its edges. A wave is drawn only once it is fifteen pixels long on the
+  screen; smaller ones only spread the mirror.
 - **A beach with waves** (the Ocean scenery; `uShore` in `scene.frag`, written into `land.json` by `ocean.py`). The
   swell comes in as lines that rise as the bed shelves, steepen, break (the larger ones further out) and run on as
   white water with the foam they made trailing behind; the last of each wave runs up the sand as a thin sheet with a

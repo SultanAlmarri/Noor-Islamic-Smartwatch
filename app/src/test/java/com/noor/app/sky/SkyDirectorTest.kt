@@ -234,61 +234,68 @@ class SkyDirectorTest {
                 val s = SkyDirector.at(biome, w, f, sunEl(f), biome.signatureYear, 0.2f)
                 assertEquals(3, s.clouds.size)
                 for (level in 0..2) {
-                    assertTrue(s.clouds[level].size <= 2)
+                    // (The set in the middle of the view and the frayed ends of its two neighbours: never more than three.)
+                    assertTrue(s.clouds[level].size <= 3)
                     for (leg in s.clouds[level]) {
                         assertTrue(leg.set, leg.set in SkyDirector.SETS[level])
                         assertTrue(leg.weight in 0f..1f)
-                        assertTrue(kotlin.math.abs(leg.offset) <= SkyDirector.DRIFT + 0.01f)
-                        if (leg.weight > 0.5f) seen[level] += leg.set
+                        assertTrue(kotlin.math.abs(leg.offset) < SkyDirector.REACH)
+                        if (leg.weight > 0.5f && SkyDirector.share(leg.offset) > 0.5f) seen[level] += leg.set
                     }
-                    // (Two sets of a level share the sky: together never more than one.)
-                    assertTrue(s.clouds[level].sumOf { it.weight.toDouble() } <= 1.0001)
                 }
                 assertTrue(s.sunPart in 0f..1f); assertTrue(s.halo in 0f..1f)
                 assertTrue(s.overcast in 0f..1f); assertTrue(s.shade in 0f..1f)
                 // Under a full overcast the Sun is not seen, and the land is not in sunshine.
-                val full = s.clouds[2].filter { it.set == "lo_overcast" }.sumOf { it.weight.toDouble() }
+                val full = s.clouds[2].filter { it.set == "lo_overcast" }.sumOf { (it.weight * SkyDirector.share(it.offset)).toDouble() }
                 if (full > 0.95) { assertTrue(s.sunPart < 0.06f); assertTrue(s.shade > 0.9f) }
                 f += 1.0 / 48
             }
         }
         // Over the sceneries and a few months of days, every kind of sky has its day.
         for (level in 0..2) assertEquals(SkyDirector.SETS[level].toSet(), seen[level])
+        // The shaders know how far apart the sets of a level stand (layer.frag ends a set by it).
+        assertTrue(java.io.File("src/main/assets/sky2/common.glsl").readText().contains("#define SKY_PITCH ${SkyDirector.PITCH.toInt()}.0"))
     }
 
     /**
-     * The owner's complaint about 0.11: "I don't like how they instantly change as soon as one prayer time comes."
-     * From one minute to the next no set comes or goes by more than a small step, and none moves by more than a
-     * fraction of a degree: at sunrise, at sunset, at every hour of the day, whatever the weather.
+     * The owner's complaint about 0.11: "I don't like how they instantly change as soon as one prayer time comes...
+     * the entire sky, all the clouds in the sky suddenly transform into a different type of cloud."
+     * From one minute to the next every set on show has only moved on at its own slow speed, and thinned or thickened
+     * by a small step; a set appears or disappears only where it has no part of the view yet, or no more (it comes in
+     * from the side and passes out at the other); and the Sun's window and the land's shade change by small steps:
+     * at sunrise, at sunset, at every hour of the day, whatever the weather.
      */
     @Test fun theCloudsNeverChangeAtAStroke() {
         for (biome in Biome.entries) for (day in 0 until 40) {
             val w = SkyDirector.weather(day * 613L + biome.ordinal, biome, biome.signatureYear)
-            fun shares(f: Double): List<Map<String, Float>> {
-                val s = SkyDirector.at(biome, w, f, sunEl(f), biome.signatureYear, 0.2f)
-                return s.clouds.map { legs -> legs.groupBy { it.set }.mapValues { e -> e.value.sumOf { it.weight.toDouble() }.toFloat() } }
-            }
+            fun at(f: Double) = SkyDirector.at(biome, w, f, sunEl(f), biome.signatureYear, 0.2f)
             val minute = 1.0 / 1440
             var f = 2 * minute
-            var before = shares(f)
-            var partBefore = SkyDirector.at(biome, w, f, sunEl(f), biome.signatureYear, 0.2f).sunPart
+            var before = at(f)
             while (f < 1.0 - 3 * minute) {
                 f += minute
-                val now = shares(f)
-                for (level in 0..2) for (set in before[level].keys + now[level].keys) {
-                    val step = kotlin.math.abs((now[level][set] ?: 0f) - (before[level][set] ?: 0f))
-                    assertTrue("$biome day $day ${"%.4f".format(f)} $set by $step", step < 0.12f)
+                val now = at(f)
+                val where = "$biome day $day ${"%.4f".format(f)}"
+                for (level in 0..2) {
+                    val was = before.clouds[level]; val isNow = now.clouds[level]
+                    for (a in was) {
+                        val moved = a.speed * 60f
+                        // (No set passes faster than two and a half degrees a minute.)
+                        assertTrue("$where ${a.set} at ${kotlin.math.abs(moved)} degrees a minute", kotlin.math.abs(moved) < 2.5f)
+                        val b = isNow.firstOrNull { it.set == a.set && kotlin.math.abs(it.offset - a.offset - moved) < 0.05f }
+                        if (b == null) assertTrue("$where ${a.set} gone from the middle of the view", SkyDirector.share(a.offset) < 0.05f)
+                        else assertTrue("$where ${a.set} by ${kotlin.math.abs(b.weight - a.weight)}", kotlin.math.abs(b.weight - a.weight) < 0.08f)
+                    }
+                    for (b in isNow) {
+                        val moved = b.speed * 60f
+                        if (was.none { it.set == b.set && kotlin.math.abs(b.offset - it.offset - moved) < 0.05f })
+                            assertTrue("$where ${b.set} appeared in the middle of the view", SkyDirector.share(b.offset) < 0.05f)
+                    }
                 }
-                val part = SkyDirector.at(biome, w, f, sunEl(f), biome.signatureYear, 0.2f).sunPart
-                assertTrue("the Sun's window by ${kotlin.math.abs(part - partBefore)}", kotlin.math.abs(part - partBefore) < 0.2f)
-                before = now; partBefore = part
-            }
-            // A set drifts: over a minute its place in the view moves by a fraction of a degree.
-            for (level in 0..2) {
-                // (The set that holds the sky at both moments: not one giving way to its like at the other end of its drift.)
-                val a = SkyDirector.legs(w, level, 10.00f, biome).firstOrNull { it.weight > 0.6f } ?: continue
-                val b = SkyDirector.legs(w, level, 10.00f + 1f / 60, biome).firstOrNull { it.set == a.set && it.weight > 0.6f } ?: continue
-                assertTrue("drift of ${kotlin.math.abs(b.offset - a.offset)} degrees in a minute", kotlin.math.abs(b.offset - a.offset) < 0.6f)
+                assertTrue("$where the Sun's window by ${kotlin.math.abs(now.sunPart - before.sunPart)}", kotlin.math.abs(now.sunPart - before.sunPart) < 0.2f)
+                assertTrue("$where the land's shade by ${kotlin.math.abs(now.shade - before.shade)}", kotlin.math.abs(now.shade - before.shade) < 0.2f)
+                assertTrue("$where the overcast by ${kotlin.math.abs(now.overcast - before.overcast)}", kotlin.math.abs(now.overcast - before.overcast) < 0.1f)
+                before = now
             }
         }
     }
