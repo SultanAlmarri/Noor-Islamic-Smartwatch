@@ -578,10 +578,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         return ok && b.tex["a"] != null
     }
 
-    private fun drawSet(b: Baked, slot: Slot, level: Int, share: Float, offset: Float, flip: Boolean) {
+    private fun drawSet(b: Baked, slot: Slot, level: Int, leg: CloudLeg, offset: Float, flip: Boolean) {
         use(progs.getValue("layer"), slot.outT, mapOf(
             "tA" to (b.tex["a"] ?: zero!!), "tF" to (b.tex["f"] ?: zero!!), "tK" to (b.tex["k"] ?: zero!!), "tG" to (b.tex["g"] ?: zero!!), "tLit" to (b.lit ?: zero!!),
-            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), share, if (flip) 1f else 0f),
+            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), leg.weight, if (flip) 1f else 0f),
             "uLayFrame" to floatArrayOf(b.num("azHalf", 29.4), b.num("elMin", -1.0), b.num("elMax", 40.0), offset),
         ))
         draw()
@@ -617,11 +617,15 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, slot.outT!!.fbo)
         GLES30.glClearColor(0f, 0f, 0f, 0f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
         GLES30.glEnable(GLES30.GL_BLEND); GLES30.glBlendFunc(GLES30.GL_ONE, GLES30.GL_ONE)
+        // The home screen tells the moment once a minute. While that moment is now, the clouds are carried on from it
+        // at their own speed, so that they glide (not while the Sun is dragged to another hour, nor with animations
+        // off).
+        val lead = if (f.busy || f.still || f.shownAtMs <= 0L) 0f else ((System.currentTimeMillis() - f.shownAtMs) / 1000f).let { if (it in 0f..150f) it else 0f }
         for ((b, leg) in show) {
             if (b.tex["a"] == null) continue
             // (A breath of wind from a touch carries the clouds a little further along.)
-            drawSet(b, slot, i, leg.weight, leg.offset + travelNow * 6f, f.flip)
-            coverNow = 1f - (1f - coverNow) * (1f - b.num("coverSeen", b.num("cover", 0.3).toDouble()) * leg.weight)
+            drawSet(b, slot, i, leg, leg.offset + leg.speed * lead + travelNow * 6f, f.flip)
+            coverNow = 1f - (1f - coverNow) * (1f - b.num("coverSeen", b.num("cover", 0.3).toDouble()) * leg.weight * SkyDirector.share(leg.offset))
         }
         GLES30.glDisable(GLES30.GL_BLEND)
         tex["tCloud$i"] = slot.out!!

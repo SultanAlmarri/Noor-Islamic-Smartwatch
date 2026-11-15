@@ -23,7 +23,7 @@ float gap(sampler2D t, vec4 f, float slide, vec2 vp) {
     float az = atan(dx / fpx) * 57.29578, el = atan((uCam.y - vp.y) / sqrt(fpx * fpx + dx * dx)) * 57.29578;
     vec2 uv = vec2(0.5 + az / 52.0, (40.0 - el) / 41.0);
     if (uv.y >= 1.0 || uv.y <= 0.0 || uv.x <= 0.0 || uv.x >= 1.0) return 1.0;
-    return 1.0 - textureLod(t, vec2(uv.x, 1.0 - uv.y), 0.0).a;
+    return 1.0 - min(textureLod(t, vec2(uv.x, 1.0 - uv.y), 0.0).a, 1.0);
 }
 
 void main() {

@@ -11,6 +11,8 @@
 #define SKYWIN_AZ 26.0
 #define SKYWIN_EL0 -1.0
 #define SKYWIN_EL1 40.0
+// How many degrees of sky a set of clouds takes on its way, from one seam to the next (SkyDirector.PITCH).
+#define SKY_PITCH 64.0
 
 uniform vec2 uRes;        // size of the target this pass draws into, px
 uniform vec2 uView;       // size of the whole scene on screen, px

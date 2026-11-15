@@ -20,6 +20,7 @@ uniform vec4 uLandInfo;       // 1 if there is a land picture, the water's level
                               // brightest shading stored, 1 if there is a mask
 uniform vec3 uCelX, uCelY, uCelZ, uGalN, uGalC;   // the turning sky: celestial axes, the Milky Way's pole and centre
 uniform vec4 uSky;            // aurora strength, meteor (0..1 along its track, 0 = none), lightning flash, rainbow
+uniform vec4 uFlash;          // lightning: where it flashes (a direction), and how bright it is this instant (0 = none)
 uniform vec4 uLand;           // biome, season (0 winter .. 1 summer), snow, wetness
 uniform vec4 uAir;            // mist near the ground, rain here, wind strength, dust
 uniform vec4 uWater;          // roughness of the water (0 glass .. 1 storm), its clearness, -, -
@@ -187,7 +188,9 @@ vec4 layerAt(sampler2D t, vec4 f, float slide, vec2 vp) {
     float az = atan(dx / fpx) / DEG, el = atan((uCam.y - vp.y) / sqrt(fpx * fpx + dx * dx)) / DEG;
     vec2 uv = vec2(0.5 + az / (2.0 * SKYWIN_AZ), (SKYWIN_EL1 - el) / (SKYWIN_EL1 - SKYWIN_EL0));
     if (uv.y >= 1.0 || uv.y <= 0.0 || uv.x <= 0.0 || uv.x >= 1.0) return vec4(0.0);
-    return texture(t, vec2(uv.x, 1.0 - uv.y));
+    // (Where one set passes out and the next comes in, the two are added: together never more than solid.)
+    vec4 c = texture(t, vec2(uv.x, 1.0 - uv.y));
+    return c / max(c.a, 1.0);
 }
 
 // Round the Sun the lower clouds stand apart when the weather lets it through (uSunPart.x). Not as a round hole: in
@@ -211,6 +214,14 @@ vec3 cloudsOver(vec3 col, vec2 vp, out float through) {
     c = parted(layerAt(tCloud1, uCloudF1, uCloudD.y, vp), vp, 0.6);
     col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
     c = parted(layerAt(tCloud2, uCloudF2, uCloudD.z, vp), vp, 1.0);
+    // Lightning in a thunderhead: for an instant the cloud is lit from within, brightest round the stroke.
+    if (uFlash.w > 0.0) {
+        float th = acos(clamp(dot(viewRay(vp), uFlash.xyz), -1.0, 1.0));
+        // (By day it is a pale glow in the cloud; in the dusk and at night it is the brightest thing in the sky. The
+        // cloud keeps its own light and shade under it.)
+        float dark = mix(0.30, 1.0, smoothstep(12.0, -4.0, uSunEl));
+        c.rgb += (c.a * vec3(0.78, 0.84, 1.0) + c.rgb * 1.5) * uFlash.w * dark * (0.05 + 1.1 * exp(-sq(th / 0.13)));
+    }
     col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
     return col;
 }
@@ -394,6 +405,8 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     amb = mix(amb, vec3(luma(amb)) * 2.3, uSunPart.w);
     // (Skylight in the shade is held a little under what the sky gives: a photograph keeps its shadows.)
     vec3 land = alb * (S * light * sh + G * mGlow()) + K * amb * mix(0.78, 1.0, max(uNight, smoothstep(10.0, 0.0, uSunEl)));
+    // (Lightning lights the land too, for its instant: coldly, and from above.)
+    land += K * uFlash.w * vec3(0.16, 0.18, 0.22);
 
     // The air between: far things fade into the colour of the sky behind them.
     float tk = t * 0.001;
@@ -768,30 +781,37 @@ void main() {
         col = mix(col, 0.80 * lit, saturate(foam) * 0.92);
     }
 
-    // Rain here: fine streaks, slanted by the wind. Where snow lies it is cold enough to fall as snow: soft flakes,
-    // drifting down slowly.
+    // Rain here. What is far off stands behind more of it: the land fades into a grey veil with its distance (a wood
+    // across a lake is a shape, a far ridge is gone), as rain is seen in a photograph. In front of that, the drops
+    // near the eye: short fine streaks, slanted by the wind, of several sizes for their several distances. Where
+    // snow lies it is cold enough to fall as snow: flakes large and soft near the eye, small far off, swaying down.
     if (uAir.y > 0.01) {
+        vec3 veil = mix(hazeCol, vec3(luma(hazeCol)), 0.75) * 0.92;
+        float far = land.a > 0.5 ? 1.0 - exp(-t * uAir.y / 4000.0) : 0.45 * uAir.y;
+        col = mix(col, veil, clamp(far, 0.0, 0.86) * (1.0 - 0.5 * foam));
         vec2 rp = vp / uView.x;
         float streaks = 0.0;
         bool snowing = uLand.z > 0.5;
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 5; i++) {
             float fi = float(i);
             if (snowing) {
-                float sc = 30.0 + fi * 24.0;
-                vec2 q = vec2(rp.x * sc + 0.7 * sin(rp.y * 6.0 + uTime * 0.5 + fi * 2.1) + uTime * (0.15 + 0.5 * uAir.z), rp.y * sc - uTime * (1.0 + fi * 0.45));
+                float sc = 11.0 + fi * fi * 5.5;
+                vec2 q = vec2(rp.x * sc + 0.8 * sin(rp.y * 5.0 + uTime * 0.45 + fi * 2.1) + uTime * (0.12 + 0.5 * uAir.z), rp.y * sc - uTime * (1.5 - fi * 0.18));
                 vec2 cell = floor(q);
                 vec2 f = fract(q) - 0.5 - (hash22(cell + fi * 9.1) - 0.5) * 0.6;
-                streaks += step(0.78, hash12(cell + fi * 17.0)) * smoothstep(0.17, 0.05, length(f)) * (0.60 - fi * 0.13);
+                float size = mix(0.10, 0.19, hash12(cell + fi * 3.7));
+                streaks += step(0.80, hash12(cell + fi * 17.0)) * smoothstep(size, size * 0.25, length(f)) * (0.62 - fi * 0.09);
             } else {
-                float sc = 26.0 + fi * 19.0;
-                vec2 q = vec2(rp.x * sc + rp.y * sc * (0.10 + 0.2 * uAir.z), rp.y * (2.2 - fi * 0.5) + uTime * (1.9 + fi * 0.6));
+                float sc = 15.0 + fi * 13.0;
+                float lean = 0.10 + 0.22 * uAir.z + 0.03 * sin(uTime * 0.7 + fi);
+                vec2 q = vec2(rp.x * sc + rp.y * sc * lean, rp.y * (3.2 + fi * 1.1) + uTime * (2.6 + fi * 0.7));
                 float r = hash12(floor(q) + fi * 17.0);
-                float x = abs(fract(q.x) - 0.5);
-                streaks += step(0.72, r) * smoothstep(0.06, 0.0, x) * smoothstep(0.0, 0.3, fract(q.y)) * smoothstep(1.0, 0.5, fract(q.y)) * (0.5 - fi * 0.12);
+                float x = abs(fract(q.x) - 0.5 - (r - 0.5) * 0.5);
+                float len = fract(q.y);
+                streaks += step(0.66, r) * smoothstep(0.05, 0.0, x) * smoothstep(0.0, 0.25, len) * smoothstep(0.75, 0.40, len) * (0.34 - fi * 0.045);
             }
         }
-        col = mix(col, col + (mAmbTop() + mSunGround() * 0.1) * (snowing ? 0.9 : 0.5), streaks * uAir.y);
-        col = mix(col, hazeCol, uAir.y * 0.18);
+        col = mix(col, col + (mAmbTop() + mSunGround() * 0.1) * (snowing ? 0.9 : 0.55), streaks * uAir.y);
     }
 
     // (Nothing in the picture is brighter than a half-float can hold, whatever a driver does with the Sun.)
