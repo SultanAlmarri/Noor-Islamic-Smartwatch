@@ -347,7 +347,7 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     t = 2.0e5;
     if (uLandInfo.x < 0.5 || luv.y <= 0.0 || luv.x <= 0.0 || luv.x >= 1.0) return vec4(0.0);
     luv.y = min(luv.y, 0.9995);
-    vec4 A = texture(tLandA, luv);
+    vec4 A = textureLod(tLandA, luv, 0.0);
     if (A.a < 0.004) return vec4(0.0);
     vec3 alb = pow(A.rgb, vec3(2.2));
     vec2 lit = texture(tLandLit, vec2(luv.x, 1.0 - luv.y)).rg;
@@ -355,7 +355,7 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     vec3 K = pow(texture(tLandK, luv).rgb, vec3(2.2));
     // Winter (where the seasons are followed): snow lies on what the scenery says takes it.
     if (uLand.z > 0.01 && uLandInfo.w > 0.5) {
-        float snow = smoothstep(0.25, 0.75, texture(tLandM, luv).b * (0.4 + 0.9 * uLand.z)) * uLand.z;
+        float snow = smoothstep(0.25, 0.75, textureLod(tLandM, luv, 0.0).b * (0.4 + 0.9 * uLand.z)) * uLand.z;
         vec3 white = vec3(0.80, 0.83, 0.88);
         K = mix(K, K * (luma(white) / max(luma(alb), 0.04)) * vec3(0.96, 0.99, 1.06), snow);
         alb = mix(alb, white, snow);
@@ -410,8 +410,9 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
 // ---- The water ----------------------------------------------------------------------------------------------------
 
 // The slope of the water at a place (m), from a few trains of waves and the ripples of the wind. `t` is how far the eye
-// is: waves too small to be seen from there are left out, and only roughen the reflection (`rough`).
-vec2 waterSlope(vec2 q, float t, out float rough) {
+// is: waves too small to be seen from there are left out, and only roughen the reflection (`rough`: as the sea's look
+// was tuned to; `smear`: how far, as a slope, the unseen waves spread what a pixel mirrors).
+vec2 waterSlope(vec2 q, float t, out float rough, out float smear) {
     float wind = mix(0.20, 1.0, uWater.x);
     // What a pixel covers of the water there: so many metres across the view, and many times more along it (far
     // water is seen at a low angle). A wave is drawn only if a pixel can show it; one coming towards us is the first
@@ -421,7 +422,7 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
     vec2 vdir = q / max(length(q), 1e-3);
     float px = px0 * sqrt(squash);
     vec2 g = vec2(0.0);
-    float lost = 0.0;
+    float lost = 0.0, lost2 = 0.0;
     for (int i = 0; i < 7; i++) {
         float fi = float(i);
         float lambda = mix(38.0, 1.4, pow(fi / 6.0, 0.6)) * mix(0.35, 1.0, uWater.x);
@@ -430,16 +431,23 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
         float ang = 1.05 * sin(fi * 2.4 + 0.7) + 0.25 * sin(fi * 5.1);
         vec2 dir = vec2(sin(ang), -cos(ang));
         float amp = lambda * 0.0075 * wind;
-        float seen = saturate(lambda / (px0 * mix(1.0, squash, abs(dot(dir, vdir))) * 3.0) - 0.5);
+        // (0.13: a wave is drawn once it is fifteen pixels long on the screen and not at all under six. Drawn at three
+        // it was a ruling of lines one pixel high.)
+        float seen = smoothstep(6.0, 15.0, lambda / (px0 * mix(1.0, squash, abs(dot(dir, vdir)))));
         // (No train is endless: each swells and dies away along its crests.)
         float group = 0.55 + 0.45 * sin(dot(q, vec2(dir.y, -dir.x)) * k * 0.13 + fi * 2.1) * sin(dot(q, dir) * k * 0.07 + fi);
         float ph = dot(q, dir) * k - uTime * sqrt(9.8 * k) + fi * 1.7;
         float c = cos(ph), s1 = sin(ph);
         g += dir * (k * amp * c * (1.0 + 0.5 * s1)) * seen * group;
-        lost += (1.0 - seen) * k * amp;
+        lost += (1.0 - saturate(lambda / (px0 * mix(1.0, squash, abs(dot(dir, vdir))) * 3.0) - 0.5)) * k * amp;
+        lost2 += (1.0 - seen * seen) * 0.5 * sq(k * amp * group);
     }
     // The wind's own ripples, at two sizes, drifting.
     const float e = 0.004;
+    // (Seen by the pixel's long side, along the view: by its mean size they were kept where a pixel held several of
+    // them from front to back, and made a ruling of fine lines on far water.)
+    float seenRmean = saturate(1.6 / (px * 5.0) - 0.4);
+    px = px0 * squash;
     float seenR = saturate(1.6 / (px * 5.0) - 0.4);
     vec2 rq = q * 0.043 + vec2(uTime * 0.021, uTime * 0.013);
     float n0 = texture(tNoise2D, rq).g, nx = texture(tNoise2D, rq + vec2(e, 0.0)).g, nz = texture(tNoise2D, rq + vec2(0.0, e)).g;
@@ -448,7 +456,9 @@ vec2 waterSlope(vec2 q, float t, out float rough) {
     vec2 sq = q.yx * 0.17 + vec2(-uTime * 0.034, uTime * 0.027);
     float m0 = texture(tNoise2D, sq).r, mx = texture(tNoise2D, sq + vec2(e, 0.0)).r, mz = texture(tNoise2D, sq + vec2(0.0, e)).r;
     g += vec2(mz - m0, mx - m0) / e * 0.0045 * wind * seenS;
-    rough = saturate(0.015 + lost * 0.9 + (1.0 - seenR) * 0.08 * wind);
+    rough = saturate(0.015 + lost * 0.9 + (1.0 - seenRmean) * 0.08 * wind);
+    float unR = (1.0 - seenR) * 0.040 * wind, unS = (1.0 - seenS) * 0.020 * wind;
+    smear = sqrt(lost2 + unR * unR + unS * unS);
     return g;
 }
 
@@ -527,7 +537,7 @@ void main() {
     // (The mask's red: 1 where the land lies under water; less where it is only wet, as sand is near the sea's edge.)
     float water = 0.0;
     if (uLandInfo.w > 0.5 && luv.y > 0.0) {
-        vec3 m = texture(tLandM, vec2(luv.x, min(luv.y, 0.9995))).rgb;
+        vec3 m = textureLod(tLandM, vec2(luv.x, min(luv.y, 0.9995)), 0.0).rgb;
         water = m.r * step(0.001, uLandInfo.y);
         float gust = sin(uTime * 1.7 + vp.x * 0.021 + vp.y * 0.013) * 0.6 + sin(uTime * 2.9 + vp.x * 0.047 - vp.y * 0.031) * 0.4;
         luv.x += m.g * gust * (0.35 + 1.2 * uAir.z) / uView.x * (1.0 - step(0.5, water));
@@ -620,7 +630,8 @@ void main() {
         }
         vec2 q = rd.xz * tw;
         float rough;
-        vec2 sl = waterSlope(q, tw, rough);
+        float smear;
+        vec2 sl = waterSlope(q, tw, rough, smear);
         // (Where the water is only a film over the sand there is no room for a wave.)
         sl *= (smoothstep(0.0, 0.5, max(t - tw, 0.0) * -rd.y) * 0.85 + 0.15) * sea;
         // (The thin sheet on the sand is never glass: it shivers, and breaks the Sun in it into glints.)
@@ -678,27 +689,55 @@ void main() {
                     * many * smoothstep(-1.10, -0.80, uSunEl);
         }
         // The land beyond, mirrored: a thing at distance D is seen in the water 2h/D lower than a far thing would be.
-        float te = r.y / max(length(r.xz), 1e-4);
-        float D = 3000.0;
-        vec2 mluv = luv, mfar = vec2(-1.0);
-        for (int i = 0; i < 3; i++) {
-            float tl = te - 2.0 * h / D;
-            vec3 dd = normalize(vec3(r.x, tl * length(r.xz), r.z));
-            vec3 pp = viewPoint(dd);
-            mluv = landUv(pp.xy);
-            if (i == 0) mfar = mluv;
-            if (mluv.y <= 0.0 || mluv.y >= 1.0) { D = 1.0e6; break; }
-            float dist = landDist(mluv) * length(dd.xz);
-            D = max(dist, tw + 1.0);
+        // (0.13) A pixel of water is never one facet. The height it mirrors wanders within the pixel (by as much as
+        // the next row's facet differs from this one) and by the ripples too small to be seen each for itself: so
+        // the mirror is asked at several heights across that spread, and the land's image is as strong as the share
+        // of them that found land. (Asked once, the image of a treeline was all there or not there, pixel by pixel:
+        // hard dashes of sky across it, and stair steps along its edges.)
+        float lenxz = max(length(r.xz), 1e-4);
+        float te = r.y / lenxz;
+        vec3 rd1 = viewRay(vp + vec2(0.0, uView.y / uRes.y));
+        float tw1 = h / max(-rd1.y, 5.0e-4), rough1, smear1;
+        vec2 sl1 = waterSlope(rd1.xz * tw1, tw1, rough1, smear1) * (smoothstep(0.0, 0.5, max(t - tw1, 0.0) * -rd1.y) * 0.85 + 0.15) * sea;
+        vec3 r1 = reflect(rd1, normalize(vec3(-sl1.x, 1.0, -sl1.y)));
+        float te1 = (abs(r1.y) + 0.002) / max(length(r1.xz), 1e-4);
+        float spread = sqrt(sq(0.5 * (te1 - te)) + sq(0.75 * smear * sea + 0.5 * chop)) + 1.0e-4;
+        // (Four heights across the spread, each read from a copy of the land's picture as soft as the step between
+        // them: a smooth share, with no grain.)
+        float lod = log2(max(0.5 * spread * uCam.x * uLandFrame.x / uView.x, 1.0));
+        float cov = 0.0, best = 0.0;
+        vec2 hit = vec2(-1.0);
+        for (int i = 0; i < 4; i++) {
+            float tei = te + ((float(i) + 0.5) * 0.5 - 1.0) * spread;
+            float D = 3000.0;
+            vec2 uvi = vec2(-1.0), uv0 = vec2(-1.0);
+            bool on = false;
+            for (int k = 0; k < 2; k++) {
+                vec3 dd = normalize(vec3(r.x, (tei - 2.0 * h / D) * lenxz, r.z));
+                uvi = landUv(viewPoint(dd).xy);
+                if (k == 0) uv0 = uvi;
+                on = uvi.y > 0.0 && uvi.y < 1.0 && uvi.x > 0.0 && uvi.x < 1.0;
+                if (!on) break;
+                D = max(landDist(uvi) * length(dd.xz), tw + 1.0);
+                if (D > 800.0) break;                 // (so far off that it lies where a far thing would)
+            }
+            if (!on) continue;
+            float ai = textureLod(tLandA, uvi, lod).a;
+            if (uLandInfo.w > 0.5) {
+                float wet = textureLod(tLandM, uvi, lod).r;
+                // (A ray that leaves the water nearly level meets the far shore at its foot. The search can end on
+                // the water in front of that shore instead: then what it found first, taking the shore for far off,
+                // is right.)
+                if (wet >= 0.5) { uvi = uv0; ai = textureLod(tLandA, uvi, lod).a; wet = textureLod(tLandM, uvi, lod).r; }
+                ai *= 1.0 - wet;
+            }
+            cov += ai;
+            if (ai > best + 0.05) { best = ai; hit = uvi; }
         }
-        if (D < 9.0e5 && mluv.y > 0.0) {
+        if (hit.y > 0.0) {
             float mt;
-            float notWater = uLandInfo.w > 0.5 ? 1.0 - step(0.5, texture(tLandM, mluv).r) : 1.0;
-            // (A ray that leaves the water nearly level meets the far shore at its foot. The search can end on the
-            // water in front of that shore instead: then what it found first, taking the shore for far off, is right.)
-            if (notWater < 0.5 && uLandInfo.w > 0.5 && mfar.y > 0.0 && mfar.y < 1.0 && texture(tLandM, mfar).r < 0.5) { mluv = mfar; notWater = 1.0; }
-            vec4 ml = landAt(mluv, r, hazeCol, mt);
-            refl = mix(refl, ml.rgb, ml.a * notWater);
+            vec4 ml = landAt(hit, r, hazeCol, mt);
+            refl = mix(refl, ml.rgb, min(cov * 0.25, 1.0) * smoothstep(0.0, 0.5, ml.a));
         }
         float fres = 0.02 + 0.98 * pow(1.0 - saturate(dot(-rd, n)), 5.0 * exp(-2.69 * sig)) / (1.0 + 22.7 * pow(sig, 1.5));
         // What lies under: the bed, dimmed and coloured by the depth of water over it.

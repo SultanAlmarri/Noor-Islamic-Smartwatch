@@ -519,7 +519,11 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             if (l.grey) GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_R8, l.w, l.h, 0, GLES30.GL_RED, GLES30.GL_UNSIGNED_BYTE, l.pixels)
             else GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_RGBA8, l.w, l.h, 0, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, l.pixels)
             val filter = if (l.nearest) GLES30.GL_NEAREST else GLES30.GL_LINEAR
-            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, filter)
+            // The land's own picture and its mask are also kept in smaller, softer copies: water mirrors the land through
+            // its ripples, blurred (scene.frag asks for a copy by its size; the land itself is drawn from the full one).
+            val mips = l.set.land && (l.name == "a" || l.name == "m")
+            if (mips) GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, if (mips) GLES30.GL_LINEAR_MIPMAP_LINEAR else filter)
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, filter)
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)

@@ -229,13 +229,14 @@ function lightWeights(el, side, under) {
   return { names, w, glow: [wl, wr], dir: norm(d) };
 }
 
-async function loadPicture(url, filter = gl.LINEAR) {
+async function loadPicture(url, filter = gl.LINEAR, mips = false) {
   const bmp = await createImageBitmap(await (await fetch(url + '?' + Date.now())).blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
   const t = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, t);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+  if (mips) gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mips ? gl.LINEAR_MIPMAP_LINEAR : filter); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   return { t, w: bmp.width, h: bmp.height, target: gl.TEXTURE_2D };
 }
@@ -245,11 +246,12 @@ async function loadLand(id) {
   LAND[id] = null;
   try {
     const meta = await (await fetch(LAND_DIR + id + '/land.json?' + Date.now())).json();
-    const load = (name, filter) => loadPicture(LAND_DIR + id + '/' + name, filter);
-    const L = { meta, a: await load('a.webp'), k: await load('k.webp'), g: await load('g.png', gl.NEAREST), s: {} };
+    const load = (name, filter, mips) => loadPicture(LAND_DIR + id + '/' + name, filter, mips);
+    // (The land's picture and its mask also in smaller, softer copies: water mirrors the land blurred by its ripples.)
+    const L = { meta, a: await load('a.webp', gl.LINEAR, true), k: await load('k.webp'), g: await load('g.png', gl.NEAREST), s: {} };
     for (const sun of meta.suns) L.s[sun.name] = await load('s_' + sun.name + '.webp');
     for (const n of ['gl', 'gr']) { try { L.s[n] = await load('s_' + n + '.webp'); } catch (e) { L.s[n] = T.tZero; } }
-    L.m = meta.mask ? await load('m.webp') : null;
+    L.m = meta.mask ? await load('m.webp', gl.LINEAR, true) : null;
     // How high the skyline stands where the Sun rises and sets (RealSky.sunLift in the app).
     try {
       const bmp = await createImageBitmap(await (await fetch(LAND_DIR + id + '/a.webp?' + Date.now())).blob(), { premultiplyAlpha: 'none' });
