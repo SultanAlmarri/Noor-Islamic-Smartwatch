@@ -72,14 +72,14 @@ class StudioWearTest {
         val actions = SettingsActions(onOpen = { opened += it }, onSetup = { f -> setup = f(setup) }, faceSummary = "Minhad Studio · In use, with your design")
 
         screen = { NoorWearTheme(config) { t -> SettingsScreen(watchUi(), t, actions) } }
-        shot("t01_settings_hub_watch", "Language and numbers")
+        shot("t01_settings_hub_watch", "Watch face")
         rule.onNode(hasText("Watch face")).performClick()
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Language and numbers"))
         rule.onNode(hasText("Language and numbers")).performClick()
         assertEquals(listOf(Dest.FACES, Dest.SETTINGS_DISPLAY), opened)
 
         screen = { NoorWearTheme(config) { t -> TimesSettingsScreen(watchUi(), t, actions) } }
-        shot("t02_settings_times", "Hijri date")
+        shot("t02_settings_times", "Location")
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Hijri date"))
         shot("t03_settings_times_hijri", "+1 day")
 
@@ -93,16 +93,17 @@ class StudioWearTest {
         shot("t05_settings_alerts_phone", "Chosen in Minhad on your phone")
 
         screen = { FacesScreen(config, StudioUi(supported = true, active = false, fromPhone = true), FaceTemplates.DAY, { false }, showClassic = false) }
-        shot("t06_faces_studio_not_in_use", "Show Minhad Studio")
+        shot("t06_faces_studio_not_in_use", "Minhad Studio")
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Show Minhad Studio"))
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Touch and hold", substring = true))
         shot("t07_faces_studio_hint", "Touch and hold")
 
         config = TestConfigs.dubai("ar")
         screen = { NoorWearTheme(config) { _ -> FacesScreen(config, StudioUi(supported = true, active = true, fromPhone = true), FaceTemplates.KUFI, { true }, showClassic = false) } }
-        shot("t08_faces_studio_in_use_ar", "مستخدمة")
+        shot("t08_faces_studio_in_use_ar", "استوديو منهاد")
         screen = { NoorWearTheme(config) { _ -> FacesScreen(config, StudioUi(supported = false, active = false, fromPhone = false), FaceTemplates.HORIZON, { false }, showClassic = false) } }
         shot("t09_faces_studio_unsupported_ar", "Wear OS 6")
         screen = { NoorWearTheme(config) { t -> SettingsScreen(phone.copy(state = phone.state.copy(config = config)), t, actions.copy(faceSummary = "")) } }
-        shot("t10_settings_hub_phone_ar", "مواقيت")
+        shot("t10_settings_hub_phone_ar", "واجهة الساعة")
     }
 }

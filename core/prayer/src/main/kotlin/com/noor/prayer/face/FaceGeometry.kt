@@ -19,6 +19,7 @@ object FaceGeometry {
     private val TOP = Box(0f, -0.335f, 0.66f, 0.125f)
     private val CENTER = Box(0f, 0f, 0.80f, 0.20f)
     private val CENTER_NARROW = Box(0f, 0f, 0.30f, 0.20f)
+    private val CENTER_TALL = Box(0f, 0f, 0.80f, 0.46f)
     private val BOTTOM = Box(0f, 0.335f, 0.66f, 0.125f)
     private val LOWER = Box(0f, 0.60f, 0.40f, 0.12f)
     private val LEFT = Box(-0.53f, 0f, 0.20f, 0.20f)
@@ -33,6 +34,16 @@ object FaceGeometry {
         Slot.LOWER -> LOWER
         Slot.LEFT -> LEFT
         Slot.RIGHT -> RIGHT
+    }
+
+    /**
+     * The space an element really takes: today's times in the centre run over the places above and below it when
+     * those are free (the renderer draws them so).
+     */
+    fun extent(slot: Slot, design: FaceDesign): Box {
+        val b = box(slot, design)
+        return if (slot == Slot.CENTER && design.at(Slot.CENTER)?.element == Element.PRAYER_TIMES && b.hw > 0.5f &&
+            design.at(Slot.TOP) == null && design.at(Slot.BOTTOM) == null) CENTER_TALL else b
     }
 
     /** The slot under a touch at ([x], [y]) (fractions of the radius), or null. Small slots win over the centre. */

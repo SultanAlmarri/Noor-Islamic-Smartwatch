@@ -451,8 +451,7 @@ class FaceRenderer(context: Context, private val fonts: FaceFonts) {
         val rtl = data.text.arabic
         if (slot == Slot.CENTER && !compact) {
             // The whole day: one row per time; it takes the space above and below when those are free.
-            val tall = design.at(Slot.TOP) == null && design.at(Slot.BOTTOM) == null
-            val h = if (tall) r * 0.92f else h0
+            val h = FaceGeometry.extent(slot, design).hh * 2f * r
             val rowH = h / lines.size
             val nameX = if (rtl) x + w * 0.36f else x - w * 0.36f
             val timeX = if (rtl) x - w * 0.36f else x + w * 0.36f

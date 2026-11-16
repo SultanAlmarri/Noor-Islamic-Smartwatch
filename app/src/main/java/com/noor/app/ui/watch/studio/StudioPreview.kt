@@ -141,7 +141,7 @@ fun StudioPreview(
                     s == selected -> slotOutline(s, design, w, accent, 1f)
                     // An empty place is shown where it is free; one that lies under another's element (left and right
                     // under a wide centre) is reached by its chip instead, so nothing is drawn over the time.
-                    !has && Slot.entries.none { o -> o != s && design.at(o) != null && overlaps(FaceGeometry.box(s, design), FaceGeometry.box(o, design)) } ->
+                    !has && Slot.entries.none { o -> o != s && design.at(o) != null && overlaps(FaceGeometry.box(s, design), FaceGeometry.extent(o, design)) } ->
                         slotOutline(s, design, w, Color.White, 0.18f, dashed = true, plus = true)
                 }
             }

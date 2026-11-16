@@ -514,7 +514,7 @@ private fun BoxScope.SendBar(s: StudioState, status: StudioStatus, a: StudioActi
     val changed = s.sentDesign != null && s.sentDesign != s.design
     Column(
         Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(sky.copy(alpha = 0f), sky.copy(alpha = 0.92f), sky)))
+            .background(Brush.verticalGradient(0f to sky.copy(alpha = 0f), 0.22f to sky.copy(alpha = 0.97f), 1f to sky))
             .navigationBarsPadding().padding(start = Page.Margin, end = Page.Margin, top = 24.dp, bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
