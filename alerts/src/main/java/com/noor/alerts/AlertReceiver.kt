@@ -87,6 +87,7 @@ class AlertReceiver : BroadcastReceiver() {
         val snoozed = intent.getBooleanExtra(AlertScheduler.EXTRA_SNOOZE, false)
         if (snoozed) {
             AlertNotifications.cancel(context, AlertNotifications.snoozedId(if (tried != null) 0 else id))
+            AlertScheduler.snoozeDone(context, if (tried != null) 0 else id)
             // (A snooze that comes long after its time, the phone having been off, wakes no one.)
             val due = intent.getLongExtra(AlertScheduler.EXTRA_AT, firedAt)
             if (firedAt - due > AlarmPlanner.MAX_LATENESS.toMillis()) return

@@ -111,7 +111,7 @@ internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extra
                 colors = ProgressIndicatorDefaults.colors(indicatorColor = Gold, trackColor = Gold.copy(alpha = 0.16f)),
             )
             ScalingLazyColumn(state = listState, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
-                item { Hero(c, t, st.next.prayer, st.next.at, untilNext) }
+                item { Hero(c, t, st.next.prayer, st.next.at, untilNext, t.name(st.next)) }
                 item {
                     Text(
                         t.placeWithFlag(c) + "  ·  " + t.hijri(HijriDate.of(st.today.date, c.hijriAdjust)),
@@ -121,7 +121,7 @@ internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extra
                 Prayer.entries.forEach { p ->
                     item {
                         val at = st.today.instant(p)
-                        PrayerRow(p, if (at != null) t.time(at, c.zone) else "—", t,
+                        PrayerRow(p, t.name(p, st.today.date), if (at != null) t.time(at, c.zone) else "—", t,
                             isCurrent = st.current?.prayer == p && st.current?.date == st.today.date,
                             isNext = st.next.prayer == p && st.next.date == st.today.date)
                     }
@@ -147,15 +147,15 @@ internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extra
 }
 
 @Composable
-private fun Hero(c: WatchConfig, t: WearText, next: Prayer, at: Instant, until: Duration) {
+private fun Hero(c: WatchConfig, t: WearText, next: Prayer, at: Instant, until: Duration, name: String = t.name(next)) {
     // Same order as the phone: the prayer, the countdown, the time.
-    val spoken = stringResource(R.string.a11y_next_prayer, t.name(next), t.remaining(until), t.time(at, c.zone))
+    val spoken = stringResource(R.string.a11y_next_prayer, name, t.remaining(until), t.time(at, c.zone))
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp).semantics(mergeDescendants = true) { contentDescription = spoken }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(ComplicationBuilder.iconRes(next)), null, Modifier.size(20.dp), tint = GoldSoft)
             Spacer(Modifier.width(6.dp))
             Text(
-                t.name(next),
+                name,
                 style = if (t.arabic) TextStyle(fontFamily = Kufi, fontSize = 24.sp) else MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium),
                 color = GoldSoft,
             )
@@ -173,7 +173,7 @@ private fun Hero(c: WatchConfig, t: WearText, next: Prayer, at: Instant, until: 
 }
 
 @Composable
-private fun PrayerRow(p: Prayer, time: String, t: WearText, isCurrent: Boolean, isNext: Boolean) {
+private fun PrayerRow(p: Prayer, name: String, time: String, t: WearText, isCurrent: Boolean, isNext: Boolean) {
     val bg = if (isCurrent) Gold.copy(alpha = 0.14f) else Color.Transparent
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -185,7 +185,7 @@ private fun PrayerRow(p: Prayer, time: String, t: WearText, isCurrent: Boolean, 
         Icon(painterResource(ComplicationBuilder.iconRes(p)), null, Modifier.size(18.dp),
             tint = if (isCurrent || isNext) Gold else Mist.copy(alpha = if (p.isPrayer) 1f else 0.7f))
         Text(
-            t.name(p), modifier = Modifier.weight(1f),
+            name, modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium,
             color = when { isNext -> Gold; isCurrent -> Ink; else -> Ink.copy(alpha = if (p.isPrayer) 0.92f else 0.7f) },
         )

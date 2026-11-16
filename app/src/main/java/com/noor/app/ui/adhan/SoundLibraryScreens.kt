@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.MoreVert
@@ -90,51 +91,23 @@ fun SoundLibraryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
     val f = Formatter(ar, s.numerals, s.timeFormat)
     val c = NoorTheme.colors
     val lib = vm.library
-    val favs = s.alerts.favourites
-    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
-    var filter by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("all") }
     var openId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     val open = openId?.let { lib.byId(it) }
-    val countries = lib.adhans.mapNotNull { it.countryEn }.toSet().size
 
-    val shown = lib.adhans.filter { e ->
-        when (filter) {
-            "all" -> true
-            "fav" -> e.id in favs
-            "fajr" -> e.fajr
-            else -> e.region == filter
-        }
-    }.filter { e ->
-        val q = query.trim().lowercase()
-        q.isEmpty() || listOfNotNull(e.title(ar), e.place(ar), e.country(ar), e.note(ar), e.credit?.author).joinToString(" ").lowercase().contains(q)
-    }
-
+    // 0.18: the library is the owner's voices and five sound effects: a plain list of each, to hear and to see its
+    // credit and licence (the search, filters and favourites of the 18-recording library had nothing left to sort).
     StopPreviewOnLeave(vm)
     NoorPage(stringResource(R.string.adhan_library), contentPadding, onBack = onBack, spacing = 16.dp) {
-        NoorSearchField(query, { query = it }, stringResource(R.string.lib_search))
-        // One line of filters, scrolling sideways (0.14; they wrapped into three ragged lines before).
-        val chips = listOf("all" to R.string.lib_filter_all, "fav" to R.string.lib_filter_favourites) +
-            REGIONS.filter { (r, _) -> lib.adhans.any { it.region == r } } + listOf("fajr" to R.string.adhan_cat_fajr)
-        ChoiceChips(chips.map { (key, label) -> key to stringResource(label) }, filter, { filter = it })
-        if (shown.isEmpty()) {
-            Text(stringResource(if (filter == "fav" && query.isBlank()) R.string.lib_no_favourites else R.string.lib_nothing), style = MaterialTheme.typography.bodyMedium,
-                color = c.textSecondary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
-        } else SettingsSection("", footer = stringResource(R.string.lib_favourites_hint)) {
-            shown.forEachIndexed { i, e ->
+        SettingsSection(stringResource(R.string.alarm_sounds_adhan)) {
+            lib.adhans.forEachIndexed { i, e ->
                 if (i > 0) SettingsDivider()
-                LibraryRow(e, f, ar, favourite = e.id in favs, playing = preview?.id == e.id, onPlay = { vm.previewLibrary(e.id, short = !e.hasFullRecording) },
-                    onFavourite = { vm.toggleFavourite(e.id) }, onOpen = { openId = e.id })
+                LibraryRow(e, f, ar, playing = preview?.id == e.id, onPlay = { vm.previewLibrary(e.id, short = !e.hasFullRecording) }, onOpen = { openId = e.id })
             }
         }
-        Footnote(stringResource(R.string.lib_intro, f.number(lib.adhans.size), f.number(countries)))
-
-        // (0.16: no alert sounds on the phone; the group is gone with them.)
-        if (lib.sounds.isNotEmpty()) Spacer(Modifier.height(4.dp))
-        if (lib.sounds.isNotEmpty()) SettingsSection(stringResource(R.string.adhan_cat_sounds), footer = stringResource(R.string.adhan_sounds_credit)) {
+        if (lib.sounds.isNotEmpty()) SettingsSection(stringResource(R.string.alarm_sounds_effects)) {
             lib.sounds.forEachIndexed { i, e ->
                 if (i > 0) SettingsDivider()
-                SoundRow(e.title(ar), f.duration(e.seconds), false, preview == PreviewKey(e.id, false), stringResource(R.string.adhan_preview), null,
-                    { vm.previewLibrary(e.id, false) })
+                LibraryRow(e, f, ar, playing = preview?.id == e.id, onPlay = { vm.previewLibrary(e.id, false) }, onOpen = { openId = e.id })
             }
         }
     }
@@ -142,7 +115,7 @@ fun SoundLibraryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
     open?.let { e ->
         com.noor.app.ui.components.NoorSheet({ openId = null }, androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-                AdhanCard(e, f, ar, preview, vm, favourite = e.id in favs)
+                AdhanCard(e, f, ar, preview, vm)
             }
         }
     }
@@ -150,7 +123,7 @@ fun SoundLibraryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
 
 /** One recording in the list: play at once, what and where, favourite, and more. */
 @Composable
-private fun LibraryRow(e: SoundEntry, f: Formatter, ar: Boolean, favourite: Boolean, playing: Boolean, onPlay: () -> Unit, onFavourite: () -> Unit, onOpen: () -> Unit) {
+private fun LibraryRow(e: SoundEntry, f: Formatter, ar: Boolean, playing: Boolean, onPlay: () -> Unit, onOpen: () -> Unit) {
     val c = NoorTheme.colors
     Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically) {
@@ -170,15 +143,12 @@ private fun LibraryRow(e: SoundEntry, f: Formatter, ar: Boolean, favourite: Bool
             Text(listOfNotNull(e.place(ar)?.let(f::digits), len).joinToString(" · "), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary,
                 maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
-        IconButton(onClick = onFavourite) {
-            Icon(if (favourite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                stringResource(if (favourite) R.string.lib_unfavourite else R.string.lib_favourite), tint = if (favourite) c.gold else c.textMuted)
-        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted.copy(alpha = 0.7f), modifier = Modifier.padding(end = 8.dp).size(22.dp))
     }
 }
 
 @Composable
-private fun AdhanCard(e: SoundEntry, f: Formatter, ar: Boolean, preview: PreviewKey?, vm: AdhanViewModel, favourite: Boolean = false) {
+private fun AdhanCard(e: SoundEntry, f: Formatter, ar: Boolean, preview: PreviewKey?, vm: AdhanViewModel) {
     val c = NoorTheme.colors
     val context = LocalContext.current
     val label = stringResource(R.string.adhan_preview)
@@ -187,10 +157,6 @@ private fun AdhanCard(e: SoundEntry, f: Formatter, ar: Boolean, preview: Preview
             Column(Modifier.weight(1f)) {
                 Text(e.title(ar), style = MaterialTheme.typography.titleLarge, color = c.textPrimary)
                 e.place(ar)?.let { Text(f.digits(it), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary) }
-            }
-            IconButton(onClick = { vm.toggleFavourite(e.id) }) {
-                Icon(if (favourite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                    stringResource(if (favourite) R.string.lib_unfavourite else R.string.lib_favourite), tint = if (favourite) c.gold else c.textMuted)
             }
         }
         Spacer(Modifier.height(12.dp))
