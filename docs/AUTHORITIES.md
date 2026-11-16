@@ -2,7 +2,7 @@
 
 How Noor chooses the source of prayer times for a place, which authorities it knows, what each entry is based on,
 and how sure we are. Code: `core/prayer/src/main/kotlin/com/noor/prayer/authority/Authorities.kt`.
-Last updated 4 November 2026.
+Last updated 16 November 2026. Measured agreement with each authority's own tables: `accuracy/results/EVIDENCE.md`.
 
 ## How a day's times are produced
 
@@ -33,7 +33,7 @@ Last updated 4 November 2026.
 | Authority | Coverage | Category | Basis | Evidence |
 | --- | --- | --- | --- | --- |
 | IACAD (Dulook DXB) | Dubai emirate (60 km around the city reference point) | Validated calculation + official timetable for carried dates | Fajr/Isha 18°, Sun's upper limb + 34′ refraction + 0.10°, seconds rounded up, fixed minutes (−2, −4, +2, 0, +2, 0); reference 25.12 N 55.189 E | 588 official times (Aug 2020 – Nov 2026): 527 exact (89.6%), rest ±1 min; 18 December dates predicted before publication: 17 exact. Official days carried: 68 archived days 2021–2023 + November 2026. See `PRAYER_ACCURACY.md`. |
-| Awqaf (UAE) | UAE outside Dubai | Validated calculation (provisional) | Fajr/Isha 18°, +0.19° horizon, rounding to nearest, minutes (−1, −3, +3, +3, +2, +1) | One month of Awqaf-attributed times (Nov 2026, secondary source): 164/180 exact. To be re-checked against Awqaf's own tables. |
+| Awqaf (UAE) | UAE outside Dubai (Abu Dhabi city timetable within 60 km of 24.44 N 54.28 E) | Validated calculation (Abu Dhabi) | Fajr/Isha 18.1°, +0.31° horizon, nearest minute (Sunrise and Isha rounded up), minutes (−1, −3, +2, 0, +1, −1) | Fitted 16 Nov 2026 to the UAE Hijri Calendar 1445 for Abu Dhabi City (Sheikh Zayed Grand Mosque Centre, times by the IAC; 353 days): 2,038/2,118 exact (96.2%), rest ±1 min, 95%+ on held-out months; Awqaf's own website (Abu Dhabi, 16–17 Nov 2026): 12/12. Other regions not yet checked. See `PRAYER_ACCURACY.md`. |
 | MUIS | Singapore | Official timetable 2024–2026 + validated calculation | Fajr 20°, Isha 18°, upper limb + 34′, rounded up, Dhuhr +1; reference 1.25 N 103.80 E | Official dataset (data.gov.sg, Singapore Open Data Licence, 1,096 days). Fitted on 2024–2025, held out on 2026: 74% exact overall, every time within 2 minutes. MUIS's ±1-minute pattern even for Dhuhr (pure solar transit) shows their tables are not reproducible exactly from standard astronomy, so the published table is used wherever it exists. The app refreshes it from data.gov.sg at most weekly when the user is in Singapore. |
 | Umm al-Qura | Saudi Arabia | Authority parameters | Fajr 18.5°, Isha 90 min after Maghrib (120 in Ramadan) | The Umm al-Qura standard of the Kingdom; not yet compared with a published Saudi timetable. |
 | JAKIM | Malaysia | Authority parameters | Fajr 18° nationwide since 1 Ramadan 1441 / April 2020 (National Muzakarah decision, Nov 2019), Isha 18°, Maghrib about 2 minutes after sunset | JAKIM publishes zone timetables (63 zones, e-solat.gov.my); Noor calculates at the user's exact position and has not yet compared them. |
@@ -52,10 +52,14 @@ Last updated 4 November 2026.
 - **JAKIM e-Solat** (Malaysia) publishes official zone timetables online. Integrating them needs the zone boundaries
   (63 zones) and confirmation that the service may be used by apps.
 - **Diyanet** offers an API to registered developers; registration is needed before integration.
-- **IACAD**: the website feed answers browsers but refuses requests from servers; it is not used by the app at runtime.
-  New official months are added to the app (and the blind test) when published.
-- **Awqaf (UAE)**: official monthly tables exist on awqaf.gov.ae; a full validation is the next step for the UAE
-  outside Dubai.
+- **IACAD**: the website feed answers browsers but refuses requests from servers (Cloudflare, HTTP 403; checked again
+  16 Nov 2026); IACAD publishes no API or data licence. It is not used by the app at runtime: that needs IACAD's
+  permission. New official months are added to the app (and the blind test) when published.
+- **Awqaf (UAE)**: an official "Prayer Timings" API is listed on the UAE Government API portal (api.government.ae),
+  offered by Awqaf's open-data page to apps; it needs an API key (registration). Integrating it is the route to exact
+  times outside Dubai.
+- **Umm al-Qura (KACST)**, **JAKIM e-Solat**, **Kemenag SIHAT**: official tables reachable on their sites, compared in
+  `accuracy/results/EVIDENCE.md`; no published terms for use by apps.
 
 ## Locations and names
 

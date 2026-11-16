@@ -24,7 +24,7 @@ PROFILE_NOW = {'lat': 24.4539, 'lon': 54.3773}
 
 
 def profile_now():
-    """the app's UAE_AWQAF profile in the refit notation (18/18, dip 0.19, nearest, -1 -3 +3 +3 +2 +1)."""
+    """the provisional UAE_AWQAF profile used until 16 Nov 2026 (18/18, dip 0.19, nearest, -1 -3 +3 +3 +2 +1)."""
     a18 = int(np.argmin(abs(R.ANG - 18.0))); d19 = int(np.argmin(abs(R.DIPS - 0.19)))
     c = dict(PROFILE_NOW)
     for p, k in zip(E.PR, (-1, -3, 3, 3, 2, 1)):
@@ -39,7 +39,7 @@ def main():
     odd = {d: S[d] for d in ds if d.month % 2}
     even = {d: S[d] for d in ds if not d.month % 2}
     now = profile_now()
-    print('Awqaf profile now: calendar %s, Awqaf website %s' % (R.score(now, ds, S), R.score(now, sorted(A), A)))
+    print('Awqaf profile before 16 Nov 2026 (provisional): calendar %s, Awqaf website %s' % (R.score(now, ds, S), R.score(now, sorted(A), A)))
     for fam in ('c1family', 'free'):
         for name, tr, te in (('odd->even', odd, even), ('even->odd', even, odd)):
             c = R.fit(sorted(tr), tr, fam)

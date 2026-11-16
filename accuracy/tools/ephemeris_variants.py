@@ -16,6 +16,7 @@ other prayers at the C1 conventions) under several ephemerides that timetable so
   meeus      Meeus ch. 25 low-precision apparent Sun (adhan-js style), evaluated at the event
   meeus_0ut  the same, at 0h UT, transit by the 0h-UT equation of time
   eot_fourier  Spencer (1971) Fourier equation of time, evaluated per day (one value per date)
+  base YYYY    a perpetual table: each date's times computed for the same calendar date of one base year
 
 usage: python3 accuracy/tools/ephemeris_variants.py   (from the repository root; needs numpy, pvlib)
 """
@@ -188,6 +189,14 @@ def main():
             print('      ' + l)
     r = np.array([P[d]['dhuhr'] * 60.0 for d in dates]) - sp['dhuhr']
     print('  spencer      dhuhr spread %.1f s, best %d/%d' % (r.max() - r.min(), best_window(r)[0], len(r)))
+    # A perpetual table: every year's times copied from one base year's calculation (IACAD's 2014-2017 tables were
+    # nearly perpetual: validate.py, integrity test 6)
+    print('Perpetual-table hypothesis (times of the same calendar date in one base year):')
+    for Y in range(2016, 2028):
+        base = [dt.date(Y, d.month, d.day) for d in dates]
+        ev = spa_events(base)
+        n, tot, line = report('base %d' % Y, ev, P, dates)
+        print('  base %d     total %d/%d   dhuhr: %s' % (Y, tot, 6 * len(dates), line[3]))
 
 
 if __name__ == '__main__':

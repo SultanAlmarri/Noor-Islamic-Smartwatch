@@ -21,6 +21,8 @@ data class CalculationProfile(
     /** When true, the observer's elevation lowers the horizon by 0.0353333 * sqrt(h) deg (IAC formula). */
     val elevationAffectsHorizon: Boolean = false,
     val rounding: Rounding = Rounding.NEAREST,
+    /** Per-prayer rounding where an authority's tables round prayers differently (overrides [rounding]). */
+    val roundingByPrayer: Map<Prayer, Rounding> = emptyMap(),
     /** Fixed precaution minutes per event, applied after rounding. */
     val offsets: Map<Prayer, Int> = emptyMap(),
     /**
@@ -34,4 +36,6 @@ data class CalculationProfile(
     val validationAr: String = "محسوبة وفق المعايير المنشورة للطريقة.",
 ) {
     fun offset(p: Prayer): Int = offsets[p] ?: 0
+
+    fun rounding(p: Prayer): Rounding = roundingByPrayer[p] ?: rounding
 }

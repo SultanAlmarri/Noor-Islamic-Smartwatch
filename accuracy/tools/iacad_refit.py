@@ -40,16 +40,31 @@ def data():
 
 
 def tables(dates):
-    """event seconds at LON0 for every lat and parameter: T[p][lat_i] -> array (nparam, ndays)."""
-    T = {p: [] for p in PR}
+    """event seconds at LON0 for every lat and parameter: T[p][lat_i] -> array (nparam, ndays). Same engine as
+    evidence.raw, vectorised over the parameter grid."""
+    m, spa = E.model, E.spa
+    nd = len(dates)
+    mid = np.array([(dt.datetime(d.year, d.month, d.day) - dt.datetime(1970, 1, 1)).total_seconds() - 4 * 3600 for d in dates])
+    ut0 = mid + 4 * 3600
+    T0 = np.asarray(spa.transit_sunrise_sunset(ut0, 25.0, LON0, m.DELTA_T, 1)[0]) - mid
+    sd = m.semidiameter(dates)
+    out = {p: [] for p in PR}
+
+    def grid(la, guess, targets):
+        k = targets.shape[0]
+        return m.solve_alt(np.tile(mid, k), np.tile(T0 / 3600 + guess, k), targets.reshape(-1), la, LON0).reshape(k, nd)
+
     for la in LATS:
-        f = np.stack([E.raw(dates, la, LON0, 4, dict(fajr=a, isha=18.0))['fajr'] for a in ANG])
-        i = np.stack([E.raw(dates, la, LON0, 4, dict(fajr=18.0, isha=a))['isha'] for a in ANG])
-        rs = [E.raw(dates, la, LON0, 4, dict(fajr=18.0, isha=18.0, dip=dp)) for dp in DIPS]
-        T['fajr'].append(f); T['isha'].append(i)
-        T['shuruq'].append(np.stack([r['shuruq'] for r in rs])); T['maghrib'].append(np.stack([r['maghrib'] for r in rs]))
-        T['dhuhr'].append(rs[0]['dhuhr'][None, :]); T['asr'].append(rs[0]['asr'][None, :])
-    return T
+        alt_noon = m._state(mid + T0, la, LON0, 0.0)
+        asr_alt = np.degrees(np.arctan(1.0 / (1.0 + np.tan(np.radians(90.0 - alt_noon)))))
+        hz = -(sd[None, :] + 0.5667 + DIPS[:, None])
+        out['fajr'].append(grid(la, -7, np.repeat(-ANG[:, None], nd, 1)))
+        out['isha'].append(grid(la, 7, np.repeat(-ANG[:, None], nd, 1)))
+        out['shuruq'].append(grid(la, -5.8, hz))
+        out['maghrib'].append(grid(la, 5.8, hz))
+        out['dhuhr'].append(T0[None, :])
+        out['asr'].append(grid(la, 3.3, asr_alt[None, :]))
+    return out
 
 
 def quant(t, mode):
@@ -110,8 +125,11 @@ def fit(dates, P, family):
 def describe(c):
     def par(p):
         i = c[p][0]
-        return {'fajr': 'Fajr %.1f°' % ANG[i], 'isha': 'Isha %.1f°' % ANG[i], 'shuruq': 'Shuruq dip %.2f°' % DIPS[i],
-                'maghrib': 'Maghrib dip %.2f°' % DIPS[i]}.get(p, NAMES[p])
+        if p in ('fajr', 'isha'):
+            return '%s %.1f°' % (E.NAMES[p], ANG[i])
+        if p in ('shuruq', 'maghrib'):
+            return '%s dip %.2f°' % (E.NAMES[p], DIPS[i])
+        return E.NAMES[p]
     NAMES = E.NAMES
     return 'lat %.2f lon %.3f; ' % (c['lat'], c['lon']) + '; '.join('%s %s %+d' % (par(p), c[p][1], c[p][2]) for p in PR)
 

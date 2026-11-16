@@ -1,0 +1,15 @@
+official current-era days: 98 (2020-2023: 68, 2026: 30); Emirates 24|7 days not in them: 61 (2023-05-13 .. 2026-03-02)
+
+split A: fit on 98 days, test on 61 days
+  C1 (current profile)  fit-set 527/588  test 300/366 (82.0%)  test per prayer {'fajr': 45, 'shuruq': 52, 'dhuhr': 53, 'asr': 53, 'maghrib': 44, 'isha': 53}
+  c1family  fitted: lat 25.10 lon 55.190; Fajr 17.8° ceil -3; Shuruq dip 0.13° ceil -4; Dhuhr ceil +2; Asr ceil +0; Maghrib dip 0.13° ceil +2; Isha 17.8° ceil +1
+            fit-set 540/588  test 293/366 (80.1%)  test per prayer {'fajr': 42, 'shuruq': 48, 'dhuhr': 53, 'asr': 52, 'maghrib': 47, 'isha': 51}
+  free      fitted: lat 25.14 lon 55.190; Fajr 17.5° round -4; Shuruq dip 0.02° round -4; Dhuhr ceil +2; Asr ceil +0; Maghrib dip 0.12° ceil +2; Isha 17.7° round +2
+            fit-set 544/588  test 293/366 (80.1%)  test per prayer {'fajr': 42, 'shuruq': 47, 'dhuhr': 53, 'asr': 53, 'maghrib': 46, 'isha': 52}
+
+split B: fit on 68 days, test on 91 days
+  C1 (current profile)  fit-set 357/408  test 470/546 (86.1%)  test per prayer {'fajr': 74, 'shuruq': 79, 'dhuhr': 82, 'asr': 80, 'maghrib': 73, 'isha': 82}
+  c1family  fitted: lat 25.14 lon 55.190; Fajr 17.4° ceil -5; Shuruq dip 0.12° ceil -4; Dhuhr ceil +2; Asr ceil +0; Maghrib dip 0.12° ceil +2; Isha 17.6° ceil +2
+            fit-set 380/408  test 451/546 (82.6%)  test per prayer {'fajr': 61, 'shuruq': 76, 'dhuhr': 82, 'asr': 80, 'maghrib': 76, 'isha': 76}
+  free      fitted: lat 25.14 lon 55.195; Fajr 17.4° ceil -5; Shuruq dip 0.00° round -4; Dhuhr ceil +2; Asr ceil +0; Maghrib dip 0.24° round +2; Isha 17.7° round +2
+            fit-set 383/408  test 447/546 (81.9%)  test per prayer {'fajr': 56, 'shuruq': 77, 'dhuhr': 82, 'asr': 79, 'maghrib': 74, 'isha': 79}

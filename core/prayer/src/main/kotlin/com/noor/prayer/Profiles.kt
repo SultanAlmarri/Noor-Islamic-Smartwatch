@@ -33,19 +33,27 @@ object Profiles {
     )
 
     /**
-     * UAE - Awqaf, provisional. Fitted to one secondary month (godubai.com, Nov 2026, Dubai):
-     * 164/180 times exact (91%). To be re-validated against Awqaf's own tables.
+     * UAE - Awqaf (outside Dubai). Fitted (16 Nov 2026) to the UAE Hijri Calendar 1445 of the Sheikh Zayed Grand Mosque
+     * Centre, Abu Dhabi City column (353 days, Jul 2023 - Jul 2024; times by the International Astronomy Center), held
+     * out on alternate months (95.8% and 95.3% exact), and checked on Awqaf's own website (Abu Dhabi region, 16-17 Nov
+     * 2026): 12/12 exact. Whole calendar: 2038/2118 exact (96.2%), every other time 1 minute
+     * (accuracy/tools/awqaf_fit.py, accuracy/results/EVIDENCE.md). Fajr/Isha 18.1 deg and the reference longitude are
+     * equivalent fitted values, not published ones. Inside 60 km of Abu Dhabi the city timetable is used, as Awqaf
+     * publishes one table per region; elsewhere the same conventions at the user's own position (not yet checked against
+     * Awqaf's tables for other regions).
      */
     val UAE_AWQAF = CalculationProfile(
         id = "uae_awqaf",
         nameEn = "UAE — Awqaf (provisional)",
         nameAr = "الإمارات — الهيئة العامة للشؤون الإسلامية والأوقاف (مبدئي)",
-        fajrAngle = 18.0, ishaAngle = 18.0,
-        horizonExtraDeg = 0.19,
+        fajrAngle = 18.1, ishaAngle = 18.1,
+        horizonExtraDeg = 0.31,
         rounding = Rounding.NEAREST,
-        offsets = mapOf(FAJR to -1, SHURUQ to -3, DHUHR to 3, ASR to 3, MAGHRIB to 2, ISHA to 1),
-        validationEn = "Provisional: matched 91% of one month of Awqaf-attributed times (Nov 2026); differences up to 1 minute.",
-        validationAr = "مبدئي: طابق 91% من أوقات شهر واحد منسوبة للأوقاف (نوفمبر 2026)، بفارق لا يتجاوز دقيقة.",
+        roundingByPrayer = mapOf(SHURUQ to Rounding.UP, ISHA to Rounding.UP),
+        offsets = mapOf(FAJR to -1, SHURUQ to -3, DHUHR to 2, ASR to 0, MAGHRIB to 1, ISHA to -1),
+        referencePoint = GeoPoint(24.44, 54.28, 0.0),
+        validationEn = "Matches the official UAE calendar for Abu Dhabi to the minute on 96.2% of 2,118 times (2023–2024), the rest by 1 minute; matched Awqaf's website on all 12 times checked (Nov 2026).",
+        validationAr = "تطابق التقويم الرسمي لأبوظبي بالدقيقة في 96.2% من 2118 وقتًا (2023–2024)، والباقي بفارق دقيقة؛ وطابقت موقع الهيئة في جميع الأوقات الـ12 التي فُحصت (نوفمبر 2026).",
     )
 
     private fun method(

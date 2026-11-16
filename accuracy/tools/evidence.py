@@ -77,7 +77,8 @@ def raw(dates, lat, lon, tz, prof, ramadan=()):
 
 
 def minutes(sec, prof, p):
-    m = np.ceil(sec / 60.0 - 1e-9) if prof.get('rounding') == 'up' else np.floor(sec / 60.0 + 0.5)
+    mode = prof.get('rounding_by', {}).get(p, prof.get('rounding'))
+    m = np.ceil(sec / 60.0 - 1e-9) if mode == 'up' else np.floor(sec / 60.0 + 0.5)
     return m.astype(int) + prof.get('offsets', {}).get(p, 0)
 
 
@@ -96,8 +97,11 @@ DUBAI = dict(fajr=18.0, isha=18.0, dip=0.10, rounding='up', offsets=dict(fajr=-2
 SINGAPORE = dict(fajr=20.0, isha=18.0, rounding='up', offsets=dict(dhuhr=1))
 UQU = dict(fajr=18.5, isha_min=90, isha_min_ramadan=120)
 JAKIM = dict(fajr=18.0, isha=18.0, offsets=dict(dhuhr=1, maghrib=2))
-AWQAF = dict(fajr=18.0, isha=18.0, dip=0.19, offsets=dict(fajr=-1, shuruq=-3, dhuhr=3, asr=3, maghrib=2, isha=1))
-ABU_DHABI = (24.4539, 54.3773)
+# UAE_AWQAF since 16 Nov 2026 (awqaf_fit.py); the provisional profile before it is AWQAF_OLD
+AWQAF = dict(fajr=18.1, isha=18.1, dip=0.31, rounding_by=dict(shuruq='up', isha='up'),
+             offsets=dict(fajr=-1, shuruq=-3, dhuhr=2, asr=0, maghrib=1, isha=-1))
+AWQAF_OLD = dict(fajr=18.0, isha=18.0, dip=0.19, offsets=dict(fajr=-1, shuruq=-3, dhuhr=3, asr=3, maghrib=2, isha=1))
+ABU_DHABI = (24.44, 54.28)   # the profile's reference point (Abu Dhabi region)
 KEMENAG = dict(fajr=20.0, isha=18.0, offsets=dict(dhuhr=1))
 DIYANET = dict(fajr=18.0, isha=17.0, offsets=dict(shuruq=-7, dhuhr=5, asr=4, maghrib=7))
 
@@ -105,14 +109,14 @@ CASES = [
     # key, authority, source, file, since, point (lat, lon), tz, profile, how the app gets exact times, ramadan range
     ('iacad', 'IACAD (Dulook DXB), Dubai', 'IACAD website feed (Nov 2026) + IACAD SmartPortal pages in the Internet Archive (2020-2023)',
      ['iacad_official_archive_2014_2023.csv', 'iacad_api_2026-11.iso.csv'], dt.date(2020, 8, 20), (25.12, 55.189), 4, DUBAI,
-     'Carried: the app bundles the official days it has (68 days 2021-2023 + Nov 2026). No public feed the app may use: IACAD\'s feed refuses non-browser clients (Cloudflare, HTTP 403, checked 16 Nov 2026).', None),
+     'Carried: the app shows IACAD\'s own times on the 97 official days it bundles (2021-2023 and Nov 2026). No public feed the app may use: IACAD\'s feed refuses non-browser clients (Cloudflare, HTTP 403, checked 16 Nov 2026).', None),
     ('dulook', 'IACAD (Dulook DXB app), Dubai South', 'The official Dulook DXB app, read from the owner\'s screen recording (location "Dubai South"); dates outside the Nov 2026 feed',
      ['dulook_dxb_recording_2026.csv'], None, (25.12, 55.189), 4, DUBAI, 'Read by eye from the official app; validation only.', None),
-    ('iacad247', 'IACAD (Dulook DXB), Dubai: 2023-2026 days', 'Emirates 24|7 prayer page (republishes IACAD; identical to the IACAD feed on all 180 times of Nov 2026), Internet Archive captures',
+    ('iacad247', 'IACAD (Dulook DXB), Dubai: 2023-2026 days', 'Emirates247 prayer page (republishes IACAD; identical to the IACAD feed on all 180 times of Nov 2026), Internet Archive captures',
      ['iacad_via_emirates247_wayback.csv'], dt.date(2020, 8, 20), (25.12, 55.189), 4, DUBAI, 'Secondary copy: used for validation only.', None),
     ('awqaf', 'Awqaf (UAE), Abu Dhabi', 'awqaf.gov.ae/prayer-times as shown on a visit (region "Abu Dhabi", official times), 16-17 Nov 2026',
      ['awqaf_website_abudhabi_2026-11.csv'], None, ABU_DHABI, 4, AWQAF,
-     'Calculated (provisional profile). Awqaf\'s official API exists on the UAE Government API portal (api.government.ae, "Prayer Timings", needs an API key); not used yet.', None),
+     'Calculated (profile fitted 16 Nov 2026 to the UAE calendar below). Awqaf\'s official API exists on the UAE Government API portal (api.government.ae, "Prayer Timings", needs an API key); not used yet.', None),
     ('szgmc', 'UAE Hijri Calendar (Sheikh Zayed Grand Mosque Centre), Abu Dhabi City', 'HijriBook1445_en.pdf: times "calculated by the International Astronomy Center - Abu Dhabi" under the Centre\'s Sharia and Astronomical Committee (not Awqaf\'s own table)',
      ['szgmc_abudhabi_1445.csv'], None, ABU_DHABI, 4, AWQAF, 'Reference only (compared with the Awqaf profile).', None),
     ('muis', 'MUIS, Singapore', 'data.gov.sg dataset "Muslim Prayer Timetable" (Singapore Open Data Licence)',

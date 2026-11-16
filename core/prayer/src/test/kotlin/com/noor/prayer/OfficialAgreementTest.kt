@@ -50,6 +50,21 @@ class OfficialAgreementTest {
         assertEquals(1, r.maxAbs)
     }
 
+    /** The UAE Hijri Calendar 1445 (Sheikh Zayed Grand Mosque Centre), Abu Dhabi City: the data the Awqaf profile is fitted to. */
+    @Test fun awqafProfileAgainstTheUaeCalendarForAbuDhabi() {
+        val r = agreement("szgmc_abudhabi_1445.csv", GeoPoint(24.4539, 54.3773), ZoneId.of("Asia/Dubai"), Profiles.UAE_AWQAF)
+        assertEquals(353 * 6, r.compared)
+        assertEquals(2038, r.exact, "update accuracy/results/EVIDENCE.md and docs/PRAYER_ACCURACY.md if intended")
+        assertEquals(1, r.maxAbs)
+    }
+
+    /** Awqaf's own website (Abu Dhabi region), two days the fit never saw. */
+    @Test fun awqafProfileAgainstAwqafsWebsite() {
+        val r = agreement("awqaf_website_abudhabi_2026-11.csv", GeoPoint(24.4539, 54.3773), ZoneId.of("Asia/Dubai"), Profiles.UAE_AWQAF)
+        assertEquals(12, r.compared)
+        assertEquals(12, r.exact)
+    }
+
     @Test fun ummAlQuraMakkah1448() {
         val r = agreement("ummalqura_makkah_1448.csv", GeoPoint(21.426666, 39.831666), ZoneId.of("Asia/Riyadh"), Profiles.UMM_AL_QURA)
         assertEquals(355 * 6, r.compared)
