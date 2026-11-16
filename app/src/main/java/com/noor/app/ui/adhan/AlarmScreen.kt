@@ -29,7 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Alarm
-import androidx.compose.material.icons.rounded.Label
+import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Snooze
@@ -346,7 +346,7 @@ private fun AlarmSoundPage(contentPadding: PaddingValues, a: PrayerAlarm, custom
 private fun LabelRow(label: String, onChange: (String) -> Unit) {
     val c = NoorTheme.colors
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconTile(Icons.Rounded.Label)
+        IconTile(Icons.AutoMirrored.Rounded.Label)
         Spacer(Modifier.width(14.dp))
         val hint = stringResource(R.string.alarm_label_hint)
         BasicTextField(label, onChange, singleLine = true, textStyle = MaterialTheme.typography.bodyLarge.copy(color = c.textPrimary),

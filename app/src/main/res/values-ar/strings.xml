@@ -10,7 +10,7 @@
     <string name="next">القادمة</string>
     <string name="in_duration">بعد %1$s</string>
     <string name="hours_minutes">%1$s س %2$s د</string>
-    <string name="minutes_only">%1$s دقيقة</string>
+    <string name="minutes_only">%1$s د</string>
     <string name="remaining">متبقٍ</string>
     <string name="less_than_minute">أقل من دقيقة</string>
     <string name="today">اليوم</string>
@@ -58,8 +58,8 @@
     <string name="numerals_western">غربية (0123)</string>
     <string name="numerals_arabic">عربية مشرقية (٠١٢٣)</string>
     <string name="time_format">صيغة الوقت</string>
-    <string name="time_12">12 ساعة</string>
-    <string name="time_24">24 ساعة</string>
+    <string name="time_12">%1$s ساعة</string>
+    <string name="time_24">%1$s ساعة</string>
     <string name="theme">السمة</string>
     <string name="theme_system">حسب النظام</string>
     <string name="theme_dark">ليلي</string>
@@ -231,7 +231,7 @@
     <string name="adhan_sound_section">الصوت</string>
     <string name="adhan_gradual">رفع الصوت تدريجيًا</string>
     <string name="adhan_gradual_off">متوقف: يبدأ بالصوت الكامل</string>
-    <string name="adhan_gradual_value">يرتفع خلال %1$s ثانية</string>
+    <string name="adhan_gradual_value">يرتفع خلال %1$s ث</string>
     <string name="adhan_dnd">التشغيل في الوضع الصامت و«عدم الإزعاج»</string>
     <string name="adhan_dnd_on">يعمل كالمنبّه.</string>
     <string name="adhan_dnd_off">إشعار صامت حين يكون الهاتف صامتًا.</string>
@@ -248,7 +248,7 @@
     </plurals>
     <string name="adhan_library_section">المكتبة</string>
     <string name="adhan_library">مكتبة الأذان</string>
-    <string name="adhan_library_desc">%1$s أذانًا، مع مصادرها وتراخيصها</string>
+    <string name="adhan_library_desc">المصادر والتراخيص</string>
     <string name="adhan_my_sounds">أصواتي</string>
     <string name="adhan_my_sounds_desc_empty">استورد ملفاتك بصيغة MP3 أو M4A أو AAC أو WAV</string>
     <string name="adhan_my_sounds_desc">المستوردة: %1$s</string>
@@ -263,11 +263,11 @@
     <string name="adhan_vibrate">اهتزاز</string>
     <string name="adhan_stop_after">الإيقاف بعد</string>
     <string name="adhan_stop_full">حتى النهاية</string>
-    <string name="adhan_stop_seconds">%1$s ثانية</string>
-    <string name="adhan_stop_minutes">%1$s دقيقة</string>
+    <string name="adhan_stop_seconds">%1$s ث</string>
+    <string name="adhan_stop_minutes">%1$s د</string>
     <string name="adhan_test">تجربة هذا التنبيه</string>
     <string name="adhan_test_desc">يأتي بعد ١٠ ثوانٍ، تمامًا كما في وقت الصلاة.</string>
-    <string name="adhan_test_sent">تنبيه تجريبي بعد ١٠ ثوانٍ</string>
+    <string name="adhan_test_sent">تنبيه تجريبي بعد %1$s ثوانٍ</string>
     <string name="adhan_test_failed">تعذّر ضبط التنبيه التجريبي.</string>
     <string name="adhan_notification_desc">إشعار عادي بصوت إشعارات هاتفك، ويتبع «عدم الإزعاج» مثل أي إشعار آخر.</string>
     <string name="adhan_silent_desc">إشعار على شاشة القفل وفي لوحة الإشعارات، دون صوت أو اهتزاز.</string>
@@ -688,4 +688,5 @@
     <string name="alarm_length_full">كامل</string>
     <string name="alarm_length_short">قصير</string>
     <string name="alarm_adhan_before_warn">إذا سُمع قبل الصلاة فقد يُظنّ الأذان دخولًا لوقتها.</string>
+    <string name="adhan_warn_fullscreen">لا يمكن لشاشة الأذان أن تظهر فوق شاشة القفل.</string>
 </resources>

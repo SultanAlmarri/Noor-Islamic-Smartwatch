@@ -1,9 +1,10 @@
 name: Fetch licensed Adhan recordings
 
-# Downloads the Wikimedia Commons recordings listed in tools/sounds/adhan_sources.json,
-# re-checks each file's licence and SHA-1, keeps only the audio (lossless FLAC) and publishes
+# Downloads the recordings listed in tools/sounds/adhan_sources.json (Wikimedia Commons, NPS sound
+# libraries, radio aporee on the Internet Archive, the owner's own files in tools/sounds/owner),
+# re-checks each file's licence (Commons) and SHA-1, keeps only the audio (lossless FLAC) and publishes
 # the result, with its attribution data, on the "sound-sources" pre-release.
-# The app's bundled sounds are produced from these files by tools/sounds/process_adhans.py.
+# The app's bundled sounds are produced from these files by tools/sounds/build_library.py.
 
 on:
   push:
@@ -11,6 +12,7 @@ on:
     paths:
       - tools/sounds/adhan_sources.json
       - tools/sounds/fetch_commons.py
+      - tools/sounds/owner/**
       - .github/workflows/fetch-sounds.yml
   workflow_dispatch:
 
@@ -31,12 +33,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: sound-sources
-          name: Adhan source recordings (Wikimedia Commons)
+          name: Sound source recordings (Adhans and nature)
           prerelease: true
           body: |
-            Audio extracted losslessly from freely licensed Wikimedia Commons files, with each file's licence,
-            author and SHA-1 in sources.json. These are the inputs to tools/sounds/process_adhans.py; they are
-            not an app build. Licences: CC0, public domain, CC BY 3.0 and CC BY-SA 4.0 as listed per file.
+            Audio extracted losslessly from freely licensed recordings (Wikimedia Commons, US National Park
+            Service, radio aporee on the Internet Archive, the owner's own recordings), with each file's licence,
+            author and SHA-1 in sources.json. These are the inputs to tools/sounds/build_library.py; they are
+            not an app build. Licences as listed per file (public domain, CC0, CC BY, CC BY-SA).
           files: |
             out/*.flac
             out/*.wav

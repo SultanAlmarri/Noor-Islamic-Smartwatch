@@ -122,7 +122,7 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
             Column(Modifier.graphicsLayer { alpha = intro.value; translationY = (1f - intro.value) * 24.dp.toPx() }) {
                 Text("منهاد", style = MaterialTheme.typography.displayLarge.copy(fontFamily = Kufi, fontSize = 96.sp, fontWeight = FontWeight.Normal),
                     color = Sky.GoldOnSky, modifier = Modifier.semantics { heading() })
-                if (!isArabicUi()) Text("NOOR", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 8.sp, fontSize = 13.sp), color = Sky.OnSkySecondary,
+                if (!isArabicUi()) Text("MINHAD", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 8.sp, fontSize = 13.sp), color = Sky.OnSkySecondary,
                     modifier = Modifier.padding(start = 4.dp))
                 Spacer(Modifier.height(18.dp))
                 Text(stringResource(R.string.onboarding_tagline), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal, lineHeight = 24.sp),

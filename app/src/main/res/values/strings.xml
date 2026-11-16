@@ -58,8 +58,8 @@
     <string name="numerals_western">Western (0123)</string>
     <string name="numerals_arabic">Arabic-Indic (٠١٢٣)</string>
     <string name="time_format">Time format</string>
-    <string name="time_12">12-hour</string>
-    <string name="time_24">24-hour</string>
+    <string name="time_12">%1$s-hour</string>
+    <string name="time_24">%1$s-hour</string>
     <string name="theme">Theme</string>
     <string name="theme_system">System</string>
     <string name="theme_dark">Night</string>
@@ -246,7 +246,7 @@
     </plurals>
     <string name="adhan_library_section">Library</string>
     <string name="adhan_library">Adhan library</string>
-    <string name="adhan_library_desc">%1$s Adhans, with their sources and licences</string>
+    <string name="adhan_library_desc">Sources and licences</string>
     <string name="adhan_my_sounds">My sounds</string>
     <string name="adhan_my_sounds_desc_empty">Import your own MP3, M4A, AAC or WAV files</string>
     <string name="adhan_my_sounds_desc">Imported: %1$s</string>
@@ -265,7 +265,7 @@
     <string name="adhan_stop_minutes">%1$s min</string>
     <string name="adhan_test">Test this alert</string>
     <string name="adhan_test_desc">Comes in 10 seconds, exactly as at prayer time.</string>
-    <string name="adhan_test_sent">Test alert in 10 seconds</string>
+    <string name="adhan_test_sent">Test alert in %1$s seconds</string>
     <string name="adhan_test_failed">The test alert could not be set.</string>
     <string name="adhan_notification_desc">A standard notification with your phone’s notification sound. It follows Do Not Disturb like any other notification.</string>
     <string name="adhan_silent_desc">A notification on the lock screen and in the notification shade, with no sound and no vibration.</string>
@@ -679,4 +679,5 @@
     <string name="alarm_length_full">Full</string>
     <string name="alarm_length_short">Short</string>
     <string name="alarm_adhan_before_warn">Heard before the prayer, the Adhan may be taken for its time.</string>
+    <string name="adhan_warn_fullscreen">The Adhan screen cannot show over the lock screen.</string>
 </resources>

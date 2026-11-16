@@ -124,6 +124,9 @@ fun AdhanScreen(
     var gradualDialog by rememberSaveable { mutableStateOf(false) }
 
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
+    // (Messages from the page's actions, such as the test's "in 10 seconds", or that it could not be set.)
+    val message by vm.message.collectAsStateWithLifecycle()
+    LaunchedEffect(message) { message?.let { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show(); vm.consumeMessage() } }
     val notifPermission = com.noor.app.ui.components.rememberNotificationRequest { vm.refresh() }
     // 0.18: a voice Noor has no recording of takes the user's own, under the voice's name.
     var addingVoice by rememberSaveable { mutableStateOf<String?>(null) }
@@ -159,8 +162,6 @@ fun AdhanScreen(
     if (shown == 0) NoorPage(stringResource(R.string.adhan_title), contentPadding) {
         // 0.17.1: the Adhan and the alarms, each a page of its own under one switch (the owner: "like the clock app,
         // but specialised for prayer times").
-        Segmented(listOf(0 to stringResource(R.string.adhan_section_adhan), 1 to stringResource(R.string.alarms_title)), section, { section = it })
-        if (section == 1) AlarmsList(a, rings, f, onOpen = onOpenAlarm, onToggle = { id, on -> vm.setAlarmOn(id, on) }) else {
         // What needs attention, in a group of its own: there only when something does.
         // (Without a place there are no times to alert at: that comes first, with the way to set one. 0.14: the page
         // said so before, but offered no way there.)
@@ -169,6 +170,12 @@ fun AdhanScreen(
             (if (watch) watches.mapNotNull { w -> watchIssue(w) { vm.openNoorOnWatch(w.node.id) } } else emptyList())
         // (0.15: what stops an alert altogether comes first, before what only makes it late.)
             .sortedByDescending { it.blocking }
+        Segmented(listOf(0 to stringResource(R.string.adhan_section_adhan), 1 to stringResource(R.string.alarms_title)), section, { section = it })
+        // (0.18: what would stop an alarm shows on the alarms' page too.)
+        if (section == 1) {
+            if (issues.isNotEmpty()) AttentionSection(issues)
+            AlarmsList(a, rings, f, onOpen = onOpenAlarm, onToggle = { id, on -> vm.setAlarmOn(id, on) })
+        } else {
         // 0.15: the page opens on what happens next, in big type: the next Adhan and its sound, and the one switch;
         // or, when something would stop it, that it will not sound.
         run {
@@ -198,12 +205,7 @@ fun AdhanScreen(
             )
         }
 
-        if (issues.isNotEmpty()) SettingsSection(stringResource(R.string.adhan_attention)) {
-            issues.forEachIndexed { i, issue ->
-                if (i > 0) SettingsDivider()
-                WarningRow(issue.text, issue.action, issue.onAction, issue.icon, danger = issue.blocking)
-            }
-        }
+        if (issues.isNotEmpty()) AttentionSection(issues)
 
         // 0.18: the voice for every prayer, as tiles, with one volume for all (the owner: "Why can't I set a certain
         // Adhan sound for all the prayers at once?"). Then each prayer with today's time and its switch, and a line
@@ -231,11 +233,9 @@ fun AdhanScreen(
         SettingsSection("") {
             // 0.15: "will it really sound tonight?" answered where the question arises: a real alert in ten seconds,
             // through the whole path, with the next prayer's own sound (its result shows in the history).
-            if (a.enabled) {
-                SettingsItem(Icons.Rounded.PlayCircle, stringResource(R.string.history_test, f.number(10)), null, onClick = {
-                    vm.testNext()
-                    android.widget.Toast.makeText(context, context.getString(R.string.adhan_test_sent), android.widget.Toast.LENGTH_SHORT).show()
-                })
+            // (Not while the alerts are on the watch alone: the test would sound on the phone.)
+            if (a.enabled && a.device != AlertDevice.WATCH) {
+                SettingsItem(Icons.Rounded.PlayCircle, stringResource(R.string.history_test, f.number(10)), null, onClick = { vm.testNext() })
                 SettingsDivider()
             }
             SettingsItem(Icons.Rounded.Tune, stringResource(R.string.adhan_alert_options),
@@ -296,7 +296,7 @@ fun AdhanScreen(
             // through the whole path, with the next prayer's own sound (its result shows in the history below).
             val last = history.firstOrNull()
             SettingsItem(Icons.Rounded.History, stringResource(R.string.history_title),
-                last?.let { r -> (r.prayer?.let { f.prayerName(it) } ?: "") + " · " + outcomeText(r, f) } ?: stringResource(R.string.history_row_empty),
+                last?.let { r -> listOfNotNull(r.prayer?.let { f.prayerName(it) }, outcomeText(r, f)).joinToString(" · ") } ?: stringResource(R.string.history_row_empty),
                 onClick = onOpenHistory)
             if (phone && ready.batteryRestricted) {
                 SettingsDivider()
@@ -314,6 +314,15 @@ fun AdhanScreen(
     }
 }
 
+/** What needs the user's attention, most serious first, each with the one action that fixes it. */
+@Composable
+private fun AttentionSection(issues: List<Issue>) = SettingsSection(stringResource(R.string.adhan_attention)) {
+    issues.forEachIndexed { i, issue ->
+        if (i > 0) SettingsDivider()
+        WarningRow(issue.text, issue.action, issue.onAction, issue.icon, danger = issue.blocking)
+    }
+}
+
 /** What on this phone would stop an alert, most serious first. (The battery advice is not here: it is not a fault.) */
 @Composable
 private fun phoneIssues(ready: Readiness, a: AlertSettings, context: Context, alarms: Boolean, onRequestNotifications: () -> Unit): List<Issue> = buildList {
@@ -327,6 +336,11 @@ private fun phoneIssues(ready: Readiness, a: AlertSettings, context: Context, al
             context.open(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                 .putExtra(Settings.EXTRA_CHANNEL_ID, com.noor.alerts.AlertNotifications.CHANNEL_ADHAN))
         }, blocking = true))
+    }
+    if (!ready.fullScreenAllowed && Build.VERSION.SDK_INT >= 34 && (audible || alarms)) {
+        add(Issue(stringResource(R.string.adhan_warn_fullscreen), stringResource(R.string.adhan_action_allow), {
+            context.open(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + context.packageName)))
+        }))
     }
     if (!ready.exactAlarms && Build.VERSION.SDK_INT >= 31) {
         add(Issue(stringResource(R.string.adhan_warn_exact), stringResource(R.string.adhan_action_exact), {

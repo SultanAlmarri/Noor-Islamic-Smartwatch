@@ -47,7 +47,7 @@ data class AlertRecord(
     val dueAtMs: Long,
     val firedAtMs: Long,
     val outcome: AlertOutcome,
-    /** What was chosen ("adhan.makkah_maghrib_2012", "custom.…", or the mode for notifications). */
+    /** What was chosen ("adhan.makkah", "custom.…", or the mode for notifications). */
     val sound: String? = null,
     /** How long sound actually came out, in milliseconds. */
     val playedMs: Long = 0,

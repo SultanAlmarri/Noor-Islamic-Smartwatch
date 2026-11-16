@@ -59,6 +59,8 @@ data class Readiness(
     val exactAlarms: Boolean = true,
     val alarmVolume: Float = 1f,
     val batteryRestricted: Boolean = false,
+    /** 0.18: Android 14+ lets the Adhan's screen show over the lock screen (it keeps the sound playing on Android 17). */
+    val fullScreenAllowed: Boolean = true,
 )
 
 /** The watch's side, from its last report. */
@@ -207,6 +209,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             exactAlarms = AlertScheduler.canScheduleExact(ctx),
             alarmVolume = AlertPlayer.alarmVolume(ctx),
             batteryRestricted = ctx.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(ctx.packageName) == false,
+            fullScreenAllowed = Build.VERSION.SDK_INT < 34 || nm?.canUseFullScreenIntent() != false,
         )
         viewModelScope.launch {
             _history.value = withContext(Dispatchers.IO) { AlertLog.all(ctx) }
@@ -314,8 +317,11 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             val a = s.alert(p)
             // (For every prayer: those that call the Adhan; a prayer set to a notification or a sound keeps it.)
             if (target == null && a.mode !in VOICE_MODES) continue
-            // 0.18: Fajr takes the voice's own Fajr recording ("As-salatu khayrun min an-nawm") when there is one.
-            val id = if (p == Prayer.FAJR) fajrOf(voice, this, _custom.value) else voice
+            // 0.18: Fajr takes the voice's own Fajr recording ("As-salatu khayrun min an-nawm") when there is one; for
+            // every prayer at once, a voice without one leaves Fajr on the Fajr Adhan it has (never a plain Adhan at Fajr).
+            val own = if (p == Prayer.FAJR) fajrOf(voice, this, _custom.value) else voice
+            if (p == Prayer.FAJR && target == null && own == voice && library.byId(a.soundId)?.fajr == true && voice != SoundIds.RANDOM) continue
+            val id = own
             val entry = library.byId(id)
             val mode = when {
                 custom -> AlertMode.CUSTOM
@@ -392,7 +398,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         val ctx = getApplication<Application>()
         stopPreview()
         _message.value = ctx.getString(
-            if (AlertScheduler.scheduleTest(ctx, p, 10)) com.noor.app.R.string.adhan_test_sent else com.noor.app.R.string.adhan_test_failed)
+            if (AlertScheduler.scheduleTest(ctx, p, 10)) com.noor.app.R.string.adhan_test_sent else com.noor.app.R.string.adhan_test_failed, digits(10))
     }
 
     /**
@@ -439,6 +445,14 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun openNoorOnWatch(nodeId: String) = viewModelScope.launch { container.watchSetup.openNoorOnWatch(nodeId) }
 
     fun consumeMessage() { _message.value = null }
+
+    /** [n] in the digits the user chose and the app's language (for messages built here). */
+    private fun digits(n: Int): String {
+        val s = settings.value ?: return n.toString()
+        val ar = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language == "ar" ||
+            (androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().isEmpty && java.util.Locale.getDefault().language == "ar")
+        return com.noor.app.util.Formatter(ar, s.numerals, s.timeFormat).number(n)
+    }
 
     override fun onCleared() { player.stop(notify = false) }
 }

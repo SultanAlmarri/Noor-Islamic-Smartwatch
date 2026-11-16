@@ -1264,3 +1264,40 @@ alarm being edited in Arabic and by day, ringing in English and Arabic). The who
 
 **Not tested**: on a phone: an alarm ringing at a real prayer-relative time, Snooze, the phone's alarm sound,
 notification-only alarms.
+
+## 28. Minhad; the owner's sounds; a calmer Adhan tab; authorities for every country; a review (0.18.0, 16–17 November 2026, phone and watch)
+
+**What the owner asked** (16 November, evening and night): set one Adhan for every prayer at once ("why do I have to
+go to every individual prayer"); only the voices Makkah, Madinah, Al-Quds, Egypt and Dubai (the Dubai Mall Adhan)
+and Random, each whole and its opening; five real sound effects (birds and four more, no music), each whole and short;
+a master volume; the alarms' sounds to include the phone's ringtone, the voices and the effects; a light vibration on
+touches throughout; no redundant button or text; then, before sleeping, to find and fix every bug in both languages
+and on the home screen's sky, to make the app much faster, prayer times exact for IACAD and Awqaf and every authority
+of the world chosen by GPS, the app renamed **Minhad (منهاد)**, and evidence of the accuracy at the end.
+
+**What was done**:
+- Sounds (a helper agent, then the lead): the library is `adhan.makkah`, `adhan.madinah` (Commons, CC BY 3.0),
+  `adhan.dubai` and `adhan.dubai_fajr` (the owner's files, who states he holds the rights; their tags name YouTube
+  uploads, written down in SOUNDS.md), each with its opening; `fx.birds`, `fx.rooster`, `fx.waves`, `fx.rain`,
+  `fx.stream` (US National Park Service, public domain; radio aporee, CC BY 3.0), whole and short, raised to about
+  −18 LUFS. Al-Quds and Egypt: no recording with a usable licence was found; they take the user's own. The Dubai
+  Mall recording on YouTube was not downloaded (YouTube's terms; rule 7). Fajr's default is Makkah (no licensed Makkah
+  Fajr Adhan exists); a voice's Fajr recording plays at Fajr (Dubai's, or the user's "<voice> Fajr").
+- Adhan tab: `VoiceCard` (six tiles, the voice for every prayer, its opening heard on touch) and one volume for all
+  (`setVolumeAll`); prayers list without the voice row; no "turn on" button, fewer footers; a prayer can be set to a
+  Sound (the effects); the library is a plain list with credits (no favourites or filters).
+- Alarms: `AlarmSound.RINGTONE` and `LIBRARY` (with `short`), the sound page in four groups with Full | Short; one
+  band across the wheels, more room for "Before"; snoozes kept across a restart.
+- Haptics: `withTick` on buttons, rows, switches, tabs and choices; wheels and sliders tick.
+- Rebrand: every visible name (app, watch app, watch faces, notifications, wordmark منهاد in Kufi, MINHAD).
+- Authorities (a helper agent): profiles for Morocco, Algeria, Tunisia, Jordan, Portugal, Russia, Brunei, Moonsighting
+  Committee (UK; seasonal twilight in the engine), UOIF (France), Shia Ithna Ashari (manual), regional methods; every
+  ISO country mapped; the country from the offline time-zone map when there is no network (`ZoneCountries`). See
+  AUTHORITIES.md.
+- Review (an independent agent reading all the code but the sky): 24 findings, all fixed (permissions that did
+  nothing after two refusals, Isha not lit after it began, the status notification sharing Fajr's reminder id,
+  Arabic units, digits by the user's choice, the language set in Android's settings, a warning when the Adhan screen
+  may not show over the lock screen, the watch's Jumu'ah and 24-hour times, the watch's official times refreshed daily,
+  and more).
+
+**Tests**: see the release report; unit tests and software renders only. **Not tested**: on a phone or watch.
