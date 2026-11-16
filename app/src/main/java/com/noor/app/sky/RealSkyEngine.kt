@@ -91,32 +91,6 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
     fun setVisible(v: Boolean) { synchronized(lock) { visible = v; lock.notifyAll() } }
 
-    @Volatile private var warm = false
-    @Volatile private var warmBiome: Biome? = null
-    private fun warmDue(failed: Boolean) = warm && !glReady && !failed
-
-    /**
-     * (0.18) Gets ready for the home screen before it is on the screen (while the launch screen shows): builds the
-     * shader programs and starts reading the scenery's own pictures, so that the opening opens onto the scene. Until
-     * 0.17 all of it began only once the home screen's view was laid out, and the opening ran over that work.
-     */
-    fun prewarm(biome: Biome?) { synchronized(lock) { warmBiome = biome; warm = true; lock.notifyAll() } }
-
-    private fun warmUp() {
-        warm = false
-        if (glReady) return
-        val began = SystemClock.uptimeMillis()
-        if (!firstShown && !attempting) { attempting = true; RealSky.beginAttempt(app) }
-        initGl()
-        val b = warmBiome ?: return
-        val land = bakedSet("land/${b.id}", true) ?: return
-        val now = SystemClock.uptimeMillis()
-        land.lastUsed = now
-        for (n in arrayOf("a", "k", "g")) want(land, n, now)
-        if (land.mask) want(land, "m", now)
-        Log.i(TAG, "Made ready ahead of the home screen: ${SystemClock.uptimeMillis() - began} ms")
-    }
-
     fun wake() { synchronized(lock) { lock.notifyAll() } }
 
     // ---- EGL ---------------------------------------------------------------------------------------------------
@@ -161,7 +135,6 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         progs.clear(); tex.clear()
         tTrans = null; tMeter = null; tSky = null; tScene = null; tB4 = null; tB8a = null; tB8b = null
         b4 = null; b8a = null; b8b = null; zero = null
-        waitingJobs.clear(); nightAsked = false
         baked.clear(); loaded.clear(); slots.forEach { it.live = emptyList(); it.out = null; it.outT = null }
         sizedFor = ""; landKey = ""; lightKey = ""; starVao = 0; starCount = 0; stillDrawn = null
     }
@@ -355,10 +328,21 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         tex["tTrans"] = hdr(256, 64).also { tTrans = target(it) }
         tex["tMeter"] = hdr(10, 1, GLES30.GL_NEAREST).also { tMeter = target(it) }
         buildStars()
-        // The Milky Way and the Moon's face (NASA's maps; see tools/scenery/nightsky.py): a picture each, read with the
-        // rest (0.18: they were read here, before the first picture, by day as well).
-        nightAsked = false
-        askNight()
+        // The Milky Way and the Moon's face (NASA's maps; see tools/scenery/nightsky.py): a picture each.
+        for ((name, file) in listOf("tMilky" to "milkyway.webp", "tMilkyHi" to "starfield.webp", "tMoon" to "moon.jpg")) runCatching {
+            val opts = BitmapFactory.Options().apply {
+                inPremultiplied = false; inPreferredConfig = Bitmap.Config.ARGB_8888
+                inSampleSize = if (name != "tMoon" && tier.ordinal >= RealSky.Tier.MEDIUM.ordinal) 2 else 1
+            }
+            val bmp = app.assets.open("sky2/night/$file").use { BitmapFactory.decodeStream(it, null, opts) } ?: error("unreadable")
+            val buf = ByteBuffer.allocateDirect(bmp.width * bmp.height * 4)
+            bmp.copyPixelsToBuffer(buf); buf.position(0)
+            val t = tex2D(bmp.width, bmp.height, GLES30.GL_RGBA8, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, GLES30.GL_LINEAR, GLES30.GL_REPEAT)
+            GLES30.glTexSubImage2D(GLES30.GL_TEXTURE_2D, 0, 0, 0, bmp.width, bmp.height, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buf)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+            bmp.recycle()
+            tex[name] = t
+        }.onFailure { Log.w(TAG, "No picture $file", it) }
         lastHaze = -1f; lightKey = ""; landKey = ""; sizedFor = ""
         glReady = true
         Log.i(TAG, "Real sky built: tier ${tier.name}, ${SystemClock.uptimeMillis() - began} ms")
@@ -467,82 +451,17 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         val used = HashMap<String, Long>()
         var lit: Tex? = null; var litT: Target? = null; var litKey = ""
         var lastUsed = 0L
-        /** (0.18) When it first came on show (0 = not yet), and whether it was wanted in the sky before its pictures were at hand. */
-        var appeared = 0L; var late = false
         val water: Float get() = if (meta.isNull("water")) 0f else meta.optDouble("water", 0.0).toFloat()
         val mask: Boolean get() = meta.optBoolean("mask", false)
         fun num(name: String, or: Double = 0.0) = meta.optDouble(name, or).toFloat()
     }
-    private class Loaded(val set: Baked?, val name: String, val w: Int, val h: Int, val grey: Boolean, val nearest: Boolean, val pixels: ByteBuffer?)
+    private class Loaded(val set: Baked, val name: String, val w: Int, val h: Int, val grey: Boolean, val nearest: Boolean, val pixels: ByteBuffer?)
     private class Slot { var live: List<Baked> = emptyList(); var out: Tex? = null; var outT: Target? = null; var drawnKey = ""; var drawnAt = 0L }
 
     private val baked = HashMap<String, Baked?>()
     private val loaded = ConcurrentLinkedQueue<Loaded>()
     private val slots = Array(3) { Slot() }
-
-    /**
-     * (0.18) A picture to read: what the moment on the screen needs ([urgent]) goes before what is only read ahead
-     * (the next set of clouds on its way, the shading under the next rendered Suns), first asked first served within
-     * each. A picture read ahead that the screen then asks for is moved up.
-     */
-    private class Job(@Volatile var urgent: Boolean, val order: Long, val body: () -> Unit) : Runnable, Comparable<Job> {
-        override fun run() = body()
-        override fun compareTo(other: Job): Int = if (urgent != other.urgent) (if (urgent) -1 else 1) else order.compareTo(other.order)
-    }
-    private val jobOrder = java.util.concurrent.atomic.AtomicLong()
-    private val queue = java.util.concurrent.PriorityBlockingQueue<Runnable>()
-    /**
-     * (0.18) Pictures are read by two or three threads at once (they were read one after another: a start that needed
-     * thirty pictures waited for each in turn, and the opening ran on the waiting sky).
-     */
-    private val decoders = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 3)
-    private val loader = java.util.concurrent.ThreadPoolExecutor(decoders, decoders, 20L, java.util.concurrent.TimeUnit.SECONDS, queue) { r ->
-        Thread(r, "NoorSkyPictures").apply { priority = Thread.NORM_PRIORITY - 2; isDaemon = true }
-    }.apply { allowCoreThreadTimeOut(true) }
-    private val waitingJobs = HashMap<String, Job>()   // asked for and not yet read, by set key and name (render thread only)
-
-    /**
-     * (0.18) Buffers for decoded pixels, used again rather than made anew for every picture (each was 4 to 10 MB of
-     * garbage, made while the screen was moving).
-     */
-    private val buffers = ConcurrentLinkedQueue<ByteBuffer>()
-    private fun buffer(bytes: Int): ByteBuffer {
-        val it = buffers.iterator()
-        while (it.hasNext()) { val b = it.next(); if (b.capacity() >= bytes && b.capacity() <= bytes * 2) { it.remove(); b.clear(); b.limit(bytes); return b } }
-        return ByteBuffer.allocateDirect(bytes)
-    }
-    private fun giveBack(b: ByteBuffer?) { if (b != null && buffers.size < 6) buffers.add(b) }
-    /** Each reading thread's own bitmap and scratch row of bytes, used again from picture to picture. */
-    private class Scratch { var bitmap: Bitmap? = null; var rgba: ByteBuffer? = null }
-    private val scratch = ThreadLocal.withInitial { Scratch() }
-
-    /** Reads a picture of the APK's assets: RGBA (or one channel, [grey]) in a buffer ready for the GPU. */
-    private fun decode(path: String, sample: Int, grey: Boolean): Triple<Int, Int, ByteBuffer> {
-        val s = scratch.get()!!
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true; inSampleSize = sample }
-        app.assets.open(path).use { BitmapFactory.decodeStream(it, null, bounds) }
-        val opts = BitmapFactory.Options().apply {
-            inPremultiplied = false; inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888; inMutable = true
-            // (The bitmap of this thread's last picture, if this one fits in it: the same size, as most are.)
-            s.bitmap?.takeIf { !it.isRecycled && bounds.outWidth > 0 && it.width == bounds.outWidth && it.height == bounds.outHeight }?.let { inBitmap = it }
-        }
-        val bmp = runCatching { app.assets.open(path).use { BitmapFactory.decodeStream(it, null, opts) } }.getOrNull()
-            ?: app.assets.open(path).use { BitmapFactory.decodeStream(it, null, opts.apply { inBitmap = null }) } ?: error("unreadable")
-        if (s.bitmap !== bmp) { s.bitmap?.recycle(); s.bitmap = bmp }
-        val w = bmp.width; val h = bmp.height
-        if (!grey) {
-            val out = buffer(w * h * 4)
-            bmp.copyPixelsToBuffer(out); out.position(0)
-            return Triple(w, h, out)
-        }
-        // One channel of four: through this thread's own buffers, into one the size of the picture.
-        val rgba = s.rgba?.takeIf { it.capacity() >= w * h * 4 } ?: ByteBuffer.allocateDirect(w * h * 4).also { s.rgba = it }
-        rgba.clear(); bmp.copyPixelsToBuffer(rgba); rgba.position(0)
-        val out = buffer(w * h)
-        for (i in 0 until w * h) out.put(i, rgba.get(i * 4))
-        out.position(0)
-        return Triple(w, h, out)
-    }
+    private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "NoorSkyPictures").apply { priority = Thread.NORM_PRIORITY - 2; isDaemon = true } }
 
     private fun bakedSet(dir: String, land: Boolean, turned: Boolean = false): Baked? {
         val key = if (turned) "$dir#turned" else dir
@@ -556,18 +475,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         return b
     }
 
-    /**
-     * A picture of a set as a texture, or null while it is being read (or if the set has none of that name). [ahead]:
-     * only read ahead of need (it waits behind every picture the screen needs now).
-     */
-    private fun want(b: Baked, name: String, now: Long, ahead: Boolean = false): Tex? {
+    /** A picture of a set as a texture, or null while it is being read (or if the set has none of that name). */
+    private fun want(b: Baked, name: String, now: Long): Tex? {
         b.tex[name]?.let { b.used[name] = now; return it }
-        if (name in b.missing) return null
-        if (!b.asked.add(name)) {
-            // Asked for already: if only to read ahead and now it is needed, it goes to the front.
-            if (!ahead) waitingJobs["${b.key}/$name"]?.let { j -> if (!j.urgent && queue.remove(j)) { j.urgent = true; loader.execute(j) } }
-            return null
-        }
+        if (name in b.missing || !b.asked.add(name)) return null
         // (A land's colours in another season: a_<season>, k_<season>.)
         val seasonal = b.land && (name.startsWith("a_") || name.startsWith("k_"))
         val colour = b.land && (name == "a" || name == "k" || name == "g" || name == "m" || seasonal)
@@ -578,38 +489,33 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         }
         // Coarser pictures on phones with little to spare (never the distances, which are small already).
         val sample = if (b.land) (if (name == "g") 1 else tier.landSample) else tier.cloudSample
-        val id = "${b.key}/$name"
-        val job = Job(!ahead, jobOrder.incrementAndGet()) {
+        loader.execute {
             val out = runCatching {
-                val (w, h, px) = decode("sky2/${b.dir}/$file", sample, !colour)
-                Loaded(b, name, w, h, !colour, name == "g", px)
+                val opts = BitmapFactory.Options().apply { inPremultiplied = false; inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888 }
+                val bmp = app.assets.open("sky2/${b.dir}/$file").use { BitmapFactory.decodeStream(it, null, opts) } ?: error("unreadable")
+                val w = bmp.width; val h = bmp.height
+                val rgba = ByteBuffer.allocateDirect(w * h * 4)
+                bmp.copyPixelsToBuffer(rgba)
+                bmp.recycle()
+                if (colour) { rgba.position(0); Loaded(b, name, w, h, false, name == "g", rgba) }
+                else {
+                    val all = ByteArray(w * h * 4); rgba.position(0); rgba.get(all)
+                    val one = ByteArray(w * h)
+                    for (i in one.indices) one[i] = all[i * 4]
+                    Loaded(b, name, w, h, true, false, ByteBuffer.allocateDirect(w * h).put(one).also { it.position(0) })
+                }
             }.getOrElse { Loaded(b, name, 0, 0, true, false, null) }
             loaded.add(out)
             wake()
         }
-        waitingJobs[id] = job
-        loader.execute(job)
         return null
     }
 
-    /**
-     * Pictures the readers have finished become textures. (0.18) While the scene is moving (a drag, the opening) at
-     * most a few megabytes of them a frame, so that no frame of the motion waits for a heap of uploads; before the
-     * first picture, all at once.
-     */
-    private fun drain(moving: Boolean) {
-        var budget = if (moving) UPLOAD_BYTES_MOVING else Long.MAX_VALUE
-        var first = true
+    /** Pictures the loader has finished become textures. */
+    private fun drain() {
         while (true) {
-            val l = loaded.peek() ?: break
-            val bytes = l.w.toLong() * l.h * (if (l.grey) 1 else 4)
-            if (!first && bytes > budget) break
-            loaded.poll()
-            first = false
-            budget -= bytes
-            if (l.set == null) { night(l); continue }
-            waitingJobs.remove("${l.set.key}/${l.name}")
-            if (baked[l.set.key] !== l.set) { giveBack(l.pixels); continue }    // of a context that is gone
+            val l = loaded.poll() ?: break
+            if (baked[l.set.key] !== l.set) continue                      // of a context that is gone
             if (l.pixels == null) { l.set.missing += l.name; continue }
             val t = IntArray(1)
             GLES30.glGenTextures(1, t, 0)
@@ -617,7 +523,6 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             GLES30.glPixelStorei(GLES30.GL_UNPACK_ALIGNMENT, 1)
             if (l.grey) GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_R8, l.w, l.h, 0, GLES30.GL_RED, GLES30.GL_UNSIGNED_BYTE, l.pixels)
             else GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_RGBA8, l.w, l.h, 0, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, l.pixels)
-            giveBack(l.pixels)
             val filter = if (l.nearest) GLES30.GL_NEAREST else GLES30.GL_LINEAR
             // The land's own picture and its mask are also kept in smaller, softer copies: water mirrors the land through
             // its ripples, blurred (scene.frag asks for a copy by its size; the land itself is drawn from the full one).
@@ -629,36 +534,6 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
             l.set.tex[l.name] = Tex(t[0], l.w, l.h)
         }
-    }
-
-    /** The night's pictures (the Milky Way, NASA's star map, the Moon's face): read with the rest, not before the first picture. */
-    private val nightPictures = listOf("tMilky" to "milkyway.webp", "tMilkyHi" to "starfield.webp", "tMoon" to "moon.jpg")
-    private var nightAsked = false
-    private var nightLeft = 0
-    private fun askNight() {
-        if (nightAsked) return
-        nightAsked = true
-        nightLeft = nightPictures.size
-        for ((name, file) in nightPictures) {
-            val sample = if (name != "tMoon" && tier.ordinal >= RealSky.Tier.MEDIUM.ordinal) 2 else 1
-            loader.execute(Job(true, jobOrder.incrementAndGet()) {
-                val out = runCatching { decode("sky2/night/$file", sample, false).let { (w, h, px) -> Loaded(null, name, w, h, false, false, px) } }
-                    .getOrElse { Log.w(TAG, "No picture $file", it); Loaded(null, name, 0, 0, false, false, null) }
-                loaded.add(out)
-                wake()
-            })
-        }
-    }
-    private fun night(l: Loaded) {
-        nightLeft--
-        val px = l.pixels ?: return
-        if (!glReady) { giveBack(px); return }
-        val t = tex2D(l.w, l.h, GLES30.GL_RGBA8, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, GLES30.GL_LINEAR, GLES30.GL_REPEAT)
-        GLES30.glPixelStorei(GLES30.GL_UNPACK_ALIGNMENT, 1)
-        GLES30.glTexSubImage2D(GLES30.GL_TEXTURE_2D, 0, 0, 0, l.w, l.h, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, px)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
-        giveBack(px)
-        tex[l.name] = t
     }
 
     private fun known(b: Baked, name: String, now: Long): Boolean = want(b, name, now) != null || name in b.missing
@@ -701,29 +576,18 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     }
 
     /** A cloud set is ready to be shown when its own four pictures and its shading for this moment are at hand. */
-    private fun setReady(b: Baked, lw: LightWeights, mirror: Boolean, now: Long): Int {
+    private fun setReady(b: Baked, lw: LightWeights, mirror: Boolean, now: Long): Boolean {
         var ok = true
         for (n in arrayOf("a", "f", "k", "g")) if (!known(b, n, now)) ok = false
-        val lit = light(b, lw, mirror, now)
-        if (!ok || b.tex["a"] == null) return 0
-        // (0.18) Once it has been lit, a set stays on show while the shading of a new moment is read: the mix of the
-        // pictures at hand stands in. Until 0.17 a set waited for every shading picture of the moment, so dragging the
-        // Sun took whole sets out of the sky and put them back as their pictures were read ("clouds keep popping in
-        // and out").
-        return if (lit) 2 else if (b.lit != null) 1 else 0
+        if (!light(b, lw, mirror, now)) ok = false
+        return ok && b.tex["a"] != null
     }
 
-    /** How far a set has come in (0..1): see [layer]. */
-    private fun appear(b: Baked, now: Long): Float {
-        val t = ((now - b.appeared) / APPEAR_MS.toFloat()).coerceIn(0f, 1f)
-        return t * t * (3 - 2 * t)
-    }
-
-    private fun drawSet(b: Baked, slot: Slot, level: Int, leg: CloudLeg, offset: Float, flip: Boolean, now: Long) {
+    private fun drawSet(b: Baked, slot: Slot, level: Int, leg: CloudLeg, offset: Float, flip: Boolean) {
         // (uLay.w: 1 = the scene is mirrored, 2 = this set's picture is turned about, 3 = both.)
         use(progs.getValue("layer"), slot.outT, mapOf(
             "tA" to (b.tex["a"] ?: zero!!), "tF" to (b.tex["f"] ?: zero!!), "tK" to (b.tex["k"] ?: zero!!), "tG" to (b.tex["g"] ?: zero!!), "tLit" to (b.lit ?: zero!!),
-            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), leg.weight * appear(b, now), (if (flip) 1f else 0f) + (if (leg.turned) 2f else 0f)),
+            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), leg.weight, (if (flip) 1f else 0f) + (if (leg.turned) 2f else 0f)),
             "uLayFrame" to floatArrayOf(b.num("azHalf", 29.4), b.num("elMin", -1.0), b.num("elMax", 40.0), offset),
         ))
         draw()
@@ -743,9 +607,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             // (A set whose pictures cannot be read is as good as no set: nothing waits for it.)
             val b = bakedSet("clouds/${leg.set}", false, leg.turned)?.takeIf { "a" !in it.missing } ?: continue
             // (A set turned about is lit from the other side: its picture's left is the sky's right.)
-            val r = setReady(b, if (leg.turned) f.cloudLight.mirrored() else f.cloudLight, f.flip, now)
-            if (r > 0) show += b to leg else b.late = true
-            if (r < 2) waiting = true
+            if (setReady(b, if (leg.turned) f.cloudLight.mirrored() else f.cloudLight, f.flip, now)) show += b to leg else waiting = true
         }
         slot.live = show.map { it.first }
         if (show.isEmpty()) {
@@ -753,14 +615,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             u["uCloudF$i"] = floatArrayOf(1080f, 1056f, 1350f, 1080f)
             return !waiting
         }
-        for ((b, leg) in show) {
-            b.lastUsed = now; light(b, if (leg.turned) f.cloudLight.mirrored() else f.cloudLight, f.flip, now)
-            // (0.18) A set whose pictures were not at hand when it should have come into the sky (a drag far through
-            // the day can outrun the reading of pictures) comes in over a moment, as a cloud gathers, never at a
-            // stroke. Sets on show from the first picture, and sets read ahead, are simply there.
-            if (b.appeared == 0L) b.appeared = if (shown && b.late) now else now - APPEAR_MS
-            if (appear(b, now) < 1f) appearing = true
-        }
+        for ((b, leg) in show) { b.lastUsed = now; light(b, if (leg.turned) f.cloudLight.mirrored() else f.cloudLight, f.flip, now) }
         val w = 1144 / tier.cloudSample; val h = 902 / tier.cloudSample
         if (slot.out == null || slot.out!!.w != w || slot.out!!.h != h) {
             delete(slot.outT); delete(slot.out)
@@ -773,7 +628,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         // The clouds move by less than a pixel a second: a level's window is drawn again five times a second, not at
         // every frame; and at once when something else has changed (the light, the sets on show, their amounts), and at
         // every frame while the Sun is dragged or a breath of wind runs through.
-        val key = show.joinToString("|") { (b, leg) -> "${b.key} ${b.litKey} ${(leg.weight * appear(b, now) * 200).toInt()}" } + " $w ${f.flip}"
+        val key = show.joinToString("|") { (b, leg) -> "${b.key} ${b.litKey} ${(leg.weight * 200).toInt()}" } + " $w ${f.flip}"
         if (slot.drawnKey == key && !busyNow && now - slot.drawnAt < 200) return !waiting
         slot.drawnKey = key; slot.drawnAt = now
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, slot.outT!!.fbo)
@@ -782,64 +637,17 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         // The home screen tells the moment once a minute. While that moment is now, the clouds are carried on from it
         // at their own speed, so that they glide (a moment the Sun has been dragged to is not now: it stands as it
         // is told; so does everything with animations off).
-        // (0.18) Carried on only as far as the moment shown is now: until 0.17 the clouds were carried on whenever the
-        // moment shown lay within two and a half minutes of the clock, so a drag through now, and the Sun's spring
-        // back to now when it was let go, threw the low clouds five degrees along at a stroke as it crossed that line.
-        val lead = if (f.still || f.shownAtMs <= 0L || f.nowMs <= 0L) 0f else {
-            val since = ((System.currentTimeMillis() - f.nowMs) / 1000f).let { if (it in 0f..150f) it else 0f }
-            val away = abs(f.shownAtMs - f.nowMs) / 1000f
-            since * (1f - smoothstepF(0f, 180f, away))
-        }
+        val lead = if (f.still || f.shownAtMs <= 0L) 0f else ((System.currentTimeMillis() - f.shownAtMs) / 1000f).let { if (it in 0f..150f) it else 0f }
         for ((b, leg) in show) {
             if (b.tex["a"] == null) continue
             // (A breath of wind from a touch carries the clouds a little further along.)
-            drawSet(b, slot, i, leg, leg.offset + leg.speed * lead + travelNow * 6f, f.flip, now)
+            drawSet(b, slot, i, leg, leg.offset + leg.speed * lead + travelNow * 6f, f.flip)
         }
         GLES30.glDisable(GLES30.GL_BLEND)
         return !waiting
     }
-    private fun smoothstepF(a: Float, b: Float, x: Float): Float { val t = ((x - a) / (b - a)).coerceIn(0f, 1f); return t * t * (3 - 2 * t) }
     private var coverNow = 0f
     private var travelNow = 0f
-    private var appearing = false
-
-    /**
-     * (0.18) Reads ahead what the next moments will ask for, behind everything the screen needs now: the sets of
-     * cloud next on their way into the view (SkyDirector.ahead), in the light of the moment; and while the Sun is
-     * dragged or the opening runs, the shading of the land and of the sets on show under the rendered Suns on either
-     * side of the moment's, so that a drag finds them at hand.
-     */
-    private fun readAhead(f: RealSkyFrame, now: Long) {
-        for (level in 0..2) for (leg in f.soon[level]) {
-            val b = bakedSet("clouds/${leg.set}", false, leg.turned) ?: continue
-            if ("a" in b.missing) continue
-            // (Kept while it is on its way; forgotten ten seconds after it no longer is, unless it came on show.)
-            b.lastUsed = max(b.lastUsed, now - 20_000)
-            for (n in CLOUD_PICTURES) want(b, n, now, ahead = true)
-            val lw = if (leg.turned) f.cloudLight.mirrored() else f.cloudLight
-            for (i in 0 until 5) if (lw.w[i] > 0.004f) want(b, lw.names[i], now, ahead = true)
-        }
-        if (!busyNow) return
-        bakedSet("land/${f.biome.id}", true)?.let { land -> for (n in nextSuns(f.landLight)) want(land, n, now, ahead = true) }
-        for (slot in slots) for (b in slot.live) {
-            val lw = if (b.key.endsWith("#turned")) f.cloudLight.mirrored() else f.cloudLight
-            for (n in nextSuns(lw)) want(b, n, now, ahead = true)
-        }
-    }
-
-    /** The rendered Suns on either side of those a moment's light is mixed from (l3 and l4: l2 and l5). */
-    private fun nextSuns(lw: LightWeights): List<String> {
-        val out = ArrayList<String>(4)
-        for (i in 0 until 5) {
-            if (lw.w[i] <= 0.004f) continue
-            val n = lw.names[i]
-            if (n == "top") continue
-            val k = SUN_ORDER.indexOf(n.substring(1))
-            if (k < 0) continue
-            for (d in intArrayOf(-1, 1)) SUN_ORDER.getOrNull(k + d)?.let { val m = n.substring(0, 1) + it; if (m !in out && m !in lw.names) out += m }
-        }
-        return out
-    }
 
     /** Forgets pictures that have not been used for a while: only what the moment needs stays in memory. */
     private fun tidy(now: Long) {
@@ -864,7 +672,6 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         b.tex.values.forEach { delete(it) }
         b.tex.clear(); b.asked.clear(); b.used.clear()
         delete(b.litT); delete(b.lit); b.lit = null; b.litT = null; b.litKey = ""
-        b.appeared = 0L; b.late = false
     }
 
     // ---- A frame -----------------------------------------------------------------------------------------------
@@ -872,13 +679,13 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     /** Draws what is due; returns true if a new picture went to the screen. */
     private fun frame(f: RealSkyFrame, now: Long): Boolean {
         sizeBuffers(surfaceW, surfaceH)
+        drain()
         // A touch's breath of wind: strong at once, gone in a few seconds; the clouds keep the ground it gave them.
         val gusts = RealSky.gusts
         val age = (now - RealSky.gustAt) / 1000f
         val gust = if (gusts > 0 && age < 8f && !f.still) kotlin.math.exp(-age / 1.4f) else 0f
         travelNow = if (gusts > 0 && !f.still) 0.06f * (gusts - 1) + 0.06f * (1f - kotlin.math.exp(-age / 1.4f)) else 0f
         busyNow = f.busy || gust > 0.02f
-        drain(shown && (busyNow || fade < 1f))
         val dt = if (lastFrame == 0L) 0f else min(1f, (now - lastFrame) / 1000f)
         lastFrame = now
         f.fill(u, ui, viewW.toFloat(), viewH.toFloat(), (now - epoch) / 1000f, gust, travelNow)
@@ -936,19 +743,15 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
         // The clouds: three layers, each a set in the light of the moment.
         coverNow = 0f
-        appearing = false
         val s = f.state
         for (i in 0..2) if (!layer(i, s.clouds[i], f, now)) ready = false
         u["uCloudD"] = floatArrayOf(0f, 0f, 0f, if (slots.any { it.live.isNotEmpty() }) 1f else 0f)
         u["uCover"] = floatArrayOf(coverNow)
-        if (shown) readAhead(f, now)
         tidy(now)
-        // (The night's own pictures are read with the rest; a first picture by night waits for them.)
-        if (f.night > 0.05f && nightLeft > 0) ready = false
 
         if (!ready && !shown) return false
-        // (While birds cross or a star falls, or a set of clouds comes in, every frame counts.)
-        val lively = (u["uBirds"]?.get(0) ?: -1f) >= 0f || (u["uMeteor"]?.get(0) ?: 0f) > 0f || (u["uThunder"]?.get(0) ?: 0f) > 0f || appearing
+        // (While birds cross or a star falls, every frame counts.)
+        val lively = (u["uBirds"]?.get(0) ?: -1f) >= 0f || (u["uMeteor"]?.get(0) ?: 0f) > 0f || (u["uThunder"]?.get(0) ?: 0f) > 0f
         val sceneDue = busyNow || lively || !shown || fade < 1f || now - lastScene >= (if (water) tier.waterMs else tier.stillMs)
         if (!sceneDue) return false
         lastScene = now
@@ -1005,20 +808,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             val f: RealSkyFrame?
             synchronized(lock) {
                 if (surfaceChanged) { surfaceChanged = false; runCatching { bindSurface() }; lock.notifyAll() }
-                while (running && !surfaceChanged && !warmDue(failed) && (surface == null || !visible || pending.get() == null || eglSurface == EGL14.EGL_NO_SURFACE)) runCatching { lock.wait(500) }
+                while (running && !surfaceChanged && (surface == null || !visible || pending.get() == null || eglSurface == EGL14.EGL_NO_SURFACE)) runCatching { lock.wait(500) }
                 f = pending.get()
             }
             if (!running) break
-            if (warmDue(failed)) {
-                // (0.18) Made ready while the launch screen shows: the shaders built and the scenery's own pictures
-                // read before the home screen asks for its first picture.
-                try { warmUp() } catch (e: Throwable) {
-                    Log.w(TAG, "Real sky failed; the 0.9 sky takes over", e)
-                    failed = true; running = false
-                    RealSky.fail(app, e.message ?: e.javaClass.simpleName)
-                }
-                continue
-            }
             if (surfaceChanged || f == null || failed) continue
             try {
                 if (!glReady || (!firstShown && !attempting)) { attempting = true; RealSky.beginAttempt(app) }
@@ -1071,13 +864,6 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
     companion object {
         private const val TAG = "NoorRealSky"
-        /** (0.18) How long a set of clouds takes to come in when its pictures were not at hand in time (ms). */
-        private const val APPEAR_MS = 700L
-        /** (0.18) At most this many bytes of pictures go to the GPU in one frame while the scene moves (the first always). */
-        private const val UPLOAD_BYTES_MOVING = 6_000_000L
-        private val CLOUD_PICTURES = arrayOf("a", "f", "k", "g")
-        /** The rendered Suns from the lowest to the highest (clouds also have the two under the horizon). */
-        private val SUN_ORDER = arrayOf("u1", "u0", "0", "1", "2", "3", "4", "5", "6", "7")
         // High precision everywhere: phone GPUs default 2D textures to low precision, which would crush linear light.
         private const val HEAD = "#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\nprecision highp sampler3D;\n"
     }

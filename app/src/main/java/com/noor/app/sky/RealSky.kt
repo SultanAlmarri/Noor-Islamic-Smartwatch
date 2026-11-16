@@ -157,20 +157,6 @@ object RealSky {
         return unusable.intValue == 0
     }
 
-    /**
-     * (0.18) The app is starting on the home screen: the renderer gets ready behind the launch screen (its shaders,
-     * the scenery's pictures). Nothing happens where the real sky is not used.
-     */
-    fun prewarm(context: Context, settings: com.noor.app.data.AppSettings) {
-        if (forceOff) return
-        runCatching {
-            if (!usable(context, settings.skyGraphics)) return
-            val place = com.noor.app.data.PrayerProvider.place(settings)
-            val biome = place?.let { Biome.of(settings.scenery, it.countryCode, it.point.elevationM, it.point.latitude) }
-            engine(context).prewarm(biome)
-        }
-    }
-
     internal fun engine(context: Context): RealSkyEngine = engine ?: synchronized(this) {
         engine ?: RealSkyEngine(context.applicationContext).also { engine = it }
     }

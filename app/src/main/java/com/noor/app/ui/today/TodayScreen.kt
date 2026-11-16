@@ -382,7 +382,7 @@ private fun SkyHeader(
     val place = u.place ?: return
     val today = u.today ?: return
     val c = NoorTheme.colors
-    val path = remember(today, place.point, place.zone) { SunPaths.of(today, place.point, place.zone) }
+    val path = remember(today, place.point, place.zone) { SunPath.of(today, place.point, place.zone) }
     val events = remember(todayDay) { todayDay?.let { d -> Prayer.entries.mapNotNull { p -> d.instant(p)?.let { p to it } } }.orEmpty() }
     // The scene changes once a minute, not with every tick of the countdown.
     val minute = u.now.truncatedTo(ChronoUnit.MINUTES)

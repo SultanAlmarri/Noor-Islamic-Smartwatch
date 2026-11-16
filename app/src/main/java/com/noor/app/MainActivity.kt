@@ -154,10 +154,7 @@ class MainActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             val s = settingsFlow.first()
-            val home = s.onboardingDone && startRoute() == null
-            // (0.18) The home screen's sky gets ready behind the launch screen.
-            if (home) com.noor.app.sky.RealSky.prewarm(applicationContext, s)
-            opening.begin(Opening.modeAtStart(animationsOn(this@MainActivity), home = home))
+            opening.begin(Opening.modeAtStart(animationsOn(this@MainActivity), home = s.onboardingDone && startRoute() == null))
             first = s
         }
 

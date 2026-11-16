@@ -473,31 +473,6 @@ class SkyDirectorTest {
         }
     }
 
-    /**
-     * (0.18) Every set that comes into the view was named as next on its way beforehand, so its pictures are read
-     * ahead and it never appears for want of them; and nothing named ahead is in the view already.
-     */
-    @Test fun theNextSetsAreKnownBeforeTheyComeIn() {
-        for (biome in Biome.entries) for (day in 0 until 12) {
-            val w = SkyDirector.weather(day * 613L + biome.ordinal, biome, biome.signatureYear)
-            for (level in 0..2) {
-                var h = 0.05f
-                while (h < 23.9f) {
-                    val inView = SkyDirector.legs(w, level, h, biome, biome.signatureYear)
-                    val ahead = SkyDirector.ahead(w, level, h, biome, biome.signatureYear)
-                    for (a in ahead) assertTrue("$biome $day level $level at $h: ${a.set} named ahead is in the view", kotlin.math.abs(a.offset) >= SkyDirector.REACH)
-                    val later = SkyDirector.legs(w, level, h + 0.05f, biome, biome.signatureYear)
-                    for (b in later) {
-                        val was = inView.any { it.set == b.set && it.turned == b.turned && kotlin.math.abs(it.offset - b.offset) < 8f }
-                        if (!was) assertTrue("$biome $day level $level at $h: ${b.set} came in unannounced",
-                            ahead.any { it.set == b.set && it.turned == b.turned && kotlin.math.abs(it.offset - b.offset) < 8f })
-                    }
-                    h += 0.05f
-                }
-            }
-        }
-    }
-
     @Test fun theFinestNightKeepsTheMilkyWayInThePicture() {
         var h = 0f
         while (h < 24f) {
