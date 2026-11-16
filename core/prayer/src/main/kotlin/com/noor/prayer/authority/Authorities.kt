@@ -130,13 +130,128 @@ object Authorities {
         sourceNoteEn = "Fajr 18°, Isha 17°: a widely used method. No official local timetable is implied for this place.",
     )
 
-    val ALL = listOf(IACAD, AWQAF, MUIS, UMM_AL_QURA, JAKIM, KEMENAG, EGYPT, KUWAIT, QATAR, KARACHI, DIYANET, TEHRAN, ISNA, MWL)
+    // ---- 0.18: every other documented national authority, and the recognised method for each other country ----
 
-    /** The authority for a country (ISO code) and optional region; MWL when the country has no mapped authority. */
+    private const val PRAYTIMES = "https://praytimes.org/docs/methods"
+    private const val ALADHAN = "https://api.aladhan.com/v1/methods"
+
+    val MOROCCO = Authority(
+        "habous", "Ministry of Habous and Islamic Affairs — Morocco", "وزارة الأوقاف والشؤون الإسلامية — المغرب", setOf("MA", "EH"), null,
+        Profiles.MOROCCO, SourceKind.AUTHORITY_PARAMETERS,
+        sourceUrl = "https://www.habous.gov.ma",
+        sourceNoteEn = "Fajr 19°, Isha 17°, Shuruq −3, Dhuhr +5, Maghrib +5 minutes, as documented by secondary references (Aladhan, bladi.net); the ministry publishes its own city timetables, not yet compared.",
+    )
+    val ALGERIA = Authority(
+        "dz_marw", "Ministry of Religious Affairs and Endowments — Algeria", "وزارة الشؤون الدينية والأوقاف — الجزائر", setOf("DZ"), null,
+        Profiles.ALGERIA, SourceKind.AUTHORITY_PARAMETERS,
+        sourceUrl = ALADHAN,
+        sourceNoteEn = "Fajr 18°, Isha 17°, as documented by secondary references (Aladhan, salahtimes); not checked against the ministry's timetable.",
+    )
+    val TUNISIA = Authority(
+        "tn_mar", "Ministry of Religious Affairs — Tunisia", "وزارة الشؤون الدينية — تونس", setOf("TN"), null,
+        Profiles.TUNISIA, SourceKind.AUTHORITY_PARAMETERS,
+        sourceUrl = ALADHAN,
+        sourceNoteEn = "Fajr 18°, Isha 18°, as documented by Aladhan (method 18); not checked against the ministry's timetable.",
+    )
+    val JORDAN = Authority(
+        "jo_awqaf", "Ministry of Awqaf, Islamic Affairs and Holy Places — Jordan", "وزارة الأوقاف والشؤون والمقدسات الإسلامية — الأردن", setOf("JO"), null,
+        Profiles.JORDAN, SourceKind.AUTHORITY_PARAMETERS,
+        sourceUrl = ALADHAN,
+        sourceNoteEn = "Fajr 18°, Isha 18°, Maghrib 5 minutes after sunset, as documented by Aladhan (method 23); not checked against the ministry's timetable.",
+    )
+    val PORTUGAL = Authority(
+        "cil", "Comunidade Islâmica de Lisboa — Portugal", "الجالية الإسلامية في لشبونة — البرتغال", setOf("PT"), null,
+        Profiles.PORTUGAL, SourceKind.AUTHORITY_PARAMETERS,
+        sourceUrl = ALADHAN,
+        sourceNoteEn = "Fajr 18°, Maghrib 3 minutes after sunset, Isha 77 minutes after Maghrib, as documented by Aladhan (method 22).",
+    )
+    val RUSSIA = Authority(
+        "dum", "Spiritual Administration of Muslims — Russia", "الإدارة الدينية لمسلمي روسيا", setOf("RU"), null,
+        Profiles.RUSSIA, SourceKind.AUTHORITY_PARAMETERS,
+        sourceUrl = ALADHAN,
+        sourceNoteEn = "Fajr 16°, Isha 15°, as documented by Aladhan (method 14, placed at Ufa). Russia has several spiritual administrations (Tatarstan's publishes its own times); not checked against any of them.",
+    )
+    val BRUNEI = Authority(
+        "bn", "Brunei Darussalam", "بروناي دار السلام", setOf("BN"), null,
+        Profiles.BRUNEI, SourceKind.AUTHORITY_PARAMETERS,
+        sourceUrl = "https://bruneiastronomy.org/prayer/",
+        sourceNoteEn = "Fajr 20°, Isha 18°, the Brunei setting reported by the Brunei Astronomical Society; the Mufti Department's own timetable not yet compared.",
+    )
+
+    /** Moonsighting Committee Worldwide: the recognised method for the United Kingdom (made for high latitudes). */
+    val MOONSIGHTING = Authority(
+        "msc", "Moonsighting Committee Worldwide", "لجنة رؤية الهلال العالمية", setOf("GB"), null,
+        Profiles.MOONSIGHTING, SourceKind.RECOGNISED_METHOD,
+        sourceUrl = "https://www.moonsighting.com",
+        sourceNoteEn = "Fajr and Isha 18° within the committee's seasonal limits: a method widely used in the UK and designed for its long summer twilight. UK mosques publish their own timetables; none is implied.",
+    )
+    val UOIF = Authority(
+        "uoif", "UOIF (Musulmans de France)", "اتحاد المنظمات الإسلامية في فرنسا", setOf("FR"), null,
+        Profiles.FRANCE_UOIF, SourceKind.RECOGNISED_METHOD,
+        sourceUrl = PRAYTIMES,
+        sourceNoteEn = "Fajr 12°, Isha 12°: the UOIF's method, widely used in France. France has no single official authority; many mosques use 15° or 18° instead.",
+    )
+    val JAFARI = Authority(
+        "jafari", "Shia Ithna Ashari (Leva Institute, Qum)", "الشيعة الإمامية (مؤسسة ليفا، قم)", emptySet(), null,
+        Profiles.JAFARI, SourceKind.RECOGNISED_METHOD,
+        sourceUrl = PRAYTIMES,
+        sourceNoteEn = "Fajr 16°, Isha 14°, Maghrib at 4°: the method of Shia communities worldwide (choose it in Settings).",
+    )
+
+    /**
+     * The Egyptian method where it is the recognised method rather than the national authority: praytimes.org lists
+     * it for Africa, Syria and Lebanon. Countries with their own documented authority (Egypt, Morocco, Algeria,
+     * Tunisia) are mapped to it instead.
+     */
+    val EGYPT_REGION = Authority(
+        "egas_region", "Egyptian General Authority of Survey (regional method)", "الهيئة المصرية العامة للمساحة (طريقة إقليمية)",
+        setOf(
+            "SY", "LB", "LY", "SD", "SS",
+            // Africa south of the Sahara
+            "AO", "BF", "BI", "BJ", "BW", "CD", "CF", "CG", "CI", "CM", "CV", "DJ", "ER", "ET", "GA", "GH", "GM", "GN",
+            "GQ", "GW", "KE", "KM", "LR", "LS", "MG", "ML", "MR", "MU", "MW", "MZ", "NA", "NE", "NG", "RW", "SC", "SL",
+            "SN", "SO", "ST", "SZ", "TD", "TG", "TZ", "UG", "ZA", "ZM", "ZW",
+        ), null,
+        Profiles.EGYPT, SourceKind.RECOGNISED_METHOD,
+        sourceUrl = PRAYTIMES,
+        sourceNoteEn = "Fajr 19.5°, Isha 17.5°: the method praytimes.org lists for Africa, Syria and Lebanon. No official local timetable is implied.",
+    )
+
+    /** Umm al-Qura where it is the recognised method of the Arabian Peninsula (praytimes.org), outside Saudi Arabia. */
+    val UMM_AL_QURA_REGION = Authority(
+        "uqu_region", "Umm al-Qura (Arabian Peninsula)", "أم القرى (شبه الجزيرة العربية)", setOf("BH", "OM", "YE"), null,
+        Profiles.UMM_AL_QURA, SourceKind.RECOGNISED_METHOD,
+        sourceUrl = PRAYTIMES,
+        sourceNoteEn = "Fajr 18.5°, Isha 90 minutes after Maghrib (120 in Ramadan): the method praytimes.org lists for the Arabian Peninsula. No official local timetable is implied.",
+    )
+
+    /**
+     * Every authority. The first entry for a profile is the one shown for that method when it is chosen by hand
+     * ([forProfile]), so national authorities come before the regional uses of the same profile.
+     */
+    val ALL = listOf(
+        IACAD, AWQAF, MUIS, UMM_AL_QURA, JAKIM, KEMENAG, EGYPT, KUWAIT, QATAR, KARACHI, DIYANET, TEHRAN, ISNA, MWL,
+        MOROCCO, ALGERIA, TUNISIA, JORDAN, PORTUGAL, RUSSIA, BRUNEI, MOONSIGHTING, UOIF, JAFARI, EGYPT_REGION, UMM_AL_QURA_REGION,
+    )
+
+    private val byCountry: Map<String, Authority> by lazy {
+        val m = HashMap<String, Authority>()
+        for (a in ALL) if (a.region == null) for (c in a.countries) check(m.put(c, a) == null || c == "AE") { "$c is mapped twice" }
+        m
+    }
+
+    /** Every country with an authority of its own or a recognised method chosen for it (the rest get [MWL]). */
+    val mappedCountries: Set<String> get() = byCountry.keys
+
+    /**
+     * The authority for a country (ISO 3166-1 alpha-2) and optional region; MWL when the country has no mapped
+     * authority. Israel (IL) and Palestine (PS) share one entry (the Muslim World League method), so the same times
+     * are produced whichever code a geocoder returns (Flags.displayCountry shows both as Palestine).
+     */
     fun forPlace(countryCode: String?, region: String?): Authority {
         val cc = countryCode?.uppercase()
         if (cc == "AE") return if (region == DUBAI_REGION) IACAD else AWQAF
-        return ALL.firstOrNull { cc != null && cc in it.countries && it.region == null } ?: MWL
+        return cc?.let { byCountry[it] } ?: MWL
     }
 
     /** The authority whose profile is [profileId] (manual choice in Settings), or null for profiles without one. */
