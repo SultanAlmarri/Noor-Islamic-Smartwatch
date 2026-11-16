@@ -131,10 +131,13 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         seenReselect = reselect
     }
 
-    val background = com.noor.app.ui.components.rememberPermissionRequest(Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-        { com.noor.app.ui.components.appDetailsSettings(it) }) { granted -> vm.setBackgroundUpdates(granted) }
+    val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        vm.setBackgroundUpdates(granted)
+    }
     // The persistent notification needs the notification permission (Android 13+); it turns on only once granted.
-    val statusPermission = com.noor.app.ui.components.rememberNotificationRequest { granted -> if (granted) vm.setStatusNotification(true) }
+    val statusPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) vm.setStatusNotification(true)
+    }
 
     val currentPlace = remember(s) { PrayerProvider.place(s.copy(profileId = null)) }
     val autoAuthority = currentPlace?.let { PrayerProvider.authority(s.copy(profileId = null), it) }
@@ -225,7 +228,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             toggle = s.statusNotification to { on ->
                 val needs = on && Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
                     Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
-                if (needs) statusPermission() else vm.setStatusNotification(on)
+                if (needs) statusPermission.launch(Manifest.permission.POST_NOTIFICATIONS) else vm.setStatusNotification(on)
             }))
         add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }, listed = false))
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Brightness6, stringResource(R.string.theme), null, stringResource(R.string.kw_theme), { dialog = Dialog.THEME },
@@ -244,7 +247,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 stringResource(R.string.kw_status), null, toggle = s.elapsedAfterPrayer to { on -> vm.setElapsedAfterPrayer(on) }, listed = false))
         }
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Language, stringResource(R.string.settings_language),
-            listOf(languageLabel(s.language), stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24, f.number(if (s.timeFormat == TimeFormat.H12) 12 else 24))).joinToString(" · "),
+            listOf(languageLabel(s.language), stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24)).joinToString(" · "),
             stringResource(R.string.kw_language) + " " + stringResource(R.string.kw_numerals) + " " + stringResource(R.string.kw_time) + " " + stringResource(R.string.kw_hijri),
             { page = SettingsPage.LANGUAGE }))
         // 0.15.2: the watch's page lives here (set up once), no longer a tab.
@@ -273,7 +276,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         add(SettingRow(0, Icons.Rounded.Numbers, stringResource(R.string.numerals), null, stringResource(R.string.kw_numerals), { dialog = Dialog.NUMERALS },
             detail = stringResource(if (s.numerals == Numerals.WESTERN) R.string.numerals_western else R.string.numerals_arabic), page = lang))
         add(SettingRow(0, Icons.Rounded.AccessTime, stringResource(R.string.time_format), null, stringResource(R.string.kw_time), { dialog = Dialog.TIME },
-            detail = stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24, f.number(if (s.timeFormat == TimeFormat.H12) 12 else 24)), page = lang))
+            detail = stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24), page = lang))
         add(SettingRow(R.string.settings_calendar, Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust),
             // (0.15: the date it gives today, which is what is being set; the stepper shows the days added.)
             stringResource(R.string.hijri_today_is, f.hijri(com.noor.prayer.HijriDate.of(java.time.LocalDate.now(currentPlace?.zone ?: java.time.ZoneId.systemDefault()), s.hijriAdjust))),
@@ -403,7 +406,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         )
         Dialog.TIME -> ChoiceDialog(
             stringResource(R.string.time_format),
-            listOf(TimeFormat.H12 to stringResource(R.string.time_12, f.number(12)), TimeFormat.H24 to stringResource(R.string.time_24, f.number(24))),
+            listOf(TimeFormat.H12 to stringResource(R.string.time_12), TimeFormat.H24 to stringResource(R.string.time_24)),
             s.timeFormat, onSelect = { vm.setTimeFormat(it) }, onDismiss = { dialog = Dialog.NONE },
         )
         Dialog.THEME -> ChoiceDialog(
@@ -421,7 +424,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                     dialog = Dialog.NONE
                     // (Before Android 10 the location permission already covers the background: there is nothing to ask.)
                     if (vm.hasBackgroundPermission() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) vm.setBackgroundUpdates(true)
-                    else background()
+                    else background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 }) { Text(stringResource(R.string.bg_perm_continue), color = c.goldText) }
             },
             dismissButton = { TextButton(onClick = { dialog = Dialog.NONE }) { Text(stringResource(R.string.bg_perm_not_now), color = c.textSecondary) } },

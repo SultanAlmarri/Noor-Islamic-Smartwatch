@@ -232,15 +232,9 @@ data class AlertSettings(
 
 /** Ids of the bundled sounds the defaults refer to, and the id format shared with custom sounds. */
 object SoundIds {
-    // 0.18: the library is the owner's voices (Makkah, Madinah, Dubai; Al-Quds and Egypt are the user's own until
-    // licensed recordings exist) and five sound effects.
-    const val DEFAULT_ADHAN = "adhan.makkah"
-    /**
-     * The default for Fajr: a Fajr Adhan, with "As-salatu khayrun min an-nawm" (Makkah has no licensed one; Dubai's is
-     * the library's Fajr recording).
-     */
-    const val DEFAULT_FAJR_ADHAN = "adhan.dubai_fajr"
-    const val DEFAULT_SOUND = "fx.birds"
+    const val DEFAULT_ADHAN = "adhan.makkah_maghrib_2012"
+    const val DEFAULT_FAJR_ADHAN = "adhan.malmo_fajr_2012"
+    const val DEFAULT_SOUND = "alt.soft_chime"
     const val CUSTOM_PREFIX = "custom."
     /** Not a recording: "a different favourite each time" (see [RandomAdhan]). */
     const val RANDOM = "random.favourites"

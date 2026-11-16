@@ -61,7 +61,7 @@ fun HeroCard(
                 drawRect(Brush.radialGradient(listOf(glow, Color.Transparent), center = Offset(size.width * 0.12f, 0f), radius = max(size.width, size.height) * 0.85f))
             }
             .glassEdge(shape, c.glassEdge, c.glassEdgeLow)
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = withTick(onClick)) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = onClick) else Modifier)
             .padding(horizontal = 20.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

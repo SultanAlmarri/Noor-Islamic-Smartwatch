@@ -736,8 +736,3 @@ night). The interval ring keeps a gap at the top for the system clock.
 
 Layouts mirror, including the sun path (time flows from the right) and the timeline; numbers, times and the countdown
 always read left to right. Arabic display names use Reem Kufi; the Hijri date leads in gold.
-
-**The one exception to "nothing changes at a stroke" (0.18 review):** cloud sets are read ahead of the moment they come
-into view (`SkyDirector.ahead`), so they are normally on the GPU before they are seen. If a phone is too slow and a set's
-pictures arrive after it has entered the view, the set fades in over 0.7 s rather than appearing at a stroke; the
-renderer logs it (`NoorRealSky`). It is a fallback, not a design: the read-ahead is meant to make it never happen.

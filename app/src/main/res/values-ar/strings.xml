@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">منهاد</string>
+    <string name="app_name">نور</string>
     <string name="tab_prayers">الصلوات</string>
     <string name="tab_watch">الساعة</string>
     <string name="tab_settings">الإعدادات</string>
@@ -10,7 +10,7 @@
     <string name="next">القادمة</string>
     <string name="in_duration">بعد %1$s</string>
     <string name="hours_minutes">%1$s س %2$s د</string>
-    <string name="minutes_only">%1$s د</string>
+    <string name="minutes_only">%1$s دقيقة</string>
     <string name="remaining">متبقٍ</string>
     <string name="less_than_minute">أقل من دقيقة</string>
     <string name="today">اليوم</string>
@@ -24,7 +24,7 @@
 
     <string name="watch_title">ساعة جالاكسي</string>
     <string name="watch_editor_title">محرّر واجهة الساعة</string>
-    <string name="watch_editor_body">المرحلة التالية: الخطوط والألوان والأحجام والأرقام والأيقونات والتخطيط والسمات المحفوظة وتصميم منفصل للعرض الدائم، مع معاينة حية، تُرسل إلى الساعة كإصدار جديد من واجهة منهاد.</string>
+    <string name="watch_editor_body">المرحلة التالية: الخطوط والألوان والأحجام والأرقام والأيقونات والتخطيط والسمات المحفوظة وتصميم منفصل للعرض الدائم، مع معاينة حية، تُرسل إلى الساعة كإصدار جديد من واجهة نور.</string>
     <string name="in_development">قيد التطوير</string>
 
     <string name="settings_location">الموقع</string>
@@ -58,8 +58,8 @@
     <string name="numerals_western">غربية (0123)</string>
     <string name="numerals_arabic">عربية مشرقية (٠١٢٣)</string>
     <string name="time_format">صيغة الوقت</string>
-    <string name="time_12">%1$s ساعة</string>
-    <string name="time_24">%1$s ساعة</string>
+    <string name="time_12">12 ساعة</string>
+    <string name="time_24">24 ساعة</string>
     <string name="theme">السمة</string>
     <string name="theme_system">حسب النظام</string>
     <string name="theme_dark">ليلي</string>
@@ -79,24 +79,24 @@
     <string name="reset">إعادة الضبط</string>
 
     <string name="perm_title">مواقيت الصلاة حيث تكون</string>
-    <string name="perm_body">يستخدم منهاد موقعك لحساب أوقات الصلاة، ويبقى على هذا الهاتف.</string>
+    <string name="perm_body">يستخدم نور موقعك لحساب أوقات الصلاة، ويبقى على هذا الهاتف.</string>
     <string name="perm_allow">استخدام موقعي</string>
     <string name="perm_manual">اختيار مدينة بدلًا من ذلك</string>
     <string name="bg_perm_title">أوقات صحيحة أثناء السفر</string>
-    <string name="bg_perm_body">لتبقى الأوقات صحيحة أثناء السفر، اختر «السماح طوال الوقت». يتحقق منهاد نادرًا ويستهلك قليلًا من البطارية.</string>
+    <string name="bg_perm_body">لتبقى الأوقات صحيحة أثناء السفر، اختر «السماح طوال الوقت». يتحقق نور نادرًا ويستهلك قليلًا من البطارية.</string>
     <string name="bg_perm_continue">متابعة</string>
     <string name="bg_perm_not_now">ليس الآن</string>
     <string name="permission_denied">لم يُمنح إذن الموقع. اختر مدينة أو اسمح بالموقع من إعدادات النظام.</string>
     <string name="watch_sync_title">المزامنة بين الهاتف والساعة</string>
     <string name="watch_checking">جارٍ البحث عن ساعتك…</string>
-    <string name="watch_no_wear_os">يصل منهاد إلى ساعتك عبر تطبيق Galaxy Wearable. ثبّته واربط ساعتك، ثم عد إلى هنا.</string>
+    <string name="watch_no_wear_os">يصل نور إلى ساعتك عبر تطبيق Galaxy Wearable. ثبّته واربط ساعتك، ثم عد إلى هنا.</string>
     <string name="watch_not_sent">لم تُرسل الإعدادات بعد</string>
     <string name="watch_sync_failed">تعذّر تسليم الإعدادات إلى Wear OS. حاول مرة أخرى.</string>
     <string name="watch_needs_location">اختر الموقع أولاً</string>
     <string name="watch_sync_now">مزامنة الآن</string>
     <string name="watch_syncing">جارٍ المزامنة…</string>
     <string name="watch_on_watch_title">على الساعة</string>
-    <string name="watch_on_watch_body">يحسب تطبيق منهاد على الساعة المواقيت نفسها التي يحسبها هذا الهاتف، بالموقع والجهة والتعديلات نفسها، ويواصل العمل دون الهاتف. ويضيف بطاقة «مواقيت الصلاة» وإضافة «الصلاة القادمة» يمكنك وضعها على أي واجهة.</string>
+    <string name="watch_on_watch_body">يحسب تطبيق نور على الساعة المواقيت نفسها التي يحسبها هذا الهاتف، بالموقع والجهة والتعديلات نفسها، ويواصل العمل دون الهاتف. ويضيف بطاقة «مواقيت الصلاة» وإضافة «الصلاة القادمة» يمكنك وضعها على أي واجهة.</string>
     <string name="previous">السابق</string>
     <string name="next_page">التالي</string>
     <string name="previous_day">اليوم السابق</string>
@@ -147,29 +147,29 @@
     <string name="watch_generic_name">ساعتك</string>
     <string name="watch_connected_short">متصلة</string>
     <string name="watch_not_connected_short">غير متصلة الآن</string>
-    <string name="step_app_title">منهاد على الساعة</string>
+    <string name="step_app_title">نور على الساعة</string>
     <string name="step_app_done">مثبّت · الإصدار %1$s</string>
     <string name="step_app_unreached">لم تستجب الساعة. تأكد أنها متصلة ونشطة ثم أعد المحاولة.</string>
     <string name="step_app_waiting">متجر Play مفتوح على ساعتك. اضغط تثبيت هناك؛ تتحدث هذه الصفحة تلقائياً عند الانتهاء.</string>
     <string name="step_app_timeout">لم يُثبَّت بعد. إذا أُغلقت صفحة المتجر فافتحها مرة أخرى.</string>
     <string name="step_app_dev">نسخة تطوير: ثبّت تطبيق الساعة باتباع الدليل.</string>
-    <string name="step_app_todo">يفتح منهاد في متجر Play على ساعتك: ضغطة واحدة هناك تثبّته.</string>
+    <string name="step_app_todo">يفتح نور في متجر Play على ساعتك: ضغطة واحدة هناك تثبّته.</string>
     <string name="step_app_button">التثبيت على الساعة</string>
     <string name="step_app_again">فتح متجر Play على الساعة مجدداً</string>
     <string name="step_app_guide">فتح دليل التثبيت</string>
     <string name="step_sync_title">إعدادات الصلاة على الساعة</string>
-    <string name="step_after_install">متاح بعد تثبيت منهاد على الساعة.</string>
+    <string name="step_after_install">متاح بعد تثبيت نور على الساعة.</string>
     <string name="step_sync_done">استلمتها الساعة الساعة %1$s. تحسب المواقيت بنفسها من الآن.</string>
     <string name="step_sync_sent">أُرسلت الساعة %1$s. تستلمها الساعة فور اتصالها.</string>
-    <string name="step_face_title">واجهة منهاد</string>
+    <string name="step_face_title">واجهة نور</string>
     <string name="step_face_needs6">تتطلب Wear OS 6. تعمل هذه الساعة بـ Wear OS %1$s؛ البطاقة والإضافة تعملان بدونه.</string>
     <string name="step_face_done">قيد الاستخدام.</string>
     <string name="step_face_waiting">أكّد على ساعتك. يطلب Wear OS الإذن مرة واحدة لتغيير الواجهة.</string>
     <string name="step_face_installed">أُضيفت إلى واجهات ساعتك. لم تتغير الواجهات الأخرى.</string>
-    <string name="step_face_todo">يضيف وجه منهاد إلى ساعتك بعد تأكيدك عليها.</string>
-    <string name="step_face_button">استخدام واجهة منهاد</string>
-    <string name="watch_open_on_watch">فتح منهاد على الساعة</string>
-    <string name="step_face_open_first">افتح منهاد على الساعة مرة واحدة لإكمال الإعداد.</string>
+    <string name="step_face_todo">يضيف وجه نور إلى ساعتك بعد تأكيدك عليها.</string>
+    <string name="step_face_button">استخدام واجهة نور</string>
+    <string name="watch_open_on_watch">فتح نور على الساعة</string>
+    <string name="step_face_open_first">افتح نور على الساعة مرة واحدة لإكمال الإعداد.</string>
     <string name="source_official_badge">جدول رسمي</string>
     <string name="source_official">جدول رسمي: أوقات %1$s لهذا التاريخ كما نُشرت.</string>
     <string name="source_validated">محسوبة بمعايير %1$s، وقد قورنت بجدولها الرسمي.</string>
@@ -187,31 +187,31 @@
     <string name="kind_parameters">المعايير المنشورة للجهة</string>
     <string name="kind_recognised">طريقة شائعة الاستخدام</string>
     <string name="sources_title">مصادر البيانات وتراخيصها</string>
-    <string name="sources_body">الجداول الرسمية: دائرة الشؤون الإسلامية بدبي (iacad.gov.ae؛ صفحات 2021–2023 محفوظة في أرشيف الإنترنت، ونوفمبر 2026 من موقع الدائرة)؛ المجلس الإسلامي في سنغافورة 2024–2026 (data.gov.sg، رخصة البيانات المفتوحة لسنغافورة). أسماء الأماكن: GeoNames ‏(geonames.org)، برخصة CC BY 4.0. الانحراف المغناطيسي: النموذج المغناطيسي العالمي عبر أندرويد. معايير كل جهة ومصادرها مدرجة في وثائق مستودع منهاد.</string>
+    <string name="sources_body">الجداول الرسمية: دائرة الشؤون الإسلامية بدبي (iacad.gov.ae؛ صفحات 2021–2023 محفوظة في أرشيف الإنترنت، ونوفمبر 2026 من موقع الدائرة)؛ المجلس الإسلامي في سنغافورة 2024–2026 (data.gov.sg، رخصة البيانات المفتوحة لسنغافورة). أسماء الأماكن: GeoNames ‏(geonames.org)، برخصة CC BY 4.0. الانحراف المغناطيسي: النموذج المغناطيسي العالمي عبر أندرويد. معايير كل جهة ومصادرها مدرجة في وثائق مستودع نور.</string>
 
     <!-- Adhan & alerts -->
     <string name="tab_adhan">الأذان</string>
     <string name="adhan_title">الأذان والتنبيهات</string>
     <string name="adhan_master">تنبيهات الصلاة</string>
-    <string name="adhan_master_off">متوقف</string>
+    <string name="adhan_master_off">متوقفة. فعّلها لتسمع الأذان أو يصلك إشعار عند كل صلاة.</string>
     <string name="adhan_master_off_short">تنبيهات الصلاة متوقفة؛ فعّلها من تبويب الأذان.</string>
     <string name="adhan_next">التنبيه التالي على الهاتف: %1$s · %2$s</string>
-    <string name="adhan_hero_next">الأذان التالي</string>
-    <string name="adhan_next_none">لا صلاة مفعّلة.</string>
-    <string name="adhan_on_watch_only">على ساعتك</string>
+    <string name="adhan_hero_next">التالي على هذا الهاتف</string>
+    <string name="adhan_next_none">لا توجد صلاة مضبوطة للتنبيه على هذا الهاتف.</string>
+    <string name="adhan_on_watch_only">التنبيهات تأتي من ساعتك، ويبقى الهاتف صامتًا.</string>
     <string name="adhan_no_location">حدّد الموقع أولًا: التنبيهات تحتاج إلى أوقات الصلاة.</string>
-    <string name="adhan_warn_notifications">الإشعارات متوقفة لتطبيق منهاد، فلن يظهر أي تنبيه ولن يُسمع.</string>
+    <string name="adhan_warn_notifications">الإشعارات متوقفة لتطبيق نور، فلن يظهر أي تنبيه ولن يُسمع.</string>
     <string name="adhan_action_allow">السماح</string>
     <string name="adhan_action_open">فتح</string>
     <string name="adhan_action_open_watch">فتح على الساعة</string>
     <string name="adhan_warn_channel">إشعارات الأذان متوقفة في إعدادات أندرويد.</string>
     <string name="adhan_warn_exact">قد تتأخر التنبيهات. اسمح بالمنبّهات الدقيقة.</string>
     <string name="adhan_warn_volume">مستوى صوت المنبّه صفر، فلن يُسمع الأذان.</string>
-    <string name="adhan_warn_battery">إن تأخر تنبيه، اجعل استخدام منهاد للبطارية «غير مقيّد».</string>
-    <string name="adhan_warn_watch_notifications">الإشعارات متوقفة على %1$s. افتح منهاد على الساعة للسماح بها.</string>
+    <string name="adhan_warn_battery">إن تأخر تنبيه، اجعل استخدام نور للبطارية «غير مقيّد».</string>
+    <string name="adhan_warn_watch_notifications">الإشعارات متوقفة على %1$s. افتح نور على الساعة للسماح بها.</string>
     <string name="adhan_warn_watch_exact">المنبّهات الدقيقة متوقفة على %1$s، فقد تتأخر التنبيهات هناك بضع دقائق.</string>
     <string name="adhan_watch_ready">%1$s · التنبيهات المضبوطة: %2$s</string>
-    <string name="adhan_watch_unknown">لم تُبلغ %1$s عن حالة التنبيهات بعد. إن استمر ذلك، حدّث منهاد على الساعة.</string>
+    <string name="adhan_watch_unknown">لم تُبلغ %1$s عن حالة التنبيهات بعد. إن استمر ذلك، حدّث نور على الساعة.</string>
     <string name="adhan_device_title">التنبيه على</string>
     <string name="adhan_device_phone">الهاتف</string>
     <string name="adhan_device_watch">الساعة</string>
@@ -231,7 +231,7 @@
     <string name="adhan_sound_section">الصوت</string>
     <string name="adhan_gradual">رفع الصوت تدريجيًا</string>
     <string name="adhan_gradual_off">متوقف: يبدأ بالصوت الكامل</string>
-    <string name="adhan_gradual_value">يرتفع خلال %1$s ث</string>
+    <string name="adhan_gradual_value">يرتفع خلال %1$s ثانية</string>
     <string name="adhan_dnd">التشغيل في الوضع الصامت و«عدم الإزعاج»</string>
     <string name="adhan_dnd_on">يعمل كالمنبّه.</string>
     <string name="adhan_dnd_off">إشعار صامت حين يكون الهاتف صامتًا.</string>
@@ -248,7 +248,7 @@
     </plurals>
     <string name="adhan_library_section">المكتبة</string>
     <string name="adhan_library">مكتبة الأذان</string>
-    <string name="adhan_library_desc">المصادر والتراخيص</string>
+    <string name="adhan_library_desc">%1$s أذانًا، مع مصادرها وتراخيصها</string>
     <string name="adhan_my_sounds">أصواتي</string>
     <string name="adhan_my_sounds_desc_empty">استورد ملفاتك بصيغة MP3 أو M4A أو AAC أو WAV</string>
     <string name="adhan_my_sounds_desc">المستوردة: %1$s</string>
@@ -263,11 +263,11 @@
     <string name="adhan_vibrate">اهتزاز</string>
     <string name="adhan_stop_after">الإيقاف بعد</string>
     <string name="adhan_stop_full">حتى النهاية</string>
-    <string name="adhan_stop_seconds">%1$s ث</string>
-    <string name="adhan_stop_minutes">%1$s د</string>
+    <string name="adhan_stop_seconds">%1$s ثانية</string>
+    <string name="adhan_stop_minutes">%1$s دقيقة</string>
     <string name="adhan_test">تجربة هذا التنبيه</string>
     <string name="adhan_test_desc">يأتي بعد ١٠ ثوانٍ، تمامًا كما في وقت الصلاة.</string>
-    <string name="adhan_test_sent">تنبيه تجريبي بعد %1$s ثوانٍ</string>
+    <string name="adhan_test_sent">تنبيه تجريبي بعد ١٠ ثوانٍ</string>
     <string name="adhan_test_failed">تعذّر ضبط التنبيه التجريبي.</string>
     <string name="adhan_notification_desc">إشعار عادي بصوت إشعارات هاتفك، ويتبع «عدم الإزعاج» مثل أي إشعار آخر.</string>
     <string name="adhan_silent_desc">إشعار على شاشة القفل وفي لوحة الإشعارات، دون صوت أو اهتزاز.</string>
@@ -302,9 +302,9 @@
     <string name="adhan_short_label">مختصر · %1$s</string>
     <string name="adhan_source">المصدر</string>
     <string name="adhan_licence">الترخيص</string>
-    <string name="adhan_changes_generic">عُدّل لتطبيق منهاد: قُصّ ليقتصر على الأذان، مع تلاشٍ قصير وتوحيد لمستوى الصوت وتحويل إلى قناة واحدة.</string>
+    <string name="adhan_changes_generic">عُدّل لتطبيق نور: قُصّ ليقتصر على الأذان، مع تلاشٍ قصير وتوحيد لمستوى الصوت وتحويل إلى قناة واحدة.</string>
     <string name="adhan_sa_note">يُشارك هذا التسجيل المعدّل بالترخيص نفسه.</string>
-    <string name="adhan_sounds_credit">أصوات أصلية صُنعت لتطبيق منهاد، حرّة الاستخدام للجميع (CC0).</string>
+    <string name="adhan_sounds_credit">أصوات أصلية صُنعت لتطبيق نور، حرّة الاستخدام للجميع (CC0).</string>
     <string name="theme_sun">مع الشمس: فاتح من الشروق، داكن من المغرب</string>
     <string name="today_in">بعد %1$s</string>
     <string name="sky_desc_up">الشمس فوق الأفق بـ%1$s°. الصلاة القادمة عند الحلقة الذهبية.</string>
@@ -317,11 +317,11 @@
     <string name="today_set_location_title">أوقات الصلاة تبدأ من مكانك</string>
     <string name="today_set_location_body">اختر موقعك لترى أوقات اليوم والسماء فوقك واتجاه القبلة.</string>
     <string name="today_until">حتى %1$s</string>
-    <string name="watch_preview_desc">معاينة تطبيق منهاد على الساعة</string>
-    <string name="watch_feature_app">تطبيق منهاد</string>
+    <string name="watch_preview_desc">معاينة تطبيق نور على الساعة</string>
+    <string name="watch_feature_app">تطبيق نور</string>
     <string name="watch_feature_app_desc">الصلاة القادمة وأوقات اليوم وبوصلة القبلة والتسبيح والتقويم الهجري</string>
     <string name="watch_feature_tile">بطاقتان</string>
-    <string name="watch_feature_tile_desc">أوقات الصلاة مع عدّ تنازلي حيّ، واختصارات منهاد. اسحب من واجهة الساعة</string>
+    <string name="watch_feature_tile_desc">أوقات الصلاة مع عدّ تنازلي حيّ، واختصارات نور. اسحب من واجهة الساعة</string>
     <string name="watch_feature_complication">أربع إضافات</string>
     <string name="watch_feature_complication_desc">الصلاة القادمة والتاريخ الهجري والقبلة والتسبيح، على أي واجهة ساعة</string>
     <string name="watch_feature_alerts">تنبيهات الصلاة</string>
@@ -350,20 +350,20 @@
     <string name="history_on_time">في الوقت</string>
     <string name="history_exact_off">كانت المنبّهات الدقيقة متوقفة</string>
     <string name="history_volume_zero">كان صوت المنبّه صفرًا</string>
-    <string name="history_o_starting">بدأ التشغيل، ثم أغلق أندرويد منهاد قبل تسجيل النهاية.</string>
+    <string name="history_o_starting">بدأ التشغيل، ثم أغلق أندرويد نور قبل تسجيل النهاية.</string>
     <string name="history_o_played">شُغّل لمدة %1$s.</string>
     <string name="history_o_stopped">شُغّل لمدة %1$s حتى أوقفته.</string>
-    <string name="history_o_fallback">تعذّر تشغيل الصوت المختار، فشُغّل أذان منهاد الافتراضي لمدة %1$s.</string>
-    <string name="history_o_backup">لم يسمح أندرويد لمنهاد بتشغيل الأذان كاملًا، فشُغّل أذان مختصر بدلًا منه.</string>
+    <string name="history_o_fallback">تعذّر تشغيل الصوت المختار، فشُغّل أذان نور الافتراضي لمدة %1$s.</string>
+    <string name="history_o_backup">لم يسمح أندرويد لنور بتشغيل الأذان كاملًا، فشُغّل أذان مختصر بدلًا منه.</string>
     <string name="history_o_failed">تعذّر تشغيل أي صوت، فاستُخدم صوت الإشعارات.</string>
     <string name="history_o_notification">إشعار، كما اخترت.</string>
     <string name="history_o_silent">إشعار صامت، كما اخترت.</string>
     <string name="history_o_quiet">صامت: كان الهاتف صامتًا، كما اخترت.</string>
     <string name="history_o_dnd">صامت: كان وضع «عدم الإزعاج» يمنع المنبّهات.</string>
     <string name="history_o_call">صامت: كانت هناك مكالمة جارية.</string>
-    <string name="history_o_no_notifications">تعذّر عرض أي شيء أو تشغيله: الإشعارات متوقفة لتطبيق منهاد.</string>
+    <string name="history_o_no_notifications">تعذّر عرض أي شيء أو تشغيله: الإشعارات متوقفة لتطبيق نور.</string>
     <string name="history_o_late">كان الهاتف نائمًا: تأخر أكثر من عشر دقائق، فجاء إشعار هادئ بدلًا منه.</string>
-    <string name="history_o_no_settings">لم يكن لدى منهاد موقع أو إعدادات بعد، فتعذّر معرفة الصلاة التي حان وقتها.</string>
+    <string name="history_o_no_settings">لم يكن لدى نور موقع أو إعدادات بعد، فتعذّر معرفة الصلاة التي حان وقتها.</string>
     <plurals name="history_late">
         <item quantity="zero">متأخر %1$s دقيقة</item>
         <item quantity="one">متأخر دقيقة واحدة</item>
@@ -376,7 +376,7 @@
     <string name="settings_notification_bar">شريط الإشعارات</string>
     <string name="status_setting">شريط الإشعارات</string>
     <string name="status_setting_desc">الصلاة التالية مع عدّ تنازلي حيّ، على بُعد سحبة.</string>
-    <string name="status_setting_note">صامت، ولا يكاد يستهلك البطارية: أندرويد نفسه يعدّ الثواني، ومنهاد يحدّثه فقط عند كل صلاة وعند منتصف الليل. في أندرويد %1$s وما بعده يمكنك إزاحته، فيعود عند الصلاة التالية.</string>
+    <string name="status_setting_note">صامت، ولا يكاد يستهلك البطارية: أندرويد نفسه يعدّ الثواني، ونور يحدّثه فقط عند كل صلاة وعند منتصف الليل. في أندرويد %1$s وما بعده يمكنك إزاحته، فيعود عند الصلاة التالية.</string>
     <string name="status_channel">أوقات الصلاة (ظاهرة دائمًا)</string>
     <string name="status_channel_desc">الصلاة القادمة وعدّها التنازلي، باقية في شريط الإشعارات. صامتة.</string>
     <string name="acc_calibrate">عايِر أولًا</string>
@@ -388,7 +388,7 @@
     <string name="settings_off">متوقف</string>
     <string name="settings_calendar">التقويم</string>
     <string name="settings_watch">الساعة</string>
-    <string name="settings_watch_row">منهاد على ساعتك</string>
+    <string name="settings_watch_row">نور على ساعتك</string>
     <string name="settings_results">النتائج</string>
     <string name="settings_search">ابحث في الإعدادات</string>
     <string name="settings_search_clear">مسح البحث</string>
@@ -518,7 +518,7 @@
     <string name="scenery_note">طبيعة فقط: لا مبانٍ ولا أشخاص.</string>
     <string name="kw_scenery">مشهد طبيعة خلفية كثبان غابة مطيرة قطب جليد محيط بحر سافانا صخور حمراء صحراء جودة السماء رسوم غيوم</string>
     <string name="face_editor_title">واجهة الساعة</string>
-    <string name="face_preview_desc">واجهة منهاد: %1$s</string>
+    <string name="face_preview_desc">واجهة نور: %1$s</string>
     <string name="face_design_horizon">الأفق</string>
     <string name="face_design_dial">العقارب</string>
     <string name="face_design_minimal">البسيط</string>
@@ -526,7 +526,7 @@
     <string name="face_design_horizon_desc">الوقت بخط كبير، والتاريخ الهجري، والصلاة القادمة وحلقة تمتلئ حتى موعدها، فوق الكثبان.</string>
     <string name="face_design_dial_desc">عقارب وعلامات الدقائق، وحلقة الصلاة، واتجاه القبلة والبطارية (يمكن تغييرهما من الساعة).</string>
     <string name="face_design_minimal_desc">الوقت كبير جداً على خلفية سوداء، والصلاة القادمة في سطر واحد. موفّرة للبطارية.</string>
-    <string name="face_design_original_desc">الواجهة الأصلية من الإصدار 1.3.2 كما هي.</string>
+    <string name="face_design_original_desc">واجهة نور من الإصدار 1.3.2 كما هي.</string>
     <string name="face_colour_gold">ذهبي</string>
     <string name="face_colour_emerald">زمردي</string>
     <string name="face_colour_turquoise">فيروزي</string>
@@ -535,17 +535,17 @@
     <string name="face_send">اعرضها على ساعتي</string>
     <string name="face_on_watch">على ساعتك: %1$s.</string>
     <string name="face_sending">جارٍ الإرسال إلى ساعتك…</string>
-    <string name="face_pick_on_watch">أُضيفت إلى واجهات ساعتك. لعرضها اضغط مطولاً على واجهة الساعة ثم اختر منهاد.</string>
-    <string name="face_changes_hint">تظهر التغييرات على ساعتك فوراً إذا كانت منهاد واجهتها.</string>
+    <string name="face_pick_on_watch">أُضيفت إلى واجهات ساعتك. لعرضها اضغط مطولاً على واجهة الساعة ثم اختر نور.</string>
+    <string name="face_changes_hint">تظهر التغييرات على ساعتك فوراً إذا كانت نور واجهتها.</string>
 
     <!-- Home-screen widgets (0.9.10) -->
     <string name="widget_next_name">الصلاة التالية</string>
     <string name="widget_next_desc">الصلاة التالية ووقتها وعدّ تنازلي حيّ، فوق سماء اللحظة</string>
     <string name="widget_today_name">صلوات اليوم</string>
     <string name="widget_today_desc">مواقيت صلوات اليوم كلها، والتالية مميّزة، مع المكان والتاريخ الهجري والعدّ التنازلي</string>
-    <string name="widget_sky_name">سماء منهاد</string>
+    <string name="widget_sky_name">سماء نور</string>
     <string name="widget_sky_desc">السماء فوق مكانك الآن — الطقس والمشهد ومسار الشمس مع الصلوات — والصلاة التالية</string>
-    <string name="widget_choose_place">افتح منهاد لاختيار مكانك</string>
+    <string name="widget_choose_place">افتح نور لاختيار مكانك</string>
     <!-- 0.14: the interface -->
     <string name="back">رجوع</string>
     <string name="decrease">إنقاص</string>
@@ -576,7 +576,7 @@
     <string name="cd_since">منذ دخول %s</string>
     <string name="cd_since_sunrise">منذ الشروق</string>
     <string name="adhan_prayers_footer_off">فعّل صلاة لتسمع أذانها.</string>
-    <string name="adhan_hero_blocked">لن يُسمع. انظر أدناه.</string>
+    <string name="adhan_hero_blocked">لن يُسمع: أصلح ما هو مذكور أدناه.</string>
     <string name="adhan_test_footer">اقفل الهاتف بعد الضغط، وتُحفظ النتيجة في السجل.</string>
     <string name="basis_official">أوقاتها المنشورة نفسها، لكل يوم.</string>
     <string name="basis_validated">طريقتها نفسها، بعد مقارنتها بجدولها المنشور.</string>
@@ -585,7 +585,7 @@
     <string name="basis_manual">الطريقة التي اخترتها.</string>
     <string name="adhan_hint_adhan">الأذان كاملًا</string>
     <string name="adhan_hint_short">مطلعه فقط</string>
-    <string name="adhan_hint_sound">طيور، مطر…</string>
+    <string name="adhan_hint_sound">نغمة قصيرة</string>
     <string name="adhan_hint_custom">ملف من عندك</string>
     <string name="adhan_hint_notification">صوت هاتفك المعتاد</string>
     <string name="adhan_hint_silent">إشعار فقط، بلا صوت</string>
@@ -593,7 +593,7 @@
     <string name="hijri_today_is">اليوم: %s</string>
     <string name="qibla_poor_hint">البوصلة غير متيقنة هنا: عايرها قبل أن تتبع الاتجاه. اضغط لمعرفة الطريقة.</string>
     <string name="watch_get_wearable">تنزيل Galaxy Wearable</string>
-    <string name="watch_how_to">كيف تضع منهاد على ساعتك</string>
+    <string name="watch_how_to">كيف تضع نور على ساعتك</string>
     <string name="qibla_calibrate_first">عايِر أولًا: حرّك الهاتف على شكل الرقم 8</string>
     <string name="adhan_turn_on_all">تشغيل الأذان لكل الصلوات</string>
     <string name="adhan_off_would">متوقف · سيُشغَّل %s</string>
@@ -604,7 +604,7 @@
     <string name="cd_today_now">اليوم، الآن</string>
     <string name="history_fix_dnd">السماح بالمنبّهات في وضع عدم الإزعاج</string>
     <string name="adhan_alert_options">إعدادات أخرى</string>
-    <string name="settings_watch_note">منهاد على معصمك: التثبيت والمزامنة ووجه الساعة</string>
+    <string name="settings_watch_note">نور على معصمك: التثبيت والمزامنة ووجه الساعة</string>
     <!-- 0.16: the Adhan section redone. -->
     <string name="adhan_voice">صوت الأذان</string>
     <string name="voice_for">صوت %s</string>
@@ -612,6 +612,7 @@
     <string name="voice_madinah">المدينة</string>
     <string name="voice_alquds">القدس</string>
     <string name="voice_egypt">مصر</string>
+    <string name="voice_riyadh">الرياض</string>
     <string name="voice_random">متغير</string>
     <string name="voice_random_detail">صوت مختلف كل مرة</string>
     <string name="voice_yours">تسجيلك</string>
@@ -631,7 +632,7 @@
     <!-- 0.17: alarms before and after a prayer, as in the Clock app. -->
     <string name="alarms_title">المنبهات</string>
     <string name="alarm_add">إضافة منبه</string>
-    <string name="alarm_full">٢٠ منبهًا: أقصى ما يتسع له منهاد</string>
+    <string name="alarm_full">٢٠ منبهًا: أقصى ما يتسع له نور</string>
     <string name="alarms_empty_footer">استيقظ قبل الفجر، أو تذكَّر بعد الأذان: مثلًا ٢٥ دقيقة قبل الفجر.</string>
     <string name="alarms_footer">ترن المنبهات على هذا الهاتف، حتى إن كان الأذان متوقفًا.</string>
     <string name="alarm_new">منبه جديد</string>
@@ -676,17 +677,4 @@
     <string name="alarms_none">لا منبهات بعد</string>
     <string name="alarm_next_in_hm">المنبه التالي بعد %1$s س و%2$s د</string>
     <string name="alarm_next_in_m">المنبه التالي بعد %1$s د</string>
-    <!-- 0.18: the five voices, one volume for every prayer, the alarm's sounds. -->
-    <string name="voice_dubai">دبي</string>
-    <string name="voice_all_title">صوت الأذان لكل الصلوات</string>
-    <string name="adhan_volume_all">مستوى الصوت لكل الصلوات</string>
-    <string name="adhan_sound_title">الصوت</string>
-    <string name="alarm_sound_ringtone">نغمة رنين الهاتف</string>
-    <string name="alarm_sounds_phone">الهاتف</string>
-    <string name="alarm_sounds_effects">أصوات</string>
-    <string name="alarm_sounds_adhan">الأذان</string>
-    <string name="alarm_length_full">كامل</string>
-    <string name="alarm_length_short">قصير</string>
-    <string name="alarm_adhan_before_warn">إذا سُمع قبل الصلاة فقد يُظنّ الأذان دخولًا لوقتها.</string>
-    <string name="adhan_warn_fullscreen">لا يمكن لشاشة الأذان أن تظهر فوق شاشة القفل.</string>
 </resources>

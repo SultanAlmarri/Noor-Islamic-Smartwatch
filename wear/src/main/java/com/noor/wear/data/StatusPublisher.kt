@@ -45,9 +45,6 @@ object StatusPublisher {
                 faceVariant = (face as? FaceState.Ready)?.installedVariant,
                 faceChosen = (face as? FaceState.Ready)?.chosen,
                 faceNeedsPick = (face as? FaceState.Ready)?.needsPick,
-                studioSupported = com.noor.wear.studio.StudioStore.supported(),
-                studioActive = com.noor.wear.studio.StudioStore.active(context),
-                studioStamp = com.noor.wear.studio.StudioStore.stamp(context),
             )
             val req = PutDataMapRequest.create(WatchReport.PATH).apply { dataMap.putString(WatchReport.KEY, report.encode()) }
                 .asPutDataRequest().setUrgent()

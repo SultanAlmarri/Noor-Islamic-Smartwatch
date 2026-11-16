@@ -51,8 +51,7 @@ import java.util.Locale
  */
 object StatusNotification {
     const val CHANNEL = "noor_status"
-    // (0.18: 4300 was Fajr's reminder's id too: the Fajr Adhan took the bar's notification away for a moment.)
-    const val ID = 4600
+    const val ID = 4300
     private const val ACTION_REFRESH = "com.noor.app.STATUS_REFRESH"
     private const val REQUEST = 7300
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

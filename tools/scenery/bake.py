@@ -107,27 +107,6 @@ def sun_lift(alpha, top, horizon, focal_px, rows=None):
     return out
 
 
-SKYLINE_BINS = 360
-
-
-def skyline_profile(alpha, top, horizon, focal_px, rows=None, bins=SKYLINE_BINS):
-    """(0.18) The land's whole skyline, as the app draws the Sun's path behind it (RealSky.skyline): for each of
-    `bins` equal strips across the picture, the tangent of the angle over the horizon of its highest solid point
-    (alpha 0.5 or more), so that nothing drawn above the profile can cover the land. -0.05 where a strip has none.
-    `alpha` is the land's alpha (rows from the top; `rows` = how many rows of the frame it stands for)."""
-    h, w = alpha.shape
-    rows = h if rows is None else rows
-    solid = alpha >= 0.5
-    first = np.where(solid.any(axis=0), solid.argmax(axis=0), h)
-    out = []
-    for i in range(bins):
-        a, b = int(i * w / bins), max(int((i + 1) * w / bins), int(i * w / bins) + 1)
-        y = int(first[a:b].min())
-        t = -0.05 if y >= h else (horizon - (top + y * rows / h)) / focal_px
-        out.append(round(float(min(max(t, -0.05), 0.8)), 4))
-    return out
-
-
 GLOW_ANGLE = 75.0         # how broad the glow of the sky round a low Sun is taken to be (degrees across)
 
 
@@ -679,7 +658,6 @@ def bake_pack(src, dst, suns, eye, aovs=(), quality=80, frame='0001', water=None
         'suns': [{'name': n.lower(), 'azimuth': az, 'elevation': el} for n, az, el in suns],
     }
     meta['lift'] = sun_lift(alpha, top, HORIZON * k, FOCAL * alpha.shape[1])
-    meta['skyline'] = skyline_profile(alpha, top, HORIZON * k, FOCAL * alpha.shape[1])
     meta.update(extra or {})
     json.dump(meta, open(os.path.join(dst, 'land.json'), 'w'), indent=1)
     return meta

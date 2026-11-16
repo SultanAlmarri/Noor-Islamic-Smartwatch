@@ -22,13 +22,6 @@ class ConfigListenerService : WearableListenerService() {
             withTimeoutOrNull(30_000) { FacePush(this@ConfigListenerService).choose(face) }
             StatusPublisher.publish(this@ConfigListenerService)
         }
-        // 0.18: a Minhad Studio design from the phone's editor. The studio face redraws with it at once.
-        val studio = events.filter { it.type == DataEvent.TYPE_CHANGED && it.dataItem.uri.path == com.noor.prayer.face.FaceDesign.PATH }
-            .mapNotNull { DataMapItem.fromDataItem(it.dataItem).dataMap.let { m -> m.getString(com.noor.prayer.face.FaceDesign.KEY)?.let { d -> d to m.getLong(com.noor.prayer.face.FaceDesign.KEY_AT) } } }
-            .lastOrNull()
-        if (studio != null && com.noor.wear.studio.StudioStore.save(this, studio.first, studio.second)) runBlocking {
-            StatusPublisher.publish(this@ConfigListenerService)
-        }
         val repo = (application as NoorWearApp).config
         // Freeze the events before the buffer is released; the work is tiny (a few hundred bytes to DataStore).
         val payloads = events.filter { it.type == DataEvent.TYPE_CHANGED && it.dataItem.uri.path == WatchConfig.PATH }

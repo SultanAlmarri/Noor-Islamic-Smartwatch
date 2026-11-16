@@ -12,8 +12,8 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 26
         targetSdk = 35
-        versionCode = 34
-        versionName = "0.18.0"
+        versionCode = 33
+        versionName = "0.17.0"
     }
 
     signingConfigs {
@@ -62,7 +62,6 @@ dependencies {
     implementation(project(":core:prayer"))
     implementation(project(":alerts"))
     implementation(project(":shared"))
-    implementation(project(":face"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
@@ -84,9 +83,6 @@ dependencies {
     implementation(libs.play.services.wearable)
     implementation(libs.wear.remote.interactions)
     implementation(libs.androidx.concurrent.futures)
-    // (0.18) Installs the baseline profile (src/main/baseline-prof.txt and the libraries' own) on phones the APK is
-    // installed on by hand, so the code of the start and of the home screen is compiled ahead rather than interpreted.
-    implementation(libs.androidx.profileinstaller)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

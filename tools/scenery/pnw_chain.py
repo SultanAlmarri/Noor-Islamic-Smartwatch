@@ -67,20 +67,6 @@ def dist_of(g):
     return np.exp2(v / 65535.0 * 18.0)
 
 
-def skyline_profile(alpha, top, horizon, focal_px, rows, bins=360):
-    """bake.skyline_profile: the tangent of the highest solid point of each of `bins` strips across the picture."""
-    h, w = alpha.shape
-    solid = alpha >= 0.5
-    first = np.where(solid.any(axis=0), solid.argmax(axis=0), h)
-    out = []
-    for i in range(bins):
-        a, b = int(i * w / bins), max(int((i + 1) * w / bins), int(i * w / bins) + 1)
-        y = int(first[a:b].min())
-        t = -0.05 if y >= h else (horizon - (top + y * rows / h)) / focal_px
-        out.append(round(float(min(max(t, -0.05), 0.8)), 4))
-    return out
-
-
 def sun_lift(alpha, top, horizon, focal_px, rows):
     """bake.sun_lift: the tangents of how high the skyline stands where the Sun rises and sets."""
     h, w = alpha.shape
@@ -166,7 +152,6 @@ def main():
     meta['top'] = int(top)
     meta['height'] = int(rows)
     meta['lift'] = sun_lift(a, top, mo['horizon'], mo.get('focal', 1.15) * W, rows)
-    meta['skyline'] = skyline_profile(a, top, mo['horizon'], mo.get('focal', 1.15) * W, rows)
     meta['chain'] = 'Stuart Range (pnw.py, pnw_chain.py)'
     json.dump(meta, open(os.path.join(dst, 'land.json'), 'w'), indent=1)
     print('chain laid behind %s: %d x %d from row %d, lift %s' % (old_dir, W, rows, top, meta['lift']))

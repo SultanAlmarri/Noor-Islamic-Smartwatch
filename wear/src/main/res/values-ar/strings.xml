@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">منهاد</string>
+    <string name="app_name">نور</string>
     <string name="complication_next">الصلاة القادمة</string>
     <string name="tile_label">مواقيت الصلاة</string>
     <string name="next">القادمة</string>
@@ -8,12 +8,12 @@
     <string name="remaining">متبقٍ</string>
     <string name="today">اليوم</string>
     <string name="open">فتح</string>
-    <string name="setup_title">افتح منهاد لضبطه</string>
-    <string name="setup_body">يأتي موقعك وطريقة الحساب من تطبيق منهاد على الهاتف. بعد أول مزامنة تحسب الساعة المواقيت بنفسها دون اتصال.</string>
+    <string name="setup_title">افتح نور لضبطه</string>
+    <string name="setup_body">يأتي موقعك وطريقة الحساب من تطبيق نور على الهاتف. بعد أول مزامنة تحسب الساعة المواقيت بنفسها دون اتصال.</string>
     <string name="setup_waiting">بانتظار الهاتف…</string>
     <string name="synced_from_phone">من الهاتف · %1$s</string>
     <string name="offline_note">محسوبة على الساعة</string>
-    <string name="watch_face">واجهة منهاد</string>
+    <string name="watch_face">واجهة نور</string>
     <string name="face_install">إضافة إلى الساعة</string>
     <string name="face_update">تحديث الواجهة</string>
     <string name="face_activate">استخدامها واجهةً للساعة</string>
@@ -24,9 +24,9 @@
     <string name="face_error">تعذّر التثبيت: %1$s</string>
     <string name="face_working">جارٍ العمل…</string>
     <string name="method">الطريقة</string>
-    <string name="face_permission_settings">تم رفض الإذن. لاستخدام واجهة منهاد اضغط مطولاً على الواجهة الحالية واختر منهاد، أو اسمح بذلك من الإعدادات › التطبيقات › منهاد.</string>
+    <string name="face_permission_settings">تم رفض الإذن. لاستخدام واجهة نور اضغط مطولاً على الواجهة الحالية واختر نور، أو اسمح بذلك من الإعدادات › التطبيقات › نور.</string>
     <string name="try_again">إعادة المحاولة</string>
-    <string name="face_setup_title">واجهة منهاد</string>
+    <string name="face_setup_title">واجهة نور</string>
     <string name="alerts_title">تنبيهات الصلاة</string>
     <string name="alerts_need_notifications">اسمح بالإشعارات لتعمل تنبيهات الصلاة على هذه الساعة.</string>
     <string name="alerts_need_exact">اسمح بالمنبّهات الدقيقة لتصل التنبيهات في دقيقتها تمامًا.</string>
@@ -95,7 +95,7 @@
     <string name="sync_working">جارٍ سؤال الهاتف…</string>
     <string name="sync_done">محدّثة</string>
     <string name="sync_failed">تعذّر الوصول إلى الهاتف</string>
-    <string name="sync_failed_body">افتح منهاد على الهاتف أو تحقّق من اتصال البلوتوث. تستمر الساعة في العمل في الأثناء.</string>
+    <string name="sync_failed_body">افتح نور على الهاتف أو تحقّق من اتصال البلوتوث. تستمر الساعة في العمل في الأثناء.</string>
     <string name="use_watch_settings">استخدام إعدادات الساعة</string>
     <string name="use_watch_settings_body">بدلًا من إعدادات الهاتف</string>
     <string name="updated_now">حُدّثت الآن</string>
@@ -115,29 +115,29 @@
     <string name="alert_style_notification">إشعار</string>
     <string name="alert_prayers">الصلوات</string>
     <string name="alert_prayers_none">لا شيء</string>
-    <string name="get_phone_app">منهاد على هاتفك</string>
+    <string name="get_phone_app">نور على هاتفك</string>
     <string name="get_phone_app_body">يفتح صفحة التنزيل على الهاتف</string>
 
-    <string name="welcome_title">منهاد</string>
+    <string name="welcome_title">نور</string>
     <string name="welcome_body">مواقيت الصلاة والقبلة والأذكار على معصمك، دون الحاجة إلى الهاتف.</string>
     <string name="use_my_location">استخدام موقعي</string>
     <string name="use_my_location_body">يبقى على هذه الساعة</string>
     <string name="locating">جارٍ تحديد موقعك…</string>
     <string name="locating_body">في الخارج يكون أسرع</string>
-    <string name="location_denied">الموقع غير مسموح لمنهاد. اسمح به أو اختر مدينة.</string>
+    <string name="location_denied">الموقع غير مسموح لنور. اسمح به أو اختر مدينة.</string>
     <string name="location_unavailable">لم يُحدَّد الموقع بعد. جرّب في الخارج أو اختر مدينة.</string>
     <string name="choose_city">اختيار مدينة</string>
-    <string name="welcome_phone">تستخدم منهاد على هاتفك؟ افتحه مرة وستظهر إعداداته هنا.</string>
-    <string name="welcome_phone_waiting">هاتفك متصل. افتح منهاد عليه لإرسال إعداداته، أو اضبط الساعة هنا.</string>
+    <string name="welcome_phone">تستخدم نور على هاتفك؟ افتحه مرة وستظهر إعداداته هنا.</string>
+    <string name="welcome_phone_waiting">هاتفك متصل. افتح نور عليه لإرسال إعداداته، أو اضبط الساعة هنا.</string>
     <string name="search_city">البحث عن مدينة</string>
     <string name="search_none">لم يُعثر على مكان. جرّب كتابة أخرى.</string>
     <string name="cities">المدن</string>
 
-    <string name="tile_tools_label">منهاد</string>
+    <string name="tile_tools_label">نور</string>
     <string name="tile_tools_hint">القبلة · التسبيح · التقويم</string>
     <string name="tile_open_times">المواقيت</string>
     <string name="face_in_use">قيد الاستخدام: %1$s</string>
-    <string name="face_pick_hint">أُضيفت إلى واجهات ساعتك. لعرضها اضغط مطولاً على واجهة الساعة ثم اختر منهاد.</string>
+    <string name="face_pick_hint">أُضيفت إلى واجهات ساعتك. لعرضها اضغط مطولاً على واجهة الساعة ثم اختر نور.</string>
     <string name="face_design">التصميم</string>
     <string name="face_colour">اللون</string>
     <string name="face_design_horizon">الأفق</string>

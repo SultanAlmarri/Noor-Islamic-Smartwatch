@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Minhad</string>
+    <string name="app_name">Noor</string>
     <string name="complication_next">Next prayer</string>
     <string name="tile_label">Prayer times</string>
     <string name="next">Next</string>
@@ -8,12 +8,12 @@
     <string name="remaining">remaining</string>
     <string name="today">Today</string>
     <string name="open">Open</string>
-    <string name="setup_title">Open Minhad to set it up</string>
-    <string name="setup_body">Your location and calculation method come from the Minhad phone app. After the first sync the watch calculates on its own, offline.</string>
+    <string name="setup_title">Open Noor to set it up</string>
+    <string name="setup_body">Your location and calculation method come from the Noor phone app. After the first sync the watch calculates on its own, offline.</string>
     <string name="setup_waiting">Waiting for the phone…</string>
     <string name="synced_from_phone">From phone · %1$s</string>
     <string name="offline_note">Calculated on the watch</string>
-    <string name="watch_face">Minhad watch face</string>
+    <string name="watch_face">Noor watch face</string>
     <string name="face_install">Add to watch</string>
     <string name="face_update">Update watch face</string>
     <string name="face_activate">Use as watch face</string>
@@ -24,9 +24,9 @@
     <string name="face_error">Could not install: %1$s</string>
     <string name="face_working">Working…</string>
     <string name="method">Method</string>
-    <string name="face_permission_settings">Permission declined. To use Minhad as your watch face, long-press the current face and choose Minhad, or allow it in Settings › Apps › Minhad.</string>
+    <string name="face_permission_settings">Permission declined. To use Noor as your watch face, long-press the current face and choose Noor, or allow it in Settings › Apps › Noor.</string>
     <string name="try_again">Try again</string>
-    <string name="face_setup_title">Minhad watch face</string>
+    <string name="face_setup_title">Noor watch face</string>
     <string name="alerts_title">Prayer alerts</string>
     <string name="alerts_need_notifications">Allow notifications so prayer alerts can sound on this watch.</string>
     <string name="alerts_need_exact">Allow exact alarms so alerts come at the exact minute.</string>
@@ -91,7 +91,7 @@
     <string name="sync_working">Asking the phone…</string>
     <string name="sync_done">Up to date</string>
     <string name="sync_failed">Phone not reachable</string>
-    <string name="sync_failed_body">Open Minhad on the phone, or check the Bluetooth connection. The watch keeps working meanwhile.</string>
+    <string name="sync_failed_body">Open Noor on the phone, or check the Bluetooth connection. The watch keeps working meanwhile.</string>
     <string name="use_watch_settings">Use this watch\'s settings</string>
     <string name="use_watch_settings_body">Instead of the phone\'s</string>
     <string name="updated_now">Updated just now</string>
@@ -111,29 +111,29 @@
     <string name="alert_style_notification">Notification</string>
     <string name="alert_prayers">Prayers</string>
     <string name="alert_prayers_none">None</string>
-    <string name="get_phone_app">Minhad for your phone</string>
+    <string name="get_phone_app">Noor for your phone</string>
     <string name="get_phone_app_body">Opens the download page on the phone</string>
 
-    <string name="welcome_title">Minhad</string>
+    <string name="welcome_title">Noor</string>
     <string name="welcome_body">Prayer times, Qibla and dhikr on your wrist. Works without your phone.</string>
     <string name="use_my_location">Use my location</string>
     <string name="use_my_location_body">Stays on this watch</string>
     <string name="locating">Finding your location…</string>
     <string name="locating_body">Outdoors is fastest</string>
-    <string name="location_denied">Location is off for Minhad. Allow it, or choose a city.</string>
+    <string name="location_denied">Location is off for Noor. Allow it, or choose a city.</string>
     <string name="location_unavailable">No location yet. Try outdoors, or choose a city.</string>
     <string name="choose_city">Choose a city</string>
-    <string name="welcome_phone">Using Minhad on your phone? Open it once and its settings appear here.</string>
-    <string name="welcome_phone_waiting">Your phone is connected. Open Minhad on it to send its settings, or set up here.</string>
+    <string name="welcome_phone">Using Noor on your phone? Open it once and its settings appear here.</string>
+    <string name="welcome_phone_waiting">Your phone is connected. Open Noor on it to send its settings, or set up here.</string>
     <string name="search_city">Search for a city</string>
     <string name="search_none">No place found. Try another spelling.</string>
     <string name="cities">Cities</string>
 
-    <string name="tile_tools_label">Minhad</string>
+    <string name="tile_tools_label">Noor</string>
     <string name="tile_tools_hint">Qibla · Tasbih · Calendar</string>
     <string name="tile_open_times">Times</string>
     <string name="face_in_use">In use: %1$s</string>
-    <string name="face_pick_hint">Added to your watch faces. To show it, touch and hold your watch face, then choose Minhad.</string>
+    <string name="face_pick_hint">Added to your watch faces. To show it, touch and hold your watch face, then choose Noor.</string>
     <string name="face_design">Design</string>
     <string name="face_colour">Colour</string>
     <string name="face_design_horizon">Horizon</string>

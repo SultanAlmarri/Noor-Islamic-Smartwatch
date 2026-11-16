@@ -51,7 +51,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,7 +76,7 @@ import java.time.Instant
 import java.time.ZoneId
 
 @Composable
-fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(), onOpenAdhan: () -> Unit = {}, onBack: (() -> Unit)? = null, onOpenStudio: () -> Unit = {}) {
+fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(), onOpenAdhan: () -> Unit = {}, onBack: (() -> Unit)? = null) {
     val state by vm.state.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle(initialValue = null)
     val lastSent by vm.lastSent.collectAsStateWithLifecycle()
@@ -93,10 +92,6 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(),
         while (true) { delay(1000 - System.currentTimeMillis() % 1000); value = System.currentTimeMillis() }
     }
     val preview = remember(s, clock / 1000, f.arabic) { watchPreview(s, Instant.ofEpochMilli(clock), f) }
-    // 0.18: Minhad Studio's design being edited, shown live on this page; re-read when coming back from the editor.
-    var studioDesign by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.noor.app.ui.watch.studio.StudioRepository(context).draft) }
-    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { studioDesign = com.noor.app.ui.watch.studio.StudioRepository(context).draft; onPauseOrDispose { } }
-    val studioConfig = remember(s) { WearSync.configFor(s, 0L) }
     WatchContent(
         contentPadding, state, vm.configAvailable(settings), lastSent, installs, faces, syncing, syncFailed, vm.setup.installedFromPlay,
         Formatter(isArabicUi(), s.numerals, s.timeFormat),
@@ -104,7 +99,6 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(),
             install = vm::installOnWatch, useFace = vm::useNoorFace, open = vm::openOnWatch, sync = vm::syncNow,
             openGuide = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(INSTALL_GUIDE)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
             faceChoice = faceChoice, selectFace = vm::selectFace, sendFace = vm::sendFace, openAdhan = onOpenAdhan,
-            openStudio = onOpenStudio, studioDesign = studioDesign, studioConfig = studioConfig,
         ),
         now = System.currentTimeMillis(), onBack = onBack,
         preview = preview,
@@ -135,10 +129,6 @@ class WatchActions(
     val sendFace: (String, WatchReport?) -> Unit = { _, _ -> },
     /** 0.15: the watch's alerts are chosen on the Adhan tab: its row here opens it. */
     val openAdhan: () -> Unit = {},
-    /** 0.18: Minhad Studio: the editor, and the design shown on its card (none: no card). */
-    val openStudio: () -> Unit = {},
-    val studioDesign: com.noor.prayer.face.FaceDesign? = null,
-    val studioConfig: com.noor.prayer.WatchConfig? = null,
 )
 
 /** Stateless Watch tab, so every state (no watch, installing, ready…) can be rendered and tested. */
@@ -164,11 +154,6 @@ fun WatchContent(
     com.noor.app.ui.components.NoorPage(stringResource(R.string.watch_title), contentPadding, onBack = onBack, spacing = 20.dp) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             WatchPreview(preview, description = stringResource(R.string.watch_preview_desc))
-        }
-
-        actions.studioDesign?.let { d ->
-            val studioOn = state?.reports?.values?.any { it.studioActive == true } == true
-            com.noor.app.ui.watch.studio.StudioCard(d, actions.studioConfig, studioOn, actions.openStudio)
         }
 
         when {
@@ -238,7 +223,7 @@ private fun WatchCard(
         // Step 1: Noor on the watch
         val installTimedOut = install != null && now - install.startedAtMs > WatchViewModel.PENDING_TIMEOUT_MS
         Step(
-            n = f.number(1), done = hasNoor, title = stringResource(R.string.step_app_title),
+            n = 1, done = hasNoor, title = stringResource(R.string.step_app_title),
             body = when {
                 hasNoor -> stringResource(R.string.step_app_done, report?.appVersionName ?: "")
                 install != null && !install.reached -> stringResource(R.string.step_app_unreached)
@@ -259,7 +244,7 @@ private fun WatchCard(
         // Step 2: settings reached the watch
         val received = report?.configReceivedAtMs
         Step(
-            n = f.number(2), done = hasNoor && received != null, title = stringResource(R.string.step_sync_title),
+            n = 2, done = hasNoor && received != null, title = stringResource(R.string.step_sync_title),
             body = when {
                 !configAvailable -> stringResource(R.string.watch_needs_location)
                 !hasNoor -> stringResource(R.string.step_after_install)
@@ -282,7 +267,7 @@ private fun WatchCard(
         val showing = report?.faceActive == true && report.faceVariant == chosen.id
         val sending = face != null && face.reached && !faceTimedOut && report?.faceVariant != chosen.id
         Step(
-            n = f.number(3), done = report?.faceActive == true, title = stringResource(R.string.step_face_title),
+            n = 3, done = report?.faceActive == true, title = stringResource(R.string.step_face_title),
             body = when {
                 !hasNoor -> stringResource(R.string.step_after_install)
                 report == null -> stringResource(R.string.step_face_open_first)
@@ -317,7 +302,7 @@ private fun WatchCard(
 }
 
 @Composable
-private fun Step(n: String, done: Boolean, title: String, body: String, working: Boolean, action: @Composable () -> Unit) {
+private fun Step(n: Int, done: Boolean, title: String, body: String, working: Boolean, action: @Composable () -> Unit) {
     val c = NoorTheme.colors
     Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.Top) {
         Box(
@@ -327,7 +312,7 @@ private fun Step(n: String, done: Boolean, title: String, body: String, working:
             when {
                 done -> Icon(Icons.Rounded.Check, null, tint = c.success, modifier = Modifier.size(16.dp))
                 working -> CircularProgressIndicator(Modifier.size(14.dp), color = c.gold, strokeWidth = 2.dp)
-                else -> Text(n, style = MaterialTheme.typography.labelMedium, color = c.textSecondary)
+                else -> Text("$n", style = MaterialTheme.typography.labelMedium, color = c.textSecondary)
             }
         }
         Spacer(Modifier.width(14.dp))

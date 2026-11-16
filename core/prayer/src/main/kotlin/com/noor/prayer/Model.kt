@@ -31,9 +31,3 @@ data class UserAdjustments(
     val highLatitudeRule: HighLatitudeRule = HighLatitudeRule.ANGLE_BASED,
     val minuteOffsets: Map<Prayer, Int> = emptyMap(),  // personal +/- minutes per event
 )
-
-/**
- * Which twilight the Moonsighting Committee Worldwide's seasonal Isha follows: [GENERAL] (its default, a blend that
- * also suits high latitudes), [AHMER] (the red glow) or [ABYAD] (the white glow).
- */
-enum class Shafaq { GENERAL, AHMER, ABYAD }

@@ -113,7 +113,7 @@ fun SettingsItem(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = com.noor.app.ui.components.withTick(onClick)) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -171,8 +171,7 @@ fun NoorSwitch(checked: Boolean, onChange: ((Boolean) -> Unit)?) {
     val c = NoorTheme.colors
     val off = c.textMuted.copy(alpha = if (c.isDark) 0.38f else 0.30f)
     Switch(
-        // (0.18: a tick when it is flipped by itself; rows that hold a switch tick for it.)
-        checked = checked, onCheckedChange = onChange?.let { com.noor.app.ui.components.withTick(it) },
+        checked = checked, onCheckedChange = onChange,
         // (With content, Material keeps the thumb one size on and off, as on iOS.)
         thumbContent = { Spacer(Modifier.size(SwitchDefaults.IconSize)) },
         colors = SwitchDefaults.colors(

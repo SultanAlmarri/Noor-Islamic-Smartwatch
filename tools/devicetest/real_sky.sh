@@ -76,13 +76,9 @@ for sc in $SCENERIES; do
     shot "real_${sc}_${hhmm}_${name}"
     [ $r -eq 1 ] && { log "the real sky is unavailable on this device"; break 2; }
     [ $r -eq 2 ] && log "no picture reported within the time for $sc $name"
-    [ $r -eq 2 ] && { adb shell dumpsys activity activities 2>/dev/null | grep -E "mResumedActivity|topResumedActivity" | head -3 | tee -a "$OUT/steps.txt"; adb shell dumpsys meminfo com.noor.smartwatch 2>/dev/null | grep -E "TOTAL|Native Heap|Dalvik Heap|Graphics" | head -6 | tee -a "$OUT/steps.txt"; }
     [ "$(adb get-state 2>/dev/null)" = "device" ] || { log "device gone"; break 2; }
   done
 done
 
 grep -E "NoorRealSky|AndroidRuntime|FATAL|libc    :|DEBUG   :" "$OUT/logcat.txt" | head -400 > "$OUT/real_sky_log.txt" 2>/dev/null
-# (0.18) What the system said about the app: starts, deaths, not responding, memory, the activity on screen.
-grep -E "com.noor.smartwatch|ActivityManager|ActivityTaskManager|lowmemorykiller|lmkd|ANR in|Choreographer|NoorOpening" "$OUT/logcat.txt" \
-  | grep -v "NoorRealSky" | tail -300 > "$OUT/system_log.txt" 2>/dev/null
 log "done"

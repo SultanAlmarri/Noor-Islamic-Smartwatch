@@ -115,7 +115,7 @@ fun <T> Segmented(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> 
 fun PreviewButton(playing: Boolean, label: String, onClick: () -> Unit) {
     val c = NoorTheme.colors
     Box(
-        Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = com.noor.app.ui.components.withTick(onClick)).semantics { contentDescription = label },
+        Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onClick).semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.size(36.dp).clip(CircleShape).background(if (playing) c.gold else c.gold.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
@@ -139,7 +139,7 @@ fun SoundRow(
     val c = NoorTheme.colors
     Row(
         Modifier.fillMaxWidth().heightIn(min = 60.dp)
-            .then(if (onSelect != null) Modifier.clickable(role = Role.RadioButton, onClick = com.noor.app.ui.components.withTick(onSelect)).semantics { this.selected = selected } else Modifier)
+            .then(if (onSelect != null) Modifier.clickable(role = Role.RadioButton, onClick = onSelect).semantics { this.selected = selected } else Modifier)
             .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

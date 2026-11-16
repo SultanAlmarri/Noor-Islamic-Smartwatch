@@ -87,10 +87,10 @@ internal class ComplicationBuilder(private val context: Context, private val con
             .build()
 
     private fun description(iv: Interval) =
-        PlainComplicationText.Builder(text.name(iv.next) + " " + text.time(iv.end, config.zone)).build()
+        PlainComplicationText.Builder(text.name(iv.next.prayer) + " " + text.time(iv.end, config.zone)).build()
 
     fun data(type: ComplicationType, iv: Interval, at: Instant): ComplicationData? {
-        val name = text.name(iv.next)
+        val name = text.name(iv.next.prayer)
         return when (type) {
             ComplicationType.SHORT_TEXT -> ShortTextComplicationData.Builder(countdown(iv), description(iv))
                 .setTitle(PlainComplicationText.Builder(name).build())
