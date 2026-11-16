@@ -344,9 +344,10 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   of November: the land follows the Sun by a month and more), the one passing into the other over some weeks.
   Where the winter's pictures carry their own snow, the renderer lays none of its own. Sceneries with pictures of
   their own seasons: the Red Rock (base summer; autumn's cottonwoods gold, unevenly; winter bare, the willows' red
-  stems, a dusting of snow on the ledges; spring's small fresh leaves) and the green hills (base spring; summer's
-  straw-gold grass and dusty blue-green oaks; autumn tawny, the blue and valley oaks gold to russet; winter's new
-  green, those oaks bare; the live oaks evergreen). The others change with the seasons as they did (snow), which is
+  stems, a dusting of snow on the ledges; spring's small fresh leaves). The green hills' are made the same way
+  (`meadow.py`: base spring; summer's straw-gold grass and dusty blue-green oaks; autumn tawny, the blue and valley
+  oaks gold to russet; winter's new green, those oaks bare; the live oaks evergreen) and are added when their
+  renders are done (HANDOVER.md section 25 says which are in). The others change with the seasons as they did (snow), which is
   true to them: the dunes, the sea and the arctic do not turn, and the Pacific Northwest's conifers keep their
   needles. The season pictures are rendered by a colour pass with that season's materials (`bake.colour_render`;
   `tools/scenery/README.md`).

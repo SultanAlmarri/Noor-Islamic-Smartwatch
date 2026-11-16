@@ -1100,3 +1100,49 @@ Made in a cloud session (Claude Opus, picking up from Claude Fable when its limi
 - **A line of thunderstorms on the horizon** (`lo_cb_line`, sky_cb.py): three storms 72 to 90 km off at different
   stages, lightning from each (`SkyDirector.THUNDER`). Five near cumulus that had lined up on one bearing and read
   as a column of flat cloudlets were taken out of its pictures (tools/scenery/erase_clouds.py).
+- **How it is organised** (the owner, the same evening: "see how professionals in user interface design... understand
+  the human mind... organizing all the features and settings and options... intuitive... world class"; DESIGN.md,
+  "How Noor is organised (0.15)"). A helper inventoried every page, row, option, entry point, duplicate and test
+  that depends on the structure; the rules came from Apple's Human Interface Guidelines, Android's settings
+  guidelines, Nielsen Norman Group (the ten heuristics, progressive disclosure, mobile navigation) and the laws of
+  interaction design. Settings' first page: the place's card, then Prayer (Prayer times, Adhan & alerts, the
+  notification bar), Appearance (Theme, Home screen, Language and region), the watch, About, Testing: nine rows,
+  was twenty. Two pages below it, inside `SettingsScreen` (`SettingsPage`): Prayer times (a card with what the times
+  follow and on what grounds; the method, Asr, adjustments; the high-latitude rule with a footer; accuracy) and
+  Language and region (language, numerals, time format, the Hijri date). Search reaches every row of every page,
+  says where it lives and works it from the results. Renamed: Calculation method, Theme, Home screen, Language and
+  region. "Time since each prayer" moved to the Home screen page (Countdown). Alert history is on the Adhan tab only
+  (search still finds it from Settings). The tab bar is on every page except the welcome and the location chooser
+  (`Routes.withoutTabBar`), lighting the tab the page belongs to (the nearest tab in the back stack); the lit tab
+  tapped again goes back to its first page (`LocalTabReselect` for Settings' own pages). The Watch tab's "Choose
+  Watch or Both in the Adhan tab" is a link. The welcome has a third step that offers the Adhan (alerts start off),
+  also on the way to choosing a city by hand. The home screen's drag is said once on the sky
+  (`AppSettings.scrubHintDone`, set at the first drag).
+
+**What was tested, and how**
+
+- Unit and render tests on this machine: the phone app's 84 tests pass (`:app:testDebugUnitTest`),
+  including `ThemeContrastTest.textOnTheGlassOverThePagesSkyIsAlwaysReadable` (new), `MainFlowTest` through the
+  welcome's new step (it checks that "Not now" leaves the alerts off), and `ScreenshotTest` with three new pictures
+  (80 and 82: the Prayer times page in English and Arabic; 81: Language and region) and its language check on every
+  picture. `SkyDirectorTest` passes with the storm line.
+- The renders were looked at: every page in the dark theme at the afternoon of the test's clock, Settings, Adhan and
+  a prayer's alert by day, Arabic Settings, Adhan and the Prayer times page, the tab bar's lens in Arabic.
+- The sceneries on the design bench (software GPU): the chain at sunrise, morning, noon, afternoon, sunset, dusk,
+  night and in winter; Red Rock's autumn and winter at morning and evening; the storm line by day, at sunset, at dusk
+  with lightning and at night, before and after the column was taken out.
+
+**What was not tested**
+
+- **Nothing of 0.15 has been seen on a phone**: not the sky behind the pages, the glass, the floating tab bar, the
+  hero cards, the new Settings pages, the welcome's Adhan step (its notification permission request runs only on a
+  device), the drag hint, the chain of mountains, Red Rock's seasons or the storm line.
+- On a real GPU the pages' sky costs one gradient and a few dozen dots per page: nothing was measured.
+
+**Open after 0.15.0**
+
+- The container restarted at about 13:49 UTC and killed the running renders (Red Rock's spring, the towering
+  cumulus `lo_congestus`); they were started again (`/opt/noortools/work/queue_after_restart.sh`). The green hills'
+  summer, autumn and winter follow them in the same queue (hours on this machine). Each is added when it is done.
+- The Testing page is still English only, and goes before release with `com.noor.app.testing`.
+

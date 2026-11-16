@@ -16,8 +16,8 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.14.0** (versionCode 28), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
-0.9.13, 0.9.14 and 0.10.0 to 0.14.0 changed only the phone. Everything is on `main`. The merged work
+Current version: phone **0.15.0** (versionCode 29), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
+0.9.13, 0.9.14 and 0.10.0 to 0.15.0 changed only the phone. Everything is on `main`. The merged work
 branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
 branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
 Android 17 emulator experiments: that image does not run reliably on GitHub's machines) and `noor/0912` (a first
@@ -90,7 +90,9 @@ in this file's history.
    approved plan (HANDOVER.md section 10) had to stay exactly as it was; on 15 November 2026 the owner lifted that
    for the interface ("totally revolutionize the user interface and keep the Apple aesthetic... a lot more
    intuitive"), and 0.14 redesigned every screen but one on one system (`ui/components/Page.kt`,
-   docs/UI_014_NOTES.md): new screens follow that system. The Qibla screen is liked as it is:
+   docs/UI_014_NOTES.md), and 0.15 put every page on the sky of the moment with glass over it (`ui/theme/Backdrop.kt`,
+   `HeroCard`) and organised Settings in two levels (DESIGN.md, "How Noor is organised"): new screens follow that
+   system, and its contrast test (`ThemeContrastTest`). The Qibla screen is liked as it is:
    fix, do not redesign.
 6. **Do not fabricate** test results, data, or certainty. Do not invent missing data.
 7. **No scraping** of websites or apps without authorisation. **No unlicensed copyrighted recordings.** Adhan audio
