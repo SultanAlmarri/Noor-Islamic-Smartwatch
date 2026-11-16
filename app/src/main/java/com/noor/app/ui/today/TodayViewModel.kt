@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -60,6 +61,25 @@ class DayCache(private val tables: OfficialTimetables? = null, private val capac
     fun get(s: AppSettings, place: ResolvedPlace, profile: CalculationProfile, date: LocalDate): PrayerDay = resolved(s, place, profile, date).day
 }
 
+/**
+ * (0.18) The day's sun paths (241 positions of the Sun each, by the prayer engine's own solar position code), worked
+ * out once, off the main thread where it can be ([TodayViewModel] does it with the day's times), and shared. Until
+ * 0.17 the home screen worked its path out on the main thread as it first drew, and again at every return to it.
+ */
+internal object SunPaths {
+    private val map = LinkedHashMap<Triple<LocalDate, com.noor.prayer.GeoPoint, java.time.ZoneId>, com.noor.prayer.astro.SunPath>()
+
+    @Synchronized
+    fun of(date: LocalDate, point: com.noor.prayer.GeoPoint, zone: java.time.ZoneId): com.noor.prayer.astro.SunPath {
+        val k = Triple(date, point, zone)
+        map[k]?.let { return it }
+        val p = com.noor.prayer.astro.SunPath.of(date, point, zone)
+        map[k] = p
+        while (map.size > 4) map.remove(map.keys.first())
+        return p
+    }
+}
+
 class TodayViewModel(app: Application) : AndroidViewModel(app) {
 
     private val container = (app as NoorApplication).container
@@ -73,8 +93,13 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
         val place = PrayerProvider.place(s) ?: return@combine TodayUi(s, null, null, null, now, null, null, r, lr)
         val profile = PrayerProvider.profile(s, place)
         val state = Schedule.state(now, place.zone) { d -> cache.get(s, place, profile, d) }
-        TodayUi(s, place, profile, PrayerProvider.authority(s, place), now, state, now.atZone(place.zone).toLocalDate(), r, lr)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        val today = now.atZone(place.zone).toLocalDate()
+        // (0.18) The home screen's day is worked out here, off the main thread: its sun path, and the days on either
+        // side that the list of times can be swiped to.
+        SunPaths.of(today, place.point, place.zone)
+        cache.get(s, place, profile, today.minusDays(1)); cache.get(s, place, profile, today.plusDays(1))
+        TodayUi(s, place, profile, PrayerProvider.authority(s, place), now, state, today, r, lr)
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Times for any date in [DateWindow], for the current place and settings, with their source. */
     fun day(u: TodayUi, date: LocalDate): ResolvedDay? {
