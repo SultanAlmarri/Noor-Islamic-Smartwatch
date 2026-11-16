@@ -1023,3 +1023,46 @@ to change)
 - The desert keeps the most open sky (one day in four shows three kinds of low cloud, not four or more).
 - Tester's options are English only and are not stored.
 - Released in parts rather than held for the slowest bake: what needs Blender arrives as each bake is done.
+
+**How 0.14.0 was tested**
+
+- Unit tests in the cloud session, on the merged work: prayer engine 105 (1 skipped by design), alerts 16, phone
+  83, watch 29, no failures. New: `SkyDirectorTest.theDayIsAWalkThroughDifferentSkies`,
+  `someMorningsHaveFogAndTheSunBurnsItOff`, `theSeasonsTurnSmoothlyAndEachHasItsTime`; the helper's
+  `MainFlowTest` (the real `MainActivity` from onboarding to the location page) and `OpeningTest`. The director's
+  older tests pass unchanged.
+- The design bench (stills, a software GPU): far land at midday in mist and rain on four sceneries; the sunset
+  and the sunrise at five heights of the Sun under several skies on all six sceneries, beside photographs; a
+  rainy midday and the night on all six; fog at dawn, sunrise and mid-morning on all six; a set both ways round;
+  lightning by day, at dusk and by night; the seasons' turning with made-up pictures.
+- An Android 14 emulator on GitHub (`real-sky.yml`, run 43843501616, on the commit with the far land, the open
+  ocean, the sunset and the seasons' shader): the shaders build with Android's own compiler and the sky is shown,
+  no GL errors; the beach has its open horizon, the lake its golden evening. The emulator starved as before (the
+  first picture of a start took 137 to 156 seconds, later ones 2.4 to 4 seconds; "isn't responding" dialogs over
+  three of eight pictures).
+- Software renders of every screen (`ScreenshotTest`, 62 pictures; the opening frame by frame): looked at by the
+  helper and by the lead.
+
+**What was not tested**
+
+- **Nothing of 0.14 has been seen on a phone.** Not the sky, not the interface, not the opening, not the
+  tester's options. The owner is the first to see it move.
+- The cost of the heavier shaders on a real GPU: the clouds' pass now looks up the air's table and works two
+  powers for every pixel of cloud, the scene has the fog and the stroke. On the emulator a picture after the
+  first took 2.4 to 4 seconds (0.13: 1.5 to 2.2), but that machine was starved in both runs; nothing can be
+  concluded from it for a phone.
+- The opening's hand-over from Android's launch screen, haptics, TalkBack itself, dialogs and sheets (they open
+  in windows of their own, which the renders cannot capture).
+- Lightning, fog banks, the demo and a running day were seen as stills or not at all: they move.
+
+**Open after 0.14.0**
+
+- The red rock redone, cumulonimbus sets, the Pacific Northwest's chain of mountains and the seasons' pictures
+  need Blender bakes on a CPU: they follow as each is done (see below, as they are added).
+- Sunbeams through broken cloud at a low Sun were tried as a screen effect (what is bright along the line to the
+  Sun) and dropped: it made ghosts of the clouds and washed the picture out. If wanted, it needs the clouds'
+  shadow worked out in the air, not a smear of the picture.
+- The evening's horizon is still one bright band under a deck of cloud (true to photographs, but flat).
+- A scenery's water mirrors the base season's outline of the land while the seasons turn.
+- Tester's options: English only; cannot yet be driven from the emulator workflow.
+- Leftovers from 0.13 stay: `uCloudF*`, the bench's `mix*` values.
