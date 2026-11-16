@@ -84,13 +84,24 @@ internal enum class ClockVoice(val label: Int, val libraryId: String, val names:
 /** The user's sound that stands for [this] voice (one they added under its name), if any. */
 internal fun ClockVoice.ownSound(custom: List<CustomSound>) = custom.firstOrNull { it.name.trim() in names }
 
+/** 0.18: the user's Fajr recording of this voice ("Dubai Fajr", "دبي الفجر"), played at Fajr instead of [ownSound]. */
+internal fun ClockVoice.ownFajr(custom: List<CustomSound>) = custom.firstOrNull { c ->
+    val n = c.name.trim().lowercase()
+    names.any { v -> v.lowercase().let { b -> n == "$b fajr" || n == "$b (fajr)" || n == "$b الفجر" || n == "$b (الفجر)" } }
+}
+
+/** The recording a voice plays at Fajr: its own Fajr recording (Noor's or the user's) when there is one. */
+internal fun fajrOf(id: String, vm: AdhanViewModel, custom: List<CustomSound>): String =
+    if (SoundIds.isCustom(id)) ClockVoice.entries.firstOrNull { it.ownSound(custom)?.id == id }?.ownFajr(custom)?.id ?: id
+    else vm.library.byId(id + "_fajr")?.id ?: id
+
 /** The sound that plays for this voice: Noor's recording, or the user's own; null when there is neither yet. */
 internal fun ClockVoice.soundId(vm: AdhanViewModel, custom: List<CustomSound>): String? =
     libraryId.takeIf { vm.library.byId(it) != null } ?: ownSound(custom)?.id
 
 /** Which voice [id] is (a voice's Fajr recording counts as the voice). */
 internal fun voiceOf(id: String?, vm: AdhanViewModel, custom: List<CustomSound>): ClockVoice? =
-    ClockVoice.entries.firstOrNull { v -> v.soundId(vm, custom).let { it != null && (it == id || it + "_fajr" == id) } }
+    ClockVoice.entries.firstOrNull { v -> v.soundId(vm, custom).let { it != null && (it == id || it + "_fajr" == id) } || (id != null && v.ownFajr(custom)?.id == id) }
 
 /** A voice's name for a sound id: a voice's, a sound effect's, or one of the user's sounds'. */
 @Composable
@@ -208,9 +219,10 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
     val effects = target != null && (alerts.alert(target).mode == AlertMode.SOUND || target == Prayer.SHURUQ)
     val current: String? = if (target != null) alerts.alert(target).soundId else sharedVoice(alerts, vm, custom)
     var adding by rememberSaveable { mutableStateOf<String?>(null) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    // (A voice may take two files at once: the Adhan, and one named "… Fajr" for Fajr.)
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         val name = adding
-        if (uri != null && name != null) { if (name.isEmpty()) vm.importSound(uri, forPrayer = target) else vm.importVoice(uri, name, target) }
+        if (uris.isNotEmpty() && name != null) { if (name.isEmpty()) uris.forEach { vm.importSound(it, forPrayer = target) } else vm.importVoice(uris, name, target) }
         adding = null
     }
     val volume = target?.let { alerts.alert(it).volumePercent } ?: 80
@@ -233,7 +245,7 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
                 if (i > 0) SettingsDivider()
                 val id = v.soundId(vm, custom)
                 // (At Fajr, the voice's own Fajr recording when it has one.)
-                val play = if (target == Prayer.FAJR) id?.let { lib.byId(it + "_fajr")?.id } ?: id else id
+                val play = if (target == Prayer.FAJR) id?.let { fajrOf(it, vm, custom) } else id
                 val name = stringResource(v.label)
                 SoundRow(name, if (id == null) stringResource(R.string.voice_add) else null,
                     selected = id != null && (current == id || current == play), playing = play != null && preview?.id == play, previewLabel = previewLabel,
@@ -246,7 +258,7 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
         }
 
         // The user's own sounds (those not standing for a voice), and adding one.
-        val voiceOwn = ClockVoice.entries.mapNotNull { it.ownSound(custom)?.id }.toSet()
+        val voiceOwn = ClockVoice.entries.flatMap { listOfNotNull(it.ownSound(custom)?.id, it.ownFajr(custom)?.id) }.toSet()
         val mine = custom.filter { it.id !in voiceOwn }
         SettingsSection(stringResource(R.string.adhan_my_sounds)) {
             mine.forEachIndexed { i, cs ->

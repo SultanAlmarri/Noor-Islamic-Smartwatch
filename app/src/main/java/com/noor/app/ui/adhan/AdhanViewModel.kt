@@ -315,7 +315,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             // (For every prayer: those that call the Adhan; a prayer set to a notification or a sound keeps it.)
             if (target == null && a.mode !in VOICE_MODES) continue
             // 0.18: Fajr takes the voice's own Fajr recording ("As-salatu khayrun min an-nawm") when there is one.
-            val id = if (p == Prayer.FAJR && !custom) library.byId(voice + "_fajr")?.id ?: voice else voice
+            val id = if (p == Prayer.FAJR) fajrOf(voice, this, _custom.value) else voice
             val entry = library.byId(id)
             val mode = when {
                 custom -> AlertMode.CUSTOM
@@ -331,16 +331,24 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     /** 0.18: the volume of every prayer's alert at once (each can still have its own, on its page). */
     fun setVolumeAll(percent: Int) = update { s -> Prayer.entries.fold(s) { x, p -> x.with(p, x.alert(p).copy(volumePercent = percent)) } }
 
-    /** An imported file as one of the voices ([name]: "Al-Quds", "Egypt", "Riyadh"…), then used as [applyVoice] would. */
-    fun importVoice(uri: Uri, name: String, target: Prayer?) = viewModelScope.launch {
+    /**
+     * Files imported as one of the voices ([name]: "Al-Quds", "Egypt", "Dubai"…), then used as [applyVoice] would. 0.18:
+     * a file whose name says Fajr ("… Fajr", "… الفجر") becomes the voice's Fajr recording, played at Fajr.
+     */
+    fun importVoice(uris: List<Uri>, name: String, target: Prayer?) = viewModelScope.launch {
         val ctx = getApplication<Application>()
-        val result = withContext(Dispatchers.IO) { container.customSounds.import(ctx.contentResolver, uri, null) }
-        if (result is ImportResult.Ok) {
-            withContext(Dispatchers.IO) { container.customSounds.rename(result.sound.id, name) }
-            _custom.value = container.customSounds.list()
-            applyVoice(target, result.sound.id)
-            _message.value = ctx.getString(com.noor.app.R.string.adhan_import_ok, name)
-        } else importSoundResult(result)
+        var main: String? = null
+        for (uri in uris.take(2)) {
+            val display = runCatching { ctx.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { c -> if (c.moveToFirst()) c.getString(0) else null } }.getOrNull().orEmpty()
+            val fajr = Regex("fajr|الفجر|فجر", RegexOption.IGNORE_CASE).containsMatchIn(display) && uris.size > 1
+            val result = withContext(Dispatchers.IO) { container.customSounds.import(ctx.contentResolver, uri, null) }
+            if (result !is ImportResult.Ok) { importSoundResult(result); continue }
+            withContext(Dispatchers.IO) { container.customSounds.rename(result.sound.id, if (fajr) "$name Fajr" else name) }
+            if (!fajr) main = result.sound.id
+        }
+        _custom.value = container.customSounds.list()
+        main?.let { applyVoice(target, it); _message.value = ctx.getString(com.noor.app.R.string.adhan_import_ok, name) }
     }
 
     private fun importSoundResult(result: ImportResult) {

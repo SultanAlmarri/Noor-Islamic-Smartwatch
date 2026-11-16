@@ -127,9 +127,9 @@ fun AdhanScreen(
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
     // 0.18: a voice Noor has no recording of takes the user's own, under the voice's name.
     var addingVoice by rememberSaveable { mutableStateOf<String?>(null) }
-    val voicePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val voicePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         val name = addingVoice
-        if (uri != null && name != null) vm.importVoice(uri, name, null)
+        if (uris.isNotEmpty() && name != null) vm.importVoice(uris, name, null)
         addingVoice = null
     }
     val phone = a.enabled && a.device.includes(AlertDevice.PHONE)
