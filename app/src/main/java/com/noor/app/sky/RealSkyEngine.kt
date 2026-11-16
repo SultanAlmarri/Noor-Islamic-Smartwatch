@@ -476,10 +476,12 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private fun want(b: Baked, name: String, now: Long): Tex? {
         b.tex[name]?.let { b.used[name] = now; return it }
         if (name in b.missing || !b.asked.add(name)) return null
-        val colour = b.land && (name == "a" || name == "k" || name == "g" || name == "m")
+        // (A land's colours in another season: a_<season>, k_<season>.)
+        val seasonal = b.land && (name.startsWith("a_") || name.startsWith("k_"))
+        val colour = b.land && (name == "a" || name == "k" || name == "g" || name == "m" || seasonal)
         val file = when {
             name == "g" && b.land -> "g.png"
-            name.length == 1 -> "$name.webp"
+            name.length == 1 || seasonal -> "$name.webp"
             else -> "s_$name.webp"
         }
         // Coarser pictures on phones with little to spare (never the distances, which are small already).
@@ -521,7 +523,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             val filter = if (l.nearest) GLES30.GL_NEAREST else GLES30.GL_LINEAR
             // The land's own picture and its mask are also kept in smaller, softer copies: water mirrors the land through
             // its ripples, blurred (scene.frag asks for a copy by its size; the land itself is drawn from the full one).
-            val mips = l.set.land && (l.name == "a" || l.name == "m")
+            val mips = l.set.land && (l.name == "a" || l.name == "m" || l.name.startsWith("a_"))
             if (mips) GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, if (mips) GLES30.GL_LINEAR_MIPMAP_LINEAR else filter)
             GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, filter)
@@ -705,6 +707,23 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             u["uLandFrame"] = floatArrayOf(land.num("width", 1080.0), land.num("horizon", 1056.0), land.num("top"), land.num("height", 1620.0))
             u["uLandInfo"] = floatArrayOf(if (land.tex["a"] != null && land.lit != null) 1f else 0f, land.water, land.num("sMax", 2.0), if (land.tex["m"] != null) 1f else 0f)
             tex["tLandA"] = land.tex["a"] ?: zero!!; tex["tLandK"] = land.tex["k"] ?: zero!!; tex["tLandG"] = land.tex["g"] ?: zero!!
+            // The season: the land's colours of the two seasons the day lies between (Seasons). A season's pictures
+            // that are still being read do not hold the scene up: until they are there the nearest one at hand shows.
+            val base = land.meta.optString("season", "")
+            val others = land.meta.optJSONArray("seasons")?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() } ?: emptySet()
+            val turn = Seasons.between(f.year)
+            val a1 = Seasons.picture("a", turn.from, base, others); val a2 = Seasons.picture("a", turn.to, base, others)
+            val k1 = Seasons.picture("k", turn.from, base, others); val k2 = Seasons.picture("k", turn.to, base, others)
+            val t1 = if (a1 == "a") land.tex["a"] else want(land, a1, now); val t2 = if (a2 == "a") land.tex["a"] else want(land, a2, now)
+            val q1 = if (k1 == "k") land.tex["k"] else want(land, k1, now); val q2 = if (k2 == "k") land.tex["k"] else want(land, k2, now)
+            val has1 = t1 != null && q1 != null; val has2 = t2 != null && q2 != null
+            if (has1) { tex["tLandA"] = t1!!; tex["tLandK"] = q1!! }
+            tex["tLandA2"] = (if (has2) t2 else if (has1) t1 else null) ?: tex.getValue("tLandA")
+            tex["tLandK2"] = (if (has2) q2 else if (has1) q1 else null) ?: tex.getValue("tLandK")
+            val mix = if (has1 && has2) turn.mix else if (has2) 1f else 0f
+            // (Where the winter's pictures carry their own snow, the renderer lays none of its own over them.)
+            val winterShown = if (land.meta.optBoolean("winterBaked", false)) (if (turn.from == 0) 1f - mix else 0f) + (if (turn.to == 0) mix else 0f) else 0f
+            u["uSeason"] = floatArrayOf(mix, 1f - winterShown, 0f, 0f)
             tex["tLandM"] = land.tex["m"] ?: zero!!; tex["tLandLit"] = land.lit ?: zero!!
             // A beach says how it lies, for the waves that come in on it.
             u["uShore"] = land.meta.optJSONArray("shore")?.let { a -> FloatArray(4) { a.optDouble(it, 0.0).toFloat() } } ?: floatArrayOf(0f, 0f, 0f, 0f)
@@ -713,7 +732,8 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         } else {
             u["uShore"] = floatArrayOf(0f, 0f, 0f, 0f)
             u["uLandFrame"] = floatArrayOf(1080f, 1056f, 0f, 1f); u["uLandInfo"] = floatArrayOf(0f, 0f, 2f, 0f)
-            for (n in arrayOf("tLandA", "tLandK", "tLandG", "tLandM", "tLandLit")) tex[n] = zero!!
+            for (n in arrayOf("tLandA", "tLandK", "tLandG", "tLandM", "tLandLit", "tLandA2", "tLandK2")) tex[n] = zero!!
+            u["uSeason"] = floatArrayOf(0f, 1f, 0f, 0f)
         }
 
         // The clouds: three layers, each a set in the light of the moment.

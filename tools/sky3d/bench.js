@@ -83,6 +83,7 @@ const P = {
   cirrus: 0.35, veil: 0.0, showers: 0.0, seed: 3.0, haze: 1.0, time: 100, windLow: 0.012, windMid: 0.02,
   biome: 0, season: 0.3, snow: 0.0, wet: 0.0, mist: 0.0, rain: 0.0, windForce: 0.3, dust: 0.0,
   aurora: 0.0, flash: 0.0, flashAz: 10, flashEl: 9, rainbow: 0.0, waterRough: 0.3, waterClear: 0.2,
+  year: null,                                    // the land's time of year (0 midwinter .. 0.5 midsummer; null: its pictures as they are)
   trueStars: false,                              // the stars where they truly are (off: the finest night sky)
   birds: -1, birdsHeight: 0.14, meteor: 0,       // a flock (0..1 across the sky; -1 none), a shooting star (0..1; 0 none)
   skyHigh: null, skyMid: null, skyLow: null, slideHigh: 0, slideMid: 0, slideLow: 0,     // cloud sets (ids) and where each stands (degrees: how far right of the set's middle the view's middle is, -32..32)
@@ -241,6 +242,18 @@ async function loadPicture(url, filter = gl.LINEAR, mips = false) {
   return { t, w: bmp.width, h: bmp.height, target: gl.TEXTURE_2D };
 }
 
+// The two seasons a time of year lies between: Seasons.between in RealSkyFrame.kt (the two must agree).
+const SEASONS = ['winter', 'spring', 'summer', 'autumn'];
+const SEASON_FULL = [0.085, 0.335, 0.585, 0.865];
+function seasonsBetween(year) {
+  let y = year - Math.floor(year), i = 3;
+  if (y < SEASON_FULL[0]) y += 1; else { i = 0; while (i < 3 && y >= SEASON_FULL[i + 1]) i++; }
+  const next = (i + 1) % 4, end = next === 0 ? SEASON_FULL[0] + 1 : SEASON_FULL[next];
+  const t = Math.min(1, Math.max(0, (y - SEASON_FULL[i]) / (end - SEASON_FULL[i])));
+  const uu = Math.min(1, Math.max(0, (t - 0.3) / 0.4));
+  return { from: i, to: next, mix: uu * uu * (3 - 2 * uu) };
+}
+
 async function loadLand(id) {
   if (LAND[id] !== undefined) return LAND[id];
   LAND[id] = null;
@@ -252,6 +265,9 @@ async function loadLand(id) {
     for (const sun of meta.suns) L.s[sun.name] = await load('s_' + sun.name + '.webp');
     for (const n of ['gl', 'gr']) { try { L.s[n] = await load('s_' + n + '.webp'); } catch (e) { L.s[n] = T.tZero; } }
     L.m = meta.mask ? await load('m.webp', gl.LINEAR, true) : null;
+    // The land's colours in its other seasons (0.14; Seasons in RealSkyFrame.kt).
+    L.seasons = {};
+    for (const n of meta.seasons || []) { try { L.seasons[n] = { a: await load('a_' + n + '.webp', gl.LINEAR, true), k: await load('k_' + n + '.webp') }; } catch (e) { console.warn('no pictures of', id, n); } }
     // How high the skyline stands where the Sun rises and sets (RealSky.sunLift in the app).
     try {
       const bmp = await createImageBitmap(await (await fetch(LAND_DIR + id + '/a.webp?' + Date.now())).blob(), { premultiplyAlpha: 'none' });
@@ -459,12 +475,19 @@ function frame(amort = 16) {
     u.uLandInfo = [1, m.water || 0, m.sMax, land.m ? 1 : 0];
     u.uShore = m.shore || [0, 0, 0, 0];
     T.tLandA = land.a; T.tLandK = land.k; T.tLandG = land.g; T.tLandLit = land.lit; T.tLandM = land.m || T.tZero;
+    // The season (P.year: 0 midwinter .. 0.5 midsummer; null: the scenery's own pictures as they are).
+    const pic = i => (SEASONS[i] !== m.season && land.seasons[SEASONS[i]]) || land;
+    const turn = P.year === null || P.year === undefined ? { from: 0, to: 0, mix: 0, none: true } : seasonsBetween(P.year);
+    const s1 = turn.none ? land : pic(turn.from), s2 = turn.none ? land : pic(turn.to);
+    T.tLandA = s1.a; T.tLandK = s1.k; T.tLandA2 = s2.a; T.tLandK2 = s2.k;
+    const winterShown = m.winterBaked && !turn.none ? (turn.from === 0 ? 1 - turn.mix : 0) + (turn.to === 0 ? turn.mix : 0) : 0;
+    u.uSeason = [s1 === s2 ? 0 : turn.mix, 1 - winterShown, 0, 0];
     // (The land's picture is not mirrored here: scene.frag mirrors the lookup. Only the Suns change sides.)
     const rtl = P.rtl; P.rtl = false;
     const lw = Object.assign({}, G.landLight, rtl ? { names: G.landLight.names.map(swap), glow: [G.landLight.glow[1], G.landLight.glow[0]] } : {});
     lit(land, lw, land.fLit);
     P.rtl = rtl;
-  } else { u.uShore = [0, 0, 0, 0]; u.uLandFrame = [1080, 1056, 0, 1]; u.uLandInfo = [0, 0, 2, 0]; T.tLandA = T.tZero; T.tLandK = T.tZero; T.tLandG = T.tZero; T.tLandLit = T.tZero; T.tLandM = T.tZero; }
+  } else { u.uShore = [0, 0, 0, 0]; u.uLandFrame = [1080, 1056, 0, 1]; u.uLandInfo = [0, 0, 2, 0]; T.tLandA = T.tZero; T.tLandK = T.tZero; T.tLandG = T.tZero; T.tLandLit = T.tZero; T.tLandM = T.tZero; T.tLandA2 = T.tZero; T.tLandK2 = T.tZero; u.uSeason = [0, 1, 0, 0]; }
   // The three layers of cloud, each in the light of the moment.
   let cover = 0, any = 0;
   // (Each layer is drawn into a window of the sky round the view; a set is a wider window, turned by its drift.)

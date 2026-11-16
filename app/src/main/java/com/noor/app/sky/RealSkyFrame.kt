@@ -427,6 +427,41 @@ internal object SkyDirector {
 }
 
 /**
+ * The seasons of a scenery's land (0.14). A scenery's pictures are of one season (land.json, `season`); for each
+ * other season that looks different there it may hold the land's colours again (`a_<season>.webp`, `k_<season>.webp`:
+ * the leaves turned or fallen, the grass dried, snow lying), listed in `seasons`. The light pictures are shared. The
+ * renderer shows the two seasons a day of the year lies between, the one passing into the other over some weeks.
+ */
+internal object Seasons {
+    val NAMES = arrayOf("winter", "spring", "summer", "autumn")
+    /**
+     * When each season is at its fullest, as a phase of the year ([SkyDirector.yearPhase]: 0 = midwinter). Later than
+     * the calendar's: the land follows the Sun by a month and more. Bare trees and snow late in January, new leaves
+     * late in April, high summer late in July, the leaves at their brightest at the start of November.
+     */
+    val FULL = floatArrayOf(0.085f, 0.335f, 0.585f, 0.865f)
+
+    /** A season's turn: which two seasons (indices of [NAMES]) and how far from the first to the second, 0..1. */
+    class Turn(val from: Int, val to: Int, val mix: Float)
+
+    /** The two seasons [year] lies between. Each holds for a while; the change takes the middle of the time between. */
+    fun between(year: Float): Turn {
+        var y = year - kotlin.math.floor(year)
+        var i = 3
+        if (y < FULL[0]) y += 1f else { i = 0; while (i < 3 && y >= FULL[i + 1]) i++ }
+        val next = (i + 1) % 4
+        val end = if (next == 0) FULL[0] + 1f else FULL[next]
+        val t = ((y - FULL[i]) / (end - FULL[i])).coerceIn(0f, 1f)
+        val u = ((t - 0.3f) / 0.4f).coerceIn(0f, 1f)
+        return Turn(i, next, u * u * (3 - 2 * u))
+    }
+
+    /** The picture of [letter] ("a" or "k") a scenery shows in season [s]: its own for that season, or the base one. */
+    fun picture(letter: String, s: Int, base: String, others: Set<String>): String =
+        if (NAMES[s] != base && NAMES[s] in others) "${letter}_${NAMES[s]}" else letter
+}
+
+/**
  * Everything one picture of the real sky needs, worked out on the main thread from the home screen's scene and handed
  * to the renderer: where the camera looks, where the Sun and the moon are drawn and where their light comes from, the
  * weather, the land's season, where the text and the glass are.
@@ -456,6 +491,8 @@ internal class RealSkyFrame(
     val lapse: Float,
     /** The moment shown, as the clock has it (ms): the renderer carries the clouds on from there while it is now. */
     val shownAtMs: Long = 0L,
+    /** The time of year the land is shown in (0 = midwinter .. 0.5 = midsummer): see [Seasons]. */
+    val year: Float = 0.5f,
 ) {
     val haze: Float get() = state.haze
 
@@ -623,7 +660,7 @@ internal class RealSkyFrame(
                 look.night, Array(5) { m(cel[it]) },
                 hour = (display * 24).toFloat(), seed = (weather.seedX + weather.seedY * 0.37f),
                 textBottom = textBottom, panelTop = panelTop, panelRadius = panelRadius, lightGlass = lightGlass, tint = tint,
-                fade = fade, busy = busy, still = still, lapse = lapse, shownAtMs = shownAt.toEpochMilli(),
+                fade = fade, busy = busy, still = still, lapse = lapse, shownAtMs = shownAt.toEpochMilli(), year = year,
             )
         }
     }

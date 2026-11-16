@@ -22,6 +22,9 @@ uniform vec3 uCelX, uCelY, uCelZ, uGalN, uGalC;   // the turning sky: celestial 
 uniform vec4 uSky;            // aurora strength, meteor (0..1 along its track, 0 = none), lightning flash, rainbow
 uniform vec4 uFlash;          // lightning: where it flashes (a direction), and how bright it is this instant (0 = none)
 uniform vec4 uLand;           // biome, season (0 winter .. 1 summer), snow, wetness
+uniform sampler2D tLandA2;    // the land's colours in the season the year is turning to (0.14; the same pictures
+uniform sampler2D tLandK2;    // again where a scenery has no other season), and
+uniform vec4 uSeason;         // how far it has turned, 0..1; how much of its own snow the renderer lays (0: the pictures carry it)
 uniform vec4 uAir;            // mist near the ground, rain here, wind strength, dust
 uniform vec4 uWater;          // roughness of the water (0 glass .. 1 storm), its clearness, -, -
 uniform vec4 uTouch;          // where the scene was last touched (px), seconds since, strength
@@ -358,14 +361,19 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     if (uLandInfo.x < 0.5 || luv.y <= 0.0 || luv.x <= 0.0 || luv.x >= 1.0) return vec4(0.0);
     luv.y = min(luv.y, 0.9995);
     vec4 A = textureLod(tLandA, luv, 0.0);
+    // (The season turning: one season's colours pass into the next's. Where a tree has dropped its leaves the sky
+    // shows through it: the land's outline is each season's own.)
+    if (uSeason.x > 0.001) A = mix(A, textureLod(tLandA2, luv, 0.0), uSeason.x);
     if (A.a < 0.004) return vec4(0.0);
     vec3 alb = pow(A.rgb, vec3(2.2));
     vec2 lit = texture(tLandLit, vec2(luv.x, 1.0 - luv.y)).rg;
     float S = sq(lit.r) * uLandInfo.z, G = sq(lit.g) * uLandInfo.z;
     vec3 K = pow(texture(tLandK, luv).rgb, vec3(2.2));
+    if (uSeason.x > 0.001) K = mix(K, pow(texture(tLandK2, luv).rgb, vec3(2.2)), uSeason.x);
     // Winter (where the seasons are followed): snow lies on what the scenery says takes it.
-    if (uLand.z > 0.01 && uLandInfo.w > 0.5) {
-        float snow = smoothstep(0.25, 0.75, textureLod(tLandM, luv, 0.0).b * (0.4 + 0.9 * uLand.z)) * uLand.z;
+    float lying = uLand.z * uSeason.y;
+    if (lying > 0.01 && uLandInfo.w > 0.5) {
+        float snow = smoothstep(0.25, 0.75, textureLod(tLandM, luv, 0.0).b * (0.4 + 0.9 * lying)) * lying;
         vec3 white = vec3(0.80, 0.83, 0.88);
         K = mix(K, K * (luma(white) / max(luma(alb), 0.04)) * vec3(0.96, 0.99, 1.06), snow);
         alb = mix(alb, white, snow);

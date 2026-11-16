@@ -34,6 +34,56 @@ class SkyDirectorTest {
         assertEquals(1f, SkyDirector.summer(0.5f), 1e-4f)
     }
 
+    @Test fun theSeasonsTurnSmoothlyAndEachHasItsTime() {
+        // Each season is whole at its fullest and for a while to either side; between two, the one passes into the
+        // other without a step; the year closes on itself; and the design bench works it out the same way.
+        for (i in 0 until 4) {
+            val t = Seasons.between(Seasons.FULL[i] + 0.01f)
+            assertEquals(i, t.from); assertEquals(0f, t.mix, 1e-4f)
+            val before = Seasons.between(Seasons.FULL[i] - 0.01f)
+            assertEquals(i, before.to); assertEquals(1f, before.mix, 1e-4f)
+        }
+        fun share(year: Float, season: Int): Float = Seasons.between(year).let { (if (it.from == season) 1f - it.mix else 0f) + (if (it.to == season) it.mix else 0f) }
+        for (season in 0 until 4) {
+            var prev = share(0f, season)
+            for (k in 1..2000) {
+                val now = share(k / 2000f, season)
+                assertTrue("season $season steps at ${k / 2000f}", abs(now - prev) < 0.01f)
+                prev = now
+            }
+            assertEquals(share(0f, season), share(1f, season), 1e-4f)
+        }
+        // The middle of November is autumn; the end of January winter; July summer (northern hemisphere).
+        assertEquals("autumn", Seasons.between(SkyDirector.yearPhase(Instant.parse("2026-11-16T12:00:00Z"), false)).let { Seasons.NAMES[if (it.mix < 0.5f) it.from else it.to] })
+        assertEquals("winter", Seasons.between(SkyDirector.yearPhase(Instant.parse("2026-01-28T12:00:00Z"), false)).let { Seasons.NAMES[if (it.mix < 0.5f) it.from else it.to] })
+        assertEquals("summer", Seasons.between(SkyDirector.yearPhase(Instant.parse("2026-07-20T12:00:00Z"), false)).let { Seasons.NAMES[if (it.mix < 0.5f) it.from else it.to] })
+        // A scenery shows its own picture of a season where it has one, and its base pictures otherwise.
+        assertEquals("a_autumn", Seasons.picture("a", 3, "spring", setOf("autumn", "winter")))
+        assertEquals("k", Seasons.picture("k", 1, "spring", setOf("autumn", "winter")))
+        assertEquals("a", Seasons.picture("a", 2, "spring", setOf("autumn", "winter")))
+        assertEquals("a", Seasons.picture("a", 3, "", emptySet()))
+        // The bench's copy (tools/sky3d/bench.js) has the same times.
+        val bench = java.io.File("../tools/sky3d/bench.js").takeIf { it.exists() }?.readText()
+        if (bench != null) assertTrue(bench.contains("const SEASON_FULL = [" + Seasons.FULL.joinToString(", ") + "]"))
+        // Every season a scenery lists has its two pictures, and names a season.
+        val lands = java.io.File("src/main/assets/sky2/land")
+        // (Read as text: org.json is only a stub in these tests.)
+        var checked = 0
+        for (dir in lands.listFiles().orEmpty().filter { it.isDirectory }) {
+            val meta = java.io.File(dir, "land.json").readText()
+            checked++
+            val list = Regex("\"seasons\"\\s*:\\s*\\[(.*?)]", RegexOption.DOT_MATCHES_ALL).find(meta)?.groupValues?.get(1) ?: continue
+            val base = Regex("\"season\"\\s*:\\s*\"(\\w+)\"").find(meta)?.groupValues?.get(1) ?: ""
+            assertTrue("${dir.name}: base season '$base'", base in Seasons.NAMES)
+            for (n in Regex("\"(\\w+)\"").findAll(list).map { it.groupValues[1] }) {
+                assertTrue("${dir.name}: $n", n in Seasons.NAMES && n != base)
+                assertTrue("${dir.name}: a_$n.webp", java.io.File(dir, "a_$n.webp").exists())
+                assertTrue("${dir.name}: k_$n.webp", java.io.File(dir, "k_$n.webp").exists())
+            }
+        }
+        assertTrue("the sceneries were found", checked >= 6)
+    }
+
     @Test fun everyDayOfEverySceneryIsWithinBoundsAndRepeatable() {
         for (biome in Biome.entries) for (day in 0 until 120) {
             val year = (day % 12) / 12f
