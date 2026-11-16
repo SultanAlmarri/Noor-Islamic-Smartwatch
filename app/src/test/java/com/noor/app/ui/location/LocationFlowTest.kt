@@ -154,7 +154,7 @@ class LocationFlowTest {
         key++
         click("Choose on the map")
         waitText("Use this location"); shot("69_location_map_offline_en")
-        waitText("needs an internet connection")
+        waitText("needs the internet")
 
         // 6 · Arabic: home, a search in Arabic, and the confirmation.
         arabic = true; key++
