@@ -29,12 +29,6 @@ class WearText(private val config: WatchConfig?, deviceLocale: Locale = Locale.g
 
     fun name(p: Prayer): String = if (arabic) p.ar else p.en
 
-    /** 0.18: Dhuhr on a Friday is Jumu'ah, as on the phone and in the watch's own alerts. */
-    fun name(p: Prayer, date: java.time.LocalDate): String =
-        if (p == Prayer.DHUHR && date.dayOfWeek == java.time.DayOfWeek.FRIDAY) (if (arabic) "الجمعة" else "Jumu’ah") else name(p)
-
-    fun name(e: com.noor.prayer.TimedEvent): String = name(e.prayer, e.date)
-
     fun place(c: WatchConfig): String = if (arabic) c.placeAr ?: c.placeEn else c.placeEn
 
     /** Place with its country flag (shared mapping with the phone: com.noor.prayer.geo.Flags). */
@@ -43,8 +37,7 @@ class WearText(private val config: WatchConfig?, deviceLocale: Locale = Locale.g
     /** "3:14 PM", "15:14", "٣:١٤ م". */
     fun time(at: Instant, zone: ZoneId): String {
         val t = at.atZone(zone)
-        // (0.18: two-digit hours, as on the phone: "05:09".)
-        if (h24) return digits("%02d:%02d".format(t.hour, t.minute))
+        if (h24) return digits("%d:%02d".format(t.hour, t.minute))
         val h = (t.hour + 11) % 12 + 1
         val suffix = if (arabic) (if (t.hour < 12) "ص" else "م") else (if (t.hour < 12) "AM" else "PM")
         return digits("%d:%02d".format(h, t.minute)) + " " + suffix

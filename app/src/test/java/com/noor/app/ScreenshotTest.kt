@@ -317,7 +317,7 @@ class ScreenshotTest {
         arabic = false; theme = ThemeMode.LIGHT; clock = at(12, 40); shot("41_sky_noon_day_en", "Asr")
         theme = ThemeMode.DARK; clock = now
         // Adhan & alerts: off (first run), then on for phone and watch, the Fajr editor, sunrise, library and imports.
-        screen = Screen.ADHAN; shot("26_adhan_off_night_en", "Adhan voice for every prayer")
+        screen = Screen.ADHAN; shot("26_adhan_off_night_en", "Turn on to hear the Adhan")
         // 0.14: a prayer's page (reached from the home screen's rows too) says that all alerts are off, and turns them on.
         screen = Screen.ADHAN_FAJR; shot("81_adhan_fajr_alerts_off_en", "Turn on prayer alerts")
         arabic = true; shot("82_adhan_fajr_alerts_off_ar", "تشغيل تنبيهات الصلاة"); arabic = false
@@ -328,7 +328,7 @@ class ScreenshotTest {
         rule.onAllNodes(androidx.compose.ui.test.hasText("More settings")).onFirst().performScrollTo().performClick()
         shot("83_adhan_options_night_en", "Gradual volume")
         screen = Screen.WATCH; rule.waitForIdle()
-        screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Dubai")
+        screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Malmö")
         screen = Screen.ADHAN_SHURUQ; runBlocking {
             // (0.16: no alert sounds any more: sunrise with a notification, a reminder after it and some days only. 0.17:
             // the reminder becomes an alarm, "15 min after Sunrise", which posts a notification as the reminder did.)
@@ -354,15 +354,15 @@ class ScreenshotTest {
         // 0.16: the voices, named as on the owner's clock.
         screen = Screen.ADHAN_VOICE; shot("85_adhan_voice_night_en", "Al-Quds")
         arabic = true; shot("86_adhan_voice_night_ar", "القدس"); arabic = false
-        screen = Screen.ADHAN_LIBRARY; shot("30_adhan_library_night_en", "Madinah")
+        screen = Screen.ADHAN_LIBRARY; shot("30_adhan_library_night_en", "Casablanca")
         screen = Screen.ADHAN_SOUNDS; shot("31_adhan_my_sounds_night_en", "Import a sound")
-        arabic = true; screen = Screen.ADHAN_LIBRARY; shot("54_adhan_library_night_ar", "المدينة"); arabic = false
+        arabic = true; screen = Screen.ADHAN_LIBRARY; shot("54_adhan_library_night_ar", "الدار البيضاء"); arabic = false
         screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "إعدادات أخرى")
         rule.onAllNodes(androidx.compose.ui.test.hasText("إعدادات أخرى")).onFirst().performScrollTo().performClick()
         shot("84_adhan_options_night_ar", "التنبيه على")
-        screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "دبي")
+        screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "مالمو")
         arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "More settings")
-        screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Dubai")
+        screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Malmö")
         theme = ThemeMode.DARK
         // Alert history (0.9): what really happened at each alert, with examples of each kind of outcome.
         run {
@@ -370,7 +370,7 @@ class ScreenshotTest {
             fun rec(i: Long, p: com.noor.prayer.Prayer, h: Int, m: Int, o: com.noor.alerts.AlertOutcome, played: Long = 0, delay: Long = 2_000,
                     test: Boolean = false, stopped: Boolean = false, exact: Boolean = true) {
                 val due = day.withHour(h).withMinute(m).toInstant().toEpochMilli()
-                com.noor.alerts.AlertLog.add(app, com.noor.alerts.AlertRecord(i, p, test, due, due + delay, o, "adhan.makkah",
+                com.noor.alerts.AlertLog.add(app, com.noor.alerts.AlertRecord(i, p, test, due, due + delay, o, "adhan.makkah_maghrib_2012",
                     played, stopped, exact, 80, 1))
             }
             com.noor.alerts.AlertLog.clear(app)
@@ -384,7 +384,7 @@ class ScreenshotTest {
         arabic = true; shot("50_adhan_history_night_ar", "سجل التنبيهات")
         arabic = false
         screen = Screen.ONBOARDING; shot("42_onboarding_en", "Use my location")
-        arabic = true; shot("43_onboarding_ar", "منهاد")
+        arabic = true; shot("43_onboarding_ar", "نور")
         arabic = false
         assertTrue("Text in the wrong language:\n" + languageProblems.joinToString("\n"), languageProblems.isEmpty())
     }
@@ -396,7 +396,7 @@ class ScreenshotTest {
     private val languageProblems = mutableListOf<String>()
     private val arabicLetters = Regex("[\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF]")
     private val latinLetters = Regex("[A-Za-z]")
-    private val allowedInEnglish = listOf("منهاد")
+    private val allowedInEnglish = listOf("نور")
     private val allowedInArabic = listOf(
         Regex("(Galaxy|Pixel) Watch\\S*( Pro| Classic)?( \\([0-9A-F]{4}\\))?"), // a device's own name, as Android reports it
         Regex("Wear OS"), Regex("Galaxy Wearable"), Regex("WGS-84"), Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), // product, standard and format names

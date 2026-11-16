@@ -18,7 +18,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,17 +33,13 @@ import com.noor.prayer.Profiles
 fun AccuracyScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
     val ar = isArabicUi()
     val c = NoorTheme.colors
-    // (The user's digits for the figures below.)
-    val st = androidx.lifecycle.viewmodel.compose.viewModel<SettingsViewModel>().settings.collectAsStateWithLifecycle().value
-    val f = com.noor.app.util.Formatter(ar, st?.numerals ?: com.noor.app.data.Numerals.WESTERN, st?.timeFormat ?: com.noor.app.data.TimeFormat.H12)
     com.noor.app.ui.components.NoorPage(stringResource(R.string.about_accuracy), contentPadding, onBack = onBack, spacing = 12.dp) {
         GlassCard(Modifier.fillMaxWidth(), highlighted = true) {
             Text(if (ar) Profiles.DUBAI_IACAD.nameAr else Profiles.DUBAI_IACAD.nameEn, style = MaterialTheme.typography.titleMedium, color = c.goldText)
             Spacer(Modifier.height(8.dp))
             Text(
-                // (0.18: in the digits the user chose.)
-                f.digits(if (ar) "قورنت الأوقات بـ588 وقتًا رسميًا من الدائرة (أغسطس 2020 – نوفمبر 2026). تطابق 527 منها بالدقيقة (89.6%)، وكل الباقي بفارق دقيقة واحدة فقط. لم يُعدَّل أي يوم بعينه لفرض التطابق. يستمر الاختبار شهريًا مع كل جدول رسمي جديد."
-                else "Checked against 588 official IACAD times (August 2020 – November 2026): 527 match to the minute (89.6%) and every other one is within 1 minute. No day was adjusted individually to force a match. Testing continues with every new official month.").let { if (ar) it.replace('%', '٪') else it },
+                if (ar) "قورنت الأوقات بـ588 وقتًا رسميًا من الدائرة (أغسطس 2020 – نوفمبر 2026). تطابق 527 منها بالدقيقة (89.6%)، وكل الباقي بفارق دقيقة واحدة فقط. لم يُعدَّل أي يوم بعينه لفرض التطابق. يستمر الاختبار شهريًا مع كل جدول رسمي جديد."
+                else "Checked against 588 official IACAD times (August 2020 – November 2026): 527 match to the minute (89.6%) and every other one is within 1 minute. No day was adjusted individually to force a match. Testing continues with every new official month.",
                 style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
             )
         }

@@ -68,7 +68,6 @@ object AlertScheduler {
         // (0.17: the alarms ring on the phone only, whichever device the Adhan is on, and whether or not it is on.)
         val alarms = if (host?.ringsAlarms == true && config != null && alerts != null) AlarmPlanner.plan(config, alerts, now) else emptyList()
         applyAlarms(context, alarms)
-        if (host?.ringsAlarms == true) runCatching { rearmSnoozes(context) }
         return apply(context, config, plan, reminders)
     }
 
@@ -109,10 +108,11 @@ object AlertScheduler {
         val am = context.getSystemService(AlarmManager::class.java) ?: return
         val at = System.currentTimeMillis() + req.snoozeMinutes * 60_000L
         val slot = if (req.alarmText != null) 0 else req.alarmId
-        val date = req.alarmDate ?: LocalDate.now().toString()
-        armSnooze(context, am, slot, req.alarmId, date, at, req.alarmText)
-        // (0.18: kept, so a restart of the phone during the snooze arms it again.)
-        snoozes(context).edit().putString(slot.toString(), listOf(req.alarmId, date, at, req.alarmText ?: "").joinToString("|")).apply()
+        val pi = snoozePending(context, slot, PendingIntent.FLAG_UPDATE_CURRENT) { i ->
+            i.putExtra(EXTRA_ALARM, req.alarmId).putExtra(EXTRA_DATE, req.alarmDate ?: LocalDate.now().toString()).putExtra(EXTRA_AT, at)
+            if (req.alarmText != null) i.putExtra(EXTRA_ALARM_TEXT, req.alarmText)
+        } ?: return
+        arm(context, am, at, pi, canScheduleExact(context))
         alertScope.launch {
             val config = runCatching { context.alertHost?.alertConfig() }.getOrNull() ?: return@launch
             val text = AlertText(context, config)
@@ -121,35 +121,8 @@ object AlertScheduler {
         }
     }
 
-    private fun armSnooze(context: Context, am: AlarmManager, slot: Int, alarmId: Int, date: String, at: Long, alarmText: String?) {
-        val pi = snoozePending(context, slot, PendingIntent.FLAG_UPDATE_CURRENT) { i ->
-            i.putExtra(EXTRA_ALARM, alarmId).putExtra(EXTRA_DATE, date).putExtra(EXTRA_AT, at)
-            if (alarmText != null) i.putExtra(EXTRA_ALARM_TEXT, alarmText)
-        } ?: return
-        arm(context, am, at, pi, canScheduleExact(context))
-    }
-
-    private fun snoozes(context: Context) = context.getSharedPreferences("noor_snoozes", Context.MODE_PRIVATE)
-
-    /** 0.18: a snooze has rung (or was cancelled): forget it. */
-    internal fun snoozeDone(context: Context, slot: Int) { snoozes(context).edit().remove(slot.toString()).apply() }
-
-    /** 0.18: the snoozes still to come, armed again (after a restart, alarms set before it are gone). */
-    private fun rearmSnoozes(context: Context) {
-        val am = context.getSystemService(AlarmManager::class.java) ?: return
-        val now = System.currentTimeMillis()
-        for ((key, v) in snoozes(context).all) {
-            val f = (v as? String)?.split('|', limit = 4) ?: continue
-            val slot = key.toIntOrNull() ?: continue
-            val at = f.getOrNull(2)?.toLongOrNull() ?: continue
-            if (at + AlarmPlanner.MAX_LATENESS.toMillis() < now) { snoozeDone(context, slot); continue }
-            armSnooze(context, am, slot, f[0].toIntOrNull() ?: continue, f[1], at, f.getOrNull(3)?.ifEmpty { null })
-        }
-    }
-
     /** 0.17: a snoozed alarm will not ring again (its note's Dismiss, or the alarm changed, turned off or deleted); 0: a tried one. */
     fun cancelSnooze(context: Context, id: Int) {
-        snoozeDone(context, id)
         snoozePending(context, id, PendingIntent.FLAG_NO_CREATE)?.let { pi -> context.getSystemService(AlarmManager::class.java)?.cancel(pi); pi.cancel() }
         AlertNotifications.cancel(context, AlertNotifications.snoozedId(id))
     }

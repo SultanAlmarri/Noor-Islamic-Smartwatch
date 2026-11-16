@@ -29,7 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Alarm
-import androidx.compose.material.icons.automirrored.rounded.Label
+import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Snooze
@@ -125,7 +125,7 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
         if (uri != null) vm.importForAlarm(uri) { cid -> PrayerAlarm.decode(draftText)?.let { draftText = it.copy(sound = AlarmSound.CUSTOM, customId = cid).encode() } }
     }
     val leave = rememberUpdatedState(onBack)
-    val notifPermission = com.noor.app.ui.components.rememberNotificationRequest { vm.refresh(); leave.value() }
+    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh(); leave.value() }
     // (Hours and minutes as the wheels show them: 0 h 0 min is allowed on the wheels, not saved.)
     var hours by rememberSaveable { mutableStateOf(draft.minutes / 60) }
     var mins by rememberSaveable { mutableStateOf(draft.minutes % 60) }
@@ -134,13 +134,9 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
     val save = {
         vm.saveAlarm(draft.copy(id = if (isNew) 0 else id, enabled = true))
         // (An alarm can only ring with notifications allowed: asked here, where it is wanted.)
-        if (ready.canRequestNotifications) notifPermission() else onBack()
+        if (ready.canRequestNotifications) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS) else onBack()
     }
 
-    // 0.18: the sound is a page of its own (the phone's sounds, Noor's sounds full or short, the Adhan, the user's own).
-    androidx.activity.compose.BackHandler(enabled = soundDialog) { vm.stopPreview(); soundDialog = false }
-    if (soundDialog) { AlarmSoundPage(contentPadding, draft, custom, vm, ar, f, onBack = { vm.stopPreview(); soundDialog = false },
-        onPick = { x -> set { x } }, onAdd = { picker.launch(CustomSounds.PICKER_TYPES) }); return }
     NoorPage(stringResource(if (isNew) R.string.alarm_new else R.string.alarm_edit), contentPadding, onBack = onBack,
         floating = {
             // Cancel and Save, always in reach at the bottom, as in the Clock app.
@@ -168,27 +164,19 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
 
             // The wheels read as the sentence: [0 h] [25 min] [before] [Fajr].
             val head = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp)
-            // (0.18: wider room for "Before" and the prayer's name, and one band across all four, as on a clock.)
-            val w = listOf(0.7f, 0.9f, 1.3f, 1.5f)
             Row(Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.alarm_hours), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(w[0]))
-                Text(stringResource(R.string.alarm_minutes_head), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(w[1]))
-                Spacer(Modifier.weight(w[2]))
-                Text(stringResource(R.string.alarm_prayer), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(w[3]))
+                Text(stringResource(R.string.alarm_hours), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(0.8f))
+                Text(stringResource(R.string.alarm_minutes_head), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                Spacer(Modifier.weight(1.1f))
+                Text(stringResource(R.string.alarm_prayer), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(1.5f))
             }
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(c.gold.copy(alpha = if (c.isDark) 0.14f else 0.12f)))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Wheel((0..PrayerAlarm.MAX_MINUTES / 60).map { f.number(it) }, hours, { h -> hours = h; minutesOf(h, mins) }, stringResource(R.string.alarm_hours),
-                        Modifier.weight(w[0]), band = false)
-                    Wheel((0..59).map { f.number(it) }, mins, { m -> mins = m; minutesOf(hours, m) }, stringResource(R.string.alarm_minutes_head),
-                        Modifier.weight(w[1]), loop = true, band = false)
-                    Wheel(listOf(stringResource(R.string.alarm_before_word), stringResource(R.string.alarm_after_word)), if (draft.after) 1 else 0,
-                        { i -> set { it.copy(after = i == 1) } }, stringResource(R.string.alarm_before_word) + " / " + stringResource(R.string.alarm_after_word),
-                        Modifier.weight(w[2]), band = false, size = 21f)
-                    Wheel(Prayer.entries.map { f.prayerName(it) }, draft.prayer.ordinal, { i -> set { it.copy(prayer = Prayer.entries[i]) } },
-                        stringResource(R.string.alarm_prayer), Modifier.weight(w[3]), band = false, size = 21f)
-                }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Wheel((0..PrayerAlarm.MAX_MINUTES / 60).map { f.number(it) }, hours, { h -> hours = h; minutesOf(h, mins) }, stringResource(R.string.alarm_hours), Modifier.weight(0.8f))
+                Wheel((0..59).map { f.number(it) }, mins, { m -> mins = m; minutesOf(hours, m) }, stringResource(R.string.alarm_minutes_head), Modifier.weight(1f), loop = true)
+                Wheel(listOf(stringResource(R.string.alarm_before_word), stringResource(R.string.alarm_after_word)), if (draft.after) 1 else 0,
+                    { i -> set { it.copy(after = i == 1) } }, stringResource(R.string.alarm_before_word) + " / " + stringResource(R.string.alarm_after_word), Modifier.weight(1.1f))
+                Wheel(Prayer.entries.map { f.prayerName(it) }, draft.prayer.ordinal, { i -> set { it.copy(prayer = Prayer.entries[i]) } },
+                    stringResource(R.string.alarm_prayer), Modifier.weight(1.5f))
             }
         }
 
@@ -201,8 +189,8 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
             DaysRow(draft.days, f) { d -> if (d != 0) set { it.copy(days = d) } }
         }
 
-        SettingsSection("") {
-            SettingsItem(Icons.Rounded.MusicNote, stringResource(R.string.alarm_sound), null, onClick = { soundDialog = true }, detail = soundLabel(draft, custom, vm, ar))
+        SettingsSection("", footer = stringResource(R.string.alarm_sound_footer)) {
+            SettingsItem(Icons.Rounded.MusicNote, stringResource(R.string.alarm_sound), null, onClick = { soundDialog = true }, detail = soundLabel(draft, custom))
             if (draft.sound != AlarmSound.NOTIFICATION) {
                 SettingsDivider()
                 SettingsSwitch(Icons.Rounded.Vibration, stringResource(R.string.adhan_vibrate), null, draft.vibrate) { on -> set { it.copy(vibrate = on) } }
@@ -220,6 +208,23 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
         Spacer(Modifier.height(64.dp))
     }
 
+    if (soundDialog) {
+        val options = buildList {
+            add("phone" to stringResource(R.string.alarm_sound_phone))
+            add("notify" to stringResource(R.string.alarm_sound_notification))
+            custom.forEach { add(it.id to it.name) }
+            add("add" to stringResource(R.string.alarm_sound_add))
+        }
+        val selected = when (draft.sound) { AlarmSound.PHONE_ALARM -> "phone"; AlarmSound.NOTIFICATION -> "notify"; AlarmSound.CUSTOM -> draft.customId ?: "phone" }
+        ChoiceDialog(stringResource(R.string.alarm_sound), options, selected, onSelect = { k ->
+            when (k) {
+                "phone" -> set { it.copy(sound = AlarmSound.PHONE_ALARM, customId = null) }
+                "notify" -> set { it.copy(sound = AlarmSound.NOTIFICATION, customId = null) }
+                "add" -> picker.launch(CustomSounds.PICKER_TYPES)
+                else -> set { it.copy(sound = AlarmSound.CUSTOM, customId = k) }
+            }
+        }, onDismiss = { soundDialog = false })
+    }
     if (snoozeDialog) ChoiceDialog(stringResource(R.string.alarm_snooze), PrayerAlarm.SNOOZE_CHOICES.map { it to minutesLabel(it, f) }, draft.snoozeMinutes,
         onSelect = { m -> set { it.copy(snoozeMinutes = m) } }, onDismiss = { snoozeDialog = false })
 }
@@ -271,71 +276,10 @@ internal fun daysLabel(days: Int, f: Formatter): String {
 }
 
 @Composable
-private fun soundLabel(a: PrayerAlarm, custom: List<CustomSound>, vm: AdhanViewModel, ar: Boolean): String = when (a.sound) {
+private fun soundLabel(a: PrayerAlarm, custom: List<CustomSound>): String = when (a.sound) {
     AlarmSound.PHONE_ALARM -> stringResource(R.string.alarm_sound_phone)
-    AlarmSound.RINGTONE -> stringResource(R.string.alarm_sound_ringtone)
     AlarmSound.NOTIFICATION -> stringResource(R.string.alarm_sound_notification)
     AlarmSound.CUSTOM -> custom.firstOrNull { it.id == a.customId }?.name ?: stringResource(R.string.alarm_sound_phone)
-    AlarmSound.LIBRARY -> (voiceName(a.customId, vm, custom, ar) ?: stringResource(R.string.alarm_sound_phone)) +
-        if (a.short) " · " + stringResource(R.string.alarm_length_short) else ""
-}
-
-/**
- * An alarm's sound (0.18), in four plain groups so the choice is never a long list: the phone's own (its alarm sound,
- * its ringtone, a notification only), Noor's sounds and the Adhan voices (with one Full | Short above them for both),
- * and the user's recordings. A touch chooses and plays it; Back returns to the alarm.
- */
-@Composable
-private fun AlarmSoundPage(contentPadding: PaddingValues, a: PrayerAlarm, custom: List<CustomSound>, vm: AdhanViewModel, ar: Boolean, f: Formatter,
-                           onBack: () -> Unit, onPick: (PrayerAlarm) -> Unit, onAdd: () -> Unit) {
-    val preview by vm.preview.collectAsStateWithLifecycle()
-    val lib = vm.library
-    var short by rememberSaveable { mutableStateOf(a.short) }
-    val label = stringResource(R.string.adhan_preview)
-    fun pickLib(id: String, s: Boolean) { onPick(a.copy(sound = AlarmSound.LIBRARY, customId = id, short = s)); vm.previewLibrary(id, s, 90) }
-    NoorPage(stringResource(R.string.alarm_sound), contentPadding, onBack = onBack) {
-        SettingsSection(stringResource(R.string.alarm_sounds_phone)) {
-            SoundRow(stringResource(R.string.alarm_sound_phone), null, a.sound == AlarmSound.PHONE_ALARM, preview?.id == SYS_ALARM, label,
-                onSelect = { onPick(a.copy(sound = AlarmSound.PHONE_ALARM, customId = null, short = false)); vm.previewSystem(SYS_ALARM) }, onPreview = null)
-            SettingsDivider()
-            SoundRow(stringResource(R.string.alarm_sound_ringtone), null, a.sound == AlarmSound.RINGTONE, preview?.id == SYS_RINGTONE, label,
-                onSelect = { onPick(a.copy(sound = AlarmSound.RINGTONE, customId = null, short = false)); vm.previewSystem(SYS_RINGTONE) }, onPreview = null)
-            SettingsDivider()
-            SoundRow(stringResource(R.string.alarm_sound_notification), null, a.sound == AlarmSound.NOTIFICATION, false, label,
-                onSelect = { vm.stopPreview(); onPick(a.copy(sound = AlarmSound.NOTIFICATION, customId = null, short = false)) }, onPreview = null)
-        }
-
-        // One length for Noor's sounds and the Adhan: the whole, or its opening (a bird's chirp or two).
-        Segmented(listOf(false to stringResource(R.string.alarm_length_full), true to stringResource(R.string.alarm_length_short)), short, { v ->
-            short = v
-            if (a.sound == AlarmSound.LIBRARY && a.customId != null) pickLib(a.customId!!, v)
-        })
-        if (lib.sounds.isNotEmpty()) SettingsSection(stringResource(R.string.alarm_sounds_effects)) {
-            lib.sounds.forEachIndexed { i, e ->
-                if (i > 0) SettingsDivider()
-                SoundRow(e.title(ar), null, a.sound == AlarmSound.LIBRARY && a.customId == e.id, preview?.id == e.id, label,
-                    onSelect = { pickLib(e.id, short) }, onPreview = null)
-            }
-        }
-        val voices = ClockVoice.entries.mapNotNull { v -> v.libraryId.takeIf { lib.byId(it) != null }?.let { v to it } }
-        if (voices.isNotEmpty()) SettingsSection(stringResource(R.string.alarm_sounds_adhan),
-            footer = if (!a.after) stringResource(R.string.alarm_adhan_before_warn) else null) {
-            voices.forEachIndexed { i, (v, id) ->
-                if (i > 0) SettingsDivider()
-                SoundRow(stringResource(v.label), null, a.sound == AlarmSound.LIBRARY && a.customId == id, preview?.id == id, label,
-                    onSelect = { pickLib(id, short) }, onPreview = null)
-            }
-        }
-        SettingsSection(stringResource(R.string.adhan_my_sounds)) {
-            custom.forEachIndexed { i, cs ->
-                if (i > 0) SettingsDivider()
-                SoundRow(cs.name, f.duration(cs.seconds), a.sound == AlarmSound.CUSTOM && a.customId == cs.id, preview?.id == cs.id, label,
-                    onSelect = { onPick(a.copy(sound = AlarmSound.CUSTOM, customId = cs.id, short = false)); vm.previewCustom(cs.id, 90) }, onPreview = null)
-            }
-            if (custom.isNotEmpty()) SettingsDivider()
-            SettingsItem(Icons.Rounded.Add, stringResource(R.string.alarm_sound_add), null, onClick = onAdd)
-        }
-    }
 }
 
 
@@ -346,7 +290,7 @@ private fun AlarmSoundPage(contentPadding: PaddingValues, a: PrayerAlarm, custom
 private fun LabelRow(label: String, onChange: (String) -> Unit) {
     val c = NoorTheme.colors
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconTile(Icons.AutoMirrored.Rounded.Label)
+        IconTile(Icons.Rounded.Label)
         Spacer(Modifier.width(14.dp))
         val hint = stringResource(R.string.alarm_label_hint)
         BasicTextField(label, onChange, singleLine = true, textStyle = MaterialTheme.typography.bodyLarge.copy(color = c.textPrimary),
@@ -390,6 +334,7 @@ internal fun AlarmsList(a: com.noor.prayer.alerts.AlertSettings, rings: Rings, f
         a.alarms.forEach { al -> AlarmCard(al, rings.next[al.id], rings.zone, f, onOpen = { onOpen(al.id) }, onToggle = { on -> onToggle(al.id, on) }) }
     }
     NoorButton(stringResource(if (full) R.string.alarm_full else R.string.alarm_add), { onOpen(0) }, Modifier.fillMaxWidth(), icon = Icons.Rounded.Add, enabled = !full)
+    Text(stringResource(R.string.alarms_footer), style = FootnoteStyle, color = c.textMuted, modifier = Modifier.padding(horizontal = 16.dp))
 }
 
 /** One alarm as a card: its name, the time it rings next (large), what it is and its days, and its switch. */
@@ -398,7 +343,7 @@ private fun AlarmCard(a: PrayerAlarm, next: PlannedAlarm?, zone: ZoneId, f: Form
     val c = NoorTheme.colors
     val shape = RoundedCornerShape(24.dp)
     Row(
-        Modifier.fillMaxWidth().clip(shape).background(c.glass).clickable(role = Role.Button, onClick = com.noor.app.ui.components.withTick(onOpen))
+        Modifier.fillMaxWidth().clip(shape).background(c.glass).clickable(role = Role.Button, onClick = onOpen)
             .padding(start = 18.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -63,7 +63,7 @@ fun TestingScreen(
             Text("Testing", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         }
         Text(
-            "For testing only. These options change what the home screen's sky shows, until Minhad is started again. " +
+            "For testing only. These options change what the home screen's sky shows, until Noor is started again. " +
                 "The prayer times, the countdown, the Adhan and the watch always stay real.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -122,7 +122,7 @@ fun TestingScreen(
         }
 
         Card {
-            Title("Place", "To see another place (its prayer times, its Sun, its night sky), choose it in Minhad's own place chooser, and choose your own place again afterwards.")
+            Title("Place", "To see another place (its prayer times, its Sun, its night sky), choose it in Noor's own place chooser, and choose your own place again afterwards.")
             OutlinedButton(onClick = onOpenLocation) { Text("Choose a place") }
         }
         Spacer(Modifier.height(24.dp))

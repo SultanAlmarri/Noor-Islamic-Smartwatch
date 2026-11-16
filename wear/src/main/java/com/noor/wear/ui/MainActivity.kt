@@ -44,7 +44,6 @@ class MainActivity : ComponentActivity() {
     private fun Intent?.destination(): String? = when {
         this == null -> null
         dataString == WatchReport.LINK_ACTIVATE_FACE -> Dest.FACE
-        dataString == WatchReport.LINK_STUDIO -> Dest.FACES
         else -> getStringExtra(EXTRA_DEST)?.takeIf { it in Dest.external }
     }
 

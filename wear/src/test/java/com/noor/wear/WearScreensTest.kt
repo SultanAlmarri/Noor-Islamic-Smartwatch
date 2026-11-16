@@ -209,8 +209,8 @@ class WearScreensTest {
         shot("s42_settings_watch", "Set on this watch")
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Opening of the Adhan"))
         shot("s43_settings_watch_alerts", "Opening of the Adhan")
-        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Minhad for your phone"))
-        shot("s44_settings_get_phone_app", "Minhad for your phone")
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Noor for your phone"))
+        shot("s44_settings_get_phone_app", "Noor for your phone")
 
         screen = { NoorWearTheme(config) { t -> AlertPrayersScreen(setup, t) { _, _ -> } } }
         shot("s45_alert_prayers", "Fajr")
@@ -316,6 +316,6 @@ internal fun wrongLanguageTexts(nodes: List<androidx.compose.ui.semantics.Semant
         n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text).orEmpty().map { it.text } +
             n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ContentDescription).orEmpty()
     }.distinct().filter { t ->
-        if (arabic) Regex("[A-Za-z]").containsMatchIn(t.replace(Regex("Wear OS|Minhad"), ""))
-        else Regex("[\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF]").containsMatchIn(t.replace("منهاد", ""))
+        if (arabic) Regex("[A-Za-z]").containsMatchIn(t.replace(Regex("Wear OS|Noor"), ""))
+        else Regex("[\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF]").containsMatchIn(t.replace("نور", ""))
     }

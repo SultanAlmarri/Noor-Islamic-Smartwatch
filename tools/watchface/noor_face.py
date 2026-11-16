@@ -353,9 +353,9 @@ def preview_png(path, design, colour):
 
 
 STRINGS = {
-    "": dict(watch_face_name="Minhad", cfg_seconds="Seconds", slot_next="Next prayer", slot_hijri="Hijri date",
+    "": dict(watch_face_name="Noor", cfg_seconds="Seconds", slot_next="Next prayer", slot_hijri="Hijri date",
              slot_left="Left", slot_right="Right"),
-    "-ar": dict(watch_face_name="منهاد", cfg_seconds="الثواني", slot_next="الصلاة القادمة", slot_hijri="التاريخ الهجري",
+    "-ar": dict(watch_face_name="نور", cfg_seconds="الثواني", slot_next="الصلاة القادمة", slot_hijri="التاريخ الهجري",
                 slot_left="اليسار", slot_right="اليمين"),
 }
 

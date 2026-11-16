@@ -34,14 +34,9 @@ object Dest {
     const val ALERT_PRAYERS = "settings/prayers"
     const val LOCATION = "location"
     const val FACE = "face"
-    /** 0.18: the watch face page (Minhad Studio and the Minhad faces) and the settings pages. */
-    const val FACES = "faces"
-    const val SETTINGS_TIMES = "settings/times"
-    const val SETTINGS_ALERTS = "settings/alerts"
-    const val SETTINGS_DISPLAY = "settings/display"
 
     /** Destinations that may be opened from outside the app. */
-    val external = setOf(QIBLA, TASBIH, CALENDAR, SETTINGS, FACE, FACES)
+    val external = setOf(QIBLA, TASBIH, CALENDAR, SETTINGS, FACE)
 }
 
 private const val SEARCH_KEY = "noor_city_query"
@@ -65,7 +60,7 @@ fun NoorWearNav(vm: WearViewModel, pending: String?, onPendingHandled: () -> Uni
     LaunchedEffect(pending, state != null) {
         val dest = pending ?: return@LaunchedEffect
         if (state == null) return@LaunchedEffect
-        if (dest in Dest.external && (config != null || dest == Dest.FACE || dest == Dest.FACES)) nav.navigate(dest) { launchSingleTop = true }
+        if (dest in Dest.external && (config != null || dest == Dest.FACE)) nav.navigate(dest) { launchSingleTop = true }
         onPendingHandled()
     }
     LifecycleResumeEffect(Unit) { vm.refreshPhone(); onPauseOrDispose { } }
@@ -114,26 +109,17 @@ fun NoorWearNav(vm: WearViewModel, pending: String?, onPendingHandled: () -> Uni
                         onVibrate = vm::setTasbihVibrate)
                 }
                 composable(Dest.CALENDAR) { config?.let { CalendarScreen(it, t, today) } }
-                val settingsActions = SettingsActions(
-                    onSync = vm::requestSync,
-                    onUseWatch = vm::useWatchSettings,
-                    onLocation = { nav.navigate(Dest.LOCATION) },
-                    onSetup = vm::updateSetup,
-                    onPrayers = { nav.navigate(Dest.ALERT_PRAYERS) },
-                    onGetPhoneApp = vm::openPhoneDownload,
-                    onOpen = { nav.navigate(it) { launchSingleTop = true } },
-                )
                 composable(Dest.SETTINGS) {
-                    val studio = rememberStudio()
-                    val faceSummary = if (studio.active) stringResource(R.string.studio_face_name) + " · " + stringResource(R.string.studio_in_use) else ""
-                    state?.let { s -> SettingsScreen(SettingsUi(s, phone, sync, vm.versionName), t, settingsActions.copy(faceSummary = faceSummary)) }
-                }
-                composable(Dest.SETTINGS_TIMES) { state?.let { s -> TimesSettingsScreen(SettingsUi(s, phone, sync, vm.versionName), t, settingsActions) } }
-                composable(Dest.SETTINGS_ALERTS) { state?.let { s -> AlertSettingsScreen(SettingsUi(s, phone, sync, vm.versionName), t, settingsActions) } }
-                composable(Dest.SETTINGS_DISPLAY) { state?.let { s -> DisplaySettingsScreen(SettingsUi(s, phone, sync, vm.versionName), t, settingsActions) } }
-                composable(Dest.FACES) {
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    FacesScreen(config, rememberStudio(), rememberStudioDesign(), onShowStudio = { com.noor.wear.studio.StudioStore.requestActive(context) })
+                    state?.let { s ->
+                        SettingsScreen(SettingsUi(s, phone, sync, vm.versionName), t, SettingsActions(
+                            onSync = vm::requestSync,
+                            onUseWatch = vm::useWatchSettings,
+                            onLocation = { nav.navigate(Dest.LOCATION) },
+                            onSetup = vm::updateSetup,
+                            onPrayers = { nav.navigate(Dest.ALERT_PRAYERS) },
+                            onGetPhoneApp = vm::openPhoneDownload,
+                        ))
+                    }
                 }
                 composable(Dest.ALERT_PRAYERS) {
                     state?.setup?.let { setup ->

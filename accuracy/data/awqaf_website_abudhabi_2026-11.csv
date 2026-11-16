@@ -1,6 +1,0 @@
-# Awqaf (General Authority of Islamic Affairs, Endowments and Zakat) website https://www.awqaf.gov.ae/prayer-times,
-# default city "أبوظبي - أبوظبي" (official_id 36: Abu Dhabi region), as the page showed it on a visit on 16 Nov 2026
-# (method "المواقيت الرسمية" = official times, is_static: true). Two days: the page shows today and tomorrow. UTC+4.
-date,fajr,shuruq,dhuhr,asr,maghrib,isha
-2026-11-16,05:19,06:35,12:10,15:14,17:38,18:55
-2026-11-17,05:19,06:36,12:10,15:14,17:38,18:54

@@ -63,10 +63,7 @@ without the phone, using the last configuration or its own setup.
 - NREL SPA port, agreeing with pvlib to 0.007 s on 37,254 Dubai event times.
 - Dubai profile "C1": 527 of 588 official IACAD times exact; the other 61 differ by exactly 1 minute and are still
   **unexplained**. No date-specific adjustment is used. `PrayerEngineTest.iacadOfficialAgreementIsAsDocumented` locks
-  these numbers. Full detail in `docs/PRAYER_ACCURACY.md`. 16 Nov 2026: shown to be beyond any single calculation rule
-  (even Dhuhr's residuals spread over 65 s; simpler ephemerides and refits do no better on unseen days); exact times
-  need IACAD's own table. Awqaf profile refitted to the UAE calendar for Abu Dhabi (96.2%, 12/12 on Awqaf's website).
-  Every authority's agreement with its own table: `accuracy/results/EVIDENCE.md`.
+  these numbers. Full detail in `docs/PRAYER_ACCURACY.md`.
 - Blind test: predictions for Dec 2026 – Jun 2027 are frozen. `iacad-monthly.yml` scores each new IACAD month and
   commits the result, so pull before you push.
 - Hijri: Umm al-Qura with a ±2-day user adjustment. It can differ from the UAE calendar by a day.
@@ -1267,64 +1264,3 @@ alarm being edited in Arabic and by day, ringing in English and Arabic). The who
 
 **Not tested**: on a phone: an alarm ringing at a real prayer-relative time, Snooze, the phone's alarm sound,
 notification-only alarms.
-
-## 28. Minhad; the owner's sounds; a calmer Adhan tab; authorities for every country; a review (0.18.0, 16–17 November 2026, phone and watch)
-
-**What the owner asked** (16 November, evening and night): set one Adhan for every prayer at once ("why do I have to
-go to every individual prayer"); only the voices Makkah, Madinah, Al-Quds, Egypt and Dubai (the Dubai Mall Adhan)
-and Random, each whole and its opening; five real sound effects (birds and four more, no music), each whole and short;
-a master volume; the alarms' sounds to include the phone's ringtone, the voices and the effects; a light vibration on
-touches throughout; no redundant button or text; then, before sleeping, to find and fix every bug in both languages
-and on the home screen's sky, to make the app much faster, prayer times exact for IACAD and Awqaf and every authority
-of the world chosen by GPS, the app renamed **Minhad (منهاد)**, and evidence of the accuracy at the end.
-
-**What was done**:
-- Sounds (a helper agent, then the lead): the library is `adhan.makkah`, `adhan.madinah` (Commons, CC BY 3.0),
-  `adhan.dubai` and `adhan.dubai_fajr` (the owner's files, who states he holds the rights; their tags name YouTube
-  uploads, written down in SOUNDS.md), each with its opening; `fx.birds`, `fx.rooster`, `fx.waves`, `fx.rain`,
-  `fx.stream` (US National Park Service, public domain; radio aporee, CC BY 3.0), whole and short, raised to about
-  −18 LUFS. `adhan.egypt`: a rooftop at Khan el-Khalili, Cairo (Freesound 511003, CC0; fetched by the Fetch
-  workflow on GitHub, because Freesound refuses the cloud session; licence checked in Openverse's index), the only one
-  of six Egyptian candidates with a whole, clear Adhan (checked with band energy and faster-whisper; cut 90.0–295.3 s,
-  opening 90.0–112.6 s). Al-Quds: the one candidate (Holy Sepulchre) holds no phrase the recogniser could hear; it
-  takes the user's own. The Dubai Mall recording on YouTube was not downloaded (YouTube's terms; rule 7). Fajr's
-  default is Dubai's Fajr Adhan; a voice's Fajr recording plays at Fajr (Dubai's, or the user's "<voice> Fajr").
-  `build_library.py` does not yet hold the Dubai entries (added by hand): add them before running it again.
-- Adhan tab: `VoiceCard` (six tiles, the voice for every prayer, its opening heard on touch) and one volume for all
-  (`setVolumeAll`); prayers list without the voice row; no "turn on" button, fewer footers; a prayer can be set to a
-  Sound (the effects); the library is a plain list with credits (no favourites or filters).
-- Alarms: `AlarmSound.RINGTONE` and `LIBRARY` (with `short`), the sound page in four groups with Full | Short; one
-  band across the wheels, more room for "Before"; snoozes kept across a restart.
-- Haptics: `withTick` on buttons, rows, switches, tabs and choices; wheels and sliders tick.
-- Rebrand: every visible name (app, watch app, watch faces, notifications, wordmark منهاد in Kufi, MINHAD).
-- Authorities (a helper agent): profiles for Morocco, Algeria, Tunisia, Jordan, Portugal, Russia, Brunei, Moonsighting
-  Committee (UK; seasonal twilight in the engine), UOIF (France), Shia Ithna Ashari (manual), regional methods; every
-  ISO country mapped; the country from the offline time-zone map when there is no network (`ZoneCountries`). See
-  AUTHORITIES.md.
-- Review (an independent agent reading all the code but the sky): 24 findings, all fixed (permissions that did
-  nothing after two refusals, Isha not lit after it began, the status notification sharing Fajr's reminder id,
-  Arabic units, digits by the user's choice, the language set in Android's settings, a warning when the Adhan screen
-  may not show over the lock screen, the watch's Jumu'ah and 24-hour times, the watch's official times refreshed daily,
-  and more).
-
-- Accuracy (a helper agent): IACAD's tables cannot be reproduced exactly by any single rule (Dhuhr's official-minus-
-  calculated spread is 65 s, over a minute; simpler ephemerides do no better); C1 stays (527/588). Awqaf refitted from
-  the official UAE Hijri Calendar for Abu Dhabi (2,038/2,118, 96.2%, held-out months 95.8% and 95.3%; Awqaf's own
-  website 12/12). Routes to exact times: IACAD needs its permission (its feed refuses servers); Awqaf has an official
-  API that needs a key the owner must register for. `accuracy/results/EVIDENCE.md`, `OfficialAgreementTest`.
-- Authorities round 2: Karachi with the Hanafi Asr by default in Pakistan, India, Bangladesh and Afghanistan; JAKIM,
-  Kemenag refitted from their own 2026 years (58–67% and 93–94% exact); Kazakhstan (DUMK, 90–94%) and Bosnia (Takvim,
-  56%, an approximation) added. `accuracy/results/authorities_measurements.md`, `AuthorityTablesTest`.
-- Home sky (a helper agent; `docs/sky-018/CHANGES.md`): the path behind the land above each scenery's skyline
-  (`land.json` "skyline", `tools/scenery/skyline.py`), the horizon lowered where a skyline would hide the Sun at rise
-  and set (`HeroGeometry.horizonFor`), the progress line fading into the Sun, cloud sets kept while their shading
-  loads and read ahead (`SkyDirector.ahead`), the drift easing in near now, `RealSky.prewarm` behind the launch screen,
-  pictures decoded on worker threads into reused buffers, a baseline profile; treeline specks in fog mended.
-- The green hills' autumn pictures (the colour pass of 16 November).
-- Minhad Studio (a helper agent; docs/WATCH.md): `FaceDesign` (core), the `face` module's renderer, the watch's
-  `StudioFaceService` (androidx.wear.watchface; not on watches that launched with Wear OS 6, where the app says so),
-  the phone's editor (route `watch/studio`), the watch's settings in one page with details; the future route to every
-  watch (FaceDesign → WFF on the device → Watch Face Push) and a tested prototype generator `FaceWff`.
-
-**Tests**: see the release report; unit tests, software renders and the emulator only. **Not tested**: on a phone or
-watch.
