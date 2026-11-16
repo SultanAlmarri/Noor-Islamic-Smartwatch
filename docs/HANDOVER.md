@@ -1070,3 +1070,33 @@ to change)
 - A scenery's water mirrors the base season's outline of the land while the seasons turn.
 - Tester's options: English only; cannot yet be driven from the emulator workflow.
 - Leftovers from 0.13 stay: `uCloudF*`, the bench's `mix*` values.
+
+## 25. The app lives in the sky; a chain of mountains, Red Rock's seasons, a line of storms (0.15.0, 16 November 2026, phone only)
+
+Made in a cloud session (Claude Opus, picking up from Claude Fable when its limit was reached).
+
+**What the owner asked**
+
+- Of 0.14's interface, the same day: "I see absolutely nothing changed with the user interface. I want you to
+  totally revolutionize the user interface, make it better in every single way." (0.14 had reordered and regrouped
+  every page but kept the look: flat ink or paper and solid cards, so on the phone it read as the same app.)
+- Still open from 0.14's list: the Pacific Northwest's mountain as "a chain of mountains", real seasons ("the trees
+  don't change color"), cumulonimbus and distant thunderstorms with lightning.
+
+**What was done**
+
+- **The interface** (DESIGN.md, "The interface of 0.15"): every page stands on the sky of the moment at the user's
+  place (`Backdrop`, `SkyBackdrop`; `rememberSun` re-reads the Sun's height every minute); lists and cards are glass
+  with a lit edge; the tab bar is a floating capsule of glass with a sliding lens (`NoorTabBar`; the pages run on
+  under it, `TabBarSpace`); Adhan and Settings open on hero cards (`HeroCard`). The leftover solid tiles (a prayer's
+  kinds of alert, the sceneries, the location fields) are glass. Contrast is locked for every text colour on the
+  glass at every height of the Sun in both themes (`ThemeContrastTest`); the dark theme's greys were lightened and
+  its danger red softened for it, the light theme's muted grey and gold text darkened.
+- **Pacific Northwest: the Stuart Range** behind the forest lake (pnw.py, pnw_dem.py, pnw_chain.py; sources/pnw.md):
+  USGS 3DEP one-arc-second elevation, the chain baked alone through the same camera and Suns and laid behind the
+  0.13 pictures by distance (the whole scene is too heavy for this machine).
+- **Red Rock's seasons**: autumn (the cottonwoods gold, unevenly) and winter (bare trees, red willow stems, snow on
+  the ledges; `winterBaked`); spring follows if its render finishes (see below).
+- **A line of thunderstorms on the horizon** (`lo_cb_line`, sky_cb.py): three storms 72 to 90 km off at different
+  stages, lightning from each (`SkyDirector.THUNDER`). Five near cumulus that had lined up on one bearing and read
+  as a column of flat cloudlets were taken out of its pictures (tools/scenery/erase_clouds.py).

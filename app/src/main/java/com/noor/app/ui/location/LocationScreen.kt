@@ -672,7 +672,7 @@ private fun CoordField(value: String, label: String, onChange: (String) -> Unit)
     TextField(value, onChange, singleLine = true, label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
         shape = RoundedCornerShape(14.dp),
-        colors = TextFieldDefaults.colors(focusedContainerColor = c.surface, unfocusedContainerColor = c.surface, cursorColor = c.gold,
+        colors = TextFieldDefaults.colors(focusedContainerColor = c.glassRaised, unfocusedContainerColor = c.glass, cursorColor = c.gold,
             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, focusedLabelColor = c.goldText),
         modifier = Modifier.fillMaxWidth())
 }
@@ -725,7 +725,7 @@ private fun SearchField(value: String, hint: String, raised: Boolean = false, on
         placeholder = { Text(hint, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         shape = RoundedCornerShape(16.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = c.surfaceRaised, unfocusedContainerColor = if (raised) c.surfaceRaised else c.surface, cursorColor = c.gold,
+            focusedContainerColor = c.glassRaised, unfocusedContainerColor = if (raised) c.glassRaised else c.glass, cursorColor = c.gold,
             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
         ),
         modifier = Modifier.fillMaxWidth().padding(top = if (raised) 0.dp else 6.dp, bottom = if (raised) 0.dp else 10.dp)

@@ -276,8 +276,8 @@ private fun ModeTiles(modes: List<AlertMode>, selected: AlertMode, onSelect: (Al
                     val shape = RoundedCornerShape(16.dp)
                     Column(
                         Modifier.weight(1f).heightIn(min = 76.dp).fillMaxHeight().clip(shape)
-                            .background(if (on) c.gold.copy(alpha = if (c.isDark) 0.16f else 0.13f) else c.surface)
-                            .border(if (on) 1.5.dp else 0.5.dp, if (on) c.gold else c.separator, shape)
+                            .background(if (on) c.gold.copy(alpha = if (c.isDark) 0.16f else 0.13f) else c.glass)
+                            .border(if (on) 1.5.dp else 0.75.dp, if (on) c.gold else c.glassEdge.copy(alpha = c.glassEdge.alpha * 0.6f), shape)
                             .clickable(role = Role.RadioButton) { if (!on) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSelect(m) }
                             .semantics { this.selected = on }.padding(horizontal = 6.dp, vertical = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,

@@ -478,6 +478,30 @@ letters of the other script, apart from names that are not language (devices, li
 Every text colour meets WCAG AA (4.5:1) on every surface in both themes, white on the sky meets 7:1 at every solar
 elevation, and gold on the sky 4.5:1 (`ThemeContrastTest`, `SkyPaletteTest`).
 
+## The interface of 0.15: the app lives in the sky
+
+The owner (16 November 2026), of 0.14: "I see absolutely nothing changed with the user interface. I want you to
+totally revolutionize the user interface, make it better in every single way." 0.14 had changed the structure of
+the pages (order, groups, sheets) but kept their look: flat ink at night, paper by day, solid cards. 0.15 changes
+the look of every page at once, through the parts they share:
+
+- **The pages stand on the sky of the moment** at the user's place (`ui/theme/Backdrop.kt`, `SkyBackdrop`): the
+  colours of `Sky.colors` for the Sun's height there now, re-read every minute (`rememberSun` in `MainActivity`).
+  Deep blue at midday, rose and amber round sunrise and sunset with a glow at the foot of the page, indigo with a
+  few faint stars at night; in the light theme the same sky washed pale. As Apple's Weather app lives in its
+  weather, Noor lives in its light. The home screen keeps its real sky.
+- **Glass.** Lists and cards are panes of glass over that sky (`NoorColors.glass`, `glassRaised`) with a lit upper
+  edge (`Modifier.glassEdge`), larger corners (24 to 30 dp); buttons and the search field are capsules; sheets are
+  the glass over the page's sky made solid. `ThemeContrastTest.textOnTheGlassOverThePagesSkyIsAlwaysReadable`
+  checks every text colour on the glass at every height of the Sun, morning and evening, in both themes (WCAG AA,
+  4.5:1); the dark theme's secondary and muted greys were lightened for it.
+- **The tab bar floats**: a capsule of thicker glass (`chrome`) over the foot of every tab's page, as on iOS 26,
+  the page running on under it; the tab on show sits in a lens of gold light that slides (a spring) to the tab
+  chosen, mirrored in Arabic.
+- **Hero cards** (`ui/components/Hero.kt`): a tab's page opens on what it is about now, in big type, on a pane lit
+  from one corner by Noor's gold with a gold medallion: Adhan, the next Adhan, its sound and the one switch;
+  Settings, the place the times are for and the authority they follow (the card opens the location page).
+
 ## The interface of 0.14: one system, and an opening
 
 The owner (15 November 2026): "totally revolutionize the user interface and keep the Apple aesthetic... make the

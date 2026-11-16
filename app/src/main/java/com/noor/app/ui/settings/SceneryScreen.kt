@@ -150,8 +150,8 @@ private fun SceneryCard(image: Int, title: String, subtitle: String?, selected: 
     val c = NoorTheme.colors
     val shape = RoundedCornerShape(18.dp)
     Column(Modifier.fillMaxWidth().clip(shape)
-        .border(if (selected) 2.dp else 0.5.dp, if (selected) c.gold else c.separator, shape)
-        .background(c.surface)
+        .border(if (selected) 2.dp else 0.75.dp, if (selected) c.gold else c.glassEdge.copy(alpha = c.glassEdge.alpha * 0.6f), shape)
+        .background(c.glass)
         .semantics { role = Role.RadioButton; this.selected = selected }
         .clickable(onClick = onClick)) {
         Box {
