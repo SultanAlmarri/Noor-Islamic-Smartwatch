@@ -777,6 +777,8 @@ internal class RealSkyFrame(
     val lapse: Float,
     /** The moment shown, as the clock has it (ms): the renderer carries the clouds on from there while it is now. */
     val shownAtMs: Long = 0L,
+    /** (0.18) The minute the home screen last told (ms): the clouds are carried on from it only while the moment shown is that one. */
+    val nowMs: Long = 0L,
     /** The time of year the land is shown in (0 = midwinter .. 0.5 = midsummer): see [Seasons]. */
     val year: Float = 0.5f,
     /** Testing only (Tester): the fog to show whatever the morning; null: the director's. */
@@ -973,7 +975,7 @@ internal class RealSkyFrame(
                 look.night, Array(5) { m(cel[it]) },
                 hour = (display * 24).toFloat(), seed = (weather.seedX + weather.seedY * 0.37f),
                 textBottom = textBottom, panelTop = panelTop, panelRadius = panelRadius, lightGlass = lightGlass, tint = tint,
-                fade = fade, busy = busy, still = still, lapse = lapse, shownAtMs = shownAt.toEpochMilli(), year = year, fogShown = fogShown,
+                fade = fade, busy = busy, still = still, lapse = lapse, shownAtMs = shownAt.toEpochMilli(), nowMs = scene.now.toEpochMilli(), year = year, fogShown = fogShown,
                 soon = List(3) { level -> SkyDirector.ahead(weather, level, (display * 24).toFloat(), biome, year, rise, set) },
             )
         }
