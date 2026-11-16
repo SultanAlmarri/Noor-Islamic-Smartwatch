@@ -35,8 +35,8 @@ enum class Biome(val id: String, val eye: Float, val focal: Float, val waterRoug
     OCEAN("ocean", 3.0f, 1.15f, 0.55f, 0.25f, 0.40f),
     /** Green hills and oaks in spring. */
     MEADOW("meadow", 2.0f, 1.15f, 0.12f, 0.35f, 0.30f),
-    /** Red rock: buttes and mesas over a desert floor. */
-    CANYON("canyon", 2.0f, 1.15f, 0.3f, 0.2f, 0.35f);
+    /** Red rock (0.14): Cathedral Rock over a pool of Oak Creek, its cottonwoods and willows (Sedona, Arizona). */
+    CANYON("canyon", 2.0f, 1.15f, 0.12f, 0.32f, 0.35f);
 
     companion object {
         private val ARID = setOf("AE", "SA", "QA", "KW", "BH", "OM", "YE", "IQ", "JO", "EG", "LY", "DZ", "TN", "MA", "EH", "MR", "ML", "NE", "TD", "SD", "DJ")

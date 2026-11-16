@@ -327,16 +327,125 @@ def float_image(name, arr, path):
 
 # ---- Baking: the land under each Sun and under a white sky ------------------------------------------------------
 
-def bake_render(out, yaw=0.0, samples=512, aovs=()):
-    """Renders the scene once with every light of the set in its own light group, and writes one EXR per pass."""
+def bake_parts(n):
+    """The lights of a bake (every Sun, the two glows, 'SKY') dealt into n hands, for a bake made in parts."""
+    names = [name for name, _, _ in sun_set() + glow_set()] + ['SKY']
+    return [set(names[k::n]) for k in range(n)]
+
+
+def write_layers(path):
+    """Renders the scene and writes all its passes as they are (not denoised) into one multilayer EXR: nothing but
+    the render itself is held in memory. split_layers() makes the denoised pictures from it, in a run of its own."""
+    s = bpy.context.scene
+    s.use_nodes = False
+    # (The renderer's own denoiser would only clean the one picture nothing here uses, and takes about 2 GB to do
+    # it at this size, on top of the scene. The passes it needs later are stored all the same.)
+    s.cycles.use_denoising = False
+    s.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+    s.render.image_settings.color_depth = '32'
+    s.render.image_settings.exr_codec = 'ZIP'
+    s.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+
+
+def split_layers(path, out, lights, plain=(), aovs=()):
+    """From a multilayer EXR of write_layers() to one EXR per pass in `out`, as bake_pack and colour_pack read them:
+    `lights` = [(file name, layer name)] are denoised (with the file's own denoising passes), `plain` =
+    [(file name, layer name)] and the AOVs are copied. Run it in a scene with nothing in it: the compositor holds
+    several full-size pictures for every light it denoises (with the scenery loaded as well, a part of Red Rock's
+    bake went from 4 GB to 6 GB at this step)."""
+    s = bpy.context.scene
+    img = bpy.data.images.load(path)
+    s.render.resolution_x, s.render.resolution_y = img.size[0], img.size[1]
+    s.render.resolution_percentage = 100
+    s.cycles.samples = 1
+    s.cycles.use_denoising = False
+    if s.camera is None:
+        camera((0.0, 0.0, 0.0))
+    s.use_nodes = True
+    nt = s.node_tree
+    for nd in list(nt.nodes):
+        nt.nodes.remove(nd)
+    src = nt.nodes.new('CompositorNodeImage')
+    src.image = img
+    names = [o.name for o in src.outputs]
+    fo = nt.nodes.new('CompositorNodeOutputFile')
+    fo.base_path = out
+    fo.format.file_format = 'OPEN_EXR'
+    fo.format.color_depth = '32'
+    fo.format.exr_codec = 'ZIP'
+    fo.file_slots.clear()
+
+    def socket(layer):
+        if layer not in names:
+            raise SystemExit('%s has no layer %r (it has: %s)' % (path, layer, ', '.join(names)))
+        return src.outputs[layer]
+
+    for name, layer in lights:
+        fo.file_slots.new(name)
+        dn = nt.nodes.new('CompositorNodeDenoise')
+        dn.use_hdr = True
+        nt.links.new(socket(layer), dn.inputs['Image'])
+        nt.links.new(socket('Denoising Normal'), dn.inputs['Normal'])
+        nt.links.new(socket('Denoising Albedo'), dn.inputs['Albedo'])
+        nt.links.new(dn.outputs['Image'], fo.inputs[name])
+    for name, layer in list(plain) + [('aov_' + a, a) for a in aovs]:
+        fo.file_slots.new(name)
+        nt.links.new(socket(layer), fo.inputs[name])
+    bpy.ops.render.render(write_still=False)
+    bpy.data.images.remove(img)
+
+
+PLAIN = (('alpha', 'Alpha'), ('albedo', 'DiffCol'), ('normal', 'Normal'), ('position', 'Position'))
+
+
+def split_parts(raw, aovs=()):
+    """Denoises and splits every part of a bake made in parts (raw/part*.exr), each in turn."""
+    import glob
+    lights = dict([('sun_' + name, 'Combined_' + name) for name, _, _ in sun_set() + glow_set()] + [('sky', 'Combined_SKY')])
+    done = set()
+    for k, path in enumerate(sorted(glob.glob(os.path.join(raw, 'part*.exr')))):
+        probe = bpy.data.images.load(path)
+        nd = bpy.context.scene
+        nd.use_nodes = True
+        tmp = nd.node_tree.nodes.new('CompositorNodeImage')
+        tmp.image = probe
+        have = [o.name for o in tmp.outputs]
+        nd.node_tree.nodes.remove(tmp)
+        bpy.data.images.remove(probe)
+        mine = [(n, layer) for n, layer in lights.items() if layer in have]
+        split_layers(path, raw, mine, plain=PLAIN if k == 0 else (), aovs=aovs if k == 0 else ())
+        done |= set(n for n, _ in mine)
+        print('part %s: %s' % (os.path.basename(path), ', '.join(n for n, _ in mine)), flush=True)
+    missing = set(lights) - done
+    if missing:
+        raise SystemExit('the parts lack: %s' % ', '.join(sorted(missing)))
+
+
+def bake_render(out, yaw=0.0, samples=512, aovs=(), only=None, layers=None):
+    """Renders the scene once with every light of the set in its own light group, and writes one EXR per pass.
+    `only`: a set of light names (see bake_parts): only these are lit and written, the rest left to another run.
+    (Every pass of a light group is a full-size picture held in memory: a machine short of memory bakes in parts.
+    A part at 1/n of the samples costs 1/n of the time and gives its lights the same share of the samples.)
+    `layers`: a file name: the passes are written into it as they are (write_layers), and denoised and split
+    later (split_parts), in a run without the scenery."""
     s = bpy.context.scene
     vl = bpy.context.view_layer
     suns = sun_set()
+
+    def want(name):
+        return only is None or name in only
+
     for name, az, el in suns:
-        sun_lamp(name, az, el, group=name, yaw=yaw)
+        if want(name):
+            sun_lamp(name, az, el, group=name, yaw=yaw)
     for name, az, el in glow_set():
-        sun_lamp(name, az, el, angle=GLOW_ANGLE, group=name, yaw=yaw)
-    white_sky(1.0, group='SKY')
+        if want(name):
+            sun_lamp(name, az, el, angle=GLOW_ANGLE, group=name, yaw=yaw)
+    if want('SKY'):
+        white_sky(1.0, group='SKY')
+    else:
+        white_sky(0.0)
     s.cycles.samples = samples
     s.render.film_transparent = True
     vl.use_pass_diffuse_color = True
@@ -347,6 +456,9 @@ def bake_render(out, yaw=0.0, samples=512, aovs=()):
         aov = vl.aovs.add()
         aov.name = a
         aov.type = 'COLOR'
+    if layers:
+        write_layers(layers)
+        return suns
     s.use_nodes = True
     nt = s.node_tree
     for nd in list(nt.nodes):
@@ -376,12 +488,68 @@ def bake_render(out, yaw=0.0, samples=512, aovs=()):
     slot('normal', 'Normal')
     slot('position', 'Position')
     for name, _, _ in suns + glow_set():
-        slot('sun_' + name, 'Combined_' + name, denoise=True)
-    slot('sky', 'Combined_SKY', denoise=True)
+        if want(name):
+            slot('sun_' + name, 'Combined_' + name, denoise=True)
+    if want('SKY'):
+        slot('sky', 'Combined_SKY', denoise=True)
     for a in aovs:
         slot('aov_' + a, a)
     bpy.ops.render.render(write_still=False)
     return suns
+
+
+# ---- Seasons: the land's colours again, with another season's materials ------------------------------------------
+
+def colour_render(out, yaw=0.0, samples=256):
+    """Renders only what the colour pictures are made from (see colour_pack): the scene under all the Suns of the
+    set at once (one light group, 'ALL': the sum of a bake's Sun pictures) and under the plain white sky. Writes
+    its layers into <out>/colour.exr (write_layers); colour_split makes the pictures colour_pack reads."""
+    s = bpy.context.scene
+    vl = bpy.context.view_layer
+    for name, az, el in sun_set():
+        sun_lamp(name, az, el, group='ALL', yaw=yaw)
+    white_sky(1.0, group='SKY')
+    s.cycles.samples = samples
+    s.render.film_transparent = True
+    vl.use_pass_diffuse_color = True
+    vl.cycles.denoising_store_passes = True
+    os.makedirs(out, exist_ok=True)
+    write_layers(os.path.join(out, 'colour.exr'))
+
+
+def colour_split(raw):
+    split_layers(os.path.join(raw, 'colour.exr'), raw, [('sun_ALL', 'Combined_ALL'), ('sky', 'Combined_SKY')],
+                 plain=(('alpha', 'Alpha'), ('albedo', 'DiffCol')))
+
+
+def colour_pack(src, dst, season, quality=80, frame='0001', extra=None):
+    """A season's two pictures beside a packed bake in `dst`, cut to the same rows: a_<season>.webp (the land's
+    colour under white light, alpha = where there is land: made exactly as a.webp is) and k_<season>.webp (lit by
+    the plain white sky, as k.webp). The season is added to land.json's `seasons`; `extra` adds other entries."""
+    import json
+    meta = json.load(open(os.path.join(dst, 'land.json')))
+
+    def rd(name):
+        return read_exr(os.path.join(src, name + frame + '.exr'))
+
+    top, rows = int(meta['top']), int(meta['height'])
+    crop = slice(top, top + rows)
+    alpha = np.clip(rd('alpha')[..., 0], 0, 1)[crop]
+    if alpha.shape != (rows, int(meta['width'])):
+        raise SystemExit("the season's pictures %s are not the size of the bake (%d x %d)" % (alpha.shape, meta['width'], rows))
+    cover = np.maximum(alpha, 1e-4)[..., None]
+    albedo = rd('albedo')[crop][..., :3] / cover
+    total = rd('sun_ALL')[crop][..., :3] / cover + 1e-6
+    sky = rd('sky')[crop][..., :3] / cover
+    hue = total / luma(total)[..., None]
+    ref = np.maximum(luma(albedo), 0.03)
+    base = np.clip(hue * ref[..., None], 0, 1)
+    save8(os.path.join(dst, 'a_%s.webp' % season), np.concatenate([srgb(base), alpha[..., None]], -1), quality=quality + 6)
+    save8(os.path.join(dst, 'k_%s.webp' % season), srgb(sky), quality=quality)
+    meta['seasons'] = [x for x in meta.get('seasons', []) if x != season] + [season]
+    meta.update(extra or {})
+    json.dump(meta, open(os.path.join(dst, 'land.json'), 'w'), indent=1)
+    return meta
 
 
 def read_exr(path):
@@ -423,7 +591,7 @@ def save8(path, arr, quality=82):
 S_MAX = 2.0     # the shading pictures hold 0..S_MAX, as its square root (more steps in the shade)
 
 
-def bake_pack(src, dst, suns, eye, aovs=(), quality=80, frame='0001', water=None):
+def bake_pack(src, dst, suns, eye, aovs=(), quality=80, frame='0001', water=None, extra=None):
     """From the EXRs of bake_render to what the app ships: see docs/DESIGN.md, "The land".
 
     a.webp   the land's colour under white light (sRGB), alpha = where there is land
@@ -433,7 +601,8 @@ def bake_pack(src, dst, suns, eye, aovs=(), quality=80, frame='0001', water=None
              pixels (so that haze never spills from a far thing onto the rim of a near one)
     m.webp   the 'mask' AOV, if the scenery writes one: R = water, G = moves in the wind (grass, leaves),
              B = takes snow in winter
-    land.json  sizes, the camera, the Suns; `water` = the water's level in metres below the eye, if there is any"""
+    land.json  sizes, the camera, the Suns; `water` = the water's level in metres below the eye, if there is any;
+               `extra` adds other entries (the season the pictures show: 'season')"""
     import json
     os.makedirs(dst, exist_ok=True)
 
@@ -489,6 +658,7 @@ def bake_pack(src, dst, suns, eye, aovs=(), quality=80, frame='0001', water=None
         'suns': [{'name': n.lower(), 'azimuth': az, 'elevation': el} for n, az, el in suns],
     }
     meta['lift'] = sun_lift(alpha, top, HORIZON * k, FOCAL * alpha.shape[1])
+    meta.update(extra or {})
     json.dump(meta, open(os.path.join(dst, 'land.json'), 'w'), indent=1)
     return meta
 
@@ -549,7 +719,7 @@ def preview_water(level, size=60000.0):
     return ob
 
 
-def run(build, eye, yaw=0.0, aovs=(), water_level=None, preview_sun=(60.0, 28.0), exposure=-2.3):
+def run(build, eye, yaw=0.0, aovs=(), water_level=None, preview_sun=(60.0, 28.0), exposure=-2.3, season=None, extra=None):
     """The modes every scenery script offers. `build()` makes the scene (everything but camera and lights); `eye`
     is where the camera stands (scene metres; it looks along +y, level); `water_level` the height (scene z) of
     standing water, if the scenery has any (see add_mask).
@@ -557,6 +727,15 @@ def run(build, eye, yaw=0.0, aovs=(), water_level=None, preview_sun=(60.0, 28.0)
       preview [az el]   a quick small picture under a physical sky with the Sun at that bearing and height
       look [az el]      the same at full size
       bakefast          a half-size trial bake      bake   the real one      pack   only repack the last bake
+      bakepart k n      part k (1..n) of the real bake: a share of the lights, written as they are into
+                        raw/part<k>.exr; after the last part `packparts` (a run of its own, without the scenery:
+                        it denoises and splits the parts, then packs)
+      colour            (a scenery with seasons) only what the colour pictures are made from, with the materials
+                        of `season`, into raw_<season>/colour.exr; then `colourpack` (a run of its own) denoises
+                        it and packs a_<season>.webp and k_<season>.webp beside the last bake
+
+    `season`: the season the scene is built in (a name; the script decides what it changes); `extra`: entries
+    added to land.json (by a bake, or when a season is packed).
 
     NOOR_TAG (environment) is added to a preview's file name; NOOR_EXPOSURE overrides its exposure.
     """
@@ -564,7 +743,8 @@ def run(build, eye, yaw=0.0, aovs=(), water_level=None, preview_sun=(60.0, 28.0)
     reset()
     scale = {'preview': 0.4, 'look': 1.0, 'bake': 1.0, 'bakefast': 0.5}.get(mode, 1.0)
     s = cycles(samples=96 if mode == 'preview' else 400, scale=scale)
-    build()
+    if mode not in ('pack', 'packparts', 'colourpack'):          # (packing needs no scene)
+        build()
     camera(eye, yaw)
     water = None if water_level is None else float(eye[2]) - float(water_level)
     if mode in ('preview', 'look'):
@@ -580,6 +760,23 @@ def run(build, eye, yaw=0.0, aovs=(), water_level=None, preview_sun=(60.0, 28.0)
     elif mode in ('bake', 'bakefast'):
         raw = os.path.join(out, 'raw')
         suns = bake_render(raw, yaw=yaw, samples=160 if mode == 'bakefast' else 600, aovs=aovs)
-        bake_pack(raw, os.path.join(out, 'land'), suns, eye, aovs=aovs, water=water)
-    elif mode == 'pack':
-        bake_pack(os.path.join(out, 'raw'), os.path.join(out, 'land'), sun_set(), eye, aovs=aovs, water=water)
+        bake_pack(raw, os.path.join(out, 'land'), suns, eye, aovs=aovs, water=water, extra=extra)
+    elif mode == 'bakepart':
+        k, n = int(rest[0]), int(rest[1])
+        raw = os.path.join(out, 'raw')
+        os.makedirs(raw, exist_ok=True)
+        bake_render(raw, yaw=yaw, samples=max(600 // n, 1), aovs=aovs, only=bake_parts(n)[k - 1],
+                    layers=os.path.join(raw, 'part%d.exr' % k))
+    elif mode in ('pack', 'packparts'):
+        if mode == 'packparts':
+            split_parts(os.path.join(out, 'raw'), aovs=aovs)
+        bake_pack(os.path.join(out, 'raw'), os.path.join(out, 'land'), sun_set(), eye, aovs=aovs, water=water, extra=extra)
+    elif mode in ('colour', 'colourpack'):
+        if not season:
+            raise SystemExit('this scenery has no seasons')
+        raw = os.path.join(out, 'raw_' + season)
+        if mode == 'colour':
+            colour_render(raw, yaw=yaw)
+        else:
+            colour_split(raw)
+            colour_pack(raw, os.path.join(out, 'land'), season, extra=extra)

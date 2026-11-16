@@ -17,13 +17,15 @@ def _unit(v):
 
 
 def grow(seed, height=11.0, radius=7.5, trunk=2.3, girth=0.55, points=5200, step=0.34, influence=3.0, kill=0.62,
-         leaves_per_twig=38, leaf=0.18, lobed=False, droop=0.25, masses=1.0):
+         leaves_per_twig=38, leaf=0.18, lobed=False, droop=0.25, masses=1.0, twigs=None):
     """Grows one tree standing at the origin. Returns
       wood_co, wood_faces      the trunk and branches (quads)
       leaf_co, leaf_faces      the leaves (triangles)
       leaf_col                 a colour for every leaf vertex (rgb, linear)
       leaf_tip                 for every leaf vertex, 0 at the leaf's stalk .. 1 at its tip
-    `leaf` is a leaf's length in metres; `lobed` gives each the outline of an oak leaf (for trees seen close)."""
+    `leaf` is a leaf's length in metres; `lobed` gives each the outline of an oak leaf (for trees seen close).
+    `twigs`: the thinnest wood that is given a shape, as a radius in metres (None: 3 cm, or 1.2 cm with `lobed`; a
+    tree that is to stand bare in winter needs its twigs: 0.005)."""
     rng = np.random.default_rng(seed)
     crown_h = height - trunk * 0.75
     zc = trunk * 0.75 + crown_h * 0.52
@@ -124,7 +126,7 @@ def grow(seed, height=11.0, radius=7.5, trunk=2.3, girth=0.55, points=5200, step
 
     # ---- wood: a tube round every stretch thick enough to be seen
     sides = 7
-    thick = np.flatnonzero((r >= (0.012 if lobed else 0.03)) & (parent >= 0))
+    thick = np.flatnonzero((r >= (twigs if twigs is not None else 0.012 if lobed else 0.03)) & (parent >= 0))
     ang = np.arange(sides) * (2.0 * math.pi / sides)
     axis = _unit(nodes[thick] - nodes[parent[thick]])
     ref = np.where(np.abs(axis[:, 2:3]) < 0.9, np.array([[0.0, 0.0, 1.0]]), np.array([[1.0, 0.0, 0.0]]))

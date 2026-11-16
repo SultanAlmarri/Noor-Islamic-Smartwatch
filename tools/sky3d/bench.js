@@ -102,7 +102,7 @@ const BIOMES = [
   { id: 'arctic', water: [0.08, 0.10] },
   { id: 'ocean', water: [0.55, 0.25] },
   { id: 'meadow', water: [0.3, 0.2] },
-  { id: 'canyon', water: [0.3, 0.2] },
+  { id: 'canyon', water: [0.12, 0.32] },
 ];
 const LAND = {};       // per scenery: its land.json and its pictures as textures
 const u = {};          // uniform values by name

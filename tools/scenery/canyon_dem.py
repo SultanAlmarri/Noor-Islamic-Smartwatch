@@ -1,81 +1,61 @@
-"""Cuts the piece of the USGS elevation model that the Red Rock scenery is built from out of its four tiles.
+"""Cuts the pieces of the USGS elevation models that the Red Rock scenery is built from out of their tiles.
 
-The place is Monument Valley (Arizona and Utah). The tiles are the 3D Elevation Program's 1/3 arc-second model (ten
-metres; public domain; see sources/canyon.md): n37w111, n38w111, n37w110, n38w110. They are LZW-compressed, which
-plain numpy does not read; Blender's own image reader does. Run once:
+The place is Oak Creek at Red Rock Crossing under Cathedral Rock (Sedona, Arizona). Two tiles of the 3D Elevation
+Program (public domain; see sources/canyon.md), fetched with curl into <NoorTools>/assets/usgs:
 
-    blender -b --factory-startup -P tools/scenery/canyon_dem.py -- <folder with the four USGS_13_*.tif>
+    B=https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation
+    curl -A scenery-tools/1.0 -O $B/1m/Projects/AZ_NorthCentral_B23/TIFF/USGS_1M_12_x42y386_AZ_NorthCentral_B23.tif
+    curl -A scenery-tools/1.0 -O $B/13/TIFF/current/n35w112/USGS_13_n35w112.tif
 
-Writes monument_valley.npy (float32 heights in metres, row 0 the north edge) and monument_valley.json (longitude and
-latitude of its top-left corner, a pixel's size in degrees) into the same folder.
+The first is the lidar model at one metre (UTM zone 12 north, NAD83): the creek, its banks and Cathedral Rock itself.
+The second is the 1/3 arc-second model (ten metres): the land seen beyond the first one's edge. Both are
+LZW-compressed, which geotiff.py does not read; this script uses the `tifffile` package (pip install tifffile
+imagecodecs). Run once, with any Python 3 that has numpy:
+
+    python3 tools/scenery/canyon_dem.py [<folder with the two tiles>] [<work folder>]
+
+Writes cathedral_1m.npy (float32 heights in metres, row 0 the north edge) with cathedral_1m.json (easting of its west
+edge, northing of its north edge, a pixel's size in metres), and cathedral_10m.npy with cathedral_10m.json (longitude
+and latitude of its top-left corner, a pixel's size in degrees) into the work folder (<NoorTools>/work/canyon).
 """
 import json
 import os
-import struct
 import sys
 
-import bpy
 import numpy as np
+import tifffile
 
-NORTH, SOUTH, WEST, EAST = 37.42, 36.80, -110.76, -109.96     # what is kept: the valley and the land seen beyond it (we look west)
+TOOLS = os.environ.get('NOOR_TOOLS', os.path.join(os.path.expanduser('~'), 'ProjectMinhad', 'NoorTools'))
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(TOOLS, 'assets', 'usgs')
+DST = sys.argv[2] if len(sys.argv) > 2 else os.path.join(TOOLS, 'work', 'canyon')
+os.makedirs(DST, exist_ok=True)
 
-folder = sys.argv[sys.argv.index('--') + 1]
-
-
-def georef(path):
-    with open(path, 'rb') as f:
-        head = f.read(8)
-        bo = '<' if head[:2] == b'II' else '>'
-        off = struct.unpack(bo + 'I', head[4:8])[0]
-        f.seek(off)
-        n = struct.unpack(bo + 'H', f.read(2))[0]
-        entries = f.read(12 * n)
-        tags = {}
-        for i in range(n):
-            tag, typ, cnt = struct.unpack(bo + 'HHI', entries[12 * i:12 * i + 8])
-            if tag in (33550, 33922):                       # pixel scale, tie point: doubles, stored elsewhere
-                at = struct.unpack(bo + 'I', entries[12 * i + 8:12 * i + 12])[0]
-                f.seek(at)
-                tags[tag] = struct.unpack(bo + str(cnt) + 'd', f.read(8 * cnt))
-    scale, tie = tags[33550], tags[33922]
-    return tie[3] - tie[0] * scale[0], tie[4] + tie[1] * scale[1], scale[0], scale[1]
+# What is kept of the one-metre tile (columns and rows of the tile): the creek from below the crossing to the tile's
+# east and south edges. We look east-south-east.
+C0, C1, R0, R1 = 5400, 10012, 4700, 10012
+# What is kept of the ten-metre tile (degrees).
+NORTH, SOUTH, WEST, EAST = 34.90, 34.55, -111.86, -111.45
 
 
-out = None
-for name in ('n37w111', 'n38w111', 'n37w110', 'n38w110'):
-    path = os.path.join(folder, 'USGS_13_%s.tif' % name)
-    lon0, lat0, sx, sy = georef(path)
-    if out is None:
-        # The whole piece on the first tile's own grid (the tiles share one grid: their corners are whole pixels apart).
-        c0 = int(round((WEST - lon0) / sx))
-        r0 = int(round((lat0 - NORTH) / sy))
-        cols = int(round((EAST - WEST) / sx))
-        rows = int(round((NORTH - SOUTH) / sy))
-        base = (lon0, lat0, sx, sy, c0, r0)
-        out = np.zeros((rows, cols), np.float32)
-        filled = np.zeros((rows, cols), bool)
-    img = bpy.data.images.load(path)
-    img.colorspace_settings.name = 'Non-Color'
-    w, h = img.size
-    px = np.empty(w * h * img.channels, np.float32)
-    img.pixels.foreach_get(px)
-    a = px.reshape(h, w, img.channels)[::-1, :, 0]          # Blender keeps pictures bottom row first
-    del px
-    bpy.data.images.remove(img)
-    # Where this tile's pixels fall in the piece.
-    dc = int(round((lon0 - base[0]) / sx)) - base[4]
-    dr = int(round((base[1] - lat0) / sy)) - base[5]
-    r_a, r_b = max(0, dr), min(out.shape[0], dr + h)
-    c_a, c_b = max(0, dc), min(out.shape[1], dc + w)
-    if r_b > r_a and c_b > c_a:
-        part = a[r_a - dr:r_b - dr, c_a - dc:c_b - dc]
-        good = np.isfinite(part) & (part > -500.0) & (part < 9000.0)
-        tgt = out[r_a:r_b, c_a:c_b]
-        tgt[good] = part[good]
-        filled[r_a:r_b, c_a:c_b] |= good
-    print(name, 'corner', lon0, lat0, 'pixel', sx, sy, 'placed rows', r_a, r_b, 'cols', c_a, c_b, flush=True)
-    del a
-print('filled', float(filled.mean()), 'heights', float(out[filled].min()), float(out.max()), out.shape, flush=True)
-np.save(os.path.join(folder, 'monument_valley.npy'), out)
-json.dump(dict(lon=base[0] + base[4] * base[2], lat=base[1] - base[5] * base[3], sx=base[2], sy=base[3]),
-          open(os.path.join(folder, 'monument_valley.json'), 'w'))
+def page(name):
+    p = tifffile.TiffFile(os.path.join(SRC, name)).pages[0]
+    return p, p.tags['ModelPixelScaleTag'].value, p.tags['ModelTiepointTag'].value
+
+
+p, scale, tie = page('USGS_1M_12_x42y386_AZ_NorthCentral_B23.tif')
+a = p.asarray()[R0:R1, C0:C1].astype(np.float32)
+bad = ~np.isfinite(a) | (a < -500.0)
+print('one metre:', a.shape, 'heights', float(a[~bad].min()), float(a[~bad].max()), 'no data:', int(bad.sum()), flush=True)
+a[bad] = np.nan
+np.save(os.path.join(DST, 'cathedral_1m.npy'), a)
+json.dump(dict(east=tie[3] + C0 * scale[0], north=tie[4] - R0 * scale[1], cell=scale[0]), open(os.path.join(DST, 'cathedral_1m.json'), 'w'))
+del a
+
+p, scale, tie = page('USGS_13_n35w112.tif')
+lon0, lat0 = tie[3] - tie[0] * scale[0], tie[4] + tie[1] * scale[1]
+c0, c1 = int(round((WEST - lon0) / scale[0])), int(round((EAST - lon0) / scale[0]))
+r0, r1 = int(round((lat0 - NORTH) / scale[1])), int(round((lat0 - SOUTH) / scale[1]))
+a = p.asarray()[r0:r1, c0:c1].astype(np.float32)
+print('ten metres:', a.shape, 'heights', float(a.min()), float(a.max()), flush=True)
+np.save(os.path.join(DST, 'cathedral_10m.npy'), a)
+json.dump(dict(lon=lon0 + c0 * scale[0], lat=lat0 - r0 * scale[1], sx=scale[0], sy=scale[1]), open(os.path.join(DST, 'cathedral_10m.json'), 'w'))

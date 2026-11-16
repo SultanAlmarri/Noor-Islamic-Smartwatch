@@ -28,7 +28,20 @@ blender -b --factory-startup -P tools/scenery/<id>.py -- bake     <out dir>
   (morning), `15 3` (the Sun setting in the picture, at its notch) and `-15 2` (rising).
 - `bakefast`, `bake`: every light at once (one render, a light group each), then packed into `<out dir>/land`.
   The packer prints whether the skyline keeps its limits (below).
+- `bakepart <out dir> <k> <n>` for k = 1..n, then `packparts <out dir>`: the same bake in n runs, each with a
+  share of the lights (and that share of the samples: the same time and the same quality in all). A part writes
+  its layers as they are into `raw/part<k>.exr`; `packparts` is a run without the scenery that denoises and
+  splits them and then packs. For a machine short of memory: every light's picture is held at full size while a
+  bake renders, and denoising takes about 2 GB more at the end (Red Rock: three parts, 4.1 GB each).
+- `colour <out dir>`, then `colourpack <out dir>`: for a scenery with seasons (below): only what the colour
+  pictures are made from, with another season's materials (`raw_<season>/colour.exr`), then denoised and packed
+  beside the last bake.
 - `NOOR_TAG` (environment) is added to a preview's file name; `NOOR_EXPOSURE` changes its exposure (default -2.3).
+- Without a GPU Cycles renders on the CPU by itself (start Blender with `-t <threads>` on a shared machine). The
+  memory Blender prints ("Peak") is not what the process holds: Cycles' own copy of the scene comes on top (2.5 GB
+  for Red Rock). Watch the process. What saves memory: 1k scans for what is only seen far off, coarse base sheets
+  where the renderer dices the ground itself, a coarser dicing rate while composing, baking in parts.
+- `polyhaven_get.py <resolution> <id>...` fetches scans from Poly Haven's API into `NoorTools/assets/polyhaven`.
 
 ## The camera, and what the phone shows of the picture
 
@@ -108,8 +121,27 @@ water_level=...)` and pass `aovs=('mask',)` to `bake.run`.
 | `g.png` | how far each pixel is (16 bits, log scale, half size) |
 | `m.webp` | the mask: R water, G wind, B snow |
 | `land.json` | sizes, the camera's height, the water's level, the Suns |
+| `a_<season>.webp`, `k_<season>.webp` | a scenery with seasons: the two colour pictures again, in another season |
 
-Keep a scenery under about 3 MB.
+Keep a scenery under about 3 MB (3.5 MB with its seasons).
+
+## Seasons
+
+The pictures of a bake show one season: `land.json` says which (`"season": "summer"`). A scenery whose look
+changes with the year adds, for each other season it has, the two colour pictures rendered again through the same
+camera with that season's materials: `a_<season>.webp` (made exactly as `a.webp` is) and `k_<season>.webp` (as
+`k.webp`), the same size and rows. `land.json` lists them (`"seasons": ["autumn", "winter", "spring"]`). The
+pictures of the light (`s_*`), the distances and the mask are shared by all seasons, so the shapes must stay the
+same or nearly: leaves may turn, thin or go, snow may lie. `"winterBaked": true` says that the winter pictures
+carry their own snow (the phone then lays none of its own in winter). The phone blends between neighbouring
+seasons (winter 0, spring 0.25, summer 0.5, autumn 0.75 of the year).
+
+A script with seasons builds its scene for a season it is told (Red Rock: `NOOR_SEASON`) and passes
+`season=...` to `bake.run`. Bake the base season first (`bake`, or `bakepart` and `packparts`), then run `colour`
+and `colourpack` for each other season. (`pack` and `packparts` write `land.json` afresh: run `colourpack` for
+each season again after them.)
+`bake.colour_render` lights the scene with all the Suns of the set at once, in one light group, and with the white
+sky: all a colour picture needs, at a fraction of a bake's memory. `canyon.py` is the worked example.
 
 ## The standard to meet
 
