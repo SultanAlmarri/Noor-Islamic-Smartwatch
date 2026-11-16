@@ -139,7 +139,10 @@ fun StudioPreview(
                     from != null && s == from -> slotOutline(s, design, w, Color.White, 0.35f, dashed = true)
                     from != null -> slotOutline(s, design, w, Color.White, 0.22f, dashed = true)
                     s == selected -> slotOutline(s, design, w, accent, 1f)
-                    !has -> slotOutline(s, design, w, Color.White, 0.18f, dashed = true, plus = true)
+                    // An empty place is shown where it is free; one that lies under another's element (left and right
+                    // under a wide centre) is reached by its chip instead, so nothing is drawn over the time.
+                    !has && Slot.entries.none { o -> o != s && design.at(o) != null && overlaps(FaceGeometry.box(s, design), FaceGeometry.box(o, design)) } ->
+                        slotOutline(s, design, w, Color.White, 0.18f, dashed = true, plus = true)
                 }
             }
             if (from != null) {
@@ -150,6 +153,8 @@ fun StudioPreview(
         }
     }
 }
+
+private fun overlaps(a: FaceGeometry.Box, b: FaceGeometry.Box) = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
 
 private fun DrawScope.slotOutline(s: Slot, d: FaceDesign, w: Float, color: Color, alpha: Float, dashed: Boolean = false, filled: Boolean = false, plus: Boolean = false) {
     val r = w / 2f

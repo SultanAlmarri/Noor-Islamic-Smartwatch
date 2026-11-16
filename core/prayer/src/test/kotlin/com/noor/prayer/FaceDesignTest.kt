@@ -148,7 +148,7 @@ class FaceDesignTest {
 
     private fun texts(d: FaceData): List<String> = listOfNotNull(
         d.time, d.ampm, d.date, d.weekday, d.hijri, d.next?.name, d.next?.time, d.next?.countdown, d.next?.countdownShort, d.next?.currentName,
-        d.qibla, d.battery, d.appName, d.setupHint,
+        d.qibla, d.battery, d.appName, d.setupHint, d.next?.detail, d.next?.nameAndShort, d.sun?.sunriseTime, d.sun?.sunsetTime,
     ) + d.prayers.flatMap { listOf(it.name, it.time) } + d.text.numerals + (0..59).map(d.text::twoDigits)
 
     @Test fun edgeAndDialEnumsAreAllOffered() {

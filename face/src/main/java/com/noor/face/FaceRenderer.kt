@@ -213,14 +213,14 @@ class FaceRenderer(context: Context, private val fonts: FaceFonts) {
             }
             Edge.DAY_DIAL -> {
                 val sun = data.sun
-                stroke.color = lit(design.theme.soft, 0.22f); stroke.strokeWidth = w * 0.45f
+                stroke.color = lit(design.theme.soft, 0.16f); stroke.strokeWidth = w * 0.45f
                 canvas.drawCircle(cx, cy, rr, stroke)
                 if (sun == null) return
                 // Daylight, Shuruq to Maghrib, as a lighter band (midnight at the bottom, noon at the top).
                 val rise = sun.sunrise
                 val set = sun.sunset
                 if (rise != null && set != null && !ambient) {
-                    stroke.color = lit(design.theme.accent, 0.35f); stroke.strokeWidth = w
+                    stroke.color = lit(design.theme.accent, 0.6f); stroke.strokeWidth = w
                     canvas.drawArc(oval, 90f + rise * 360f, (set - rise) * 360f, false, stroke)
                 }
                 for (i in sun.marks.indices) {

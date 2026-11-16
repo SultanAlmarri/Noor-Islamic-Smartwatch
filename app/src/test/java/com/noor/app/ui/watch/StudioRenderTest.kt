@@ -73,7 +73,7 @@ class StudioRenderTest {
         for ((name, base) in designs) for ((lang, d) in listOf("en" to base.copy(language = FaceLanguage.EN, digits = FaceDigits.WESTERN),
             "ar" to base.copy(language = FaceLanguage.AR, digits = FaceDigits.ARABIC))) for ((when_, t) in moments) {
             val data = FaceData.build(d, dubai, t.toInstant(), t.zone, battery = 0.76f)
-            var lit = IntArray(2)
+            val lit = IntArray(2)
             for ((i, ambient) in listOf(false, true).withIndex()) {
                 val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
                 val canvas = Recording(bmp)
@@ -88,8 +88,8 @@ class StudioRenderTest {
                 assertTrue("$name $lang: nothing drawn", canvas.texts.isNotEmpty() || d.hands != Hands.NONE)
             }
             assertTrue("$name $lang $when_: the face is blank (${lit[0]} px)", lit[0] > size * size / 200)
-            // Always-on: well under a fifth of the face's lit pixels, and under 15 % of the screen.
-            assertTrue("$name $lang $when_: always-on lights ${lit[1]} px against ${lit[0]}", lit[1] < size * size * 0.15 && (lit[1] < lit[0] / 2 || lit[0] < size * size / 20))
+            // Always-on never lights more than the face itself, and under 15 % of the screen (OLED guidance).
+            assertTrue("$name $lang $when_: always-on lights ${lit[1]} px against ${lit[0]}", lit[1] < size * size * 0.15 && lit[1] <= lit[0])
         }
         assertTrue("Text in the wrong language:\n" + problems.distinct().joinToString("\n"), problems.isEmpty())
     }

@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -106,8 +107,8 @@ class StudioEditorTest {
         rule.onNodeWithText("Below the centre").performClick(); rule.waitForIdle()
         assertEquals(Slot.BOTTOM, s.selected)
         rule.onNodeWithText("What goes here").assertExists()
-        rule.onNodeWithText("Prayer gauge").performClick(); rule.waitForIdle()
-        assertEquals(Element.PRAYER_GAUGE, s.design.at(Slot.BOTTOM)!!.element)
+        rule.onNodeWithText("Weekday").performClick(); rule.waitForIdle()
+        assertEquals(Element.WEEKDAY, s.design.at(Slot.BOTTOM)!!.element)
         shot("91_studio_inspector_en", "Prayer gauge", arabic)
         actions.undo(); rule.waitForIdle()
         assertEquals(Element.NEXT_PRAYER, s.design.at(Slot.BOTTOM)!!.element)
