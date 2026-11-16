@@ -223,7 +223,7 @@ private fun WatchCard(
         // Step 1: Noor on the watch
         val installTimedOut = install != null && now - install.startedAtMs > WatchViewModel.PENDING_TIMEOUT_MS
         Step(
-            n = 1, done = hasNoor, title = stringResource(R.string.step_app_title),
+            n = f.number(1), done = hasNoor, title = stringResource(R.string.step_app_title),
             body = when {
                 hasNoor -> stringResource(R.string.step_app_done, report?.appVersionName ?: "")
                 install != null && !install.reached -> stringResource(R.string.step_app_unreached)
@@ -244,7 +244,7 @@ private fun WatchCard(
         // Step 2: settings reached the watch
         val received = report?.configReceivedAtMs
         Step(
-            n = 2, done = hasNoor && received != null, title = stringResource(R.string.step_sync_title),
+            n = f.number(2), done = hasNoor && received != null, title = stringResource(R.string.step_sync_title),
             body = when {
                 !configAvailable -> stringResource(R.string.watch_needs_location)
                 !hasNoor -> stringResource(R.string.step_after_install)
@@ -267,7 +267,7 @@ private fun WatchCard(
         val showing = report?.faceActive == true && report.faceVariant == chosen.id
         val sending = face != null && face.reached && !faceTimedOut && report?.faceVariant != chosen.id
         Step(
-            n = 3, done = report?.faceActive == true, title = stringResource(R.string.step_face_title),
+            n = f.number(3), done = report?.faceActive == true, title = stringResource(R.string.step_face_title),
             body = when {
                 !hasNoor -> stringResource(R.string.step_after_install)
                 report == null -> stringResource(R.string.step_face_open_first)
@@ -302,7 +302,7 @@ private fun WatchCard(
 }
 
 @Composable
-private fun Step(n: Int, done: Boolean, title: String, body: String, working: Boolean, action: @Composable () -> Unit) {
+private fun Step(n: String, done: Boolean, title: String, body: String, working: Boolean, action: @Composable () -> Unit) {
     val c = NoorTheme.colors
     Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.Top) {
         Box(
@@ -312,7 +312,7 @@ private fun Step(n: Int, done: Boolean, title: String, body: String, working: Bo
             when {
                 done -> Icon(Icons.Rounded.Check, null, tint = c.success, modifier = Modifier.size(16.dp))
                 working -> CircularProgressIndicator(Modifier.size(14.dp), color = c.gold, strokeWidth = 2.dp)
-                else -> Text("$n", style = MaterialTheme.typography.labelMedium, color = c.textSecondary)
+                else -> Text(n, style = MaterialTheme.typography.labelMedium, color = c.textSecondary)
             }
         }
         Spacer(Modifier.width(14.dp))

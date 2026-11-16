@@ -63,6 +63,8 @@ fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
     val context = LocalContext.current
     val zone = ZoneId.systemDefault()
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
+    val message by vm.message.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(message) { message?.let { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show(); vm.consumeMessage() } }
 
     com.noor.app.ui.components.NoorPage(stringResource(R.string.history_title), contentPadding, onBack = onBack) {
         Footnote(stringResource(R.string.history_intro))

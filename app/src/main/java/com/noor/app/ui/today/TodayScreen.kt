@@ -876,7 +876,8 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
         val list = Prayer.entries
         list.forEachIndexed { i, p ->
             val at = day.instant(p)
-            val isCurrent = p == current && next != null
+            // (0.18: Isha stays the current prayer until midnight, when the next is tomorrow's Fajr.)
+            val isCurrent = p == current
             val isNext = p == next
             val passed = isToday && !isCurrent && at != null && at.isBefore(u.now)
             // Gold fills the line from the current moment's node to the next one's, in step with the time.

@@ -13,8 +13,8 @@
     <string name="noor_alert_short_of">%1$s (مختصر)</string>
     <string name="noor_alert_sub_full">التسجيل الكامل غير موجود على هذا الجهاز، فشُغّلت النسخة المختصرة.</string>
     <string name="noor_alert_sub_no_full">لا يتوفر من هذا التسجيل إلا مطلعه، فشُغّلت النسخة المختصرة.</string>
-    <string name="noor_alert_sub_custom">الصوت الذي استوردته غير موجود، فشُغّل الجرس الافتراضي.</string>
-    <string name="noor_alert_sub_sound">الصوت المختار غير متوفر، فشُغّل الجرس الافتراضي.</string>
+    <string name="noor_alert_sub_custom">الصوت الذي استوردته غير موجود، فشُغّل صوت افتراضي.</string>
+    <string name="noor_alert_sub_sound">الصوت المختار غير متوفر، فشُغّل صوت افتراضي.</string>
     <string name="noor_alert_sub_fajr">أذان الفجر خاص بصلاة الفجر، فشُغّل الأذان المعتاد.</string>
     <string name="noor_channel_adhan">الأذان</string>
     <string name="noor_channel_adhan_desc">يظهر أثناء تشغيل الأذان أو صوت التنبيه، مع زر إيقاف.</string>

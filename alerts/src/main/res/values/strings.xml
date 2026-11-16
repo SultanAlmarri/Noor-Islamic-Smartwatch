@@ -13,8 +13,8 @@
     <string name="noor_alert_short_of">%1$s (short)</string>
     <string name="noor_alert_sub_full">The full recording is not on this device, so the short version played.</string>
     <string name="noor_alert_sub_no_full">Only the opening of this recording exists, so the short version played.</string>
-    <string name="noor_alert_sub_custom">Your imported sound is missing, so the default chime played.</string>
-    <string name="noor_alert_sub_sound">The chosen sound is not available, so the default chime played.</string>
+    <string name="noor_alert_sub_custom">Your imported sound is missing, so a default sound played.</string>
+    <string name="noor_alert_sub_sound">The chosen sound is not available, so a default sound played.</string>
     <string name="noor_alert_sub_fajr">The Fajr Adhan is only used for Fajr, so the standard Adhan played.</string>
     <string name="noor_channel_adhan">Adhan</string>
     <string name="noor_channel_adhan_desc">Shown while the Adhan or an alert sound plays, with a Stop button.</string>

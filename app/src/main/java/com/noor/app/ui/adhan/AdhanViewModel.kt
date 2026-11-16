@@ -392,7 +392,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         val ctx = getApplication<Application>()
         stopPreview()
         _message.value = ctx.getString(
-            if (AlertScheduler.scheduleTest(ctx, p, 10)) com.noor.app.R.string.adhan_test_sent else com.noor.app.R.string.adhan_test_failed)
+            if (AlertScheduler.scheduleTest(ctx, p, 10)) com.noor.app.R.string.adhan_test_sent else com.noor.app.R.string.adhan_test_failed, digits(10))
     }
 
     /**
@@ -439,6 +439,14 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun openNoorOnWatch(nodeId: String) = viewModelScope.launch { container.watchSetup.openNoorOnWatch(nodeId) }
 
     fun consumeMessage() { _message.value = null }
+
+    /** [n] in the digits the user chose and the app's language (for messages built here). */
+    private fun digits(n: Int): String {
+        val s = settings.value ?: return n.toString()
+        val ar = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language == "ar" ||
+            (androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().isEmpty && java.util.Locale.getDefault().language == "ar")
+        return com.noor.app.util.Formatter(ar, s.numerals, s.timeFormat).number(n)
+    }
 
     override fun onCleared() { player.stop(notify = false) }
 }
