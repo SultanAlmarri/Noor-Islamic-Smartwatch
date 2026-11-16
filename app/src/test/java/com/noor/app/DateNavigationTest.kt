@@ -78,8 +78,10 @@ class BundledDataTest {
         val text = app.assets.open(com.noor.alerts.SoundLibrary.ASSET_PATH).bufferedReader().readText()
         val entries = com.noor.alerts.SoundLibrary.parse(text)
         fun exists(path: String) = runCatching { app.assets.open(path).close(); true }.getOrDefault(false)
-        val allowed = setOf("CC0", "Public domain", "CC BY 3.0", "CC BY 4.0", "CC BY-SA 3.0", "CC BY-SA 4.0")
-        org.junit.Assert.assertTrue(entries.size >= 10)
+        val allowed = setOf("CC0", "Public domain", "CC BY 3.0", "CC BY 4.0", "CC BY-SA 3.0", "CC BY-SA 4.0", "Owner's rights")
+        // (0.18: the owner's set, exactly what must be there, rather than a count.)
+        org.junit.Assert.assertTrue(entries.map { it.id }.toString(), entries.map { it.id }.containsAll(listOf("adhan.makkah", "adhan.madinah", "adhan.dubai",
+            "adhan.dubai_fajr", "fx.birds", "fx.rooster", "fx.waves", "fx.rain", "fx.stream")))
         for (e in entries) {
             e.file?.let { org.junit.Assert.assertTrue("missing ${e.id} full", exists(it)) }
             e.shortFile?.let { org.junit.Assert.assertTrue("missing ${e.id} short", exists(it)) }
@@ -89,7 +91,9 @@ class BundledDataTest {
             org.junit.Assert.assertTrue("licence ${credit!!.licence}", credit.licence in allowed)
             if (e.kind == com.noor.alerts.SoundKind.ADHAN) {
                 org.junit.Assert.assertTrue(credit.author.isNotBlank())
-                org.junit.Assert.assertTrue(credit.sourceUrl!!.startsWith("https://commons.wikimedia.org/"))
+                // (Commons, or 0.18 the owner's own recording, kept in the repository.)
+                org.junit.Assert.assertTrue(credit.sourceUrl!!.startsWith("https://commons.wikimedia.org/") ||
+                    (credit.licence == "Owner's rights" && credit.sourceUrl!!.startsWith("owner:")))
                 org.junit.Assert.assertTrue(e.titleAr.isNotBlank() && e.placeAr != null)
                 org.junit.Assert.assertNotNull(e.shortFile)
             }
@@ -101,8 +105,8 @@ class BundledDataTest {
         }
         org.junit.Assert.assertTrue(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_FAJR_ADHAN)!!.fajr)
         org.junit.Assert.assertTrue(lib.adhansFor(com.noor.prayer.Prayer.ASR).none { it.fajr })
-        // 0.16: no alert sounds on the phone (no music, nothing that sounds like it): Adhan recordings only.
-        org.junit.Assert.assertTrue(lib.sounds.isEmpty())
-        org.junit.Assert.assertNull(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_SOUND))
+        // 0.16: no generated tones (no music, nothing that sounds like it); 0.18: real recordings of nature only.
+        org.junit.Assert.assertTrue(lib.sounds.isNotEmpty() && lib.sounds.all { it.id.startsWith("fx.") })
+        org.junit.Assert.assertNotNull(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_SOUND))
     }
 }

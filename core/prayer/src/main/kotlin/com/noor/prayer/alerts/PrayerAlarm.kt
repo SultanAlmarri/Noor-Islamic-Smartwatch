@@ -10,8 +10,8 @@ import java.time.Instant
 import java.time.LocalDate
 
 /**
- * What an alarm rings with (0.17). Never the Adhan: an alarm before a prayer that called the Adhan could be taken, by
- * someone half asleep, for the prayer having come (and after it, for a second Adhan).
+ * What an alarm rings with (0.17; 0.18 adds the phone's ringtone and Noor's own sounds: the Adhan voices and the sound
+ * effects, each full or short, as the owner asked).
  */
 enum class AlarmSound {
     /** The phone's own alarm sound, as the Clock app's alarms ring with (chosen in the phone's sound settings). */
@@ -20,6 +20,10 @@ enum class AlarmSound {
     NOTIFICATION,
     /** A recording the user added ([PrayerAlarm.customId]). */
     CUSTOM,
+    /** 0.18: the phone's ringtone. */
+    RINGTONE,
+    /** 0.18: one of Noor's sounds ([PrayerAlarm.customId] "adhan.…" or "fx.…"), in full or short ([PrayerAlarm.short]). */
+    LIBRARY,
 }
 
 /**
@@ -41,11 +45,13 @@ data class PrayerAlarm(
     /** The user's name for it ("Wake up"), or blank. */
     val label: String = "",
     val sound: AlarmSound = AlarmSound.PHONE_ALARM,
-    /** With [AlarmSound.CUSTOM]: the user's recording ("custom.…"). */
+    /** With [AlarmSound.CUSTOM]: the user's recording ("custom.…"); with [AlarmSound.LIBRARY], Noor's sound ("fx.birds"). */
     val customId: String? = null,
     val vibrate: Boolean = true,
     /** Minutes Snooze puts it off by; 0 = no Snooze. One of [SNOOZE_CHOICES]. */
     val snoozeMinutes: Int = 10,
+    /** 0.18: with [AlarmSound.LIBRARY], the sound's short version (the Adhan's opening, a bird's chirp or two). */
+    val short: Boolean = false,
 ) {
     /** From the prayer's time to the alarm's: negative before it. */
     val offset: Duration get() = Duration.ofMinutes(if (after) minutes.toLong() else -minutes.toLong())
@@ -56,15 +62,16 @@ data class PrayerAlarm(
         minutes = minutes.coerceIn(1, MAX_MINUTES), days = days.coerceIn(0, PrayerAlert.ALL_DAYS),
         // (Not trimmed here: the editor keeps its draft in this form, and a space typed at the end must stay.)
         label = label.replace(Regex("[\\r\\n\\t]"), " ").take(MAX_LABEL),
-        customId = customId?.takeIf { SoundIds.isCustom(it) && SoundIds.isValid(it) },
-        sound = if (sound == AlarmSound.CUSTOM && customId?.let { SoundIds.isCustom(it) && SoundIds.isValid(it) } != true) AlarmSound.PHONE_ALARM else sound,
+        customId = customId?.takeIf { SoundIds.isValid(it) && SoundIds.isCustom(it) == (sound == AlarmSound.CUSTOM) && sound.hasId },
+        sound = if (sound.hasId && customId?.let { SoundIds.isValid(it) && SoundIds.isCustom(it) == (sound == AlarmSound.CUSTOM) } != true) AlarmSound.PHONE_ALARM else sound,
+        short = short && sound == AlarmSound.LIBRARY,
         snoozeMinutes = snoozeMinutes.takeIf { it in SNOOZE_CHOICES } ?: 0,
     )
 
     /** One entry of the "alarms" field: commas between fields; the label percent-encoded (no , ; | = left in it). */
     fun encode(): String = listOf(
         id, if (enabled) 1 else 0, prayer.name, if (after) "A" else "B", minutes, days, sound.name, customId ?: "",
-        if (vibrate) 1 else 0, snoozeMinutes, URLEncoder.encode(label, "UTF-8"),
+        if (vibrate) 1 else 0, snoozeMinutes, URLEncoder.encode(label, "UTF-8"), if (short) 1 else 0,
     ).joinToString(",")
 
     companion object {
@@ -90,10 +97,14 @@ data class PrayerAlarm(
                 vibrate = f[8] == "1",
                 snoozeMinutes = f[9].toInt(),
                 label = f.getOrNull(10)?.let { URLDecoder.decode(it, "UTF-8") } ?: "",
+                short = f.getOrNull(11) == "1",
             ).normalized()
         }.getOrNull()
     }
 }
+
+/** Whether the sound names a file ([PrayerAlarm.customId]). */
+val AlarmSound.hasId: Boolean get() = this == AlarmSound.CUSTOM || this == AlarmSound.LIBRARY
 
 /** The next time [alarm] rings: [minutes][PrayerAlarm.minutes] from [prayer][PrayerAlarm.prayer] at [prayerAt] on [date]. */
 data class PlannedAlarm(val alarm: PrayerAlarm, val date: LocalDate, val prayerAt: Instant, val at: Instant)

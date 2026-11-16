@@ -33,7 +33,7 @@ class AppContainer(private val app: Application) {
     val gazetteer = GazetteerStore(app)
     /** 0.9.7: the offline world places and time-zone map, and online place search, for choosing a location by hand. */
     val world = com.noor.app.data.WorldStore(app)
-    val location = LocationRepository(app, settings, gazetteer)
+    val location = LocationRepository(app, settings, gazetteer, world)
     val timetables = OfficialTimetables(app)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val wear = WearSync(app, settings, timetables)
@@ -61,6 +61,14 @@ class NoorApplication : Application(), AlertHost {
     override fun onPrayerAlarm(context: Context) {
         com.noor.app.notify.StatusNotification.refreshAsync(context)
         com.noor.app.widget.Widgets.refreshAsync(context)
+        // 0.18: once a day, the watch gets the settings again, so the weeks of official times it carries never run out
+        // while nothing changes on the phone.
+        val today = java.time.LocalDate.now().toEpochDay()
+        val prefs = getSharedPreferences("noor_watch_push", MODE_PRIVATE)
+        if (prefs.getLong("day", 0L) != today) {
+            prefs.edit().putLong("day", today).apply()
+            container.scope.launch { runCatching { container.wear.syncNow() } }
+        }
     }
 
     @OptIn(FlowPreview::class)

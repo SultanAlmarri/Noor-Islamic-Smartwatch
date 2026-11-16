@@ -118,12 +118,12 @@ class PrayerTileService : TileService() {
                     mainSlot = {
                         column(
                             text(context.getString(R.string.next).uppercase().layoutString, typography = Typography.LABEL_SMALL, color = colorScheme.onSurfaceVariant),
-                            text(t.name(iv.next.prayer).layoutString, typography = Typography.DISPLAY_SMALL, color = colorScheme.primary),
+                            text(t.name(iv.next).layoutString, typography = Typography.DISPLAY_SMALL, color = colorScheme.primary),
                             text(t.time(iv.end, zone).layoutString, typography = Typography.TITLE_LARGE, color = colorScheme.onSurface),
                             text(countdown(context, t, config, iv), typography = Typography.LABEL_MEDIUM, color = colorScheme.primary),
                             spacer(height = dp(4f)),
                             text(
-                                following.joinToString("   ") { t.name(it.next.prayer) + " " + t.timeShort(it.end, zone) }.layoutString,
+                                following.joinToString("   ") { t.name(it.next) + " " + t.timeShort(it.end, zone) }.layoutString,
                                 typography = Typography.BODY_SMALL, color = colorScheme.onSurfaceVariant, maxLines = 2,
                             ),
                         )

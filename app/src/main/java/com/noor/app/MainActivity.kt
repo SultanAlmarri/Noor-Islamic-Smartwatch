@@ -189,6 +189,20 @@ class MainActivity : AppCompatActivity() {
         stoppedAt = 0L
         if (Opening.replaysOnReturn(away, animationsOn(this), opening.onHome)) opening.begin(OpeningMode.FULL, veil = false, now = true)
     }
+
+    /**
+     * 0.18: the app's language can also be changed in Android's own settings ("App languages", Android 13+); the stored
+     * choice follows it, so notifications, the notification bar, widgets and the watch speak the same language.
+     */
+    override fun onResume() {
+        super.onResume()
+        val tag = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language ?: ""
+        val lang = com.noor.app.data.Language.entries.firstOrNull { it.tag == tag } ?: com.noor.app.data.Language.SYSTEM
+        val repo = (application as NoorApplication).container.settings
+        lifecycleScope.launch {
+            if (repo.current().language != lang) { repo.setLanguage(lang); com.noor.alerts.AlertNotifications.ensureChannels(this@MainActivity) }
+        }
+    }
 }
 
 /** Whether the sun is up where the user is (between today's Shuruq and Maghrib); re-evaluated every minute. */
@@ -456,7 +470,7 @@ private fun RowScope.Tab(selected: Boolean, icon: Painter, label: String, onClic
     val lift by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 0.55f, stiffness = 420f), label = "tabLift")
     Column(
         Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(50))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab, onClick = onClick)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab, onClick = com.noor.app.ui.components.withTick(onClick))
             .semantics { this.selected = selected },
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {

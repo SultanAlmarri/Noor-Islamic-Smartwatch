@@ -84,7 +84,9 @@ class WatchLocation(private val context: Context, private val gazetteer: Gazette
             zoneId = ZoneId.systemDefault().id,
             nameEn = en,
             nameAr = ar,
-            countryCode = gaz?.countryCode ?: near.countryCode.takeIf { Places.distanceKm(near.point, point) < 150 },
+            // The country chooses the authority: when no town is within 30 km, the nearest town within 300 km gives it.
+            countryCode = gaz?.countryCode ?: runCatching { gazetteer.get().nearest(point, 300.0, specific = true) }.getOrNull()?.countryCode
+                ?: near.countryCode.takeIf { Places.distanceKm(near.point, point) < 150 },
             regionCode = gaz?.region ?: near.region.takeIf { Places.distanceKm(near.point, point) < 40 },
             fromGps = true,
             fixedAtEpochMs = System.currentTimeMillis(),

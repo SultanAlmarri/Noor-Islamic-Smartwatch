@@ -153,14 +153,14 @@ import kotlin.math.roundToInt
 fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpenSource: () -> Unit, vm: TodayViewModel = viewModel(), onOpenPrayer: (Prayer) -> Unit = {}) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refreshIfStale(); vm.refreshTimetables() }
-    val notifications = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+    val notifications = com.noor.app.ui.components.rememberNotificationRequest()
     val u = ui ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = NoorTheme.colors.gold, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
     }
     TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer, onScrubbed = vm::scrubLearned,
         onToggleAlert = { p, on ->
             // (The first alert turned on asks for Android's notification permission, at the moment its reason is plain.)
-            if (on && !u.settings.alerts.enabled && android.os.Build.VERSION.SDK_INT >= 33) notifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            if (on && !u.settings.alerts.enabled && android.os.Build.VERSION.SDK_INT >= 33) notifications()
             vm.setAlert(p, on)
         })
 }
@@ -876,7 +876,8 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
         val list = Prayer.entries
         list.forEachIndexed { i, p ->
             val at = day.instant(p)
-            val isCurrent = p == current && next != null
+            // (0.18: Isha stays the current prayer until midnight, when the next is tomorrow's Fajr.)
+            val isCurrent = p == current
             val isNext = p == next
             val passed = isToday && !isCurrent && at != null && at.isBefore(u.now)
             // Gold fills the line from the current moment's node to the next one's, in step with the time.

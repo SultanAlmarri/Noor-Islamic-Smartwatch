@@ -9,7 +9,8 @@ import com.noor.prayer.Prayer.SHURUQ
 
 /**
  * The calculation profiles shipped with the app: the 11 methods of the Noor watch face (with
- * Dubai upgraded to the research candidate C1) plus the UAE Awqaf profile.
+ * Dubai upgraded to the research candidate C1), the UAE Awqaf profile, Malaysia, Indonesia, and (0.18) the other
+ * national and community methods with documented parameters. Sources and status: docs/AUTHORITIES.md.
  */
 object Profiles {
 
@@ -97,9 +98,78 @@ object Profiles {
         offsets = mapOf(SHURUQ to -7, DHUHR to 5, ASR to 4, MAGHRIB to 7))
     val TEHRAN = method("teh", "Tehran (Institute of Geophysics)", "طهران (معهد الجيوفيزياء)", 17.7, 14.0, maghrib = 4.5)
 
+    // ---- 0.18: the other documented national and community methods (docs/AUTHORITIES.md has every source) ----
+
+    private const val SECONDARY_EN = "Calculated with the parameters documented for this authority by widely used prayer-time references; not yet checked against its own timetable."
+    private const val SECONDARY_AR = "محسوبة بالمعايير الموثقة لهذه الجهة في المراجع الشائعة لمواقيت الصلاة؛ لم تُقارن بجدولها الرسمي بعد."
+
+    private fun CalculationProfile.note(en: String, ar: String) = copy(validationEn = en, validationAr = ar)
+
+    /**
+     * Moonsighting Committee Worldwide (Syed Khalid Shaukat): Fajr and Isha 18 deg, bounded by the committee's
+     * seasonal minutes from sunrise and sunset (general shafaq), a seventh of the night above 55 N; Dhuhr +5 and
+     * Maghrib +3 minutes. Parameters as in Batoul Apps' Adhan libraries (MoonsightingCommittee).
+     */
+    val MOONSIGHTING = CalculationProfile(
+        id = "msc", nameEn = "Moonsighting Committee Worldwide", nameAr = "لجنة رؤية الهلال العالمية",
+        fajrAngle = 18.0, ishaAngle = 18.0, seasonalTwilight = Shafaq.GENERAL,
+        offsets = mapOf(DHUHR to 5, MAGHRIB to 3),
+        validationEn = "The committee's published method (18° with its seasonal limits, made for high latitudes). Reproduces the Adhan library's reference times for London; a recognised method, not an official timetable.",
+        validationAr = "طريقة اللجنة المنشورة (18° مع حدودها الموسمية المصممة للعروض العليا). تطابق الأوقات المرجعية لمكتبة «أذان» البرمجية في لندن؛ طريقة معتمدة شائعة وليست جدولاً رسمياً.",
+    )
+
+    /** Shia Ithna Ashari, Leva Institute, Qum: Fajr 16, Isha 14, Maghrib when the Sun is 4 deg down (praytimes.org). */
+    val JAFARI = method("jafari", "Shia Ithna Ashari (Leva Institute, Qum)", "الشيعة الإمامية (مؤسسة ليفا، قم)", 16.0, 14.0, maghrib = 4.0)
+        .note("Fajr 16°, Isha 14°, Maghrib at 4° (after the eastern redness is gone), as published for the Leva Institute, Qum.",
+            "الفجر 16°، العشاء 14°، المغرب عند 4° (بعد ذهاب الحمرة المشرقية)، كما نُشرت لمؤسسة ليفا في قم.")
+
+    /** France - UOIF (now Musulmans de France): Fajr and Isha 12 deg (praytimes.org, Aladhan method 12). */
+    val FRANCE_UOIF = method("uoif", "France — UOIF (Musulmans de France)", "فرنسا — اتحاد المنظمات الإسلامية (مسلمو فرنسا)", 12.0, 12.0)
+        .note("Fajr 12°, Isha 12°: the UOIF's method, widely used in France. France has no single official authority; many mosques use 15° or 18°.",
+            "الفجر 12°، العشاء 12°: طريقة اتحاد المنظمات الإسلامية الشائعة في فرنسا. لا توجد في فرنسا جهة رسمية واحدة، وتعتمد مساجد كثيرة 15° أو 18°.")
+
+    /** Russia - Spiritual Administration of Muslims: Fajr 16, Isha 15 (Aladhan method 14). */
+    val RUSSIA = method("dumr", "Russia — Spiritual Administration of Muslims", "روسيا — الإدارة الدينية لمسلمي روسيا", 16.0, 15.0)
+        .note(SECONDARY_EN, SECONDARY_AR)
+
+    /** Tunisia - Ministry of Religious Affairs: Fajr 18, Isha 18 (Aladhan method 18). */
+    val TUNISIA = method("tun", "Tunisia — Ministry of Religious Affairs", "تونس — وزارة الشؤون الدينية", 18.0, 18.0)
+        .note(SECONDARY_EN, SECONDARY_AR)
+
+    /** Algeria - Ministry of Religious Affairs and Endowments: Fajr 18, Isha 17 (Aladhan method 19). */
+    val ALGERIA = method("dza", "Algeria — Ministry of Religious Affairs and Endowments", "الجزائر — وزارة الشؤون الدينية والأوقاف", 18.0, 17.0)
+        .note(SECONDARY_EN, SECONDARY_AR)
+
+    /**
+     * Morocco - Ministry of Habous and Islamic Affairs: Fajr 19, Isha 17 (Aladhan method 21); Shuruq -3, Dhuhr +5,
+     * Maghrib +5 minutes (as documented by bladi.net for the ministry's method).
+     */
+    val MOROCCO = method("mar", "Morocco — Ministry of Habous and Islamic Affairs", "المغرب — وزارة الأوقاف والشؤون الإسلامية", 19.0, 17.0,
+        offsets = mapOf(SHURUQ to -3, DHUHR to 5, MAGHRIB to 5))
+        .note(SECONDARY_EN, SECONDARY_AR)
+
+    /** Jordan - Ministry of Awqaf, Islamic Affairs and Holy Places: Fajr 18, Isha 18, Maghrib 5 minutes after sunset (Aladhan method 23). */
+    val JORDAN = method("jor", "Jordan — Ministry of Awqaf", "الأردن — وزارة الأوقاف والشؤون والمقدسات الإسلامية", 18.0, 18.0,
+        offsets = mapOf(MAGHRIB to 5))
+        .note(SECONDARY_EN, SECONDARY_AR)
+
+    /**
+     * Portugal - Comunidade Islamica de Lisboa: Fajr 18, Maghrib 3 minutes after sunset, Isha 77 minutes after that
+     * Maghrib (Aladhan method 22). The engine counts Isha's interval from sunset, hence 3 + 77 = 80.
+     */
+    val PORTUGAL = method("por", "Portugal — Comunidade Islâmica de Lisboa", "البرتغال — الجالية الإسلامية في لشبونة", 18.0, null,
+        ishaMin = 80, offsets = mapOf(MAGHRIB to 3))
+        .note(SECONDARY_EN, SECONDARY_AR)
+
+    /** Brunei: Fajr 20, Isha 18, the setting the Brunei Astronomical Society keeps as Brunei Darussalam's. */
+    val BRUNEI = method("brn", "Brunei Darussalam (Fajr 20°, Isha 18°)", "بروناي دار السلام (الفجر 20°، العشاء 18°)", 20.0, 18.0)
+        .note("Fajr 20°, Isha 18°, the Brunei setting as reported by the Brunei Astronomical Society; not checked against the Mufti Department's timetable.",
+            "الفجر 20°، العشاء 18°، إعداد بروناي كما تذكره الجمعية الفلكية في بروناي؛ لم يُقارن بجدول دائرة الإفتاء.")
+
     /** All profiles, in the order shown to the user. */
     val ALL: List<CalculationProfile> = listOf(
         DUBAI_IACAD, UAE_AWQAF, MWL, UMM_AL_QURA, EGYPT, KARACHI, ISNA, KUWAIT, QATAR, SINGAPORE, MALAYSIA, INDONESIA, TURKIYE, TEHRAN,
+        MOONSIGHTING, JAFARI, MOROCCO, ALGERIA, TUNISIA, JORDAN, RUSSIA, FRANCE_UOIF, PORTUGAL, BRUNEI,
     )
 
     fun byId(id: String): CalculationProfile? = ALL.firstOrNull { it.id == id }

@@ -1,5 +1,6 @@
 package com.noor.app.ui.location
 
+import com.noor.app.ui.components.findActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -198,7 +199,15 @@ private fun HomePane(
     val ar = isArabicUi()
     val s = vm.settings.collectAsStateWithLifecycle().value
     val search = vm.search.collectAsStateWithLifecycle().value
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) vm.useAutomatic(onAutomatic) }
+    // (0.18: precise and approximate together, so Android 12+ offers "precise"; once refused for good, Android's page for the app.)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r.values.any { it }) vm.useAutomatic(onAutomatic)
+        else context.findActivity()?.let { a ->
+            if (!androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(a, android.Manifest.permission.ACCESS_COARSE_LOCATION))
+                runCatching { context.startActivity(com.noor.app.ui.components.appDetailsSettings(context).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
+    }
     val current = s?.let { com.noor.app.data.PrayerProvider.place(it) }
     Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
         Header(stringResource(R.string.loc_title), onBack)
@@ -224,7 +233,7 @@ private fun HomePane(
             GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
                 OptionRow(Icons.Rounded.MyLocation, stringResource(R.string.loc_current), stringResource(R.string.loc_current_desc),
                     selected = s?.locationMode == LocationMode.AUTO) {
-                    if (vm.hasLocationPermission()) vm.useAutomatic(onAutomatic) else permission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                    if (vm.hasLocationPermission()) vm.useAutomatic(onAutomatic) else permission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
                 }
                 Hairline()
                 OptionRow(Icons.Rounded.Map, stringResource(R.string.loc_map), stringResource(R.string.loc_map_desc)) { onMap(current?.point) }

@@ -194,7 +194,7 @@ class WorldStore(private val context: Context) {
     }.onFailure { Log.i("NoorPlaces", "photon: ${it.message}") }.getOrNull()
 
     companion object {
-        const val USER_AGENT = "Noor/0.9.7 (Android; prayer times; https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch)"
+        val USER_AGENT = "Minhad/${com.noor.app.BuildConfigInfo.versionName} (Android; prayer times; https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch)"
 
         /** The country's name in English or Arabic, from Android's own locale data. */
         fun countryName(code: String, arabic: Boolean): String =
