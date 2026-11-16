@@ -1120,6 +1120,20 @@ Made in a cloud session (Claude Opus, picking up from Claude Fable when its limi
   also on the way to choosing a city by hand. The home screen's drag is said once on the sky
   (`AppSettings.scrubHintDone`, set at the first drag).
 
+- **Two more rounds of self-critique** (the owner: "look at your own work and criticize yourself... keep improving
+  the software... until it's becoming so intuitive"; DESIGN.md, "Self-critique and review"). Two independent
+  reviewers, each given only the renders and the facts (not the design's reasoning), ranked what still fell short;
+  the second judged the first round's changes and said what remained, ending "not yet" at the level of the best
+  apps for the alert controls and the watch and compass error states. Done in rounds 2 and 3: the countdown's
+  caption; the bell as a switch; prayers always listed on the Adhan tab, "Off · would play …" while off, a button to
+  turn the Adhan on for every prayer; blocking problems on the hero in the danger colour and first, each fix named
+  for what it does; "Test the Adhan" on the tab; "♪" before recordings; three-word descriptions of each kind of
+  alert and "Plays: …"; Asr's school named; the high-latitude rule only where it matters; the Hijri row's date; the
+  calendar's great days; the Qibla's "Calibrate first" as its main line when the compass is unsure (it opens the
+  guide); the Watch tab's no-watch state with "Get Galaxy Wearable" and the guide; recent history records carry
+  their fix; the other day's view says the sky's countdown is "Today, now". Kept on purpose: "Shuruq", the
+  countdown's sign, the Watch tab (the owner's choices).
+
 **What was tested, and how**
 
 - Unit and render tests on this machine: the phone app's 84 tests pass (`:app:testDebugUnitTest`),
