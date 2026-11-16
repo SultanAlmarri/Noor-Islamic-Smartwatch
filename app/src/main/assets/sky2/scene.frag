@@ -408,12 +408,17 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     // (Lightning lights the land too, for its instant: coldly, and from above.)
     land += K * uFlash.w * vec3(0.16, 0.18, 0.22);
 
-    // The air between: far things fade into the colour of the sky behind them.
+    // The air between: far things fade into the colour of the air at the horizon (`hazeCol`).
     float tk = t * 0.001;
     float ya = uCam.z * 0.001, yb = max(p.y, 0.0) * 0.001;
     const float HH = 1.3;
     float layer = abs(yb - ya) > 1e-3 ? HH / (yb - ya) * (exp(-ya / HH) - exp(-yb / HH)) : exp(-ya / HH);
-    float fog = 1.0 - exp(-tk * (0.006 + (0.022 + 0.024 * (uHaze - 1.0) + 0.06 * uAir.w + 0.5 * uAir.x) * layer));
+    // (0.14) Mist lies on the ground: it is some tens of metres deep, not the whole depth of the air. A far shore
+    // stands in it; the line of sight to a mountain's flank leaves it at once. (0.13 spread it through all the air,
+    // and the least mist took a far mountain away: the owner's "distant terrain just turns invisible".)
+    const float HM = 0.07;
+    float low = abs(yb - ya) > 1e-3 ? HM / (yb - ya) * (exp(-ya / HM) - exp(-yb / HM)) : exp(-ya / HM);
+    float fog = 1.0 - exp(-tk * (0.006 + (0.022 + 0.024 * (uHaze - 1.0) + 0.06 * uAir.w) * layer + 0.5 * uAir.x * low));
     float glow = pow(saturate(dot(rd, uSunDir)), 8.0);
     vec3 airCol = mix(hazeCol * (1.0 + 0.35 * glow), amb, 0.26) * 0.93;
     land = mix(land, airCol, min(fog, 0.94) * 0.95);
@@ -537,7 +542,13 @@ float runUp(float a, float c) {
 void main() {
     vec2 vp = viewPx();
     vec3 rd = viewRay(vp);
-    vec3 hazeCol = skyAt(vec2(vp.x, min(vp.y, uCam.y - 0.012 * uView.y)));
+    // (The air in front of a far mountain has the colour of the air at the horizon, not of the sky behind the
+    // mountain: taking the sky behind it, as 0.13 did, a mountain in haze was painted in exactly the colour of what
+    // it stood against, and was gone.)
+    // Nor is it quite the horizon's own colour: that is the colour of all the air there is, whitened and warmed by
+    // its depth, and the few miles of air in front of a mountain are bluer. So: the horizon's colour and the sky's
+    // a few degrees up, at fixed heights (not the pixel's own).
+    vec3 hazeCol = mix(skyAt(vec2(vp.x, uCam.y - 0.012 * uView.y)), skyAt(vec2(vp.x, uCam.y - 0.065 * uView.y)), 0.6);
     float sunShows = mix(0.04, 1.0, cloudGap(uSunDir));
 
     vec3 col = heavens(rd, vp, 0.0, sunShows);
@@ -787,8 +798,10 @@ void main() {
     // snow lies it is cold enough to fall as snow: flakes large and soft near the eye, small far off, swaying down.
     if (uAir.y > 0.01) {
         vec3 veil = mix(hazeCol, vec3(luma(hazeCol)), 0.75) * 0.92;
-        float far = land.a > 0.5 ? 1.0 - exp(-t * uAir.y / 4000.0) : 0.45 * uAir.y;
-        col = mix(col, veil, clamp(far, 0.0, 0.86) * (1.0 - 0.5 * foam));
+        // (0.14: a far ridge fades to a shape, it does not go: in a light rain it is still there, and in the
+        // heaviest a third of it is left.)
+        float far = land.a > 0.5 ? 1.0 - exp(-t * sq(uAir.y) / 2500.0) : 0.45 * uAir.y;
+        col = mix(col, veil, clamp(far, 0.0, 0.68) * (1.0 - 0.5 * foam));
         vec2 rp = vp / uView.x;
         float streaks = 0.0;
         bool snowing = uLand.z > 0.5;
