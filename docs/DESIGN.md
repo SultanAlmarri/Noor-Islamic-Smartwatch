@@ -606,13 +606,18 @@ intuitive. And what I meant with the alarms is not what you implemented... like 
 alarm, let's say 10 minutes after Dhuhr Adhan, or set another alarm 25 minutes before Al-Fajr Adhan." 0.16 had read
 "alerts before or after the Adhan" as reminder notifications hidden on each prayer's page; he meant alarms.
 
-- **Alarms**, a list of their own on the Adhan tab, under the prayers, as in the Clock app: each row says what it is
-  ("25 min before Fajr", or its label), when it rings next ("Tomorrow at 4:52 AM") and on which days ("Mon–Fri"),
-  with its switch; "Add alarm" under them. They do not depend on the Adhan being on, and ring on the phone.
-- **The editor** reads as the sentence it makes: at the top, what it is and when it rings next, answered at once as
-  anything below changes; the minutes large, with − and + (held, they run) and the usual ones (5 to 60) at a touch;
-  Before | After; the prayer, six tiles with today's times; the days; a label; the sound; vibration; Snooze; Save, Try
-  it in 5 seconds, Delete. Back leaves the alarm as it was.
+- **Alarms**, a page of their own: the Adhan tab opens with a switch, Adhan | Alarms. The alarms page reads as the
+  Clock app's: "Next alarm in 9 h 12 min" at the top, then each alarm as a card with its name, the time it rings next
+  in large type ("4:52 AM"), what it is and its days ("25 min before Fajr · Mon–Fri"), and its switch; Add alarm
+  under them. With none, what an alarm is for and the button. They do not depend on the Adhan being on, and ring on
+  the phone.
+- **The editor** (after the owner, on the first version with − and + and preset minutes: "Don't give me presets for
+  the amount of time. I want to control the exact amount of time like my clock app. Also I want to name the alarms"):
+  at the top, the time it will ring in large type, and the day and what it is under it, answered as the wheels turn;
+  then four scroll wheels that read as the sentence, [hours] [minutes] [before/after] [prayer] (`ui/components/Wheel.kt`:
+  five rows in sight, a band behind the middle one, a tick as rows pass, the minutes going round); then the alarm's
+  name; the days; the sound, vibration and Snooze; Try it in 5 seconds and Delete; and Cancel and Save in a bar at
+  the bottom, always in reach. 0 h 0 min cannot be saved. Back or Cancel leaves the alarm as it was.
 - **Never the Adhan.** An alarm rings with the phone's own alarm sound (the one the Clock app uses), a notification
   (for a reminder), or a recording of the user's. The Adhan is never an alarm's sound: heard half asleep 25 minutes
   before Fajr it could be taken for Fajr having come, and a prayer prayed before its time. The editor says so in a

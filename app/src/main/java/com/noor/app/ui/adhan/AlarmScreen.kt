@@ -76,6 +76,7 @@ import com.noor.app.ui.components.GlassCard
 import com.noor.app.ui.components.NoorButton
 import com.noor.app.ui.components.NoorPage
 import com.noor.app.ui.components.PrayerIcon
+import com.noor.app.ui.components.Wheel
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.settings.ChoiceDialog
 import com.noor.app.ui.settings.FootnoteStyle
@@ -125,6 +126,11 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
     }
     val leave = rememberUpdatedState(onBack)
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh(); leave.value() }
+    // (Hours and minutes as the wheels show them: 0 h 0 min is allowed on the wheels, not saved.)
+    var hours by rememberSaveable { mutableStateOf(draft.minutes / 60) }
+    var mins by rememberSaveable { mutableStateOf(draft.minutes % 60) }
+    val total = hours * 60 + mins
+    fun minutesOf(h: Int, m: Int) { if (h * 60 + m > 0) set { it.copy(minutes = h * 60 + m) } }
     val save = {
         vm.saveAlarm(draft.copy(id = if (isNew) 0 else id, enabled = true))
         // (An alarm can only ring with notifications allowed: asked here, where it is wanted.)
@@ -132,35 +138,49 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
     }
 
     NoorPage(stringResource(if (isNew) R.string.alarm_new else R.string.alarm_edit), contentPadding, onBack = onBack,
-        floating = { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
-        GlassCard(Modifier.fillMaxWidth(), padding = 20.dp, corner = 30.dp, highlighted = true) {
-            // What it is, in words, and when it rings next: the answer to every change below, at once.
-            Text(alarmRelation(draft, f), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold),
-                color = c.textPrimary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        floating = {
+            // Cancel and Save, always in reach at the bottom, as in the Clock app.
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = contentPadding.calculateBottomPadding())) {
+                SnackbarHost(snackbar)
+                Row(Modifier.fillMaxWidth().background(com.noor.app.ui.theme.LocalBackdrop.current.top.copy(alpha = 0.94f))
+                    .padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NoorButton(stringResource(R.string.alarm_cancel), onBack, Modifier.weight(1f), kind = ButtonKind.Tonal)
+                    NoorButton(stringResource(R.string.alarm_save), save, Modifier.weight(1f), enabled = total > 0)
+                }
+            }
+        }) {
+        GlassCard(Modifier.fillMaxWidth(), padding = 16.dp, corner = 30.dp, highlighted = true) {
+            // When it rings, large, as a clock shows its alarm: the answer to every turn of the wheels below, at once.
             val next = remember(draftText, rings) { vm.nextRing(draft) }
-            Text(next?.let { ringWhen(it, rings.zone, f) } ?: stringResource(R.string.alarm_none_week),
-                style = MaterialTheme.typography.bodyLarge, color = c.goldText, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.Center)
-            Spacer(Modifier.height(20.dp))
+            Text(next?.let { f.timeAt(it.at, rings.zone) } ?: "–",
+                style = MaterialTheme.typography.displayMedium.copy(fontSize = 46.sp, fontWeight = FontWeight.Light),
+                color = c.textPrimary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Text(if (total == 0) stringResource(R.string.alarm_at_least) else next?.let { ringDay(it, rings.zone, f) + " · " + alarmRelation(draft, f) } ?: stringResource(R.string.alarm_none_week),
+                style = MaterialTheme.typography.bodyLarge, color = if (total == 0) c.danger else c.goldText,
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp), textAlign = TextAlign.Center)
+            Spacer(Modifier.height(14.dp))
 
-            // The minutes: − and + (held, they run), and the usual ones at a touch.
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                StepButton(Icons.Rounded.Remove, stringResource(R.string.alarm_less), draft.minutes > 1) { set { it.copy(minutes = it.minutes - 1) } }
-                Column(Modifier.width(132.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(f.number(draft.minutes), style = MaterialTheme.typography.displayMedium.copy(fontSize = 54.sp, fontWeight = FontWeight.Light), color = c.textPrimary)
-                    Text(stringResource(R.string.alarm_minutes_word), style = FootnoteStyle, color = c.textSecondary)
-                }
-                StepButton(Icons.Rounded.Add, stringResource(R.string.alarm_more), draft.minutes < PrayerAlarm.MAX_MINUTES) { set { it.copy(minutes = it.minutes + 1) } }
+            // The wheels read as the sentence: [0 h] [25 min] [before] [Fajr].
+            val head = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp)
+            Row(Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.alarm_hours), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(0.8f))
+                Text(stringResource(R.string.alarm_minutes_head), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                Spacer(Modifier.weight(1.1f))
+                Text(stringResource(R.string.alarm_prayer), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(1.5f))
             }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
-                PrayerAlarm.QUICK_MINUTES.forEach { m ->
-                    Chip(f.number(m), m == draft.minutes) { set { it.copy(minutes = m) } }
-                }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Wheel((0..PrayerAlarm.MAX_MINUTES / 60).map { f.number(it) }, hours, { h -> hours = h; minutesOf(h, mins) }, stringResource(R.string.alarm_hours), Modifier.weight(0.8f))
+                Wheel((0..59).map { f.number(it) }, mins, { m -> mins = m; minutesOf(hours, m) }, stringResource(R.string.alarm_minutes_head), Modifier.weight(1f), loop = true)
+                Wheel(listOf(stringResource(R.string.alarm_before_word), stringResource(R.string.alarm_after_word)), if (draft.after) 1 else 0,
+                    { i -> set { it.copy(after = i == 1) } }, stringResource(R.string.alarm_before_word) + " / " + stringResource(R.string.alarm_after_word), Modifier.weight(1.1f))
+                Wheel(Prayer.entries.map { f.prayerName(it) }, draft.prayer.ordinal, { i -> set { it.copy(prayer = Prayer.entries[i]) } },
+                    stringResource(R.string.alarm_prayer), Modifier.weight(1.5f))
             }
-            Spacer(Modifier.height(16.dp))
-            Segmented(listOf(false to stringResource(R.string.alarm_before_word), true to stringResource(R.string.alarm_after_word)), draft.after, { a -> set { it.copy(after = a) } })
-            Spacer(Modifier.height(12.dp))
-            PrayerTiles(draft.prayer, rings.today, rings.zone, f) { p -> set { it.copy(prayer = p) } }
+        }
+
+        // Its name, as the Clock app's alarms have ("Wake up for Fajr"), shown in large type in the list.
+        SettingsSection("") {
+            LabelRow(draft.label) { t -> draftText = draft.copy(label = t.take(PrayerAlarm.MAX_LABEL)).encode() }
         }
 
         SettingsSection(stringResource(R.string.alarm_repeat), footer = daysLabel(draft.days, f)) {
@@ -168,8 +188,6 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
         }
 
         SettingsSection("", footer = stringResource(R.string.alarm_sound_footer)) {
-            LabelRow(draft.label) { t -> draftText = draft.copy(label = t.take(PrayerAlarm.MAX_LABEL)).encode() }
-            SettingsDivider()
             SettingsItem(Icons.Rounded.MusicNote, stringResource(R.string.alarm_sound), null, onClick = { soundDialog = true }, detail = soundLabel(draft, custom))
             if (draft.sound != AlarmSound.NOTIFICATION) {
                 SettingsDivider()
@@ -180,10 +198,12 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            NoorButton(stringResource(R.string.alarm_save), save, Modifier.fillMaxWidth())
-            NoorButton(stringResource(R.string.alarm_try, f.number(5)), { vm.tryAlarm(draft.copy(id = if (isNew) PrayerAlarm.MAX else id)) }, Modifier.fillMaxWidth(), kind = ButtonKind.Tonal)
+            NoorButton(stringResource(R.string.alarm_try, f.number(5)), { vm.tryAlarm(draft.copy(id = if (isNew) PrayerAlarm.MAX else id)) }, Modifier.fillMaxWidth(),
+                kind = ButtonKind.Tonal, enabled = total > 0)
             if (!isNew) NoorButton(stringResource(R.string.alarm_delete), { vm.deleteAlarm(id); onBack() }, Modifier.fillMaxWidth(), kind = ButtonKind.Plain, danger = true)
         }
+        // (Room for the bar of Cancel and Save.)
+        Spacer(Modifier.height(64.dp))
     }
 
     if (soundDialog) {
@@ -226,6 +246,18 @@ internal fun ringWhen(p: PlannedAlarm, zone: ZoneId, f: Formatter): String {
     }
 }
 
+/** "Today", "Tomorrow", or the day's name, for when an alarm rings next. */
+@Composable
+internal fun ringDay(p: PlannedAlarm, zone: ZoneId, f: Formatter): String {
+    val day = p.at.atZone(zone).toLocalDate()
+    val today = LocalDate.now(zone)
+    return when (day) {
+        today -> stringResource(R.string.alarm_day_today)
+        today.plusDays(1) -> stringResource(R.string.alarm_day_tomorrow)
+        else -> f.weekday(day)
+    }
+}
+
 /** "Every day", or the days in the week's order, three or more in a row as a span ("Mon–Fri", "Sat, Sun"). */
 @Composable
 internal fun daysLabel(days: Int, f: Formatter): String {
@@ -248,71 +280,8 @@ private fun soundLabel(a: PrayerAlarm, custom: List<CustomSound>): String = when
     AlarmSound.CUSTOM -> custom.firstOrNull { it.id == a.customId }?.name ?: stringResource(R.string.alarm_sound_phone)
 }
 
-/** A round − or +; held down, it repeats faster and faster. */
-@Composable
-private fun StepButton(icon: ImageVector, label: String, enabled: Boolean, onStep: () -> Unit) {
-    val c = NoorTheme.colors
-    val haptics = LocalHapticFeedback.current
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val step by rememberUpdatedState(onStep)
-    val on by rememberUpdatedState(enabled)
-    LaunchedEffect(pressed) {
-        if (!pressed) return@LaunchedEffect
-        kotlinx.coroutines.delay(450)
-        var wait = 140L
-        while (on) { step(); haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); kotlinx.coroutines.delay(wait); wait = (wait * 0.86).toLong().coerceAtLeast(45) }
-    }
-    Box(
-        Modifier.size(56.dp).clip(CircleShape).background(c.gold.copy(alpha = if (c.isDark) 0.16f else 0.13f)).alpha(if (enabled) 1f else 0.4f)
-            .clickable(interaction, androidx.compose.material3.ripple(), enabled = enabled, role = Role.Button) {
-                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); step()
-            }
-            .semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) { Icon(icon, null, tint = c.gold, modifier = Modifier.size(28.dp)) }
-}
 
-@Composable
-private fun Chip(text: String, on: Boolean, onClick: () -> Unit) {
-    val c = NoorTheme.colors
-    val shape = RoundedCornerShape(50)
-    Box(
-        Modifier.heightIn(min = 36.dp).clip(shape).background(if (on) c.gold else c.textMuted.copy(alpha = if (c.isDark) 0.18f else 0.12f))
-            .clickable(role = Role.RadioButton, onClick = onClick).semantics { selected = on }.padding(horizontal = 14.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) { Text(text, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp), color = if (on) c.onGold else c.textPrimary) }
-}
 
-/** The six times of the day, three to a row, each with today's time under its name. */
-@Composable
-private fun PrayerTiles(selected: Prayer, today: Map<Prayer, java.time.Instant>, zone: ZoneId, f: Formatter, onSelect: (Prayer) -> Unit) {
-    val c = NoorTheme.colors
-    val haptics = LocalHapticFeedback.current
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Prayer.entries.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { p ->
-                    val on = p == selected
-                    val shape = RoundedCornerShape(16.dp)
-                    Column(
-                        Modifier.weight(1f).clip(shape)
-                            .background(if (on) c.gold.copy(alpha = if (c.isDark) 0.18f else 0.14f) else c.glass)
-                            .border(if (on) 1.5.dp else 0.75.dp, if (on) c.gold else c.glassEdge.copy(alpha = c.glassEdge.alpha * 0.6f), shape)
-                            .clickable(role = Role.RadioButton) { if (!on) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSelect(p) }
-                            .semantics { this.selected = on }.padding(vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        PrayerIcon(p, 20.dp, if (on) c.gold else c.textSecondary)
-                        Text(f.prayerName(p), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium),
-                            color = if (on) c.goldText else c.textPrimary, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
-                        today[p]?.let { Text(f.timeAt(it, zone), style = FootnoteStyle.copy(fontSize = 12.sp), color = c.textSecondary, maxLines = 1) }
-                    }
-                }
-            }
-        }
-    }
-}
 
 /** The alarm's name, typed in the row itself (optional). */
 @Composable
@@ -331,24 +300,56 @@ private fun LabelRow(label: String, onChange: (String) -> Unit) {
 }
 
 /**
- * One alarm in the Adhan tab's list, as in the Clock app: what it is in large type (its label, if it has one), when
- * it rings next and on which days under it, and its switch.
+ * The alarms (0.17.1), as the Clock app lists its own: the next one first, in large type; then each alarm as a card
+ * with its name, the time it rings next in large type, what it is and its days, and its switch; and Add alarm. With
+ * none yet, what an alarm is for, and the button.
  */
 @Composable
-internal fun AlarmRow(a: PrayerAlarm, next: PlannedAlarm?, zone: ZoneId, f: Formatter, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
+internal fun AlarmsList(a: com.noor.prayer.alerts.AlertSettings, rings: Rings, f: Formatter, onOpen: (Int) -> Unit, onToggle: (Int, Boolean) -> Unit) {
     val c = NoorTheme.colors
+    val full = a.nextAlarmId() == null
+    if (a.alarms.isEmpty()) {
+        GlassCard(Modifier.fillMaxWidth(), corner = 30.dp, highlighted = true) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                com.noor.app.ui.components.Medallion(androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.Alarm))
+                Text(stringResource(R.string.alarms_none), style = MaterialTheme.typography.titleLarge, color = c.textPrimary, textAlign = TextAlign.Center)
+                Text(stringResource(R.string.alarms_empty_footer), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary, textAlign = TextAlign.Center)
+                NoorButton(stringResource(R.string.alarm_add), { onOpen(0) }, Modifier.fillMaxWidth().padding(top = 6.dp), icon = Icons.Rounded.Add)
+            }
+        }
+        return
+    }
+    // The next alarm, as the Clock app says it at the top ("Alarm in 9 hours 12 minutes").
+    rings.next.values.filter { p -> a.alarms.any { it.id == p.alarm.id && it.enabled } }.minByOrNull { it.at }?.let { n ->
+        val left = java.time.Duration.between(java.time.Instant.now(), n.at).coerceAtLeast(java.time.Duration.ZERO)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+            val (h, m) = f.hoursMinutes(left)
+            Text(if (h > 0) stringResource(R.string.alarm_next_in_hm, f.number(h.toInt()), f.number(m.toInt())) else stringResource(R.string.alarm_next_in_m, f.number(m.toInt())), style = MaterialTheme.typography.titleMedium, color = c.textPrimary)
+            Text(ringWhen(n, rings.zone, f) + " · " + n.alarm.label.ifBlank { alarmRelation(n.alarm, f) }, style = FootnoteStyle, color = c.textSecondary)
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        a.alarms.forEach { al -> AlarmCard(al, rings.next[al.id], rings.zone, f, onOpen = { onOpen(al.id) }, onToggle = { on -> onToggle(al.id, on) }) }
+    }
+    NoorButton(stringResource(if (full) R.string.alarm_full else R.string.alarm_add), { onOpen(0) }, Modifier.fillMaxWidth(), icon = Icons.Rounded.Add, enabled = !full)
+    Text(stringResource(R.string.alarms_footer), style = FootnoteStyle, color = c.textMuted, modifier = Modifier.padding(horizontal = 16.dp))
+}
+
+/** One alarm as a card: its name, the time it rings next (large), what it is and its days, and its switch. */
+@Composable
+private fun AlarmCard(a: PrayerAlarm, next: PlannedAlarm?, zone: ZoneId, f: Formatter, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
+    val c = NoorTheme.colors
+    val shape = RoundedCornerShape(24.dp)
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(role = Role.Button, onClick = onOpen).padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+        Modifier.fillMaxWidth().clip(shape).background(c.glass).clickable(role = Role.Button, onClick = onOpen)
+            .padding(start = 18.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconTile(Icons.Rounded.Alarm, if (a.enabled) c.gold else c.textMuted)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f).alpha(if (a.enabled) 1f else 0.7f)) {
-            val relation = alarmRelation(a, f)
-            Text(a.label.ifBlank { relation }, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold), color = c.textPrimary)
-            val whenText = if (!a.enabled) stringResource(R.string.adhan_off) else next?.let { ringWhen(it, zone, f) } ?: stringResource(R.string.alarm_none_week)
-            Text(listOfNotNull(if (a.label.isNotBlank()) relation else null, whenText, if (a.days != PrayerAlert.ALL_DAYS) daysLabel(a.days, f) else null).joinToString(" · "),
-                style = FootnoteStyle, color = c.textSecondary)
+        Column(Modifier.weight(1f).alpha(if (a.enabled) 1f else 0.55f)) {
+            if (a.label.isNotBlank()) Text(a.label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp), color = c.goldText, maxLines = 1)
+            Text(next?.let { f.timeAt(it.at, zone) } ?: "–", style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, fontWeight = FontWeight.Light),
+                color = c.textPrimary, maxLines = 1)
+            Text(alarmRelation(a, f) + " · " + daysLabel(a.days, f), style = FootnoteStyle, color = c.textSecondary)
         }
         Spacer(Modifier.width(12.dp))
         NoorSwitch(a.enabled, onToggle)

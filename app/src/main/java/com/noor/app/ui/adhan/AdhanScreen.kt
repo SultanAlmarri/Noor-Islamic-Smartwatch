@@ -134,6 +134,8 @@ fun AdhanScreen(
     // the test); what is set once and left (the reminder, phone or watch, how the sound behaves, the library, the
     // history) one level down, on "Alert options" (the owner: "the more used features should get the priority").
     var page by rememberSaveable { mutableStateOf(0) }
+    /** 0.17.1: 0 the Adhan, 1 the alarms. */
+    var section by rememberSaveable { mutableStateOf(0) }
     androidx.activity.compose.BackHandler(enabled = page != 0) { page = 0 }
     val reselect = com.noor.app.LocalTabReselect.current
     var seenReselect by rememberSaveable { mutableStateOf(0) }
@@ -148,6 +150,10 @@ fun AdhanScreen(
         },
     ) { shown ->
     if (shown == 0) NoorPage(stringResource(R.string.adhan_title), contentPadding) {
+        // 0.17.1: the Adhan and the alarms, each a page of its own under one switch (the owner: "like the clock app,
+        // but specialised for prayer times").
+        Segmented(listOf(0 to stringResource(R.string.adhan_section_adhan), 1 to stringResource(R.string.alarms_title)), section, { section = it })
+        if (section == 1) AlarmsList(a, rings, f, onOpen = onOpenAlarm, onToggle = { id, on -> vm.setAlarmOn(id, on) }) else {
         // What needs attention, in a group of its own: there only when something does.
         // (Without a place there are no times to alert at: that comes first, with the way to set one. 0.14: the page
         // said so before, but offered no way there.)
@@ -220,18 +226,6 @@ fun AdhanScreen(
             }
         }
 
-        // 0.17: alarms a number of minutes before or after a prayer, as in the Clock app ("25 min before Fajr").
-        SettingsSection(stringResource(R.string.alarms_title),
-            footer = stringResource(if (a.alarms.isEmpty()) R.string.alarms_empty_footer else R.string.alarms_footer)) {
-            a.alarms.forEach { al ->
-                AlarmRow(al, rings.next[al.id], rings.zone, f, onOpen = { onOpenAlarm(al.id) }, onToggle = { on -> vm.setAlarmOn(al.id, on) })
-                SettingsDivider()
-            }
-            val full = a.nextAlarmId() == null
-            SettingsItem(Icons.Rounded.AlarmAdd, stringResource(if (full) R.string.alarm_full else R.string.alarm_add), null,
-                onClick = if (full) null else ({ onOpenAlarm(0) }))
-        }
-
         SettingsSection("", footer = if (a.enabled) stringResource(R.string.adhan_test_footer) else null) {
             // 0.15: "will it really sound tonight?" answered where the question arises: a real alert in ten seconds,
             // through the whole path, with the next prayer's own sound (its result shows in the history).
@@ -246,6 +240,7 @@ fun AdhanScreen(
                 stringResource(when (a.device) { AlertDevice.PHONE -> R.string.adhan_device_phone; AlertDevice.WATCH -> R.string.adhan_device_watch; AlertDevice.BOTH -> R.string.adhan_device_both }),
                 onClick = { page = 1 })
         }
+    }
     } else NoorPage(stringResource(R.string.adhan_alert_options), contentPadding, onBack = { page = 0 }) {
         run {
             Column {

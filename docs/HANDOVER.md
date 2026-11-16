@@ -1222,7 +1222,7 @@ yourself in the place of the user. Is it too overwhelming?"
 
 **What was done** (DESIGN.md, "Alarms and the Adhan tab (0.17)"):
 
-- core: `PrayerAlarm` (id 1..20, prayer, minutes 1..180, before/after, days, label, `AlarmSound` PHONE_ALARM /
+- core: `PrayerAlarm` (id 1..20, prayer, minutes 1..239, before/after, days, label, `AlarmSound` PHONE_ALARM /
   NOTIFICATION / CUSTOM, vibrate, snooze 0/5/10/15) in `AlertSettings.alarms`, written as a new field `alarms=`
   (entries joined by `|`, the label percent-encoded; old readers ignore it); `withAlarm`, `withoutAlarm`,
   `nextAlarmId`; `remindersAsAlarms` turns the 0.9.9/0.16 reminders into notification alarms (applied on read by
@@ -1238,6 +1238,13 @@ yourself in the place of the user. Is it too overwhelming?"
   removed; `AdhanAlertActivity` with Snooze and an alarm clock sign for alarms.
 - watch: rebuilt with the shared code; nothing changes on it (its alerts follow the phone's device choice; the alarms
   do not ring there).
+
+**Then the owner** (same day, on the editor's − and + and preset minutes): "Make it more intuitive. Don't give me
+presets for the amount of time. I want to control the exact amount of time like my clock app. Also I want to name the
+alarms... Make it like the clock app but specialised for prayer times." So, still in 0.17.0: scroll wheels for hours,
+minutes, before/after and the prayer (`Wheel`), the time it rings in large type above them, the name as its own row
+("Alarm name"), Cancel and Save in a bar at the bottom; up to 3 h 59 min (`PrayerAlarm.MAX_MINUTES` 239); and the
+alarms on a page of their own under the Adhan tab's switch (Adhan | Alarms), as cards with the next ring time large.
 
 **Tests**: core (all pass, 7 new); `ScreenshotTest` 87–93 (the alarms list in English and Arabic, a new alarm, an
 alarm being edited in Arabic and by day, ringing in English and Arabic). The whole suite and both APKs on GitHub.

@@ -70,12 +70,10 @@ data class PrayerAlarm(
     companion object {
         /** At most this many alarms (each holds one of Android's alarms, and another while snoozed). */
         const val MAX = 20
-        /** At most three hours before or after a prayer. */
-        const val MAX_MINUTES = 180
+        /** At most 3 hours 59 minutes before or after a prayer (the editor's wheels: hours 0–3, minutes 0–59). */
+        const val MAX_MINUTES = 239
         const val MAX_LABEL = 40
         val SNOOZE_CHOICES = listOf(0, 5, 10, 15)
-        /** The minutes offered at a touch in the editor (any other is a few taps of − and + away). */
-        val QUICK_MINUTES = listOf(5, 10, 15, 20, 25, 30, 45, 60)
 
         /** Null for an entry that cannot be read (it is dropped, not guessed at). */
         fun decode(text: String): PrayerAlarm? = runCatching {

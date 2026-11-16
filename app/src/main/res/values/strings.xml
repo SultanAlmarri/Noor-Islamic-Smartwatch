@@ -636,15 +636,12 @@
     <string name="alarm_after">%1$s after %2$s</string>
     <string name="alarm_before_word">Before</string>
     <string name="alarm_after_word">After</string>
-    <string name="alarm_minutes_word">minutes</string>
-    <string name="alarm_less">Fewer minutes</string>
-    <string name="alarm_more">More minutes</string>
     <string name="alarm_rings_today">Today at %1$s</string>
     <string name="alarm_rings_tomorrow">Tomorrow at %1$s</string>
     <string name="alarm_rings_on">%1$s at %2$s</string>
     <string name="alarm_none_week">Does not ring in the next week</string>
     <string name="alarm_repeat">Days</string>
-    <string name="alarm_label_hint">Label (optional)</string>
+    <string name="alarm_label_hint">Alarm name</string>
     <string name="alarm_sound">Sound</string>
     <string name="alarm_sound_phone">Phone\'s alarm sound</string>
     <string name="alarm_sound_notification">Notification only</string>
@@ -659,4 +656,16 @@
         <item quantity="one">%s min</item>
         <item quantity="other">%s min</item>
     </plurals>
+    <!-- 0.17.1: the alarms as in the Clock app (wheels, names, a page of their own). -->
+    <string name="alarm_cancel">Cancel</string>
+    <string name="alarm_at_least">Choose at least one minute</string>
+    <string name="alarm_hours">Hours</string>
+    <string name="alarm_minutes_head">Minutes</string>
+    <string name="alarm_prayer">Prayer</string>
+    <string name="alarm_day_today">Today</string>
+    <string name="alarm_day_tomorrow">Tomorrow</string>
+    <string name="adhan_section_adhan">Adhan</string>
+    <string name="alarms_none">No alarms yet</string>
+    <string name="alarm_next_in_hm">Next alarm in %1$s h %2$s min</string>
+    <string name="alarm_next_in_m">Next alarm in %1$s min</string>
 </resources>

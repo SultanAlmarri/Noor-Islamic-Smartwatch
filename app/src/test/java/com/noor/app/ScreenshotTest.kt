@@ -340,12 +340,12 @@ class ScreenshotTest {
         runBlocking { app.container.settings.updateAlerts { it.withAlarm(com.noor.prayer.alerts.PrayerAlarm(0, com.noor.prayer.Prayer.FAJR, 25, after = false))
             .withAlarm(com.noor.prayer.alerts.PrayerAlarm(0, com.noor.prayer.Prayer.DHUHR, 10, after = true, days = 0b0011111, snoozeMinutes = 5)) } }
         val fajrAlarm = runBlocking { app.container.settings.current().alerts.alarms.first { it.prayer == com.noor.prayer.Prayer.FAJR }.id }
-        screen = Screen.ADHAN; rule.waitUntil(20_000) { rule.onAllNodesWithText("Add alarm").fetchSemanticsNodes().isNotEmpty() }
-        rule.onAllNodes(androidx.compose.ui.test.hasText("Add alarm")).onFirst().performScrollTo()
+        // (0.17.1: the alarms are a page of their own under the Adhan tab's switch.)
+        screen = Screen.ADHAN; rule.waitUntil(20_000) { rule.onAllNodesWithText("Alarms").fetchSemanticsNodes().isNotEmpty() }
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Alarms")).onFirst().performClick()
         shot("87_adhan_alarms_night_en", "25 min before Fajr")
-        arabic = true; rule.waitUntil(20_000) { rule.onAllNodesWithText("إضافة منبه").fetchSemanticsNodes().isNotEmpty() }
-        rule.onAllNodes(androidx.compose.ui.test.hasText("إضافة منبه")).onFirst().performScrollTo()
-        shot("88_adhan_alarms_night_ar", "قبل الفجر"); arabic = false
+        arabic = true; shot("88_adhan_alarms_night_ar", "قبل الفجر")
+        rule.onAllNodes(androidx.compose.ui.test.hasText("الأذان")).onFirst().performClick(); rule.waitForIdle(); arabic = false
         alarmEdit = 0; screen = Screen.ALARM_EDIT; shot("89_alarm_new_night_en", "New alarm")
         alarmEdit = fajrAlarm; arabic = true; shot("90_alarm_edit_night_ar", "تعديل المنبه"); arabic = false
         theme = ThemeMode.LIGHT; shot("91_alarm_edit_day_en", "Edit alarm"); theme = ThemeMode.DARK

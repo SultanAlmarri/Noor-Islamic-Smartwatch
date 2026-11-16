@@ -641,15 +641,12 @@
     <string name="alarm_after">%1$s بعد %2$s</string>
     <string name="alarm_before_word">قبل</string>
     <string name="alarm_after_word">بعد</string>
-    <string name="alarm_minutes_word">دقيقة</string>
-    <string name="alarm_less">دقائق أقل</string>
-    <string name="alarm_more">دقائق أكثر</string>
     <string name="alarm_rings_today">اليوم %1$s</string>
     <string name="alarm_rings_tomorrow">غدًا %1$s</string>
     <string name="alarm_rings_on">%1$s %2$s</string>
     <string name="alarm_none_week">لا يرن في الأسبوع القادم</string>
     <string name="alarm_repeat">الأيام</string>
-    <string name="alarm_label_hint">الاسم (اختياري)</string>
+    <string name="alarm_label_hint">اسم المنبه</string>
     <string name="alarm_sound">الصوت</string>
     <string name="alarm_sound_phone">صوت منبه الهاتف</string>
     <string name="alarm_sound_notification">إشعار فقط</string>
@@ -668,4 +665,16 @@
         <item quantity="many">%s دقيقة</item>
         <item quantity="other">%s دقيقة</item>
     </plurals>
+    <!-- 0.17.1: the alarms as in the Clock app (wheels, names, a page of their own). -->
+    <string name="alarm_cancel">إلغاء</string>
+    <string name="alarm_at_least">اختر دقيقة واحدة على الأقل</string>
+    <string name="alarm_hours">ساعات</string>
+    <string name="alarm_minutes_head">دقائق</string>
+    <string name="alarm_prayer">الصلاة</string>
+    <string name="alarm_day_today">اليوم</string>
+    <string name="alarm_day_tomorrow">غدًا</string>
+    <string name="adhan_section_adhan">الأذان</string>
+    <string name="alarms_none">لا منبهات بعد</string>
+    <string name="alarm_next_in_hm">المنبه التالي بعد %1$s س و%2$s د</string>
+    <string name="alarm_next_in_m">المنبه التالي بعد %1$s د</string>
 </resources>
