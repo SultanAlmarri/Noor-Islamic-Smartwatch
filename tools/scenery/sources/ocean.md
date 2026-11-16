@@ -34,3 +34,12 @@ are the scans' own.
 The sea is not a scan and not a picture: the phone draws it (the swell, the breakers and their foam, the sheet of
 water that runs up the sand and back, the wet sand's shine, the mirrored sky), from the beach's shape, which
 `ocean.py` writes into `land.json` (`shore`).
+
+## 0.14: an open horizon
+
+The owner (15 November 2026): "for the beach, I don't like the distant terrain... the distant land, I want you to
+remove that. I want it to be like open ocean." The far mountains (Musandam, from the Copernicus elevation model)
+were taken out of the packed pictures by `tools/scenery/open_horizon.py` (the land's alpha above the horizon's row,
+its distance, and `lift`); nothing was rendered again. `ocean.py` still builds them: to bake this scenery again
+with an open horizon, run `open_horizon.py` on the result, or leave the far mountains out of the scene.
+
