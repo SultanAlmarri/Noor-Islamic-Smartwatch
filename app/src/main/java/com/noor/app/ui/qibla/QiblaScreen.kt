@@ -153,20 +153,25 @@ fun QiblaContent(
             q.nearAntipode -> stringResource(R.string.qibla_antipode)
             reading == null -> stringResource(R.string.qibla_starting)
             CompassIssue.NOT_FLAT in reading.assessment.issues -> stringResource(R.string.qibla_hold_flat)
+            // 0.15: an unsure compass is not followed: the first thing said is what to do (the turn stays in the
+            // readings below, for who wants it).
+            reading.assessment.quality == CompassQuality.POOR -> stringResource(R.string.qibla_calibrate_first)
             aligned -> stringResource(R.string.qibla_aligned)
             turn!! > 0 -> stringResource(R.string.qibla_turn_right, f.degrees(abs(turn)))
             else -> stringResource(R.string.qibla_turn_left, f.degrees(abs(turn)))
         }
-        val statusColor by animateColorAsState(if (aligned) c.success else c.textPrimary, label = "statusColor")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        val unsure = !noSensor && reading != null && reading.assessment.quality == CompassQuality.POOR && CompassIssue.NOT_FLAT !in reading.assessment.issues
+        val statusColor by animateColorAsState(if (aligned) c.success else if (unsure) c.warning else c.textPrimary, label = "statusColor")
+        Row(Modifier.fillMaxWidth().then(if (unsure) Modifier.clickable { showCalibration = true } else Modifier),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(22.dp))
             Text(status, style = MaterialTheme.typography.titleMedium, color = statusColor, textAlign = TextAlign.Center)
         }
         // 0.15: when the compass itself is unsure, the direction is not to be trusted yet: said here, where the eye
         // is, and not only in the accuracy card below.
-        if (!noSensor && reading != null && reading.assessment.quality == CompassQuality.POOR && CompassIssue.NOT_FLAT !in reading.assessment.issues)
+        if (unsure)
             Text(stringResource(R.string.qibla_poor_hint), style = MaterialTheme.typography.bodyMedium, color = c.warning, textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
+                modifier = Modifier.fillMaxWidth().clickable { showCalibration = true }.padding(top = 2.dp))
 
         // Readings, side by side: where the Qibla is, where the phone points, and the difference (two decimals each).
         GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {

@@ -136,7 +136,7 @@ fun AdhanScreen(
                 blocked -> stringResource(R.string.adhan_hero_blocked)
                 !a.enabled -> stringResource(R.string.adhan_master_off)
                 a.device == AlertDevice.WATCH -> stringResource(R.string.adhan_on_watch_only)
-                n != null -> stringResource(R.string.adhan_hero_next) + " · " + summary(a.alert(n.planned.prayer), n.planned.prayer, vm.library, custom, ar)
+                n != null -> summary(a.alert(n.planned.prayer), n.planned.prayer, vm.library, custom, ar)
                 else -> stringResource(R.string.adhan_next_none)
             }
             val toggle: (Boolean) -> Unit = { on ->
@@ -146,11 +146,15 @@ fun AdhanScreen(
             }
             HeroCard(
                 icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.NotificationsActive),
-                overline = if (n != null) stringResource(R.string.adhan_master) else null,
+                overline = if (n != null) stringResource(R.string.adhan_hero_next) else null,
                 title = if (n != null) f.prayerName(n.planned.prayer, n.planned.date) + "  " + f.timeAt(n.planned.at, n.zone) else stringResource(R.string.adhan_master),
                 subtitle = status, subtitleColor = if (blocked) NoorTheme.colors.danger else null,
                 modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(30.dp)).toggleable(a.enabled, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = toggle),
                 trailing = { com.noor.app.ui.settings.NoorSwitch(a.enabled, null) },
+                // 0.15: while off, the one thing to do, as a button: not only a switch in a corner.
+                below = if (!a.enabled && hasLocation) ({
+                    com.noor.app.ui.components.NoorButton(stringResource(R.string.adhan_turn_on_all), { toggle(true) }, Modifier.fillMaxWidth())
+                }) else null,
             )
         }
 
@@ -167,7 +171,9 @@ fun AdhanScreen(
         SettingsSection(stringResource(R.string.adhan_prayers), footer = stringResource(if (a.enabled) R.string.adhan_prayers_footer else R.string.adhan_prayers_footer_off)) {
             Prayer.entries.forEachIndexed { i, p ->
                 if (i > 0) SettingsDivider()
-                PrayerAlertRow(p, a.alert(p), summary(a.alert(p), p, vm.library, custom, ar), f, live = a.enabled,
+                // (While off, what it would play, plainly as what it would: "Off · would play Adhan · ♪ Makkah".)
+                val what = summary(a.alert(p), p, vm.library, custom, ar)
+                PrayerAlertRow(p, a.alert(p), if (!a.enabled && a.alert(p).enabled) stringResource(R.string.adhan_off_would, what) else what, f, live = a.enabled,
                     onOpen = { onOpenPrayer(p) }, onToggle = { on ->
                         if (on && !a.enabled) {
                             vm.enableOnly(p)
@@ -271,22 +277,22 @@ private fun reminderLabel(minutes: Int, f: Formatter): String =
 private fun phoneIssues(ready: Readiness, a: AlertSettings, context: Context, onRequestNotifications: () -> Unit): List<Issue> = buildList {
     val audible = Prayer.entries.any { a.alert(it).enabled && a.alert(it).mode.playsAudio }
     if (!ready.notificationsAllowed) {
-        add(Issue(stringResource(R.string.adhan_warn_notifications), stringResource(R.string.adhan_action_allow), {
+        add(Issue(stringResource(R.string.adhan_warn_notifications), stringResource(R.string.adhan_action_notifications), {
             if (ready.canRequestNotifications) onRequestNotifications() else context.open(appNotificationSettings(context))
         }, blocking = true))
     } else if (ready.adhanChannelBlocked && audible) {
-        add(Issue(stringResource(R.string.adhan_warn_channel), stringResource(R.string.adhan_action_open), {
+        add(Issue(stringResource(R.string.adhan_warn_channel), stringResource(R.string.adhan_action_channel), {
             context.open(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                 .putExtra(Settings.EXTRA_CHANNEL_ID, com.noor.alerts.AlertNotifications.CHANNEL_ADHAN))
         }, blocking = true))
     }
     if (!ready.exactAlarms && Build.VERSION.SDK_INT >= 31) {
-        add(Issue(stringResource(R.string.adhan_warn_exact), stringResource(R.string.adhan_action_allow), {
+        add(Issue(stringResource(R.string.adhan_warn_exact), stringResource(R.string.adhan_action_exact), {
             context.open(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + context.packageName)))
         }))
     }
     if (audible && ready.alarmVolume <= 0f) {
-        add(Issue(stringResource(R.string.adhan_warn_volume), stringResource(R.string.adhan_action_open), { context.open(Intent(Settings.ACTION_SOUND_SETTINGS)) },
+        add(Issue(stringResource(R.string.adhan_warn_volume), stringResource(R.string.adhan_action_volume), { context.open(Intent(Settings.ACTION_SOUND_SETTINGS)) },
             icon = Icons.AutoMirrored.Rounded.VolumeUp, blocking = true))
     }
 }

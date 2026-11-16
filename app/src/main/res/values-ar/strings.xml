@@ -89,7 +89,7 @@
     <string name="permission_denied">لم يُمنح إذن الموقع. اختر مدينة أو اسمح بالموقع من إعدادات النظام.</string>
     <string name="watch_sync_title">المزامنة بين الهاتف والساعة</string>
     <string name="watch_checking">جارٍ البحث عن ساعتك…</string>
-    <string name="watch_no_wear_os">خدمات Wear OS غير متاحة على هذا الهاتف. ثبّت تطبيق Galaxy Wearable واربط ساعتك.</string>
+    <string name="watch_no_wear_os">يصل نور إلى ساعتك عبر تطبيق Galaxy Wearable. ثبّته واربط ساعتك، ثم عد إلى هنا.</string>
     <string name="watch_not_sent">لم تُرسل الإعدادات بعد</string>
     <string name="watch_sync_failed">تعذّر تسليم الإعدادات إلى Wear OS. حاول مرة أخرى.</string>
     <string name="watch_needs_location">اختر الموقع أولاً</string>
@@ -103,10 +103,10 @@
     <string name="next_day">اليوم التالي</string>
     <string name="open_calendar">اختيار تاريخ</string>
     <string name="go_to_today">العودة إلى اليوم</string>
-    <string name="calendar_range">%1$s – %2$s</string>
+    <string name="calendar_range">التواريخ من %1$s إلى %2$s</string>
     <string name="at_time">الساعة %1$s</string>
     <string name="loc_label_auto">الموقع الحالي</string>
-    <string name="loc_label_manual">مدينة مختارة</string>
+    <string name="loc_label_manual">اخترتها أنت</string>
     <string name="tab_today">اليوم</string>
     <string name="tab_qibla">القبلة</string>
     <string name="qibla_title">القبلة</string>
@@ -141,8 +141,8 @@
     <string name="cal_step4">ثم أدر الهاتف ببطء دورة كاملة وهو مستوٍ.</string>
     <string name="cal_step5">ضعه مستوياً وانتظر بضع ثوانٍ حتى تستقر القراءة.</string>
     <string name="cal_live">الدقة الحالية: %1$s</string>
-    <string name="watch_no_wear_os_title">خدمات Wear OS غير موجودة</string>
-    <string name="watch_none_title">لا توجد ساعة متصلة</string>
+    <string name="watch_no_wear_os_title">اضبط ساعتك أولًا</string>
+    <string name="watch_none_title">ساعتك غير متصلة بعد</string>
     <string name="watch_none_body">اربط ساعة جالاكسي بتطبيق Galaxy Wearable (أو ساعة Wear OS أخرى بتطبيقها المرافق)، وأبقِ البلوتوث مفعّلاً، ثم عد إلى هنا.</string>
     <string name="watch_generic_name">ساعتك</string>
     <string name="watch_connected_short">متصلة</string>
@@ -575,8 +575,8 @@
     <string name="cd_until">حتى %s</string>
     <string name="cd_since">منذ دخول %s</string>
     <string name="cd_since_sunrise">منذ الشروق</string>
-    <string name="adhan_prayers_footer_off">التنبيهات متوقفة. فعّل صلاة لتسمع أذانها، أو اضغط على الصلاة لتختار أذانها أو صوتها أولًا.</string>
-    <string name="adhan_hero_blocked">لن يُسمع حتى تُصلَح المشكلة أدناه.</string>
+    <string name="adhan_prayers_footer_off">فعّل صلاة لتسمع أذانها، واضغط على الصلاة لتختار صوتها.</string>
+    <string name="adhan_hero_blocked">لن يُسمع: أصلح ما هو مذكور أدناه.</string>
     <string name="adhan_test_footer">اقفل الهاتف بعد الضغط: يجري الاختبار كما في وقت الصلاة تمامًا، وتُحفظ نتيجته في السجل.</string>
     <string name="basis_official">أوقاتها المنشورة نفسها، لكل يوم.</string>
     <string name="basis_validated">طريقتها نفسها، بعد مقارنتها بجدولها المنشور.</string>
@@ -587,9 +587,20 @@
     <string name="adhan_hint_short">مطلعه فقط</string>
     <string name="adhan_hint_sound">نغمة قصيرة</string>
     <string name="adhan_hint_custom">ملف من عندك</string>
-    <string name="adhan_hint_notification">صوت هاتفك</string>
-    <string name="adhan_hint_silent">دون صوت</string>
+    <string name="adhan_hint_notification">صوت هاتفك المعتاد</string>
+    <string name="adhan_hint_silent">إشعار فقط، بلا صوت</string>
     <string name="adhan_plays">يُشغَّل: %s</string>
     <string name="hijri_today_is">اليوم: %s</string>
-    <string name="qibla_poor_hint">البوصلة غير متيقنة هنا: عايرها أولًا (أدناه).</string>
+    <string name="qibla_poor_hint">البوصلة غير متيقنة هنا، لذا لا يُعرض الاتجاه بعد. اضغط لمعرفة طريقة المعايرة.</string>
+    <string name="watch_get_wearable">تنزيل Galaxy Wearable</string>
+    <string name="watch_how_to">كيف تضع نور على ساعتك</string>
+    <string name="qibla_calibrate_first">عايِر أولًا: حرّك الهاتف على شكل الرقم 8</string>
+    <string name="adhan_turn_on_all">تشغيل الأذان لكل الصلوات</string>
+    <string name="adhan_off_would">متوقف · سيُشغَّل %s</string>
+    <string name="adhan_action_notifications">تفعيل الإشعارات</string>
+    <string name="adhan_action_channel">تفعيل فئة الأذان</string>
+    <string name="adhan_action_exact">السماح بالمنبّهات الدقيقة</string>
+    <string name="adhan_action_volume">فتح إعدادات الصوت</string>
+    <string name="cd_today_now">اليوم، الآن</string>
+    <string name="history_fix_dnd">السماح بالمنبّهات في وضع عدم الإزعاج</string>
 </resources>

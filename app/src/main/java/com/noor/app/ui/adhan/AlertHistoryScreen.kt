@@ -2,6 +2,7 @@ package com.noor.app.ui.adhan
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,7 +81,8 @@ fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
                 Column {
                     history.forEachIndexed { i, r ->
                         if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 40.dp), thickness = 0.5.dp, color = c.separator)
-                        HistoryRow(r, f, zone)
+                        // (0.15: the newest record says how to fix what went wrong; older ones only tell.)
+                        HistoryRow(r, f, zone, fixable = i == 0)
                     }
                 }
             }
@@ -124,8 +126,9 @@ internal fun outcomeText(r: AlertRecord, f: Formatter): String = when (r.outcome
 }
 
 @Composable
-private fun HistoryRow(r: AlertRecord, f: Formatter, zone: ZoneId) {
+private fun HistoryRow(r: AlertRecord, f: Formatter, zone: ZoneId, fixable: Boolean = false) {
     val c = NoorTheme.colors
+    val context = androidx.compose.ui.platform.LocalContext.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.Top) {
         Box(Modifier.padding(top = 6.dp).size(10.dp).clip(CircleShape).background(outcomeColor(r.outcome)))
         Spacer(Modifier.width(14.dp))
@@ -145,6 +148,20 @@ private fun HistoryRow(r: AlertRecord, f: Formatter, zone: ZoneId) {
                 if (r.alarmVolumePercent == 0) add(stringResource(R.string.history_volume_zero))
             }
             Text(extras.joinToString(" · "), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textMuted)
+            // What went wrong, with its fix (0.15): a way to the one setting that caused it.
+            val fix: Pair<Int, () -> Unit>? = if (!fixable) null else when {
+                r.outcome == AlertOutcome.DND_BLOCKS_ALARMS -> R.string.history_fix_dnd to {
+                    context.open(android.content.Intent("android.settings.ZEN_MODE_SETTINGS"))
+                }
+                r.outcome == AlertOutcome.NO_NOTIFICATIONS -> R.string.adhan_action_notifications to { context.open(appNotificationSettings(context)) }
+                !r.exactAlarms && android.os.Build.VERSION.SDK_INT >= 31 -> R.string.adhan_action_exact to {
+                    context.open(android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, android.net.Uri.parse("package:" + context.packageName)))
+                }
+                r.alarmVolumePercent == 0 -> R.string.adhan_action_volume to { context.open(android.content.Intent(android.provider.Settings.ACTION_SOUND_SETTINGS)) }
+                else -> null
+            }
+            if (fix != null) Text(stringResource(fix.first), style = MaterialTheme.typography.labelLarge, color = c.goldText,
+                modifier = Modifier.padding(top = 4.dp).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = fix.second))
         }
     }
 }

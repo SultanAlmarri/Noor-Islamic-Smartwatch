@@ -252,7 +252,7 @@ class ScreenshotTest {
         val t0 = 1_793_801_000_000L
         val doneReport = WatchReport(2, "0.3.0", 36, true, 1, 1, true, t0 - 60_000, t0)
         screen = Screen.WATCH_STATE
-        watch = WatchScene(WatchSetupState(false, emptyList(), emptySet(), emptyMap())); shot("18_watch_none_night_en", "No watch connected")
+        watch = WatchScene(WatchSetupState(false, emptyList(), emptySet(), emptyMap())); shot("18_watch_none_night_en", "Your watch is not connected yet")
         watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap()), fromPlay = false); shot("19_watch_dev_build_night_en", "development build")
         watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap()), installs = mapOf("node1" to Pending(t0 - 30_000, true)), now = t0)
         shot("20_watch_installing_night_en", "Tap Install there")
@@ -365,7 +365,7 @@ class ScreenshotTest {
     private val allowedInEnglish = listOf("نور")
     private val allowedInArabic = listOf(
         Regex("(Galaxy|Pixel) Watch\\S*( Pro| Classic)?( \\([0-9A-F]{4}\\))?"), // a device's own name, as Android reports it
-        Regex("Wear OS"), Regex("WGS-84"), Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), // product, standard and format names
+        Regex("Wear OS"), Regex("Galaxy Wearable"), Regex("WGS-84"), Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), // product, standard and format names
         Regex("CC0|CC BY(-SA)? \\d\\.\\d"), // licence names
         Regex("\\b[a-z0-9-]+(\\.[a-z0-9-]+)*\\.(ae|sg|org|com|gov)\\b"), Regex("GeoNames"), // web addresses and the gazetteer's name
         Regex("timezone-boundary-builder|OpenStreetMap|ODbL"), // the time-zone map's source and licence (0.9.7)

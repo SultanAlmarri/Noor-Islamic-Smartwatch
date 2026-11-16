@@ -279,7 +279,7 @@ fun TodayContent(
         // (Whether the list shows today: the sky's hint keeps out of the way of "Today" while another day is shown.)
         var viewingToday by remember { mutableStateOf(true) }
         SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup,
-            showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed)
+            showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed, viewingToday = viewingToday)
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -351,7 +351,7 @@ private fun SkyHeader(
     u: TodayUi, f: Formatter, todayDay: PrayerDay?, top: Dp, heroHeight: Dp, scroll: ScrollState,
     onOpenLocation: () -> Unit, onRefresh: () -> Unit, previewScrub: Double?, previewSkyTime: Float?,
     real: RealSkySetup? = null,
-    showScrubHint: Boolean = false, onScrubbed: () -> Unit = {},
+    showScrubHint: Boolean = false, onScrubbed: () -> Unit = {}, viewingToday: Boolean = true,
 ) {
     val st = u.state ?: return
     val place = u.place ?: return
@@ -518,7 +518,9 @@ private fun SkyHeader(
             // The next prayer; while the Sun is being drawn along its path, the moment it stands at takes its place.
             val away by animateFloatAsState(if (scrubbing) 1f else 0f, tween(NoorMotion.Standard), label = "scrub")
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Column(Modifier.fillMaxWidth().graphicsLayer { alpha = 1f - away; translationY = -12.dp.toPx() * away }, horizontalAlignment = Alignment.CenterHorizontally) {
+                // (0.15: while another day is listed below, the sky's "now" steps back and says it is today's.)
+                val elsewhere by animateFloatAsState(if (viewingToday) 0f else 1f, tween(NoorMotion.Standard), label = "elsewhere")
+                Column(Modifier.fillMaxWidth().graphicsLayer { alpha = (1f - away) * (1f - 0.45f * elsewhere); translationY = -12.dp.toPx() * away }, horizontalAlignment = Alignment.CenterHorizontally) {
                     // 0.9.7: − time left before a prayer; once it has come, + time since it for a while (Countdowns),
                     // then the next prayer's countdown. The notification shows the same.
                     val cd = com.noor.prayer.Countdowns.of(st, u.now, u.settings.elapsedAfterPrayer)
@@ -547,6 +549,7 @@ private fun SkyHeader(
                         // had to be learned, and "+15:21" read as a time of day.
                         Text(
                             when {
+                                !viewingToday -> stringResource(R.string.cd_today_now)
                                 !cd.elapsed -> stringResource(R.string.cd_until, f.prayerName(cd.event.prayer, cd.event.date))
                                 cd.event.prayer == com.noor.prayer.Prayer.SHURUQ -> stringResource(R.string.cd_since_sunrise)
                                 else -> stringResource(R.string.cd_since, f.prayerName(cd.event.prayer, cd.event.date))

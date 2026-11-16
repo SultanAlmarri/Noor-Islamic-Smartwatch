@@ -162,11 +162,11 @@ fun WatchContent(
                     Text(stringResource(R.string.watch_checking), color = c.textSecondary)
                 }
             }
-            state.wearUnavailable -> EmptyCard(stringResource(R.string.watch_no_wear_os_title), stringResource(R.string.watch_no_wear_os))
+            state.wearUnavailable -> EmptyCard(stringResource(R.string.watch_no_wear_os_title), stringResource(R.string.watch_no_wear_os), actions.openGuide)
             else -> {
                 // Connected watches first, then watches that have Noor but are out of reach right now.
                 val known = state.connected + state.withNoor.filter { id -> state.connected.none { it.id == id } }.map { WatchNode(it, "") }
-                if (known.isEmpty()) EmptyCard(stringResource(R.string.watch_none_title), stringResource(R.string.watch_none_body))
+                if (known.isEmpty()) EmptyCard(stringResource(R.string.watch_none_title), stringResource(R.string.watch_none_body), actions.openGuide)
                 for (node in known) WatchCard(node, node.id in state.connected.map { it.id }, node.id in state.withNoor, state.reports[node.id],
                     configAvailable, lastSent, installs[node.id], faces[node.id], syncing, syncFailed, fromPlay, f, actions, now)
             }
@@ -336,12 +336,21 @@ private fun SecondaryButton(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EmptyCard(title: String, body: String) {
+private fun EmptyCard(title: String, body: String, openGuide: () -> Unit = {}) {
     val c = NoorTheme.colors
+    val context = androidx.compose.ui.platform.LocalContext.current
     GlassCard(Modifier.fillMaxWidth(), corner = 20.dp) {
         Header(Icons.Rounded.Watch, title, null)
         Spacer(Modifier.height(8.dp))
         Text(body, style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
+        // 0.15: what to do next, as buttons, not only said: the watch's own app from the Play Store, and Noor's guide.
+        Spacer(Modifier.height(16.dp))
+        com.noor.app.ui.components.NoorButton(stringResource(R.string.watch_get_wearable), {
+            val id = "com.samsung.android.app.watchmanager"
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$id")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                .onFailure { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$id")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+        }, Modifier.fillMaxWidth())
+        com.noor.app.ui.components.NoorButton(stringResource(R.string.watch_how_to), openGuide, Modifier.fillMaxWidth(), kind = com.noor.app.ui.components.ButtonKind.Plain)
     }
 }
 

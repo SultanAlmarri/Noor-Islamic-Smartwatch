@@ -90,7 +90,7 @@
     <string name="permission_denied">Location permission not granted. Choose a city or allow location in system settings.</string>
     <string name="watch_sync_title">Phone–watch sync</string>
     <string name="watch_checking">Checking for your watch…</string>
-    <string name="watch_no_wear_os">Wear OS services are not available on this phone. Install the Galaxy Wearable app and pair your watch.</string>
+    <string name="watch_no_wear_os">Noor reaches your watch through the Galaxy Wearable app. Install it, pair your watch, then come back here.</string>
     <string name="watch_not_sent">Settings not sent yet</string>
     <string name="watch_sync_failed">Could not hand the settings to Wear OS. Try again.</string>
     <string name="watch_needs_location">Choose a location first</string>
@@ -104,10 +104,10 @@
     <string name="next_day">Next day</string>
     <string name="open_calendar">Choose a date</string>
     <string name="go_to_today">Go to today</string>
-    <string name="calendar_range">%1$s – %2$s</string>
+    <string name="calendar_range">Dates from %1$s to %2$s</string>
     <string name="at_time">at %1$s</string>
     <string name="loc_label_auto">Current location</string>
-    <string name="loc_label_manual">Chosen city</string>
+    <string name="loc_label_manual">Chosen by you</string>
     <string name="tab_today">Today</string>
     <string name="tab_qibla">Qibla</string>
     <string name="qibla_title">Qibla</string>
@@ -142,8 +142,8 @@
     <string name="cal_step4">Then rotate the phone slowly a full turn while keeping it flat.</string>
     <string name="cal_step5">Lay it flat and wait a few seconds for the reading to settle.</string>
     <string name="cal_live">Current accuracy: %1$s</string>
-    <string name="watch_no_wear_os_title">Wear OS services not found</string>
-    <string name="watch_none_title">No watch connected</string>
+    <string name="watch_no_wear_os_title">Set up your watch first</string>
+    <string name="watch_none_title">Your watch is not connected yet</string>
     <string name="watch_none_body">Pair your Galaxy Watch with the Galaxy Wearable app (or another Wear OS watch with its companion app), keep Bluetooth on, then come back here.</string>
     <string name="watch_generic_name">Your watch</string>
     <string name="watch_connected_short">Connected</string>
@@ -570,8 +570,8 @@
     <string name="cd_until">until %s</string>
     <string name="cd_since">since %s began</string>
     <string name="cd_since_sunrise">since sunrise</string>
-    <string name="adhan_prayers_footer_off">Alerts are off. Turn on a prayer to hear its Adhan; tap a prayer to choose its Adhan or sound first.</string>
-    <string name="adhan_hero_blocked">Will not sound until the problem below is fixed.</string>
+    <string name="adhan_prayers_footer_off">Turn on a prayer to hear its Adhan. Tap a prayer to choose its sound.</string>
+    <string name="adhan_hero_blocked">Will not sound: fix what is listed below.</string>
     <string name="adhan_test_footer">Lock the phone after pressing it: the test runs exactly as a real prayer time does, and its result is kept in the history.</string>
     <string name="basis_official">Its own published times, for each day.</string>
     <string name="basis_validated">Its own method, checked against its published timetable.</string>
@@ -582,9 +582,20 @@
     <string name="adhan_hint_short">Its opening only</string>
     <string name="adhan_hint_sound">A brief tone</string>
     <string name="adhan_hint_custom">A file of yours</string>
-    <string name="adhan_hint_notification">Your phone\'s sound</string>
-    <string name="adhan_hint_silent">No sound</string>
+    <string name="adhan_hint_notification">Phone\'s usual sound</string>
+    <string name="adhan_hint_silent">Notice only, no sound</string>
     <string name="adhan_plays">Plays: %s</string>
     <string name="hijri_today_is">Today: %s</string>
-    <string name="qibla_poor_hint">The compass is unsure here: calibrate it first (below).</string>
+    <string name="qibla_poor_hint">The compass is unsure here, so the turn is not shown yet. Tap for how to calibrate.</string>
+    <string name="watch_get_wearable">Get Galaxy Wearable</string>
+    <string name="watch_how_to">How to put Noor on your watch</string>
+    <string name="qibla_calibrate_first">Calibrate first: move the phone in a figure 8</string>
+    <string name="adhan_turn_on_all">Turn on the Adhan for every prayer</string>
+    <string name="adhan_off_would">Off · would play %s</string>
+    <string name="adhan_action_notifications">Turn on notifications</string>
+    <string name="adhan_action_channel">Turn on the Adhan category</string>
+    <string name="adhan_action_exact">Allow exact alarms</string>
+    <string name="adhan_action_volume">Open sound settings</string>
+    <string name="cd_today_now">Today, now</string>
+    <string name="history_fix_dnd">Let alarms through Do Not Disturb</string>
 </resources>
