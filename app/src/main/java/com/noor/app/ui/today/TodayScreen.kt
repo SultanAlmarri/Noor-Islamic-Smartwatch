@@ -50,7 +50,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Place
@@ -101,6 +100,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -216,7 +216,9 @@ fun TodayContent(
     onOpenPrayer: (Prayer) -> Unit = {},
 ) {
     val ar = isArabicUi()
-    val f = Formatter(ar, u.settings.numerals, u.settings.timeFormat)
+    // (Kept between the screen's once-a-second updates: a new formatter each second made every row of the day's
+    // times, the date bar and the place look changed, so all of them were worked out again each second. 0.14.)
+    val f = remember(ar, u.settings.numerals, u.settings.timeFormat) { Formatter(ar, u.settings.numerals, u.settings.timeFormat) }
     val today = u.today
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
@@ -675,7 +677,8 @@ private fun Countdown(text: String, maxSp: Float) {
             lineHeight = size * 1.1f, shadow = SkyText.Shadow)
         // Numbers read left to right in Arabic too; only the block's position follows the layout direction.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.semantics(mergeDescendants = true) {}) {
+            // (One thing for TalkBack, read as a time: its digits are drawn one by one only so that they can roll.)
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.clearAndSetSemantics { contentDescription = text }) {
                 RollingText(main, style.copy(color = Sky.OnSky))
                 RollingText(secs, style.copy(color = Sky.OnSky.copy(alpha = 0.5f)))
             }
@@ -744,7 +747,8 @@ private fun DateBar(
     Box(modifier.fillMaxWidth()) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
     // On narrow phones the date takes its short form ("Wed 4 Nov 2026") so it stays on one line.
-    val narrow = maxWidth < 380.dp
+    // (0.14: with large text too, where the long form broke the year onto a line of its own.)
+    val narrow = maxWidth < 380.dp || LocalDensity.current.fontScale > 1.15f
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         DayArrow(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.previous_day), canPrev, onPrev)
         // The date itself opens the calendar.

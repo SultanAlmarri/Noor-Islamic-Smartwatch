@@ -73,12 +73,24 @@ class LocationViewModel(app: Application) : AndroidViewModel(app) {
     fun pick(p: WorldPlaces.Place) = resolve { store.picked(p) }
     fun pin(point: GeoPoint, title: String? = null) = resolve { store.pinned(point, title) }
 
-    private fun resolve(block: suspend () -> PickedPlace) = viewModelScope.launch {
-        resolving.value = true
-        preview.value = null
-        val picked = block()
-        preview.value = previewOf(picked)
-        resolving.value = false
+    private var resolveJob: Job? = null
+
+    /**
+     * Only the place asked for last is resolved (0.14): an earlier one still being named (a slow geocoder) is given up,
+     * so it can no longer arrive late and put itself under the confirmation of the place chosen after it.
+     */
+    private fun resolve(block: suspend () -> PickedPlace) {
+        resolveJob?.cancel()
+        resolveJob = viewModelScope.launch {
+            resolving.value = true
+            preview.value = null
+            try {
+                val picked = block()
+                preview.value = previewOf(picked)
+            } finally {
+                if (resolveJob == coroutineContext[Job]) resolving.value = false
+            }
+        }
     }
 
     private suspend fun previewOf(p: PickedPlace): Preview = withContext(Dispatchers.Default) {
@@ -90,7 +102,7 @@ class LocationViewModel(app: Application) : AndroidViewModel(app) {
         Preview(p, day?.day, day?.official == true, auth?.nameEn ?: profile.nameEn, auth?.nameAr ?: profile.nameAr)
     }
 
-    fun clearPreview() { preview.value = null }
+    fun clearPreview() { resolveJob?.cancel(); preview.value = null }
 
     fun save(p: PickedPlace, done: () -> Unit) = viewModelScope.launch {
         container.settings.setManualPlace(p.toKnown())

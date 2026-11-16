@@ -716,6 +716,8 @@ private fun Header(title: String, onBack: () -> Unit) {
 @Composable
 private fun SearchField(value: String, hint: String, raised: Boolean = false, onChange: (String) -> Unit) {
     val c = NoorTheme.colors
+    // 0.14: the app's one search field; the map keeps its raised one, which floats over the picture.
+    if (!raised) { com.noor.app.ui.components.NoorSearchField(value, onChange, hint, Modifier.padding(top = 4.dp, bottom = 12.dp)); return }
     TextField(
         value = value, onValueChange = onChange, singleLine = true,
         leadingIcon = { Icon(Icons.Rounded.Search, null, tint = c.textMuted) },
@@ -734,14 +736,13 @@ private fun SearchField(value: String, hint: String, raised: Boolean = false, on
 @Composable
 private fun OptionRow(icon: ImageVector, title: String, subtitle: String?, selected: Boolean = false, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(38.dp).clip(CircleShape).background(c.gold.copy(alpha = if (c.isDark) 0.16f else 0.12f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = c.goldText, modifier = Modifier.size(20.dp))
-        }
+    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        // 0.14: the same tile and small print as every other list in the app.
+        com.noor.app.ui.settings.IconTile(icon)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = c.textSecondary) }
+            subtitle?.let { Text(it, style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary) }
         }
         if (selected) Box(Modifier.size(10.dp).clip(CircleShape).background(c.success))
         else Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted)

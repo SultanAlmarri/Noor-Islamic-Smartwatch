@@ -23,7 +23,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -287,7 +286,7 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             composable(Routes.ADHAN) {
                 AdhanScreen(content, onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) },
                     onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) },
-                    onOpenHistory = { nav.navigate(Routes.ADHAN_HISTORY) })
+                    onOpenHistory = { nav.navigate(Routes.ADHAN_HISTORY) }, onOpenLocation = { nav.navigate(Routes.CITIES) })
             }
             composable(Routes.ADHAN_PRAYER) { e ->
                 val p = e.arguments?.getString("p")?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: Prayer.FAJR

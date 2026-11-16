@@ -88,7 +88,7 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL, ADHAN_HISTORY }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL, ADHAN_HISTORY, SCENERY }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -191,6 +191,7 @@ class ScreenshotTest {
                             Screen.ADHAN_HISTORY -> com.noor.app.ui.adhan.AlertHistoryScreen(pad, {})
                             Screen.ONBOARDING -> com.noor.app.ui.onboarding.OnboardingScreen(pad, {}, {})
                             Screen.CITIES -> com.noor.app.ui.location.LocationScreen(pad, {})
+                            Screen.SCENERY -> com.noor.app.ui.settings.SceneryScreen(pad, {})
                             Screen.SHELL -> Column(Modifier.fillMaxSize()) {
                                 Box(Modifier.weight(1f)) { TodayContent(u, PaddingValues(top = 28.dp), { cache.resolved(s, u.place!!, u.profile!!, it) }, {}, {}, {}) }
                                 NoorTabBar(Routes.PRAYERS) {}
@@ -276,7 +277,12 @@ class ScreenshotTest {
         screen = Screen.SETTINGS; shot("51_settings_night_ar", "الإعدادات")
         screen = Screen.ACCURACY; shot("52_accuracy_night_ar", "دبي")
         screen = Screen.CITIES; shot("53_cities_night_ar", "التصفح حسب الدولة")
+        // 0.14: the scenery page in Arabic (the language check had not seen it), Settings by day, and Settings with
+        // large text, where a row's choice moves under its title instead of being squeezed beside it.
+        screen = Screen.SCENERY; shot("59_scenery_night_ar", "الفصول")
         arabic = false
+        theme = ThemeMode.LIGHT; screen = Screen.SETTINGS; shot("60_settings_day_en", "Numerals")
+        theme = ThemeMode.DARK; fontScale = 1.3f; shot("61_settings_large_text_en", "Numerals"); fontScale = 1f
         // The sky through the day (Dubai, 4 November 2026): dawn, morning, sunset glow, night with the moon.
         theme = ThemeMode.DARK; arabic = false; screen = Screen.TODAY
         fun at(h: Int, m: Int) = ZonedDateTime.of(2026, 11, 4, h, m, 0, 0, ZoneId.of("Asia/Dubai")).toInstant()

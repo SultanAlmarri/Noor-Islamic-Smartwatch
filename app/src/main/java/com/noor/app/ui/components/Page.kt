@@ -199,8 +199,7 @@ fun <T> ChoiceChips(options: List<Pair<T, String>>, selected: T, onSelect: (T) -
                 Text(
                     label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, letterSpacing = 0.sp), maxLines = 1,
                     color = if (on) c.onGold else c.textSecondary,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) c.gold else c.surface)
-                        .then(if (!on && c.isDark) Modifier.background(c.separator, RoundedCornerShape(50)) else Modifier)
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) c.gold else if (c.isDark) c.surfaceRaised else c.surface)
                         .heightIn(min = 36.dp).padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -219,8 +218,7 @@ fun NoorSearchField(value: String, onChange: (String) -> Unit, hint: String, mod
         modifier = modifier.fillMaxWidth(),
         decorationBox = { inner ->
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).background(c.surface)
-                    .then(if (c.isDark) Modifier.background(c.separator.copy(alpha = 0.04f)) else Modifier).padding(start = 12.dp, end = 2.dp),
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).background(c.surface).padding(start = 12.dp, end = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Rounded.Search, null, tint = c.textMuted, modifier = Modifier.size(20.dp))

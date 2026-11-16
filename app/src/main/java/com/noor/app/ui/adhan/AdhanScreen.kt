@@ -92,6 +92,7 @@ fun AdhanScreen(
     onOpenMySounds: () -> Unit,
     onOpenHistory: () -> Unit = {},
     vm: AdhanViewModel = viewModel(),
+    onOpenLocation: () -> Unit = {},
 ) {
     val s = vm.settings.collectAsStateWithLifecycle().value ?: return
     val a = s.alerts
@@ -129,7 +130,10 @@ fun AdhanScreen(
         }
 
         // What needs attention, in a group of its own: there only when something does.
-        val issues = (if (phone) phoneIssues(ready, a, context) { notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS) } else emptyList()) +
+        // (Without a place there are no times to alert at: that comes first, with the way to set one. 0.14: the page
+        // said so before, but offered no way there.)
+        val noPlace = if (!hasLocation) listOf(Issue(stringResource(R.string.adhan_no_location), stringResource(R.string.set_location), onOpenLocation)) else emptyList()
+        val issues = noPlace + (if (phone) phoneIssues(ready, a, context) { notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS) } else emptyList()) +
             (if (watch) watches.mapNotNull { w -> watchIssue(w) { vm.openNoorOnWatch(w.node.id) } } else emptyList())
         if (issues.isNotEmpty()) SettingsSection(stringResource(R.string.adhan_attention)) {
             issues.forEachIndexed { i, issue ->
@@ -148,8 +152,7 @@ fun AdhanScreen(
             }
             // 0.9.9: a reminder a few minutes before every prayer that alerts.
             SettingsSection("") {
-                SettingsItem(Icons.Rounded.Schedule, stringResource(R.string.adhan_reminder), null, onClick = { reminderDialog = true },
-                    detail = reminderLabel(a.reminderMinutes, f))
+                SettingsItem(Icons.Rounded.Schedule, stringResource(R.string.adhan_reminder), reminderLabel(a.reminderMinutes, f), onClick = { reminderDialog = true })
             }
 
             Column {

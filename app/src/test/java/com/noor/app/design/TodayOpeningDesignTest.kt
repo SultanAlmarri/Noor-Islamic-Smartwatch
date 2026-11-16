@@ -67,10 +67,10 @@ class TodayOpeningDesignTest {
         assertTrue(opening.veiled)
         // The real prayer of the countdown and its time are there from the first frame. (0.9.7: at 15:29, 15 minutes after
         // Asr, the countdown is "+" time since Asr; the countdown draws each digit on its own so they can roll, so the
-        // prayer, its time and the sign are checked.)
+        // prayer, its time and the countdown as a screen reader has it are checked.)
         assertTrue(rule.onAllNodesWithText("Asr", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         assertTrue(rule.onAllNodesWithText("3:14 PM", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
-        assertTrue(rule.onAllNodesWithText("+", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("+15:21"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         var at = 0
         for (ms in listOf(250, 450, 650, 850, 1050, 1300, 1700)) {
             rule.mainClock.advanceTimeBy((ms - at).toLong()); at = ms
