@@ -679,4 +679,5 @@
     <string name="alarm_length_full">Full</string>
     <string name="alarm_length_short">Short</string>
     <string name="alarm_adhan_before_warn">Heard before the prayer, the Adhan may be taken for its time.</string>
+    <string name="adhan_warn_fullscreen">The Adhan screen cannot show over the lock screen.</string>
 </resources>

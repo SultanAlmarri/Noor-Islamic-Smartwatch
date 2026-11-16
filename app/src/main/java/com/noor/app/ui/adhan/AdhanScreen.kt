@@ -337,6 +337,11 @@ private fun phoneIssues(ready: Readiness, a: AlertSettings, context: Context, al
                 .putExtra(Settings.EXTRA_CHANNEL_ID, com.noor.alerts.AlertNotifications.CHANNEL_ADHAN))
         }, blocking = true))
     }
+    if (!ready.fullScreenAllowed && Build.VERSION.SDK_INT >= 34 && (audible || alarms)) {
+        add(Issue(stringResource(R.string.adhan_warn_fullscreen), stringResource(R.string.adhan_action_allow), {
+            context.open(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + context.packageName)))
+        }))
+    }
     if (!ready.exactAlarms && Build.VERSION.SDK_INT >= 31) {
         add(Issue(stringResource(R.string.adhan_warn_exact), stringResource(R.string.adhan_action_exact), {
             context.open(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + context.packageName)))

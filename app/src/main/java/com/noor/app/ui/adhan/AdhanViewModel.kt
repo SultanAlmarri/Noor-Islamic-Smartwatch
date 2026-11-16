@@ -59,6 +59,8 @@ data class Readiness(
     val exactAlarms: Boolean = true,
     val alarmVolume: Float = 1f,
     val batteryRestricted: Boolean = false,
+    /** 0.18: Android 14+ lets the Adhan's screen show over the lock screen (it keeps the sound playing on Android 17). */
+    val fullScreenAllowed: Boolean = true,
 )
 
 /** The watch's side, from its last report. */
@@ -207,6 +209,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             exactAlarms = AlertScheduler.canScheduleExact(ctx),
             alarmVolume = AlertPlayer.alarmVolume(ctx),
             batteryRestricted = ctx.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(ctx.packageName) == false,
+            fullScreenAllowed = Build.VERSION.SDK_INT < 34 || nm?.canUseFullScreenIntent() != false,
         )
         viewModelScope.launch {
             _history.value = withContext(Dispatchers.IO) { AlertLog.all(ctx) }
