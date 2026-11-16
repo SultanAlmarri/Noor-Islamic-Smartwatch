@@ -47,9 +47,7 @@ jobs:
       # short of memory as the app started, and the kernel killed the emulator without a word ("device not found").
       - name: Free the build's memory for the emulator
         run: |
-          ./gradlew --stop || true
-          pkill -f KotlinCompileDaemon || true
-          free -m
+          free -m   # EXPERIMENT H: daemons left running
 
       - name: Each scenery through the day
         uses: reactivecircus/android-emulator-runner@v2
