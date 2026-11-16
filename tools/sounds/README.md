@@ -45,8 +45,12 @@ first phrase and after the last, never inside a phrase; an opening ends in the s
 - Makkah: the Maghrib 2012 recording is the only complete, freely licensed Haram Adhan found; the crowd can be heard
   between phrases. The 2013 recording is clearer but stops during the 11th phrase; the 2018 one starts mid-phrase.
 - Madinah: the Prophet's Mosque recording (ejaz215) is complete and clean.
-- Al-Quds and Egypt: no recording with a usable licence and a clear single voice was found (details in
-  `docs/SOUNDS.md`); the app offers them as "add your own recording".
+- Al-Quds and Egypt: no recording with a usable licence and a clear single voice could be downloaded and checked
+  (details in `docs/SOUNDS.md`); the app offers them as "add your own recording". Candidates found on Freesound
+  (one at the Holy Sepulchre in Jerusalem, six in Egypt; CC0 or CC BY 4.0) are listed in `adhan_sources.json` with
+  `"status": "candidate"` and `"sha1": null`, because Freesound refuses the cloud session: the Fetch workflow
+  downloads them on GitHub and publishes them on `sound-sources`, where they can be listened to, segmented and checked
+  with the speech recogniser; a chosen one gets its SHA-1 pinned and an `ADHANS` entry.
 - Nature: windows were chosen with band-energy profiles and spectrograms to start and end in a lull (waves), hold
   several crows (rooster) or steady sound (rain, stream), and to avoid intruding noises; the birds' short version is
   two chirps (1.25 s), the rooster's one crow, the waves' one wave.
