@@ -571,6 +571,34 @@ Weather, Google Clock, Muslim Pro, Athan, Pillars). What it found and what was d
   calibrate first when the compass is unsure; the welcome's second way is an outlined button; "Notification bar".
 - **Kept on purpose**: "Shuruq" and the countdown's sign (the owner's), the Watch tab (the owner's product).
 
+### The Adhan section (0.16)
+
+The owner (16 November 2026): "If I want to change the adhan sound for all my prayers at once, I can't even do that...
+setting alerts before Adhan or after Adhan and on specific days of the week"; the Adhans of his Al-Fajr desk clock,
+"the same names" (its dial: Makkah, Madinah, Al-Quds, Egypt, Riyadh, Random); "The AI generated sounds... some of the
+sounds even sound like music. I don't want any music in my app. Zero music"; and fewer words everywhere ("is this
+really even necessary to tell the user?"). Modelled on the clock (one dial for every prayer), alarm clocks (repeat
+days) and prayer apps (a reminder before, an iqamah reminder after):
+
+- **One voice for every prayer**, first on the Adhan tab ("Adhan voice · Makkah"), opening the voices page: the
+  clock's six by its names, then the other recordings of the library, then the user's own sounds, each with ▶ to hear
+  it first. Choosing one sets every prayer that calls the Adhan (or plays the user's sound); Fajr keeps a Fajr Adhan
+  (with "As-salatu khayrun min an-nawm") unless the voice is one, or it is chosen on Fajr's own page. A prayer's page
+  opens the same voices for that prayer alone.
+- **The clock's voices.** Noor has licensed recordings from Makkah and Madinah only: Wikimedia Commons, searched in
+  full (tools/sounds research list, 191 entries), has none from al-Aqsa, Egypt or Riyadh. The clock's own recordings
+  belong to Al-Fajr and cannot be shipped without its permission (the owner will arrange licences before release).
+  Meanwhile Al-Quds, Egypt and Riyadh read "Add a recording": the user's file (a recording of their own clock, say)
+  takes the voice's name and stays on their phone. Licensed recordings replace these when there are any.
+- **When**: each prayer's page has seven day toggles (the week in the language's order; at least one stays on), a
+  reminder before the Adhan and one after it (the iqamah: "Asr began 20 minutes ago"); Alert options sets either for
+  every prayer at once ("Mixed" when they differ). A prayer's row on the tab shows small signs for these.
+- **No tones.** The phone's kinds of alert are the Adhan, its opening, the user's sound, a notification (the phone's
+  own sound) and a silent notice; the fourteen generated alert sounds are gone from the phone (the watch keeps them for
+  its own setting on versions up to 0.9.12). A prayer set to one alerts with a notification.
+- **Fewer words**: warnings in a line ("Alerts may come late. Allow exact alarms."), notes in a phrase, the Qibla's
+  note on true north, the ellipsoid and the decimals removed.
+
 ### Priority by use (0.15.2)
 
 The owner: "some features are used more than others... the more used features should get the priority... clean,

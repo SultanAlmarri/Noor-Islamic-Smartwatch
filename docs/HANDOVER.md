@@ -1177,3 +1177,38 @@ Made in a cloud session (Claude Opus, picking up from Claude Fable when its limi
 - The green hills' winter is in 0.15.2 (`a_winter`, `k_winter`; new green grass, no flowers, the blue and valley oaks
   bare, the live oaks evergreen), seen on the design bench beside spring.
 
+## 26. The Adhan section redone; no tones; fewer words (0.16.0, 16 November 2026, phone and watch)
+
+**What the owner asked**: change the Adhan for all prayers at once; reminders before and after the Adhan, on chosen
+days of the week; the Adhans of his Al-Fajr desk clock by the same names (its dial: Makkah, Madinah, Al-Quds, Egypt,
+Riyadh, Random; he sent a photograph); no music, nothing that sounds like it (the generated tones); fewer words ("Some
+things which long can be said in one or two words... use icons"). On the clock's recordings: told they belong to
+Al-Fajr and cannot be shipped in a public repository without its permission, he said he will buy the licences before
+release; they were not copied (none is published by Al-Fajr; copies online are unauthorised; the repository is
+public, so committing them would publish them at once).
+
+**What was done** (DESIGN.md, "The Adhan section (0.16)"):
+
+- core: `PrayerAlert.days` (a bit a day, Monday lowest), `beforeMinutes`, `afterMinutes`, new fields at the end of a
+  prayer's line (older readers stop before them; settings without them encode as before); the single 0.9.9 lead
+  still serves every prayer until one is set on its own (`AlertSettings.beforeOf`, `withBefore`, `withBeforeForAll`);
+  "pre" is still written for watches up to 0.9.12 when the leads agree. `AlertPlanner` looks 8 days ahead, skips days
+  that are off (also when an alarm fires) and plans after-reminders (`afterReminders`, `onAfter`). AlertPlannerTest:
+  three new tests.
+- alerts: the after-reminder's alarm (request code base + 30 + prayer, `EXTRA_AFTER`) and notification ("Asr began 20
+  minutes ago", English and Arabic); a missing default tone falls back to the default Adhan's opening.
+- phone: the voices page (`VoiceScreen`, route `adhan/voice/{p}`, `ClockVoice`), "Adhan voice" on the tab,
+  `AdhanViewModel.applyVoice` / `importVoice` / `setDays` / `setBefore` / `setAfter` and the "every prayer" setters;
+  a prayer's page (kind, voice, when, sound, test; `DaysRow`); the phone's library without the 14 alt tones
+  (`build_library.py`: `PHONE_ALTS = False`; the watch keeps them) and `SettingsRepository.phoneAlerts` (a prayer set
+  to a tone becomes a notification). Shorter English and Arabic texts; the Qibla's method note removed.
+- watch: no code of its own changed, but it is rebuilt with the shared core and alerts (days, reminders after, the
+  fallback), so its version moves to 0.16.0 (versionCode 18).
+
+**Tests**: core 108 (all pass, 3 new); `ScreenshotTest` with the voices page (85, 86) and sunrise with a reminder
+after and five days (29); `DateNavigationTest` now checks the phone's library has no tones. The whole suite and both
+APKs on GitHub (see below).
+
+**Not tested**: on a phone or watch: the voices, the after-reminder's notification at a real prayer time, the days.
+Al-Quds, Egypt and Riyadh have no licensed recording in Noor.
+
