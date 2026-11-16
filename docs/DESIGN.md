@@ -531,6 +531,11 @@ interaction design (Hick, Fitts, Jakob, Miller):
   on every page of a tab, with the tab one is in lit, as on iOS; only the welcome page and the location chooser,
   tasks with a keyboard or a map, hide it. Tapping the lit tab returns to its first page.
 - **Links, not directions.** "Choose Watch or Both in the Adhan tab" on the Watch tab is now a link to it.
+- **The heart of the app is offered, not hidden.** Prayer alerts start off (Android must be asked for each
+  permission), and until 0.15 nothing on the way in said they existed. The welcome now has a third step, "Hear the
+  Adhan at each prayer", after the place (also when the place is chosen by hand): "Turn on the Adhan" switches the
+  alerts on and asks for Android's notification permission at that moment, when its reason is plain; "Not now"
+  leaves them off (MainFlowTest checks it).
 - **Help in context, once.** The home screen's hidden gesture (drag the sky to follow the Sun) is said once, on
   the sky, in a small capsule, until the first drag; it never returns (`AppSettings.scrubHintDone`).
 

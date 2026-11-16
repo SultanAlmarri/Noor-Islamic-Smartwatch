@@ -68,6 +68,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun setSeasons(on: Boolean) = viewModelScope.launch { repo.setSeasons(on) }
     fun setTrueStars(on: Boolean) = viewModelScope.launch { repo.setTrueStars(on) }
     fun completeOnboarding() = viewModelScope.launch { repo.setOnboardingDone() }
+    /** Prayer alerts on or off (0.15: offered by the welcome page; the Adhan tab holds the rest). */
+    fun setAlertsEnabled(on: Boolean) = viewModelScope.launch { repo.updateAlerts { it.copy(enabled = on) } }
 
     fun setLanguage(l: Language) = viewModelScope.launch {
         repo.setLanguage(l)

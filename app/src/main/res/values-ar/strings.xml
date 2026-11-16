@@ -569,4 +569,7 @@
     <string name="settings_found_in">في %s</string>
     <string name="sky_scrub_hint_short">اسحب السماء لتتبّع الشمس</string>
     <string name="theme_sun_short">مع الشمس</string>
+    <string name="onb_adhan_title">استمع إلى الأذان عند كل صلاة</string>
+    <string name="onb_adhan_body">يرفع نور الأذان عند دخول وقت كل صلاة، حتى والهاتف مقفل. ويمكنك اختيار أذان كل صلاة، أو صوتًا أهدأ، في أي وقت من تبويب الأذان.</string>
+    <string name="onb_adhan_on">تشغيل الأذان</string>
 </resources>

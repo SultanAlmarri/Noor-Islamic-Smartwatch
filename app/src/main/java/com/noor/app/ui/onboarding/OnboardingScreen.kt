@@ -46,6 +46,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,12 +78,23 @@ import com.noor.app.ui.theme.Sky
 fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, onFinished: () -> Unit, vm: SettingsViewModel = viewModel()) {
     // (Saved: Android's permission dialog can outlive the activity, and the second step must still be there after it.)
     var step by rememberSaveable { mutableIntStateOf(0) }
+    // (After the Adhan's step: the location page, when the place is to be chosen by hand, or the home screen.)
+    var thenCity by rememberSaveable { mutableStateOf(false) }
+    fun finish() { vm.completeOnboarding(); if (thenCity) onChooseCity() else onFinished() }
     val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        vm.setBackgroundUpdates(granted); vm.completeOnboarding(); onFinished()
+        vm.setBackgroundUpdates(granted); step = 2
     }
     val foreground = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         val granted = result.values.any { it }
-        if (granted) { vm.setLocationMode(LocationMode.AUTO); step = 1 } else { vm.completeOnboarding(); onChooseCity() }
+        if (granted) { vm.setLocationMode(LocationMode.AUTO); step = 1 } else { thenCity = true; step = 2 }
+    }
+    // 0.15: the Adhan is Noor's heart, and it starts off: the welcome offers it, once, with Android's notification
+    // permission (13+) asked right after the user said yes. (Exact alarms and the alarm volume are checked on the
+    // Adhan tab, each with its own fix.)
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> finish() }
+    fun adhanOn() {
+        vm.setAlertsEnabled(true)
+        if (Build.VERSION.SDK_INT >= 33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS) else finish()
     }
     val ambient = LocalAmbientMotion.current
     // The sun rises from deep twilight to just above the horizon, once.
@@ -121,29 +133,35 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
                 (fadeIn(tween(NoorMotion.Standard)) + slideInVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) { it / 6 }) togetherWith fadeOut(tween(NoorMotion.Quick))
             }, label = "onboardingStep", modifier = Modifier.graphicsLayer { alpha = intro.value }) { s ->
                 Column {
-                    // Two steps: where one is.
+                    // Three steps (where one is, keeping it right, the Adhan): which one this is.
                     Row(Modifier.padding(bottom = 14.dp).clearAndSetSemantics { }, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        repeat(2) { i -> Box(Modifier.size(width = if (i == s) 18.dp else 6.dp, height = 6.dp).clip(CircleShape).background(Sky.OnSky.copy(alpha = if (i == s) 0.95f else 0.4f))) }
+                        repeat(3) { i -> Box(Modifier.size(width = if (i == s) 18.dp else 6.dp, height = 6.dp).clip(CircleShape).background(Sky.OnSky.copy(alpha = if (i == s) 0.95f else 0.4f))) }
                     }
-                    Text(stringResource(if (s == 0) R.string.perm_title else R.string.bg_perm_title), style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold), color = Sky.OnSky,
+                    Text(stringResource(when (s) { 0 -> R.string.perm_title; 1 -> R.string.bg_perm_title; else -> R.string.onb_adhan_title }), style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold), color = Sky.OnSky,
                         modifier = Modifier.semantics { heading() })
                     Spacer(Modifier.height(8.dp))
-                    Text(stringResource(if (s == 0) R.string.perm_body else R.string.bg_perm_body), style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp), color = Sky.OnSkySecondary)
+                    Text(stringResource(when (s) { 0 -> R.string.perm_body; 1 -> R.string.bg_perm_body; else -> R.string.onb_adhan_body }), style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp), color = Sky.OnSkySecondary)
                     Spacer(Modifier.height(22.dp))
                     Button(
                         onClick = {
                             // Android shows its precise/approximate choice; Noor works with either.
-                            if (s == 0) foreground.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                            else { vm.setBackgroundUpdates(true); vm.completeOnboarding(); onFinished() }
+                            when {
+                                s == 0 -> foreground.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                                s == 2 -> adhanOn()
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                                else -> { vm.setBackgroundUpdates(true); step = 2 }
+                            }
                         },
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF14204A)),
                         modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-                    ) { Text(stringResource(if (s == 0) R.string.perm_allow else R.string.bg_perm_continue), style = MaterialTheme.typography.titleMedium) }
+                    ) { Text(stringResource(when (s) { 0 -> R.string.perm_allow; 1 -> R.string.bg_perm_continue; else -> R.string.onb_adhan_on }), style = MaterialTheme.typography.titleMedium) }
                     TextButton(onClick = {
-                        vm.completeOnboarding()
-                        if (s == 0) onChooseCity() else onFinished()
+                        when (s) {
+                            0 -> { thenCity = true; step = 2 }
+                            1 -> step = 2
+                            else -> finish()
+                        }
                     }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
                         Text(stringResource(if (s == 0) R.string.perm_manual else R.string.bg_perm_not_now), color = Sky.OnSkySecondary, style = MaterialTheme.typography.titleSmall)
                     }

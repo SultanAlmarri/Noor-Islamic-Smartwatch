@@ -39,7 +39,12 @@ class MainFlowTest {
             assertTrue(Opening.playedInThisProcess)
             rule.waitForIdle()
             rule.onAllNodesWithText("Choose a city instead").onFirst().performClick()
+            // 0.15: the welcome offers the Adhan before the place is chosen; "Not now" leaves the alerts off.
+            rule.waitUntil(30_000) { rule.onAllNodesWithText("Hear the Adhan at each prayer").fetchSemanticsNodes().isNotEmpty() }
+            rule.waitForIdle()
+            rule.onAllNodesWithText("Not now").onFirst().performClick()
             rule.waitUntil(30_000) { rule.onAllNodesWithText("Browse by country").fetchSemanticsNodes().isNotEmpty() }
+            assertTrue("Not now leaves the alerts off", !runBlocking { app.container.settings.current().alerts.enabled })
             // The welcome page is recorded as done (on the settings' own thread): once it is, the location page is
             // still the page on show.
             for (i in 0 until 400) {
