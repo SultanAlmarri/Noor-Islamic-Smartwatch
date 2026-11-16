@@ -599,6 +599,35 @@ days) and prayer apps (a reminder before, an iqamah reminder after):
 - **Fewer words**: warnings in a line ("Alerts may come late. Allow exact alarms."), notes in a phrase, the Qibla's
   note on true north, the ellipsoid and the decimals removed.
 
+### Alarms and the Adhan tab (0.17)
+
+The owner (16 November 2026), on 0.16: "I am still not satisfied at all with the Adhan tab... The UI is not
+intuitive. And what I meant with the alarms is not what you implemented... like your phone clock app... set this
+alarm, let's say 10 minutes after Dhuhr Adhan, or set another alarm 25 minutes before Al-Fajr Adhan." 0.16 had read
+"alerts before or after the Adhan" as reminder notifications hidden on each prayer's page; he meant alarms.
+
+- **Alarms**, a list of their own on the Adhan tab, under the prayers, as in the Clock app: each row says what it is
+  ("25 min before Fajr", or its label), when it rings next ("Tomorrow at 4:52 AM") and on which days ("Mon–Fri"),
+  with its switch; "Add alarm" under them. They do not depend on the Adhan being on, and ring on the phone.
+- **The editor** reads as the sentence it makes: at the top, what it is and when it rings next, answered at once as
+  anything below changes; the minutes large, with − and + (held, they run) and the usual ones (5 to 60) at a touch;
+  Before | After; the prayer, six tiles with today's times; the days; a label; the sound; vibration; Snooze; Save, Try
+  it in 5 seconds, Delete. Back leaves the alarm as it was.
+- **Never the Adhan.** An alarm rings with the phone's own alarm sound (the one the Clock app uses), a notification
+  (for a reminder), or a recording of the user's. The Adhan is never an alarm's sound: heard half asleep 25 minutes
+  before Fajr it could be taken for Fajr having come, and a prayer prayed before its time. The editor says so in a
+  line.
+- **Ringing** like an alarm clock: full screen over the lock screen with an alarm clock (not the Adhan's sign), the
+  sound over and over and a repeating vibration for up to ten minutes, a big Stop and a wide Snooze; Snooze and Stop
+  in the notification too; a snoozed alarm's note says until when, with Dismiss.
+- **The tab, self-critique.** 0.16's rows repeated "Adhan · ♪ Makkah" five times and hid what was set behind three
+  unexplained small icons. Now each prayer row is its name, today's time and its switch, and a line only where it
+  differs from the others (Fajr's own recording, the opening only, a notification, some days). The voice for them all
+  is the first row of the same group. Each prayer's page has four kinds of alert, two by two (the user's own
+  recording is a voice, not a kind) and its days. "Alert options" is "More settings".
+- 0.16's reminders before and after the Adhan (and 0.9.9's single lead) became notification-only alarms, so nothing
+  set is lost and all of the kind is in one place.
+
 ### Priority by use (0.15.2)
 
 The owner: "some features are used more than others... the more used features should get the priority... clean,

@@ -1212,3 +1212,35 @@ APKs on GitHub (see below).
 **Not tested**: on a phone or watch: the voices, the after-reminder's notification at a real prayer time, the days.
 Al-Quds, Egypt and Riyadh have no licensed recording in Noor.
 
+
+## 27. Alarms before and after the prayers; the Adhan tab simplified (0.17.0, 16 November 2026, phone; watch rebuilt)
+
+**What the owner asked**: "what I meant with the alarms is not what you implemented... like your phone clock app...
+set this alarm, let's say 10 minutes after Dhuhr Adhan, or set another alarm 25 minutes before Al-Fajr Adhan"; the
+Adhan tab "not intuitive"; "completely redo and revolutionize the Adhan section... criticize yourself a lot, put
+yourself in the place of the user. Is it too overwhelming?"
+
+**What was done** (DESIGN.md, "Alarms and the Adhan tab (0.17)"):
+
+- core: `PrayerAlarm` (id 1..20, prayer, minutes 1..180, before/after, days, label, `AlarmSound` PHONE_ALARM /
+  NOTIFICATION / CUSTOM, vibrate, snooze 0/5/10/15) in `AlertSettings.alarms`, written as a new field `alarms=`
+  (entries joined by `|`, the label percent-encoded; old readers ignore it); `withAlarm`, `withoutAlarm`,
+  `nextAlarmId`; `remindersAsAlarms` turns the 0.9.9/0.16 reminders into notification alarms (applied on read by
+  `SettingsRepository.phoneAlerts`). `AlarmPlanner.next` / `plan` / `onFire` (on time within 90 s early to 10 min
+  late; days are the prayer's day; "after Isha" can ring after midnight). `PrayerAlarmTest`: 7 tests.
+- alerts: one alarm-clock alarm per alarm (request code 7100 + 100 + id), snooze (+ 200 + id), a tried alarm (+ 60;
+  the alarm travels in the intent). `AlarmDispatcher.ring` uses the Adhan's quiet rules, then `AdhanService` with
+  `SoundSource.System` (the phone's alarm sound; else its ringtone), looping, 10 minutes at most, repeating vibration,
+  Snooze in the notification and on the ringing screen; if nothing can play, a notification (never the backup
+  Adhan). `AlertHost.ringsAlarms`: the phone only.
+- phone: `AlarmScreen` (route `adhan/alarm/{id}`, 0 = new) and `AlarmRow`; the Adhan tab regrouped (prayers with
+  today's times and a line only where they differ; Alarms; test; More settings); the reminder rows and setters
+  removed; `AdhanAlertActivity` with Snooze and an alarm clock sign for alarms.
+- watch: rebuilt with the shared code; nothing changes on it (its alerts follow the phone's device choice; the alarms
+  do not ring there).
+
+**Tests**: core (all pass, 7 new); `ScreenshotTest` 87–93 (the alarms list in English and Arabic, a new alarm, an
+alarm being edited in Arabic and by day, ringing in English and Arabic). The whole suite and both APKs on GitHub.
+
+**Not tested**: on a phone: an alarm ringing at a real prayer-relative time, Snooze, the phone's alarm sound,
+notification-only alarms.

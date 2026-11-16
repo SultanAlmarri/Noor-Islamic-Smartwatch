@@ -88,6 +88,19 @@ every scheduled Adhan as "played 0 s" while tests played. Since 0.9.7:
 and `scheduled-hardened` scenarios that let the real prayer alarm fire (device clock moved to 45 s before it), the latter
 with Android 17's hardening at its strictest (`cmd audio set-enable-hardening enable`).
 
+## Alarms before and after the prayers (0.17)
+
+The user's own alarms, a number of minutes before or after a prayer ("25 minutes before Fajr"), live in
+`AlertSettings.alarms` (`PrayerAlarm`, core). They ring on the phone only (`AlertHost.ringsAlarms`), whether or not
+the Adhan is on. `AlertScheduler` arms one alarm-clock alarm for each that is on (its next ring from
+`AlarmPlanner.next`); `AlertReceiver` checks it again as it fires (`AlarmPlanner.onFire`: turned off or deleted, the
+prayer moved later, or more than 10 minutes late: nothing) and `AlarmDispatcher.ring` sounds it through `AdhanService`
+like the Adhan (same quiet rules, same foreground service and full-screen screen), but with the phone's alarm sound
+(`SoundSource.System`), or the user's recording, over and over for at most 10 minutes, with a repeating vibration and
+Snooze. An alarm never plays the Adhan, and never falls back to the backup Adhan. A notification-only alarm posts on
+the reminder channel. Snooze arms a one-off alarm (request code 7100 + 200 + id) and posts "Snoozed until …" with
+Dismiss. "Try it" arms a one-off alarm in 5 seconds that carries the alarm itself.
+
 ## Permissions
 
 | Permission | Why | If refused |
