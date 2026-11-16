@@ -28,6 +28,8 @@ data class CalculationProfile(
     /** When true, the observer's elevation lowers the horizon by 0.0353333 * sqrt(h) deg (IAC formula). */
     val elevationAffectsHorizon: Boolean = false,
     val rounding: Rounding = Rounding.NEAREST,
+    /** Per-prayer rounding where an authority's tables round prayers differently (overrides [rounding]). */
+    val roundingByPrayer: Map<Prayer, Rounding> = emptyMap(),
     /** Fixed precaution minutes per event, applied after rounding. */
     val offsets: Map<Prayer, Int> = emptyMap(),
     /**
@@ -51,4 +53,5 @@ data class CalculationProfile(
     /** The precaution minutes for [p] at [latitude]. */
     fun offset(p: Prayer, latitude: Double): Int =
         if (offsetsFromLatitude != null && kotlin.math.abs(latitude) >= offsetsFromLatitude) offsetsAtHighLatitude[p] ?: 0 else offset(p)
+    fun rounding(p: Prayer): Rounding = roundingByPrayer[p] ?: rounding
 }

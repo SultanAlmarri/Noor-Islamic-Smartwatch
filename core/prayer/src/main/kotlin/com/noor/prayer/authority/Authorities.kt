@@ -55,7 +55,7 @@ object Authorities {
         "awqaf", "Awqaf — UAE", "الهيئة العامة للشؤون الإسلامية والأوقاف", setOf("AE"), null,
         Profiles.UAE_AWQAF, SourceKind.VALIDATED_CALCULATION,
         sourceUrl = "https://www.awqaf.gov.ae",
-        sourceNoteEn = "Provisional: fitted to one month of Awqaf-attributed times (Nov 2026), 91% exact; to be re-checked against Awqaf's own tables.",
+        sourceNoteEn = "Conventions fitted to the official UAE Hijri Calendar for Abu Dhabi (353 days, 2023–2024): 96.2% exact, the rest within 1 minute; all 12 times checked on Awqaf's website (Nov 2026) exact. Other regions calculated at your position, not yet checked.",
     )
     val MUIS = Authority(
         "muis", "MUIS — Singapore", "المجلس الإسلامي في سنغافورة", setOf("SG"), null,
