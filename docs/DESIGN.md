@@ -540,6 +540,37 @@ interaction design (Hick, Fitts, Jakob, Miller):
 - **Help in context, once.** The home screen's hidden gesture (drag the sky to follow the Sun) is said once, on
   the sky, in a small capsule, until the first drag; it never returns (`AppSettings.scrubHintDone`).
 
+### Self-critique and review (0.15, second round)
+
+The owner, the same night: "look at your own work and criticize yourself... Is this really how intuitive software
+should look like? And if it's not, how can you improve it?" The pages were reviewed again, by the lead and by an
+independent reviewer that had not seen the design's reasoning (the renders only, against Apple's Settings, Clock and
+Weather, Google Clock, Muslim Pro, Athan, Pillars). What it found and what was done:
+
+- **A number with only a sign** ("+15:21") read as a time of day. The countdown now says what it counts, under it:
+  "since Asr began", "since sunrise", "until Maghrib" (the sign stays: the owner's design, shared with the watch).
+- **Turning on one prayer's Adhan took three screens.** Each prayer's bell on the home screen is now a switch of its
+  own (gold when that prayer will alert); the row still opens the details. With all alerts off, the first bell or
+  switch turned on turns them on for that prayer alone; the notification permission is asked at that moment.
+- **The Adhan tab was empty while alerts were off** (the state everyone starts in): the prayers are now always
+  listed, quiet and switched off until then, so what would happen can be seen and set first.
+- **"Fajr 5:17 AM" in big type over a problem that silences it.** What stops an alert altogether (notifications
+  off, the Adhan category off, the alarm volume at zero, a watch's notifications off) is now said on the hero card in
+  the danger colour ("Will not sound until the problem below is fixed.") and listed first, before what only makes it
+  late. The exact-alarm warning is shorter.
+- **"Will it really sound tonight?"** "Test the Adhan in 10 seconds" is on the Adhan tab itself, with the history.
+- **A recording's city read as the place** ("Adhan · Malmö" for someone in Dubai): recordings carry a note mark,
+  "Adhan · ♪ Malmö".
+- **"Sound", "Notification", "Silent" had to be tried to be understood**: each kind of alert says what it is in three
+  words ("The full call", "A brief tone", "Your phone's sound", "No sound"), and "Plays: …" names what will play.
+- **Jargon and silence**: Asr names the school in use, also when it is the method's own; the high-latitude rule is
+  listed only where it can matter (45° and beyond) or once changed; the Prayer times card says on what grounds in a
+  sentence ("Its own published times, for each day."); the Hijri row shows the date it gives ("Today: 6 Jumada
+  al-Akhirah 1448 AH"); the calendar marks the year's great days with a gold dot, and the date line names them.
+- **Small things**: the drag hint keeps out of the way while another day is shown; the Qibla screen says to
+  calibrate first when the compass is unsure; the welcome's second way is an outlined button; "Notification bar".
+- **Kept on purpose**: "Shuruq" and the countdown's sign (the owner's), the Watch tab (the owner's product).
+
 ## The interface of 0.14: one system, and an opening
 
 The owner (15 November 2026): "totally revolutionize the user interface and keep the Apple aesthetic... make the
