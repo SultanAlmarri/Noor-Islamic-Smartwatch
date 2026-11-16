@@ -94,9 +94,10 @@ object Profiles {
 
     /**
      * Indonesia - Kementerian Agama: Fajr -20 deg, Isha -18 deg (reaffirmed by Kemenag, December 2020), the Sun's
-     * centre 1 deg below the horizon at sunrise and sunset, ihtiyat 2 minutes (sunrise -2) rounded up (as documented by
-     * BHR Mimika after Kemenag); Dhuhr 3 minutes after transit (the documented 2 and one more, found in Kemenag's own
-     * tables). Fitted on Jakarta January-June 2026, checked on the rest of the year and on Makassar and Medan.
+     * centre 1 deg below the horizon at sunrise and sunset (one academic source, a UINSA thesis), ihtiyat 2 minutes
+     * (sunrise -2) as documented (BHR Mimika, after Kemenag); the rounding up, and Dhuhr 3 minutes after transit (the
+     * documented 2 and one more), were found in Kemenag's own tables. Fitted on Jakarta January-June 2026, checked on
+     * the rest of the year and on Makassar and Medan.
      */
     val INDONESIA = CalculationProfile(
         id = "kemenag", nameEn = "Indonesia — Kemenag", nameAr = "إندونيسيا — وزارة الشؤون الدينية",
