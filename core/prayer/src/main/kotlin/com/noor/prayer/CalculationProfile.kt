@@ -15,6 +15,13 @@ data class CalculationProfile(
     val ishaMinutesAfterMaghribRamadan: Int? = null,
     /** Maghrib depression angle (Tehran style), or null for sunset. */
     val maghribAngle: Double? = null,
+    /**
+     * Moonsighting Committee Worldwide's seasonal twilight, with this shafaq for Isha: Fajr is never earlier, and Isha
+     * never later, than a number of minutes from sunrise / sunset that depends on latitude and season
+     * ([MoonsightingSeason]); above 55° N a seventh of the night. It replaces the user's high-latitude rule.
+     * Null = plain angles.
+     */
+    val seasonalTwilight: Shafaq? = null,
     val asrSchool: AsrSchool = AsrSchool.STANDARD,
     /** Extra horizon depression (deg) for sunrise and sunset, beyond the Sun's radius and 34' refraction. */
     val horizonExtraDeg: Double = 0.0,
