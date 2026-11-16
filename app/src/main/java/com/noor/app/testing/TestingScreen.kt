@@ -129,6 +129,26 @@ fun TestingScreen(
     }
 }
 
+/**
+ * A strip over the tab bar while the tester's options are on, on every page: what is being shown, and a tap to go back
+ * to the real sky. So that a test sky is never taken for the real one.
+ */
+@Composable
+fun TesterBanner() {
+    val t = Tester
+    if (!t.on) return
+    val what = t.demoLabel ?: buildList {
+        t.time?.let { add(if (t.playing) "day running, ${clock(it)}" else clock(it)) }
+        t.year?.let { y -> add(Tester.SEASONS.minByOrNull { kotlin.math.abs(it.second - y) }!!.first.lowercase()) }
+        t.weather?.let { add(Tester.WEATHER_NAMES[it].lowercase()) }
+        t.fog?.let { if (it > 0f) add("fog") }
+    }.joinToString(", ").ifEmpty { "on" }
+    Surface(color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth().clickable { t.reset() }) {
+        Text("Testing: $what  ·  tap for the real sky", Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onTertiaryContainer, maxLines = 1)
+    }
+}
+
 @Composable
 private fun Card(content: @Composable () -> Unit) {
     Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f), modifier = Modifier.fillMaxWidth()) {

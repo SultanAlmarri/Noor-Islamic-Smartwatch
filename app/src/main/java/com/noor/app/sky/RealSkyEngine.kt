@@ -70,6 +70,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
     fun attach(st: SurfaceTexture, w: Int, h: Int) {
         synchronized(lock) { surface = st; surfaceW = w; surfaceH = h; surfaceChanged = true; visible = true; lock.notifyAll() }
+        if (!shown) RealSky.waiting(true)
     }
 
     fun resize(w: Int, h: Int) { synchronized(lock) { surfaceW = w; surfaceH = h; lock.notifyAll() } }
@@ -79,6 +80,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         synchronized(lock) {
             if (surface !== st) return
             surface = null; surfaceChanged = true; visible = false
+            RealSky.waiting(false)
             // Leaving before the first picture was shown is not a failed start.
             if (attempting && !firstShown) { attempting = false; RealSky.cancelAttempt(app) }
             lock.notifyAll()
@@ -753,7 +755,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         val sceneDue = busyNow || lively || !shown || fade < 1f || now - lastScene >= (if (water) tier.waterMs else tier.stillMs)
         if (!sceneDue) return false
         lastScene = now
-        if (!shown) { shown = true; Log.i(TAG, "Pictures read: ${f.biome.id}, ${now - landBegan} ms") }
+        if (!shown) { shown = true; RealSky.waiting(false); Log.i(TAG, "Pictures read: ${f.biome.id}, ${now - landBegan} ms") }
         // It comes in out of the page's colour: with the opening when there is one, otherwise over a few frames.
         ramp = if (f.still) 1f else min(1f, ramp + 0.10f)
         fade = min(f.fade, ramp)

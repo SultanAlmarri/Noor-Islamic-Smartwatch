@@ -92,6 +92,8 @@ object Opening {
 
     /** When Noor comes back after this long in the background, the home screen comes in again (without the veil). */
     const val RETURN_AFTER_MS = 15 * 60_000L
+    /** How long the dusk may wait, closed, for the real sky's first picture (ms). */
+    const val HOLD_MAX_MS = 700f
     /** Without the veil there is nothing to wait for: the home screen's parts come in this much earlier. */
     const val NO_VEIL_LEAD_MS = 500
 
@@ -186,12 +188,19 @@ class OpeningState(mode: OpeningMode = OpeningMode.NONE, veil: Boolean = true) {
         if (!started) withTimeoutOrNull(450) { snapshotFlow { started }.first { it } }
         started = true
         var last = withFrameNanos { it }
+        var held = 0f
         while (elapsed.floatValue < totalMs) {
             val now = withFrameNanos { it }
             // (A frame that took long, the first ones of a cold start, does not eat the animation: at most 34 ms a frame.)
             val dt = ((now - last) / 1e6f).coerceIn(0f, 34f)
             last = now
-            elapsed.floatValue = (elapsed.floatValue + dt * if (skipped) 8f else 1f).coerceAtMost(totalMs.toFloat())
+            var next = (elapsed.floatValue + dt * if (skipped) 8f else 1f).coerceAtMost(totalMs.toFloat())
+            // The dusk does not open before there is a scene behind it: while the real sky is still reading its first
+            // picture the clock waits where the iris would begin, for at most HOLD_MAX_MS (then it opens anyway, onto
+            // the waiting sky, as before 0.14). A touch ends the wait.
+            if (veil && mode == OpeningMode.FULL && !skipped && elapsed.floatValue <= Opening.IRIS_AT && next > Opening.IRIS_AT &&
+                com.noor.app.sky.RealSky.waitingForPicture.value && held < Opening.HOLD_MAX_MS) { held += dt; next = Opening.IRIS_AT.toFloat() }
+            elapsed.floatValue = next
         }
     }
 

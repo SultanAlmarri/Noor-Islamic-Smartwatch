@@ -67,6 +67,10 @@
     <string name="hijri_adjust">التاريخ الهجري</string>
     <string name="hijri_adjust_value">التعديل: %1$s أيام</string>
     <string name="settings_about">حول التطبيق</string>
+    <string name="settings_testing">الاختبار</string>
+    <string name="testing_row">خيارات الاختبار</string>
+    <string name="testing_row_note">الوقت والفصل والطقس والضباب وعرض تجريبي. تُحذف قبل الإصدار.</string>
+    <string name="kw_testing">اختبار تجربة عرض مطور فصل وقت طقس ضباب</string>
     <string name="about_accuracy">دقة مواقيت الصلاة</string>
     <string name="about_version">إصدار التطبيق %1$s</string>
     <string name="search_city">ابحث عن مدينة</string>

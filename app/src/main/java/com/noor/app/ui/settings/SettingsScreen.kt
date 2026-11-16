@@ -214,8 +214,9 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         add(SettingRow(R.string.settings_watch, Icons.Rounded.Watch, stringResource(R.string.settings_watch_row), null, stringResource(R.string.kw_watch), { onOpenRoute(Routes.WATCH) }))
         add(SettingRow(R.string.settings_about, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), null, stringResource(R.string.kw_accuracy), onOpenAccuracy))
         add(SettingRow(R.string.settings_about, Icons.Rounded.Info, stringResource(R.string.about_version, BuildConfigInfo.versionName), null, "", null))
-        // (A group of its own for testing goes here, after About: rows with their own group title come out as a
-        // separate group at the end of the page, and are found by search like every other row.)
+        // Testing only (0.14): to be removed before release, with com.noor.app.testing (the owner's word).
+        add(SettingRow(R.string.settings_testing, Icons.Rounded.Tune, stringResource(R.string.testing_row), stringResource(R.string.testing_row_note),
+            stringResource(R.string.kw_testing), { onOpenRoute(Routes.TESTING) }))
     }
     val footers = mapOf(
         R.string.settings_calculation to basisText,

@@ -108,6 +108,14 @@ object RealSky {
     private const val K_TIER = "real_sky_tier"
     private const val TAG = "NoorRealSky"
 
+    /**
+     * (0.14) The renderer has a surface and has not yet put its first picture on it: the opening holds its dusk closed
+     * over that moment (a short while at most: Opening.drive), so it opens onto the scene and not onto the waiting sky.
+     */
+    val waitingForPicture = androidx.compose.runtime.mutableStateOf(false)
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    internal fun waiting(now: Boolean) { main.post { waitingForPicture.value = now } }
+
     /** 0 = may be used, 1 = cannot be used on this phone (observed by the home screen). */
     val unusable = mutableIntStateOf(-1)
     /** The quality chosen in Settings. */

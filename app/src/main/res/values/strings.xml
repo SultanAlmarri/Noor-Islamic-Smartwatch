@@ -67,6 +67,11 @@
     <string name="hijri_adjust">Hijri date</string>
     <string name="hijri_adjust_value">Adjustment: %1$s days</string>
     <string name="settings_about">About</string>
+    <!-- Testing only (0.14): to be removed before release, with com.noor.app.testing. -->
+    <string name="settings_testing">Testing</string>
+    <string name="testing_row">Tester\'s options</string>
+    <string name="testing_row_note">Time, season, weather, fog, a demo. Removed before release.</string>
+    <string name="kw_testing">test tester demo developer debug season time weather fog</string>
     <string name="about_accuracy">Prayer-time accuracy</string>
     <string name="about_version">App version %1$s</string>
     <string name="search_city">Search cities</string>

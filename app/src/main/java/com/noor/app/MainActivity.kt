@@ -205,6 +205,8 @@ internal object Routes {
     const val CITIES = "cities"
     const val ACCURACY = "accuracy"
     const val SCENERY = "scenery"
+    /** Testing only (0.14): to be removed before release, with com.noor.app.testing. */
+    const val TESTING = "testing"
     const val ADHAN = "adhan"
     const val ADHAN_PRAYER = "adhan/prayer/{p}"
     const val ADHAN_LIBRARY = "adhan/library"
@@ -264,7 +266,13 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
 
     Scaffold(
         containerColor = Color.Transparent,
-        bottomBar = { if (topLevel) NoorTabBar(route, ::openTab) },
+        bottomBar = {
+            Column {
+                // (Testing only, 0.14: says so on every page while the tester's options change what the sky shows.)
+                com.noor.app.testing.TesterBanner()
+                if (topLevel) NoorTabBar(route, ::openTab)
+            }
+        },
     ) { padding ->
         val content = PaddingValues(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())
         NavHost(
@@ -312,6 +320,15 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             }
             composable(Routes.ACCURACY) { AccuracyScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.SCENERY) { com.noor.app.ui.settings.SceneryScreen(content, onBack = { nav.popBackStack() }) }
+            // Testing only (0.14): to be removed before release.
+            composable(Routes.TESTING) {
+                val vm: com.noor.app.ui.settings.SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+                val s = vm.settings.collectAsState().value
+                com.noor.app.testing.TestingScreen(
+                    content, scenery = s?.scenery ?: com.noor.app.data.Scenery.AUTO, setScenery = { vm.setScenery(it) },
+                    onBack = { nav.popBackStack() }, onShowHome = { openTab(Routes.PRAYERS) }, onOpenLocation = { nav.navigate(Routes.CITIES) },
+                )
+            }
         }
     }
 }
