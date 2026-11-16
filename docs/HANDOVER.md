@@ -1042,6 +1042,10 @@ to change)
   three of eight pictures).
 - Software renders of every screen (`ScreenshotTest`, 62 pictures; the opening frame by frame): looked at by the
   helper and by the lead.
+- GitHub's build of `main` (run 43852204944, 16 November 2026, commit `6463d4a`: every test, both APKs, the watch
+  face's validation; `dev-latest` republished: the phone link was downloaded and reads 0.14.0, versionCode 28,
+  the watch link 0.9.12). The Adhan test on emulators (`device-alerts.yml`, run 43852204892) passed on the same
+  commit.
 
 **What was not tested**
 
