@@ -535,4 +535,18 @@
     <string name="widget_sky_name">Noor sky</string>
     <string name="widget_sky_desc">The sky over your place now — weather, scenery and the Sun’s path with the prayers — and the next prayer</string>
     <string name="widget_choose_place">Open Noor to choose your place</string>
+    <!-- 0.14: the interface -->
+    <string name="back">Back</string>
+    <string name="decrease">Decrease</string>
+    <string name="increase">Increase</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_language">Language and numbers</string>
+    <string name="adhan_attention">Needs your attention</string>
+    <string name="adhan_prayers_footer">Tap a prayer to choose its Adhan or sound. The switch turns that prayer’s alert on or off.</string>
+    <string name="today_row_alert">Alert: %1$s</string>
+    <string name="today_row_open">Alert settings</string>
+    <string name="opening_skip">Skip</string>
+    <string name="size_megabytes">%1$s MB</string>
+    <string name="adhan_master_off_here">Prayer alerts are off, so this prayer will not alert.</string>
+    <string name="adhan_turn_on">Turn on prayer alerts</string>
 </resources>

@@ -147,11 +147,7 @@ fun WatchContent(
     preview: WatchPreviewState? = null,
 ) {
     val c = NoorTheme.colors
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = Noor.ScreenPadding),
-        verticalArrangement = Arrangement.spacedBy(Noor.Gap),
-    ) {
-        ScreenTitle(stringResource(R.string.watch_title))
+    com.noor.app.ui.components.NoorPage(stringResource(R.string.watch_title), contentPadding, spacing = 20.dp) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             WatchPreview(preview, description = stringResource(R.string.watch_preview_desc))
         }
@@ -188,7 +184,6 @@ fun WatchContent(
             SettingsDivider()
             SettingsItem(Icons.Rounded.Palette, stringResource(R.string.watch_feature_editor), stringResource(R.string.watch_feature_editor_desc), null)
         }
-        Spacer(Modifier.height(12.dp))
     }
 }
 
@@ -199,7 +194,7 @@ private fun WatchCard(
 ) {
     val c = NoorTheme.colors
     fun clock(ms: Long) = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).let { f.timeText(it.hour * 60 + it.minute) }
-    GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
+    GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 20.dp) {
         // Header: watch and connection
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(c.gold.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
@@ -212,9 +207,9 @@ private fun WatchCard(
                     Box(Modifier.size(7.dp).clip(CircleShape).background(if (connected) c.success else c.textMuted))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(if (connected) R.string.watch_connected_short else R.string.watch_not_connected_short),
-                        style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+                        style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
                     report?.let {
-                        Text("  ·  Wear OS " + WatchViewModel.wearOsName(it.sdkInt), style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+                        Text("  ·  Wear OS " + WatchViewModel.wearOsName(it.sdkInt), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textMuted)
                     }
                 }
             }
@@ -296,9 +291,8 @@ private fun WatchCard(
         }
         if (hasNoor && connected) {
             Hairline()
-            TextButton(onClick = { actions.open(node.id) }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                Text(stringResource(R.string.watch_open_on_watch), color = c.goldText)
-            }
+            com.noor.app.ui.components.NoorButton(stringResource(R.string.watch_open_on_watch), { actions.open(node.id) }, Modifier.fillMaxWidth(),
+                kind = com.noor.app.ui.components.ButtonKind.Plain)
         }
     }
 }
@@ -319,9 +313,9 @@ private fun Step(n: Int, done: Boolean, title: String, body: String, working: Bo
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = c.textPrimary)
+            Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = c.textPrimary)
             Spacer(Modifier.height(2.dp))
-            Text(body, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+            Text(body, style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
             Box(Modifier.padding(top = 4.dp)) { action() }
         }
     }
@@ -330,10 +324,7 @@ private fun Step(n: Int, done: Boolean, title: String, body: String, working: Bo
 @Composable
 private fun PrimaryButton(text: String, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    Button(onClick = onClick, shape = RoundedCornerShape(14.dp), modifier = Modifier.padding(top = 6.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = c.gold, contentColor = c.onGold)) {
-        Text(text, style = MaterialTheme.typography.titleSmall)
-    }
+    com.noor.app.ui.components.NoorButton(text, onClick, Modifier.padding(top = 8.dp))
 }
 
 @Composable
@@ -345,7 +336,7 @@ private fun SecondaryButton(text: String, onClick: () -> Unit) {
 @Composable
 private fun EmptyCard(title: String, body: String) {
     val c = NoorTheme.colors
-    GlassCard(Modifier.fillMaxWidth()) {
+    GlassCard(Modifier.fillMaxWidth(), corner = 20.dp) {
         Header(Icons.Rounded.Watch, title, null)
         Spacer(Modifier.height(8.dp))
         Text(body, style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)

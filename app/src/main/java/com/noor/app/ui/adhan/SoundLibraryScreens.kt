@@ -63,6 +63,10 @@ import com.noor.app.R
 import com.noor.app.ui.components.GlassCard
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.settings.SettingsDivider
+import com.noor.app.ui.settings.SettingsSection
+import com.noor.app.ui.components.NoorPage
+import com.noor.app.ui.components.NoorSearchField
+import com.noor.app.ui.components.ChoiceChips
 import com.noor.app.ui.theme.NoorTheme
 import com.noor.app.util.Formatter
 
@@ -89,7 +93,8 @@ fun SoundLibraryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
     val favs = s.alerts.favourites
     var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     var filter by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("all") }
-    var open by remember { mutableStateOf<SoundEntry?>(null) }
+    var openId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    val open = openId?.let { lib.byId(it) }
     val countries = lib.adhans.mapNotNull { it.countryEn }.toSet().size
 
     val shown = lib.adhans.filter { e ->
@@ -104,57 +109,37 @@ fun SoundLibraryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
         q.isEmpty() || listOfNotNull(e.title(ar), e.place(ar), e.country(ar), e.note(ar), e.credit?.author).joinToString(" ").lowercase().contains(q)
     }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        BackHeader(stringResource(R.string.adhan_library), onBack)
-        Footnote(stringResource(R.string.lib_intro, f.number(lib.adhans.size), f.number(countries)))
-        OutlinedTextField(
-            value = query, onValueChange = { query = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(stringResource(R.string.lib_search), color = c.textMuted) },
-            leadingIcon = { Icon(Icons.Rounded.Search, null, tint = c.textMuted) },
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedBorderColor = c.gold, unfocusedBorderColor = c.outline, cursorColor = c.gold,
-                focusedContainerColor = c.surface, unfocusedContainerColor = c.surface, focusedTextColor = c.textPrimary, unfocusedTextColor = c.textPrimary),
-        )
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            val chips = listOf("all" to R.string.lib_filter_all, "fav" to R.string.lib_filter_favourites) +
-                REGIONS.filter { (r, _) -> lib.adhans.any { it.region == r } } + listOf("fajr" to R.string.adhan_cat_fajr)
-            chips.forEach { (key, label) ->
-                androidx.compose.material3.FilterChip(selected = filter == key, onClick = { filter = key },
-                    label = { Text(stringResource(label)) },
-                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = c.gold, selectedLabelColor = c.onGold, labelColor = c.textSecondary))
-            }
-        }
+    StopPreviewOnLeave(vm)
+    NoorPage(stringResource(R.string.adhan_library), contentPadding, onBack = onBack, spacing = 16.dp) {
+        NoorSearchField(query, { query = it }, stringResource(R.string.lib_search))
+        // One line of filters, scrolling sideways (0.14; they wrapped into three ragged lines before).
+        val chips = listOf("all" to R.string.lib_filter_all, "fav" to R.string.lib_filter_favourites) +
+            REGIONS.filter { (r, _) -> lib.adhans.any { it.region == r } } + listOf("fajr" to R.string.adhan_cat_fajr)
+        ChoiceChips(chips.map { (key, label) -> key to stringResource(label) }, filter, { filter = it })
         if (shown.isEmpty()) {
             Text(stringResource(if (filter == "fav" && query.isBlank()) R.string.lib_no_favourites else R.string.lib_nothing), style = MaterialTheme.typography.bodyMedium,
-                color = c.textSecondary, modifier = Modifier.padding(horizontal = 12.dp))
-        } else GlassCard(Modifier.fillMaxWidth(), padding = 4.dp) {
+                color = c.textSecondary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+        } else SettingsSection("", footer = stringResource(R.string.lib_favourites_hint)) {
             shown.forEachIndexed { i, e ->
                 if (i > 0) SettingsDivider()
                 LibraryRow(e, f, ar, favourite = e.id in favs, playing = preview?.id == e.id, onPlay = { vm.previewLibrary(e.id, short = !e.hasFullRecording) },
-                    onFavourite = { vm.toggleFavourite(e.id) }, onOpen = { open = e })
+                    onFavourite = { vm.toggleFavourite(e.id) }, onOpen = { openId = e.id })
             }
         }
-        Footnote(stringResource(R.string.lib_favourites_hint))
+        Footnote(stringResource(R.string.lib_intro, f.number(lib.adhans.size), f.number(countries)))
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.adhan_cat_sounds).uppercase(), style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.1.sp), color = c.textMuted, modifier = Modifier.padding(start = 16.dp))
-            GlassCard(Modifier.fillMaxWidth(), padding = 4.dp) {
-                lib.sounds.forEachIndexed { i, e ->
-                    if (i > 0) SettingsDivider()
-                    SoundRow(e.title(ar), f.duration(e.seconds), false, preview == PreviewKey(e.id, false), stringResource(R.string.adhan_preview), null,
-                        { vm.previewLibrary(e.id, false) })
-                }
+        Spacer(Modifier.height(4.dp))
+        SettingsSection(stringResource(R.string.adhan_cat_sounds), footer = stringResource(R.string.adhan_sounds_credit)) {
+            lib.sounds.forEachIndexed { i, e ->
+                if (i > 0) SettingsDivider()
+                SoundRow(e.title(ar), f.duration(e.seconds), false, preview == PreviewKey(e.id, false), stringResource(R.string.adhan_preview), null,
+                    { vm.previewLibrary(e.id, false) })
             }
-            Footnote(stringResource(R.string.adhan_sounds_credit))
         }
-        Spacer(Modifier.height(12.dp))
     }
 
     open?.let { e ->
-        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { open = null }, containerColor = c.surface, contentColor = c.textPrimary) {
+        com.noor.app.ui.components.NoorSheet({ openId = null }, androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
                 AdhanCard(e, f, ar, preview, vm, favourite = e.id in favs)
             }
@@ -166,10 +151,10 @@ fun SoundLibraryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
 @Composable
 private fun LibraryRow(e: SoundEntry, f: Formatter, ar: Boolean, favourite: Boolean, playing: Boolean, onPlay: () -> Unit, onFavourite: () -> Unit, onOpen: () -> Unit) {
     val c = NoorTheme.colors
-    Row(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).clickable(onClick = onOpen).padding(horizontal = 8.dp, vertical = 8.dp),
+    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically) {
         PreviewButton(playing, stringResource(R.string.adhan_preview), onPlay)
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(e.title(ar), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary, maxLines = 1,
@@ -181,7 +166,7 @@ private fun LibraryRow(e: SoundEntry, f: Formatter, ar: Boolean, favourite: Bool
                 }
             }
             val len = if (e.hasFullRecording) f.duration(e.seconds) else stringResource(R.string.adhan_opening_only) + " · " + f.duration(e.shortSeconds ?: 0.0)
-            Text(listOfNotNull(e.place(ar)?.let(f::digits), len).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
+            Text(listOfNotNull(e.place(ar)?.let(f::digits), len).joinToString(" · "), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary,
                 maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
         IconButton(onClick = onFavourite) {
@@ -259,7 +244,7 @@ fun MySoundsScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: AdhanV
     val f = Formatter(ar, s.numerals, s.timeFormat)
     val c = NoorTheme.colors
     val snackbar = remember { SnackbarHostState() }
-    var replaceTarget by remember { mutableStateOf<String?>(null) }
+    var replaceTarget by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var renaming by remember { mutableStateOf<CustomSound?>(null) }
     var deleting by remember { mutableStateOf<CustomSound?>(null) }
 
@@ -269,63 +254,53 @@ fun MySoundsScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: AdhanV
         replaceTarget = null
     }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            BackHeader(stringResource(R.string.adhan_my_sounds), onBack)
-            if (custom.isEmpty()) {
-                // Empty state: what this is for, and the one thing to do.
-                Column(Modifier.fillMaxWidth().padding(top = 36.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(84.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.gold.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.GraphicEq, null, tint = c.gold, modifier = Modifier.size(38.dp))
-                    }
-                    Spacer(Modifier.height(18.dp))
-                    Text(stringResource(R.string.adhan_custom_empty_title), style = MaterialTheme.typography.titleLarge, color = c.textPrimary)
-                    Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.adhan_custom_empty), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 12.dp))
+    StopPreviewOnLeave(vm)
+    NoorPage(stringResource(R.string.adhan_my_sounds), contentPadding, onBack = onBack,
+        floating = { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
+        if (custom.isEmpty()) {
+            // Empty state: what this is for, and the one thing to do.
+            Column(Modifier.fillMaxWidth().padding(top = 36.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(84.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.gold.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.GraphicEq, null, tint = c.gold, modifier = Modifier.size(38.dp))
                 }
+                Spacer(Modifier.height(18.dp))
+                Text(stringResource(R.string.adhan_custom_empty_title), style = MaterialTheme.typography.titleLarge, color = c.textPrimary)
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.adhan_custom_empty), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 12.dp))
             }
-            Button(onClick = { replaceTarget = null; picker.launch(CustomSounds.PICKER_TYPES) },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                modifier = if (custom.isEmpty()) Modifier.fillMaxWidth().height(52.dp) else Modifier,
-                colors = ButtonDefaults.buttonColors(containerColor = c.gold, contentColor = c.onGold)) {
-                Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.adhan_import), style = MaterialTheme.typography.titleSmall)
-            }
-            if (custom.isNotEmpty()) GlassCard(Modifier.fillMaxWidth(), padding = 4.dp) {
-                custom.forEachIndexed { i, cs ->
-                    if (i > 0) SettingsDivider()
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.weight(1f)) {
-                            SoundRow(cs.name, f.duration(cs.seconds) + " · " + f.digits("%.1f".format(cs.bytes / 1_048_576.0)) + " MB",
-                                false, preview == PreviewKey(cs.id, false), stringResource(R.string.adhan_preview), null, { vm.previewCustom(cs.id) })
-                        }
-                        var menu by remember { mutableStateOf(false) }
-                        Box {
-                            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.adhan_more), tint = c.textSecondary) }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.adhan_rename)) }, onClick = { menu = false; renaming = cs })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.adhan_replace)) }, onClick = {
-                                    menu = false; replaceTarget = cs.id; picker.launch(CustomSounds.PICKER_TYPES)
-                                })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.adhan_delete), color = c.danger) }, onClick = { menu = false; deleting = cs })
-                            }
-                        }
-                    }
-                }
-            }
-            Footnote(stringResource(R.string.adhan_custom_privacy))
-            Spacer(Modifier.height(12.dp))
         }
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding))
+        if (custom.isNotEmpty()) SettingsSection("", footer = stringResource(R.string.adhan_custom_privacy)) {
+            custom.forEachIndexed { i, cs ->
+                if (i > 0) SettingsDivider()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        SoundRow(cs.name, f.duration(cs.seconds) + " · " + stringResource(R.string.size_megabytes, f.digits("%.1f".format(java.util.Locale.ROOT, cs.bytes / 1_048_576.0))),
+                            false, preview == PreviewKey(cs.id, false), stringResource(R.string.adhan_preview), null, { vm.previewCustom(cs.id) })
+                    }
+                    var menu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.adhan_more), tint = c.textSecondary) }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.surfaceRaised) {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.adhan_rename), color = c.textPrimary) }, onClick = { menu = false; renaming = cs })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.adhan_replace), color = c.textPrimary) }, onClick = {
+                                menu = false; replaceTarget = cs.id; picker.launch(CustomSounds.PICKER_TYPES)
+                            })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.adhan_delete), color = c.danger) }, onClick = { menu = false; deleting = cs })
+                        }
+                    }
+                }
+            }
+        }
+        com.noor.app.ui.components.NoorButton(stringResource(R.string.adhan_import), { replaceTarget = null; picker.launch(CustomSounds.PICKER_TYPES) },
+            Modifier.fillMaxWidth(), icon = Icons.Rounded.Add)
+        if (custom.isEmpty()) Footnote(stringResource(R.string.adhan_custom_privacy))
     }
 
     renaming?.let { cs ->
         var name by remember(cs.id) { mutableStateOf(cs.name) }
         AlertDialog(
-            onDismissRequest = { renaming = null },
+            onDismissRequest = { renaming = null }, containerColor = c.surface, titleContentColor = c.textPrimary, textContentColor = c.textSecondary,
             title = { Text(stringResource(R.string.adhan_rename)) },
             text = { OutlinedTextField(name, { name = it.take(60) }, label = { Text(stringResource(R.string.adhan_name)) }, singleLine = true) },
             confirmButton = { TextButton(onClick = { vm.renameSound(cs.id, name); renaming = null }, enabled = name.isNotBlank()) { Text(stringResource(R.string.adhan_save), color = c.goldText) } },
@@ -335,7 +310,7 @@ fun MySoundsScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: AdhanV
     deleting?.let { cs ->
         val users = vm.usersOf(cs.id)
         AlertDialog(
-            onDismissRequest = { deleting = null },
+            onDismissRequest = { deleting = null }, containerColor = c.surface, titleContentColor = c.textPrimary, textContentColor = c.textSecondary,
             title = { Text(stringResource(R.string.adhan_delete_confirm, cs.name)) },
             text = { if (users.isNotEmpty()) Text(stringResource(R.string.adhan_delete_used, users.joinToString("، ".takeIf { ar } ?: ", ") { f.prayerName(it) })) },
             confirmButton = { TextButton(onClick = { vm.deleteSound(cs.id); deleting = null }) { Text(stringResource(R.string.adhan_delete), color = c.danger) } },

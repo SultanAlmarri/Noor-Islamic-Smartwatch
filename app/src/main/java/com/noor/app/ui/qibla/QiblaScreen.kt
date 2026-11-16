@@ -28,7 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -133,7 +133,7 @@ fun QiblaContent(
             subtitle = if (place != null && q != null) (if (ar) place.nameAr ?: place.nameEn else place.nameEn) + "  ·  " + stringResource(R.string.qibla_distance, f.kilometres(q.distanceKm)) else null,
             leading = place?.countryCode?.let { cc -> Flags.emoji(cc)?.let { e -> { Text(e, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp)) } } })
         if (place == null || q == null) {
-            GlassCard(Modifier.fillMaxWidth().clickable(onClick = onOpenLocation)) {
+            GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onOpenLocation)) {
                 Text(stringResource(R.string.qibla_needs_location), style = MaterialTheme.typography.bodyLarge, color = c.textSecondary)
             }
             return@Column
@@ -218,7 +218,7 @@ internal fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: ()
     val c = NoorTheme.colors
     val shown = reading.assessment
     val label = accuracyLabel(shown)
-    GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(onClick = onCalibrate), padding = 18.dp) {
+    GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onCalibrate), padding = 18.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.acc_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.weight(1f))
             AccuracyMeter(shown, small = false, modifier = Modifier.semantics { contentDescription = label })
@@ -230,7 +230,8 @@ internal fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: ()
             val labels = listOf(R.string.acc_good, R.string.acc_fair, R.string.acc_poor, R.string.acc_calibrate).map { stringResource(it) }
             val slot = with(androidx.compose.ui.platform.LocalDensity.current) { labels.maxOf { measurer.measure(it, style, maxLines = 1).size.width }.toDp() }
             Text(label, style = style, color = accuracyColor(shown), maxLines = 1, modifier = Modifier.width(slot))
-            Icon(Icons.Rounded.ChevronRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
+            // (Mirrored in Arabic since 0.14: it pointed right in both languages.)
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(6.dp))
         val detail = buildList {

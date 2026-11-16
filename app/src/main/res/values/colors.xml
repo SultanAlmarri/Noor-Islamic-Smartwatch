@@ -3,4 +3,6 @@
     <color name="night_900">#FF070D18</color>
     <color name="night_800">#FF0E1726</color>
     <color name="gold_300">#FFE3C27E</color>
+    <!-- The launch screen and the opening's veil: the same as RealSky.WAITING_SKY (a test keeps them equal). -->
+    <color name="noor_dusk">#FF26355C</color>
 </resources>

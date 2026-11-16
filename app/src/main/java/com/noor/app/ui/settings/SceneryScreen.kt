@@ -21,7 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Park
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -91,10 +94,9 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
     val auto = Biome.of(Scenery.AUTO, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
     val chosen = Biome.of(s.scenery, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
     val placeName = place?.let { if (ar) it.nameAr ?: it.nameEn else it.nameEn }
-    Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) {
-        BackHeader(stringResource(R.string.scenery_title), onBack)
+    com.noor.app.ui.components.NoorPage(stringResource(R.string.scenery_title), contentPadding, onBack = onBack, spacing = 0.dp) {
         Text(stringResource(R.string.scenery_intro), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+            modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 12.dp))
         SceneryCard(
             image = sceneryImage(auto), title = stringResource(R.string.scenery_auto),
             subtitle = stringResource(R.string.scenery_auto_now, stringResource(sceneryName(auto)), placeName ?: "—"),
@@ -114,55 +116,32 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
                 }
             }
         }
-        Text(stringResource(R.string.scenery_note), style = MaterialTheme.typography.bodySmall, color = c.textMuted,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+        Text(stringResource(R.string.scenery_note), style = FootnoteStyle, color = c.textMuted,
+            modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 24.dp))
 
-        // The seasons: followed or not (not, unless asked).
-        val shape0 = RoundedCornerShape(18.dp)
-        Row(
-            Modifier.fillMaxWidth().padding(top = 10.dp).clip(shape0).border(0.5.dp, c.separator, shape0).background(c.surface)
-                .clickable { vm.setSeasons(!s.seasons) }.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                Text(stringResource(R.string.scenery_seasons_title), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
-                Text(stringResource(R.string.scenery_seasons_note), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
-            }
-            NoorSwitch(s.seasons) { on -> vm.setSeasons(on) }
+        // The seasons: followed or not (not, unless asked). The stars: where they truly are, or the finest night sky.
+        SettingsSection("") {
+            SettingsSwitch(Icons.Rounded.Park, stringResource(R.string.scenery_seasons_title), stringResource(R.string.scenery_seasons_note), s.seasons) { on -> vm.setSeasons(on) }
+            SettingsDivider()
+            SettingsSwitch(Icons.Rounded.AutoAwesome, stringResource(R.string.scenery_stars_title), stringResource(R.string.scenery_stars_note), s.trueStars) { on -> vm.setTrueStars(on) }
         }
-        // The stars: where they truly are, or the finest night sky (unless asked).
-        Row(
-            Modifier.fillMaxWidth().padding(top = 10.dp).clip(shape0).border(0.5.dp, c.separator, shape0).background(c.surface)
-                .clickable { vm.setTrueStars(!s.trueStars) }.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                Text(stringResource(R.string.scenery_stars_title), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
-                Text(stringResource(R.string.scenery_stars_note), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
-            }
-            NoorSwitch(s.trueStars) { on -> vm.setTrueStars(on) }
-        }
+        Spacer(Modifier.height(24.dp))
 
         // How finely the sky is drawn.
-        Text(stringResource(R.string.sky_graphics_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary,
-            modifier = Modifier.padding(start = 4.dp, top = 14.dp, bottom = 2.dp))
-        Text(stringResource(R.string.sky_graphics_note), style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-        val shape = RoundedCornerShape(18.dp)
-        Column(Modifier.fillMaxWidth().padding(top = 6.dp).clip(shape).border(0.5.dp, c.separator, shape).background(c.surface)) {
-            SkyGraphics.entries.forEach { g ->
+        SettingsSection(stringResource(R.string.sky_graphics_title), footer = stringResource(R.string.sky_graphics_note)) {
+            SkyGraphics.entries.forEachIndexed { i, g ->
                 val on = s.skyGraphics == g
+                if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 16.dp), thickness = 0.5.dp, color = c.separator)
                 Row(
-                    Modifier.fillMaxWidth().semantics { role = Role.RadioButton; selected = on }.clickable { vm.setSkyGraphics(g) }
-                        .padding(horizontal = 16.dp, vertical = 13.dp),
+                    Modifier.fillMaxWidth().heightIn(min = 52.dp).semantics { role = Role.RadioButton; selected = on }.clickable { vm.setSkyGraphics(g) }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(graphicsName(g)), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary, modifier = Modifier.weight(1f))
+                    Text(stringResource(graphicsName(g)), style = MaterialTheme.typography.bodyLarge, color = if (on) c.goldText else c.textPrimary, modifier = Modifier.weight(1f))
                     if (on) Icon(Icons.Rounded.Check, null, tint = c.gold, modifier = Modifier.size(20.dp))
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
     }
 }
 

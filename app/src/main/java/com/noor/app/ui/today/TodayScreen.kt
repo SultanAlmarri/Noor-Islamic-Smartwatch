@@ -3,6 +3,7 @@ package com.noor.app.ui.today
 import androidx.compose.animation.AnimatedContent
 import java.time.temporal.ChronoUnit
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
@@ -49,11 +50,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.NotificationsNone
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.shadow
+import com.noor.app.ui.opening.LocalOpening
+import com.noor.app.ui.opening.Opening
+import com.noor.app.ui.opening.arrives
+import kotlinx.coroutines.flow.first
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -90,6 +100,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -136,13 +147,13 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
-fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpenSource: () -> Unit, vm: TodayViewModel = viewModel()) {
+fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpenSource: () -> Unit, vm: TodayViewModel = viewModel(), onOpenPrayer: (Prayer) -> Unit = {}) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refreshIfStale(); vm.refreshTimetables() }
     val u = ui ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = NoorTheme.colors.gold, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
     }
-    TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource)
+    TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer)
 }
 
 /**
@@ -201,9 +212,13 @@ fun TodayContent(
     previewScrub: Double? = null,
     /** For previews and tests: the moment in the sky's ambient cycle (0–1) to show when animations are off. */
     previewSkyTime: Float? = null,
+    /** A prayer's row was touched (0.14): its alert opens. */
+    onOpenPrayer: (Prayer) -> Unit = {},
 ) {
     val ar = isArabicUi()
-    val f = Formatter(ar, u.settings.numerals, u.settings.timeFormat)
+    // (Kept between the screen's once-a-second updates: a new formatter each second made every row of the day's
+    // times, the date bar and the place look changed, so all of them were worked out again each second. 0.14.)
+    val f = remember(ar, u.settings.numerals, u.settings.timeFormat) { Formatter(ar, u.settings.numerals, u.settings.timeFormat) }
     val today = u.today
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
@@ -281,11 +296,12 @@ fun TodayContent(
                 date = shown, isToday = shown == today, hijri = HijriDate.of(shown, u.settings.hijriAdjust), f = f,
                 canPrev = shown > DateWindow.FIRST, canNext = shown < DateWindow.LAST,
                 onPrev = { step(-1) }, onNext = { step(+1) }, onToday = { go(today) }, onCalendar = { calendarOpen = true },
+                modifier = Modifier.arrives(0, Opening.PANEL_AT),
             )
             HorizontalPager(state = pager, beyondViewportPageCount = 1, pageSpacing = 24.dp, verticalAlignment = Alignment.Top) { page ->
                 val date = DateWindow.dateOf(page)
                 val day = remember(date, u.settings, u.place, u.profile) { dayFor(date) }
-                if (day != null) Timeline(day.day, date, isToday = date == today, u, f, home)
+                if (day != null) Timeline(day.day, date, isToday = date == today, u, f, home, onOpenPrayer)
             }
             // Where the times come from and the method now live in Settings (0.9.2); the home screen is the day itself.
             Spacer(Modifier.height(contentPadding.calculateBottomPadding() + 10.dp))
@@ -293,12 +309,7 @@ fun TodayContent(
             if (calendarOpen) {
                 val c = NoorTheme.colors
                 val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-                ModalBottomSheet(
-                    onDismissRequest = { calendarOpen = false }, sheetState = sheet,
-                    containerColor = c.surface, contentColor = c.textPrimary,
-                    shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
-                    dragHandle = { Box(Modifier.padding(top = 10.dp, bottom = 6.dp).size(width = 36.dp, height = 4.dp).clip(CircleShape).background(c.textMuted.copy(alpha = 0.3f))) },
-                ) {
+                com.noor.app.ui.components.NoorSheet({ calendarOpen = false }, sheet) {
                     CalendarPicker(
                         selected = shown, today = today, hijriAdjust = u.settings.hijriAdjust, f = f,
                         onPick = { picked ->
@@ -365,30 +376,45 @@ private fun SkyHeader(
     // Opening (0.9.6): the day's sky comes in. The scene fades up from the page while the Sun runs, slow at first and
     // settling gently, from the start of the current prayer's time to this moment, so the sky passes through the hours
     // just gone (sunrise into morning, dusk into night); the clouds run fast and slow to their real drift; the land
-    // rises a little; the path and its prayers draw themselves. About two to three seconds, once per launch, and a
-    // brief fade only if the full one was seen in the last half hour. A touch on the sky takes over at once. Only the
-    // scene moves: the prayer, its time and the countdown are the real ones from the first frame.
+    // rises a little; the path and its prayers draw themselves. A drag on the sky takes over at once. The prayer, its
+    // time and the countdown are the real ones from the first frame.
     var intro by remember { mutableStateOf(false) }
-    val opening = remember { Animatable(1f) }
-    val context = androidx.compose.ui.platform.LocalContext.current
-    LaunchedEffect(Unit) {
-        if (ambient && previewScrub == null && !OpeningSky.played) {
-            OpeningSky.played = true
-            val full = OpeningSky.fullDue(context)
+    // 0.14: the sweep is one part of the app's opening (ui/opening): it starts as the dusk of the launch screen begins
+    // to open, so the sky is seen running through the opening; a touch anywhere finishes it. It also runs, on its own,
+    // when Noor comes back after a long while. (Before its first frame the scene is already at its start.)
+    val app = LocalOpening.current
+    val opening = remember { Animatable(if (app.arriving && app.veil && previewScrub == null) 0f else 1f) }
+    LaunchedEffect(app.run) {
+        if (previewScrub == null && app.claimSky()) {
             val now = current.nowFraction.toFloat()
-            val start = if (full) OpeningSky.startFraction(current) else now
-            val ms = if (full) OpeningSky.durationMs(start, now) else OpeningSky.BRIEF_MS
+            val start = OpeningSky.startFraction(current)
+            val ms = Opening.skyMs(start, now)
+            // From the launch screen the scene itself comes in (out of the dusk: it fades up, the path draws itself). On
+            // a return the scene stays as it is, and only the Sun runs to now.
+            val fromDusk = app.veil
             intro = true
-            opening.snapTo(0f)
-            shown.snapTo(start)
             try {
-                launch { opening.animateTo(1f, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
-                shown.animateTo(now, tween(ms, easing = OpeningSky.Ease))
-                if (full) OpeningSky.markFull(context)
+                if (fromDusk) opening.snapTo(0f)
+                shown.snapTo(start)
+                snapshotFlow { app.elapsedMs >= (if (fromDusk) Opening.SKY_AT else 0) || app.skipped }.first { it }
+                kotlinx.coroutines.coroutineScope {
+                    val sweep = launch {
+                        if (fromDusk) launch { opening.animateTo(1f, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
+                        shown.animateTo(now, tween(ms, easing = OpeningSky.Ease))
+                    }
+                    val touch = launch { snapshotFlow { app.skipped }.first { it }; sweep.cancel() }
+                    sweep.join()
+                    touch.cancel()
+                    // A touch asked for the end: the rest of the way in a quarter of a second, still without a jump.
+                    if (app.skipped && !scrubbing) {
+                        launch { opening.animateTo(1f, tween(240)) }
+                        shown.animateTo(current.nowFraction.toFloat(), tween(260, easing = OpeningSky.Ease))
+                    }
+                }
             } finally {
                 intro = false
             }
-        }
+        } else if (opening.value < 1f && !opening.isRunning) opening.snapTo(1f)
     }
     LaunchedEffect(scene.nowFraction) { if (!scrubbing && !shown.isRunning) shown.snapTo(scene.nowFraction.toFloat()) }
     LaunchedEffect(previewScrub) {
@@ -420,12 +446,25 @@ private fun SkyHeader(
         }
     }
 
+    // The opening's light goes to the Sun of this sky, and the dusk opens from there (from the middle of the sky at night).
+    var headerWidth by remember { mutableIntStateOf(0) }
+    val headerPx = with(density) { height.toPx() }
+    if (app.arriving && app.veil && headerWidth > 0) {
+        val focus = remember(scene, layout, headerPx, headerWidth, rtl) {
+            val w = headerWidth.toFloat()
+            val g = SkyGeometry(scene, w, headerPx * layout.horizon, headerPx * layout.arcTop, headerPx * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
+            if (scene.sunElevation > 1.0) Offset(g.x(scene.nowFraction), g.y(scene.sunElevation, scene.nowFraction))
+            else Offset(w / 2f, headerPx * (layout.arcTop + layout.horizon) / 2f)
+        }
+        androidx.compose.runtime.SideEffect { app.focus = focus }
+    }
+
     val elevation = scene.sunElevation.roundToInt()
     val desc = stringResource(if (elevation >= 0) R.string.sky_desc_up else R.string.sky_desc_down, f.number(abs(elevation))) + " " + stringResource(R.string.sky_scrub_hint)
     val totalPx = with(density) { height.toPx() }
 
     Box(
-        Modifier.fillMaxWidth().height(height).pointerInput(rtl) {
+        Modifier.fillMaxWidth().height(height).onSizeChanged { headerWidth = it.width }.pointerInput(rtl) {
             detectHorizontalDragGestures(
                 onDragStart = { o ->
                     scrubbing = true
@@ -456,7 +495,7 @@ private fun SkyHeader(
             },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            PlaceRow(u, f, onOpenLocation, onRefresh, slim = hero.slimPlace)
+            Box(Modifier.arrives(0, Opening.HEADER_AT, lift = 10.dp)) { PlaceRow(u, f, onOpenLocation, onRefresh, slim = hero.slimPlace) }
             Spacer(Modifier.height(2.dp))
             // The next prayer; while the Sun is being drawn along its path, the moment it stands at takes its place.
             val away by animateFloatAsState(if (scrubbing) 1f else 0f, tween(NoorMotion.Standard), label = "scrub")
@@ -475,7 +514,7 @@ private fun SkyHeader(
                             PrayerTitle(f.prayerName(p, d), f.arabic, hero.titleSize, time = if (inline) f.timeAt(shownAt, place.zone) else null, spoken = label)
                         }
                     }
-                    if (hero.sideBySide) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (hero.sideBySide) Row(Modifier.fillMaxWidth().arrives(2, Opening.HEADER_AT, lift = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(0.85f)) {
                             title(false)
                             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -484,8 +523,8 @@ private fun SkyHeader(
                         }
                         Box(Modifier.weight(1.15f)) { Countdown(countdownText, hero.countdownMax) }
                     } else {
-                        title(true)
-                        Countdown(countdownText, hero.countdownMax)
+                        Box(Modifier.arrives(2, Opening.HEADER_AT, lift = 12.dp)) { title(true) }
+                        Box(Modifier.arrives(4, Opening.HEADER_AT, lift = 22.dp)) { Countdown(countdownText, hero.countdownMax) }
                     }
                 }
                 if (away > 0f) {
@@ -584,18 +623,10 @@ internal class SkyDetent(val x: Float, val caught: Pair<Prayer, java.time.Instan
     }
 }
 
-/** The opening (0.9.6): once per launch; in full when none has been seen for half an hour, otherwise a brief fade. */
+/** The sky's sweep in the opening (0.9.6; since 0.14 a part of the app's opening, which decides when it runs). */
 internal object OpeningSky {
-    @Volatile var played = false
-    const val BRIEF_MS = 650
-    private const val FULL_AFTER_MS = 30 * 60_000L
-    private const val PREFS = "noor_ui"
-    private const val KEY = "opening_full_at"
     /** Moves off gently and settles slowly. */
     val Ease = androidx.compose.animation.core.CubicBezierEasing(0.45f, 0f, 0.15f, 1f)
-
-    /** Longer for a longer run of the sky: from just under two seconds to three. */
-    fun durationMs(start: Float, now: Float): Int = (1900 + 1100 * ((now - start) / 0.2f).coerceIn(0f, 1f)).toInt()
 
     /** Where the run starts: the beginning of the current prayer's time, but at least 50 minutes and at most 6 hours back. */
     fun startFraction(scene: SkyScene): Float {
@@ -606,14 +637,6 @@ internal object OpeningSky {
 
     /** Extra seconds of cloud drift during the opening: fast at first, none added by the end (so nothing jumps). */
     fun cloudLapse(p: Float): Float { val q = 1f - p.coerceIn(0f, 1f); return 45f * (1f - q * q * q) - 45f }
-
-    fun fullDue(context: android.content.Context): Boolean = runCatching {
-        System.currentTimeMillis() - context.getSharedPreferences(PREFS, 0).getLong(KEY, 0L) > FULL_AFTER_MS
-    }.getOrDefault(true)
-
-    fun markFull(context: android.content.Context) {
-        runCatching { context.getSharedPreferences(PREFS, 0).edit().putLong(KEY, System.currentTimeMillis()).apply() }
-    }
 }
 
 /** A soft shadow under text on the sky, so white stays crisp on the palest noon sky. */
@@ -656,7 +679,8 @@ private fun Countdown(text: String, maxSp: Float) {
             lineHeight = size * 1.1f, shadow = SkyText.Shadow)
         // Numbers read left to right in Arabic too; only the block's position follows the layout direction.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.semantics(mergeDescendants = true) {}) {
+            // (One thing for TalkBack, read as a time: its digits are drawn one by one only so that they can roll.)
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.clearAndSetSemantics { contentDescription = text }) {
                 RollingText(main, style.copy(color = Sky.OnSky))
                 RollingText(secs, style.copy(color = Sky.OnSky.copy(alpha = 0.5f)))
             }
@@ -686,8 +710,8 @@ private fun PlaceRow(u: TodayUi, f: Formatter, onOpenLocation: () -> Unit, onRef
     Box(Modifier.fillMaxWidth().height(if (slim) 40.dp else 48.dp)) {
         Row(
             Modifier.align(Alignment.Center).padding(horizontal = 52.dp).clip(RoundedCornerShape(50)).background(glass).border(0.5.dp, glassEdge, RoundedCornerShape(50))
-                .clickable(onClickLabel = stringResource(R.string.change_location), onClick = onOpenLocation)
-                .heightIn(min = if (slim) 36.dp else 44.dp)
+                .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = stringResource(R.string.change_location), onClick = onOpenLocation)
+                .heightIn(min = if (slim) 40.dp else 44.dp)
                 .padding(start = 12.dp, end = 10.dp)
                 .semantics(mergeDescendants = true) {},
             verticalAlignment = Alignment.CenterVertically,
@@ -718,13 +742,15 @@ private fun PlaceRow(u: TodayUi, f: Formatter, onOpenLocation: () -> Unit, onRef
 @Composable
 private fun DateBar(
     date: LocalDate, isToday: Boolean, hijri: HijriDate, f: Formatter, canPrev: Boolean, canNext: Boolean,
-    onPrev: () -> Unit, onNext: () -> Unit, onToday: () -> Unit, onCalendar: () -> Unit,
+    onPrev: () -> Unit, onNext: () -> Unit, onToday: () -> Unit, onCalendar: () -> Unit, modifier: Modifier = Modifier,
 ) {
     val c = NoorTheme.colors
     val calendarLabel = stringResource(R.string.open_calendar)
+    Box(modifier.fillMaxWidth()) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
     // On narrow phones the date takes its short form ("Wed 4 Nov 2026") so it stays on one line.
-    val narrow = maxWidth < 380.dp
+    // (0.14: with large text too, where the long form broke the year onto a line of its own.)
+    val narrow = maxWidth < 380.dp || LocalDensity.current.fontScale > 1.15f
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         DayArrow(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.previous_day), canPrev, onPrev)
         // The date itself opens the calendar.
@@ -749,12 +775,24 @@ private fun DateBar(
         DayArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.next_day), canNext, onNext)
     }
     }
-    // "Today" appears only when another date is shown.
-    AnimatedVisibility(!isToday, enter = fadeIn(tween(NoorMotion.Quick)) + expandVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
-        exit = fadeOut(tween(NoorMotion.Quick)) + shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease))) {
-        Box(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp), contentAlignment = Alignment.Center) {
-            com.noor.app.ui.components.PillButton(stringResource(R.string.today), onClick = onToday)
+    // "Today" appears only when another date is shown. 0.14: it floats on the upper edge of the panel, over the foot of
+    // the sky, so the day's times do not move down when it comes (on a short phone that pushed Isha off the screen).
+    androidx.compose.animation.AnimatedVisibility(
+        !isToday, Modifier.align(Alignment.TopCenter).offset(y = (-46).dp),
+        enter = fadeIn(tween(NoorMotion.Quick)) + androidx.compose.animation.scaleIn(spring(dampingRatio = 0.7f, stiffness = 420f), initialScale = 0.8f),
+        exit = fadeOut(tween(NoorMotion.Quick)) + androidx.compose.animation.scaleOut(tween(NoorMotion.Quick), targetScale = 0.85f),
+    ) {
+        val shape = RoundedCornerShape(50)
+        Box(Modifier.heightIn(min = 48.dp).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
+            role = androidx.compose.ui.semantics.Role.Button, onClick = onToday), contentAlignment = Alignment.Center) {
+            Row(Modifier.shadow(6.dp, shape).clip(shape).background(c.surface).border(0.5.dp, c.separator, shape).padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Replay, null, tint = c.goldText, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.today), style = MaterialTheme.typography.labelLarge, color = c.goldText, maxLines = 1)
+            }
         }
+    }
     }
 }
 
@@ -775,7 +813,7 @@ private fun DayArrow(icon: androidx.compose.ui.graphics.vector.ImageVector, labe
  * from the current moment towards the next. Past moments are quiet; the current one is lit.
  */
 @Composable
-private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter, home: HomeLayout) {
+private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter, home: HomeLayout, onOpenPrayer: (Prayer) -> Unit = {}) {
     val c = NoorTheme.colors
     val st = u.state
     val current = if (isToday) st?.current?.takeIf { it.date == date }?.prayer else null
@@ -799,6 +837,9 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
             // Gold fills the line from the current moment's node to the next one's, in step with the time.
             val fillBelow = if (isCurrent && list.getOrNull(i + 1) == next) (fill * 2f).coerceIn(0f, 1f) else 0f
             val fillAbove = if (isNext && list.getOrNull(i - 1) == current) (fill * 2f - 1f).coerceIn(0f, 1f) else 0f
+            // 0.14: the bell says what will happen at this time (the Adhan or a sound, a quiet notification, nothing).
+            val alert = u.settings.alerts.alert(p)
+            val alerting = u.settings.alerts.enabled && alert.enabled
             TimelineRow(
                 p, f.prayerName(p, date), day.minutes[p]?.let { f.time(it) },
                 status = listOfNotNull(
@@ -814,6 +855,11 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
                 lineAboveDone = passed || isCurrent, lineBelowDone = passed, fillAbove = fillAbove, fillBelow = fillBelow, f = f,
                 // Shuruq marks the end of Fajr's time; it is not a prayer, so its row is quieter and slimmer.
                 height = if (p == Prayer.SHURUQ) home.shuruqHeight else home.rowHeight, minor = p == Prayer.SHURUQ,
+                bell = when { !alerting -> Icons.Rounded.NotificationsOff; alert.mode.playsAudio -> Icons.Rounded.NotificationsActive; else -> Icons.Rounded.NotificationsNone },
+                bellOn = alerting,
+                bellText = stringResource(R.string.today_row_alert, stringResource(if (alerting) com.noor.app.ui.adhan.modeLabel(alert.mode) else R.string.adhan_off)),
+                onClick = { onOpenPrayer(p) },
+                modifier = Modifier.arrives(i + 1, Opening.PANEL_AT),
             )
         }
     }
@@ -831,6 +877,8 @@ private fun TimelineRow(
     isCurrent: Boolean, isNext: Boolean, passed: Boolean, first: Boolean, last: Boolean,
     lineAboveDone: Boolean, lineBelowDone: Boolean, fillAbove: Float, fillBelow: Float, f: Formatter,
     height: Dp = 54.dp, minor: Boolean = false,
+    bell: androidx.compose.ui.graphics.vector.ImageVector? = null, bellOn: Boolean = false, bellText: String? = null,
+    onClick: (() -> Unit)? = null, modifier: Modifier = Modifier,
 ) {
     val c = NoorTheme.colors
     val fg = if (passed) c.textMuted else c.textPrimary
@@ -841,7 +889,8 @@ private fun TimelineRow(
         if (rtl) listOf(Color.Transparent, sky.middle.copy(alpha = if (c.isDark) 0.30f else 0.16f)) else listOf(sky.middle.copy(alpha = if (c.isDark) 0.30f else 0.16f), Color.Transparent),
     )
     Row(
-        Modifier.fillMaxWidth().heightIn(min = height).height(androidx.compose.foundation.layout.IntrinsicSize.Min).clip(RoundedCornerShape(20.dp))
+        modifier.fillMaxWidth().heightIn(min = height).height(androidx.compose.foundation.layout.IntrinsicSize.Min).clip(RoundedCornerShape(20.dp))
+            .then(if (onClick != null) Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = stringResource(R.string.today_row_open), onClick = onClick) else Modifier)
             .then(if (isCurrent) Modifier.background(litBg).border(0.75.dp, Brush.horizontalGradient(
                 if (rtl) listOf(Color.Transparent, sky.bottom.copy(alpha = 0.35f)) else listOf(sky.bottom.copy(alpha = 0.35f), Color.Transparent)), RoundedCornerShape(22.dp)) else Modifier)
             .padding(horizontal = 8.dp),
@@ -877,7 +926,9 @@ private fun TimelineRow(
                 color = if (isNext) c.goldText else fg)
             if (time.second != null) Text(" " + time.second, style = MaterialTheme.typography.labelMedium, color = if (passed) c.textMuted else c.textSecondary, modifier = Modifier.padding(bottom = 3.dp))
         }
-        Spacer(Modifier.width(8.dp))
+        if (bell != null) Box(Modifier.width(34.dp), contentAlignment = Alignment.CenterEnd) {
+            Icon(bell, bellText, tint = if (bellOn) c.textSecondary.copy(alpha = if (passed) 0.6f else 0.9f) else c.textMuted.copy(alpha = 0.45f), modifier = Modifier.size(if (minor) 16.dp else 18.dp))
+        } else Spacer(Modifier.width(8.dp))
     }
 }
 

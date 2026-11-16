@@ -559,7 +559,7 @@ private fun MapPane(vm: LocationViewModel, start: GeoPoint?, startZoom: Double, 
         // Top: back and search.
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, null, onBack)
+                RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onBack)
                 Spacer(Modifier.width(8.dp))
                 Box(Modifier.weight(1f)) {
                     SearchField(query, stringResource(R.string.loc_map_search), raised = true, onChange = { query = it; searching = it.isNotBlank(); vm.setQuery(it, ar) })
@@ -710,20 +710,18 @@ internal fun zoneText(zoneId: String, ar: Boolean, f: Formatter, now: Instant = 
 
 @Composable
 private fun Header(title: String, onBack: () -> Unit) {
-    val c = NoorTheme.colors
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.textPrimary) }
-        Text(title, style = MaterialTheme.typography.titleLarge, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
+    com.noor.app.ui.components.NavBar(title, onBack)
 }
 
 @Composable
 private fun SearchField(value: String, hint: String, raised: Boolean = false, onChange: (String) -> Unit) {
     val c = NoorTheme.colors
+    // 0.14: the app's one search field; the map keeps its raised one, which floats over the picture.
+    if (!raised) { com.noor.app.ui.components.NoorSearchField(value, onChange, hint, Modifier.padding(top = 4.dp, bottom = 12.dp)); return }
     TextField(
         value = value, onValueChange = onChange, singleLine = true,
         leadingIcon = { Icon(Icons.Rounded.Search, null, tint = c.textMuted) },
-        trailingIcon = if (value.isNotEmpty()) ({ IconButton(onClick = { onChange("") }) { Icon(Icons.Rounded.Close, null, tint = c.textMuted) } }) else null,
+        trailingIcon = if (value.isNotEmpty()) ({ IconButton(onClick = { onChange("") }) { Icon(Icons.Rounded.Close, stringResource(R.string.settings_search_clear), tint = c.textMuted) } }) else null,
         placeholder = { Text(hint, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         shape = RoundedCornerShape(16.dp),
         colors = TextFieldDefaults.colors(
@@ -738,14 +736,13 @@ private fun SearchField(value: String, hint: String, raised: Boolean = false, on
 @Composable
 private fun OptionRow(icon: ImageVector, title: String, subtitle: String?, selected: Boolean = false, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(38.dp).clip(CircleShape).background(c.gold.copy(alpha = if (c.isDark) 0.16f else 0.12f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = c.goldText, modifier = Modifier.size(20.dp))
-        }
+    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        // 0.14: the same tile and small print as every other list in the app.
+        com.noor.app.ui.settings.IconTile(icon)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = c.textSecondary) }
+            subtitle?.let { Text(it, style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary) }
         }
         if (selected) Box(Modifier.size(10.dp).clip(CircleShape).background(c.success))
         else Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted)
@@ -798,7 +795,7 @@ private fun Loading() = Box(Modifier.fillMaxWidth().padding(24.dp), contentAlign
 @Composable
 private fun RoundButton(icon: ImageVector, description: String?, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    Box(Modifier.size(46.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(c.surfaceRaised).clickable(onClick = onClick)
+    Box(Modifier.size(48.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(c.surfaceRaised).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
         .semantics { if (description != null) contentDescription = description }, contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = c.textPrimary, modifier = Modifier.size(22.dp))
     }

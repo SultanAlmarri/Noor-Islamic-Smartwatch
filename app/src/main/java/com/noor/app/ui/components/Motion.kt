@@ -4,7 +4,9 @@ import android.provider.Settings
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 
 /**
@@ -23,10 +25,15 @@ object NoorMotion {
 /** False when ambient (endless) animations must not run. */
 val LocalAmbientMotion = compositionLocalOf { true }
 
+/** Whether Android's "Remove animations" is off. */
+fun animationsOn(ctx: android.content.Context): Boolean =
+    runCatching { Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) }.getOrDefault(1f) > 0f
+
+/** Read again each time the app comes back, so a change made in Android's settings meanwhile is seen (0.14). */
 @Composable
 fun systemAllowsAmbientMotion(): Boolean {
     val ctx = LocalContext.current
-    return remember(ctx) {
-        runCatching { Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) }.getOrDefault(1f) > 0f
-    }
+    var on by remember(ctx) { androidx.compose.runtime.mutableStateOf(animationsOn(ctx)) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(ctx) { on = animationsOn(ctx); onPauseOrDispose { } }
+    return on
 }

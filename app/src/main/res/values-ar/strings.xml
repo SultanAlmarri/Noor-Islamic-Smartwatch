@@ -541,4 +541,18 @@
     <string name="widget_sky_name">سماء نور</string>
     <string name="widget_sky_desc">السماء فوق مكانك الآن — الطقس والمشهد ومسار الشمس مع الصلوات — والصلاة التالية</string>
     <string name="widget_choose_place">افتح نور لاختيار مكانك</string>
+    <!-- 0.14: the interface -->
+    <string name="back">رجوع</string>
+    <string name="decrease">إنقاص</string>
+    <string name="increase">زيادة</string>
+    <string name="settings_appearance">المظهر</string>
+    <string name="settings_language">اللغة والأرقام</string>
+    <string name="adhan_attention">يحتاج إلى انتباهك</string>
+    <string name="adhan_prayers_footer">اضغط على صلاة لاختيار أذانها أو صوتها. المفتاح يشغّل تنبيه تلك الصلاة أو يوقفه.</string>
+    <string name="today_row_alert">التنبيه: %1$s</string>
+    <string name="today_row_open">إعدادات التنبيه</string>
+    <string name="opening_skip">تخطٍّ</string>
+    <string name="size_megabytes">%1$s م.ب</string>
+    <string name="adhan_master_off_here">تنبيهات الصلاة متوقفة، لذلك لن يُنبَّه لهذه الصلاة.</string>
+    <string name="adhan_turn_on">تشغيل تنبيهات الصلاة</string>
 </resources>

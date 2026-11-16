@@ -52,6 +52,8 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
     var screen by mutableStateOf<(@Composable (PaddingValues) -> Unit)?>(null)
     /** Ambient motion on (animations as on a phone with "Remove animations" off); off by default for still renders. */
     var ambient by mutableStateOf(false)
+    /** The app's opening (0.14), when a test renders it: the home screen and the tab bar take their parts from it, and its veil is drawn over all. */
+    var opening by mutableStateOf<com.noor.app.ui.opening.OpeningState?>(null)
 
     fun start() {
         // No GPU here: the sky is computed on the spot, so every frame shows the sky of its own moment.
@@ -68,6 +70,7 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
                 LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
                 LocalActivityResultRegistryOwner provides rule.activity,
                 LocalDensity provides Density(LocalDensity.current.density, fontScale),
+                com.noor.app.ui.opening.LocalOpening provides (opening ?: com.noor.app.ui.opening.OpeningState.None),
             ) {
                 NoorTheme(theme) {
                     NoorBackground {
@@ -77,6 +80,7 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
                         if (tab != null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                             com.noor.app.NoorTabBar(tab) {}
                         }
+                        opening?.let { com.noor.app.ui.opening.OpeningVeil(it) }
                     }
                 }
             }

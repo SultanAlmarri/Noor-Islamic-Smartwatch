@@ -33,16 +33,9 @@ import com.noor.prayer.Profiles
 fun AccuracyScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
     val ar = isArabicUi()
     val c = NoorTheme.colors
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.textPrimary) }
-            Text(stringResource(R.string.about_accuracy), style = MaterialTheme.typography.titleLarge, color = c.textPrimary)
-        }
+    com.noor.app.ui.components.NoorPage(stringResource(R.string.about_accuracy), contentPadding, onBack = onBack, spacing = 12.dp) {
         GlassCard(Modifier.fillMaxWidth(), highlighted = true) {
-            Text(if (ar) Profiles.DUBAI_IACAD.nameAr else Profiles.DUBAI_IACAD.nameEn, style = MaterialTheme.typography.titleMedium, color = c.gold)
+            Text(if (ar) Profiles.DUBAI_IACAD.nameAr else Profiles.DUBAI_IACAD.nameEn, style = MaterialTheme.typography.titleMedium, color = c.goldText)
             Spacer(Modifier.height(8.dp))
             Text(
                 if (ar) "قورنت الأوقات بـ588 وقتًا رسميًا من الدائرة (أغسطس 2020 – نوفمبر 2026). تطابق 527 منها بالدقيقة (89.6%)، وكل الباقي بفارق دقيقة واحدة فقط. لم يُعدَّل أي يوم بعينه لفرض التطابق. يستمر الاختبار شهريًا مع كل جدول رسمي جديد."
@@ -57,10 +50,9 @@ fun AccuracyScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
                 Text(if (ar) p.validationAr else p.validationEn, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
             }
         }
-        Text(stringResource(R.string.sources_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.padding(top = 8.dp))
+        SectionHeader(stringResource(R.string.sources_title), Modifier.padding(top = 12.dp))
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.sources_body), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
         }
-        Spacer(Modifier.height(12.dp))
     }
 }

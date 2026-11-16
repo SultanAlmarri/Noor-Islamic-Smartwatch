@@ -34,6 +34,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -64,7 +75,8 @@ import com.noor.app.ui.theme.Sky
  */
 @Composable
 fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, onFinished: () -> Unit, vm: SettingsViewModel = viewModel()) {
-    var step by remember { mutableIntStateOf(0) }
+    // (Saved: Android's permission dialog can outlive the activity, and the second step must still be there after it.)
+    var step by rememberSaveable { mutableIntStateOf(0) }
     val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.setBackgroundUpdates(granted); vm.completeOnboarding(); onFinished()
     }
@@ -85,10 +97,13 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         DawnSky(sun.value.toDouble(), Modifier.fillMaxSize())
+        // (It scrolls when it must: a short screen or large text no longer cuts the buttons off. On a wide screen the
+        // words keep a readable width.)
         Column(
-            Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 28.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = maxHeight).padding(contentPadding)
+                .padding(horizontal = 28.dp).wrapContentWidth().widthIn(max = 520.dp),
         ) {
             Spacer(Modifier.weight(0.9f))
             // Wordmark: نور in Kufi is Noor's logo (shown in both languages, like the icon); the Latin name beneath only in English.
@@ -106,7 +121,12 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
                 (fadeIn(tween(NoorMotion.Standard)) + slideInVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) { it / 6 }) togetherWith fadeOut(tween(NoorMotion.Quick))
             }, label = "onboardingStep", modifier = Modifier.graphicsLayer { alpha = intro.value }) { s ->
                 Column {
-                    Text(stringResource(if (s == 0) R.string.perm_title else R.string.bg_perm_title), style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold), color = Sky.OnSky)
+                    // Two steps: where one is.
+                    Row(Modifier.padding(bottom = 14.dp).clearAndSetSemantics { }, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        repeat(2) { i -> Box(Modifier.size(width = if (i == s) 18.dp else 6.dp, height = 6.dp).clip(CircleShape).background(Sky.OnSky.copy(alpha = if (i == s) 0.95f else 0.4f))) }
+                    }
+                    Text(stringResource(if (s == 0) R.string.perm_title else R.string.bg_perm_title), style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold), color = Sky.OnSky,
+                        modifier = Modifier.semantics { heading() })
                     Spacer(Modifier.height(8.dp))
                     Text(stringResource(if (s == 0) R.string.perm_body else R.string.bg_perm_body), style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp), color = Sky.OnSkySecondary)
                     Spacer(Modifier.height(22.dp))
@@ -117,14 +137,14 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
                             else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                             else { vm.setBackgroundUpdates(true); vm.completeOnboarding(); onFinished() }
                         },
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF14204A)),
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
                     ) { Text(stringResource(if (s == 0) R.string.perm_allow else R.string.bg_perm_continue), style = MaterialTheme.typography.titleMedium) }
                     TextButton(onClick = {
                         vm.completeOnboarding()
                         if (s == 0) onChooseCity() else onFinished()
-                    }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
                         Text(stringResource(if (s == 0) R.string.perm_manual else R.string.bg_perm_not_now), color = Sky.OnSkySecondary, style = MaterialTheme.typography.titleSmall)
                     }
                 }
