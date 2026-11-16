@@ -104,8 +104,10 @@ class SoundLibrary(val entries: List<SoundEntry>, private val exists: (String) -
     fun resolve(prayer: Prayer, alert0: PrayerAlert, custom: CustomSounds?, favourites: List<String> = emptyList(),
                 date: java.time.LocalDate = java.time.LocalDate.now()): ResolvedSound? {
         val alert = if (alert0.soundId == SoundIds.RANDOM) alert0.copy(soundId = randomPick(favourites, prayer, date, full = alert0.mode == AlertMode.ADHAN)) else alert0
+        // (The default alert sound; on the phone, which has none since 0.16, the default Adhan's opening.)
         fun fallbackSound(sub: Substitution): ResolvedSound? =
             byId(SoundIds.DEFAULT_SOUND)?.let { e -> e.file?.takeIf(exists)?.let { ResolvedSound(SoundSource.Asset(it), e, null, false, sub) } }
+                ?: byId(SoundIds.DEFAULT_ADHAN)?.let { e -> e.shortFile?.takeIf(exists)?.let { ResolvedSound(SoundSource.Asset(it), e, null, true, sub) } }
 
         fun adhan(short: Boolean): ResolvedSound? {
             var sub: Substitution? = null
