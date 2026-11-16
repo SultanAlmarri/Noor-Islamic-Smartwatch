@@ -48,5 +48,6 @@ class NoorWearApp : Application(), AlertHost {
     override fun onCreate() {
         super.onCreate()
         AlertNotifications.ensureChannels(this)
+        com.noor.wear.studio.StudioStore.enableForDevice(this)
     }
 }

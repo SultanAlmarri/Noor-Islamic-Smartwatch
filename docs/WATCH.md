@@ -11,7 +11,7 @@ been verified. Written for maintainers; the user-facing install guide is [INSTAL
 | **Qibla** (app) | A compass for the wrist: the bezel turns with the world (cardinal letters in English or Arabic), the Kaaba sits on the rim with a beam as wide as the sensor's own uncertainty, a fixed mark at 12 o'clock. Centre: degrees to turn and "Turn right/left", or "Facing the Qibla" (green, success haptic). Hints for tilted wrist and poor calibration; a static bearing on watches without a compass; a plain message inside Makkah. Keeps the screen on for up to 3 minutes, sensors only while visible |
 | **Tasbih** (app) | Whole screen is the button. Tap, or turn the bezel/crown clockwise, to count; counter-clockwise or ↶ to take one back. "After prayer" walks 33 SubhanAllah, 33 Alhamdulillah, 33 Allahu Akbar and the completing tahlil (Sahih Muslim 597); single-phrase presets (33 or 100) and a free counter (mark every 33). Haptics: tick, firmer pulse at a phrase change, celebration at a round. Day total (starts at midnight) and all-time total; stays on the watch. In English the phrase is shown transliterated with its meaning; in Arabic, in Arabic script |
 | **Hijri calendar** (app) | Today's Hijri date large, Gregorian date, day of month; then Ramadan, Eid al-Fitr, Day of Arafah, Eid al-Adha, Islamic New Year, Ashura and the next White Days, each with its date and "in N days". Umm al-Qura with the user's Hijri adjustment, and a note that the actual day can follow local moon sighting |
-| **Settings** (app) | Where the times come from (phone, with "updated X ago" and "Sync with phone"; or this watch, with place), the switch between phone and watch settings, watch-only settings (location, Asr, prayer alerts: on/off, sound, which prayers), the Noor watch face, "Noor for your phone" when no phone app is found, method and version |
+| **Settings** (app) | 0.18: one page whose rows say their state and open the details: Watch face (Minhad Studio and the Minhad faces), where the times come from (Sync right there; the phone or this watch, place, Asr, Hijri adjustment), Prayer alerts (set here when the watch is set up on its own, otherwise what the phone chose and whether the watch is ready), Language and numbers (watch set-up only: language, digits, 12/24-hour clock), "Minhad for your phone" when no phone app is found, method and version. The crown or bezel scrolls every page |
 | **Welcome / Location** (app) | First run without a phone: "Use my location" (watch GPS or the phone's position, named offline) or "Choose a city" (voice/keyboard search across ~34,000 places, plus the curated cities) |
 | **Prayer times tile** | Next prayer, its time, a countdown the watch keeps current itself ("in 1 h 23 min", every minute, rounded up like the app; "Now" if the tile has not switched yet), the two prayers after it; switches at each prayer from a two-day timeline |
 | **Noor tile** | Hijri date, three round shortcuts (Qibla, Tasbih, Calendar; ordered right-to-left in Arabic), today's tasbih count, "Times" edge button |
@@ -71,6 +71,95 @@ pictures; `tools/watchface/build_pushed_face.py` packages all 16 under one packa
 development key and validates each with Google's validator at every build (about 20 s), writing the tokens for the
 watch app. `WatchFacesTest` checks the phone's list of faces against the build's.
 
+## Minhad Studio: the face the user designs (0.18)
+
+The owner asked for "a watch face editor on the phone app, unlike any app in the world": what is shown, the theme,
+colour, font, seconds, the always-on look, and one tap to put it on the watch. The pushed faces above cannot do that:
+each Watch Face Push face is a prebuilt APK with a validation token made at build time. So the studio face is drawn
+by the watch app itself, and the phone's editor shows it with the very same drawing code.
+
+**How it is built.**
+
+| Part | Where | What |
+| --- | --- | --- |
+| The design | `core/prayer/.../face/FaceDesign.kt` | Seven places on the round face (`Slot`: top edge, above, centre, below, bottom edge, left, right), each holding one element (`Element`: time, date, weekday, Hijri date, next prayer, countdown, today's six times, prayer gauge, Sun's arc, Qibla, battery, words), with a size, a colour (the theme's accent/text/soft or one's own) and a touch action (open Minhad, Qibla, tasbih, calendar, nothing); under them hands (classic, slim, bold), marks (dots, minutes, numerals) and an edge (prayer ring or the day's dial); a theme (seven palettes or one's own colours; black, colour, gradient or night-dunes background; Plex Light/Regular/Bold or Reem Kufi); seconds; always-on (dimmed design, time and next prayer as outlines, time only, or chosen places; pixel shift; outlines); language, digits and clock (or as the app). Tolerant `key=value` format like `WatchConfig` |
+| Geometry | `FaceGeometry.kt` | Where each place sits (fractions of the radius); used by the renderer, the editor's taps and drags, and the watch's touch targets |
+| The data | `FaceData.kt` | What the face writes, built from the same `WatchConfig` and engine as the rest of the app (next prayer, countdown rounded up like the app, the interval, the six times, Hijri date with the user's adjustment, Qibla bearing, Sun's place), in the design's language and digits, from Minhad's own word tables (not the platform's locale data, so phone, watch and tests write the same). Rebuilt once a minute or at the next prayer, whichever is sooner |
+| Templates | `FaceTemplates.kt` | Horizon, Dial, Minimal (as the pushed faces), Day dial, Timetable, Kufi, Sun; the seven palettes |
+| The renderer | `face/` (new Android library, plain `android.graphics`) | `FaceRenderer.draw(canvas, bounds, design, data, frame)`: paints, paths and shaders made once; a frame allocates nothing on the watch (the strings come from `FaceData`) |
+| The watch face | `wear/.../studio/StudioFaceService.kt` | `androidx.wear.watchface` 1.2.1 `WatchFaceService` with `CanvasRenderer2`; reads the design (`StudioStore`, a preferences file) and the app's configuration, redraws the moment either changes; a frame a second with seconds, every 15 s without; once a minute always-on (the system's pace), with pixel shift; battery from the sticky broadcast (no permission); touches go to the element's action |
+| Sending | `app/.../ui/watch/studio/StudioRepository.kt` → `/noor/studio` → `wear/.../data/ConfigListenerService.kt` | The design and a stamp over the Data Layer; the watch stores it and reports `studioSupported`, `studioActive` and the stamp back in `WatchReport` |
+| The editor | `app/.../ui/watch/studio/` | `StudioScreen` (route `watch/studio`, from the Watch page's Minhad Studio card) |
+
+**The editor.** A large live preview (the watch's renderer, the watch's data, to the second) is the editor itself:
+tap a place on the face (or its chip, for TalkBack and small places) to open what goes there, its size, colour and
+touch action; touch and hold an element and drag it to another place (the two swap; a haptic tick at each place it
+passes, the place under the finger lit). Undo and redo for every change; "Active / Always-on" switches the preview,
+and the Always-on panel shows it by itself. Panels: Designs (templates and one's saved designs, as small faces), Style
+(palettes, the three colours with a colour picker, background, font), Dial (hands, marks, edge, seconds), Always-on,
+Options (language, digits, clock). One button held at the bottom, "Set on my watch", sends the design; if a watch in
+reach has the studio face but is not showing it, the watch app opens on its face page there. The line above the
+button says what the watch reported: showing now; on the watch but not chosen (with how to choose it); the watch
+cannot run it; Minhad on the watch needs updating.
+
+Why places and not free positions (the owner left the interaction open): on a 1.2-inch round screen free positions
+make it easy to build a face that is crowded, clipped at the round edge, unreadable or hard to tap. Seven places tuned
+to the round screen keep every design balanced and legible, still let anything go anywhere, and make the editor
+quick: two taps to change what a place shows. Dragging stays where it helps: moving an element from one place to
+another.
+
+**Choosing the face on the watch.** Wear OS lets the user, not an app, choose an app-drawn watch face. The watch's
+Settings → Watch face page shows the design live, whether it is in use, and a "Show Minhad Studio" button that asks
+the system to show it with its own confirmation (`WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER`); where the system
+has no such screen the page says how: touch and hold the watch face, swipe to Minhad Studio, tap it. Once chosen,
+every later design shows at once.
+
+**Which watches can run it.** Checked 16 November 2026 against Google's documents:
+
+- "Watches that launch with Wear OS 6 only support watch faces that use the Watch Face Format"
+  ([Wear OS 6 behaviour changes](https://developer.android.com/training/wearables/versions/6/changes)).
+- Since 14 January 2026 legacy (AndroidX/Jetpack) faces cannot be installed from Google Play on any watch, cannot
+  be updated there, and faces already installed "will continue to work"
+  ([Android Developers Blog, June 2025](https://android-developers.googleblog.com/2025/06/upcoming-changes-to-wear-os-watch-faces.html);
+  [Watch Face Format](https://developer.android.com/training/wearables/wff)).
+
+So: the owner's Galaxy Watch 5 Pro (launched with Wear OS 3.5, updated since) runs it; Minhad is installed from
+GitHub, not Play. A watch that launched with Wear OS 6 (Galaxy Watch 8, Pixel Watch 4) does not: there the watch app
+disables the studio face at start (it reads the public `ro.product.first_api_level` property; unknown counts as an
+updated watch) and says so on its face page and to the phone, whose editor then says the Minhad faces work instead. A
+Play release of the watch app with this face would meet Play's legacy-face rules.
+
+**The route that works everywhere (for later).** Google's Watch Face Push guide names exactly this use: "a phone app
+that allows users to ... design and customize watch faces for installation directly on their Wear OS watch", and
+offers a validator that runs on Android (`validator-push-android`) and the Pack library "for building APKs on-device,
+for use with the Android-based validator" ([Watch Face Push](https://developer.android.com/training/wearables/watch-face-push)).
+The route: `FaceDesign` → Watch Face Format XML → an APK built and signed on the phone or watch (Pack) → validated
+there → installed and updated in place with Watch Face Push, as the pushed faces are now. The design format is kept
+independent of the renderer for this. `FaceWff.kt` is a first, tested prototype of the first step (not wired to
+anything): it writes a design as WFF with Minhad's complications for prayer data, and lists what WFF cannot yet show
+from that data (the whole timetable, the Sun's arc, the day's dial, the dunes picture and hand pictures until they
+are packed as resources). The cost: the WFF face is drawn by the system, so the phone's preview would be close to,
+not the same pixels as, the watch.
+
+**Tested here** (software, not on a watch): `FaceDesignTest` (core: every template and a design using every option
+survive the trip; defaults; unknown keys and values from a newer phone ignored; label escaping; moving and swapping;
+every place is found by a tap at its centre and stays inside the round face; the face's six times are the engine's
+own to the minute; an Arabic face writes no Latin letter and, with Arabic-Indic digits, no Western digit, at four
+times of day, for every template; an English face no Arabic letter; without a place it still tells the time),
+`FaceWffTest` (core: well-formed WFF for every template), `StudioRenderTest` (phone, Robolectric: every template and
+two variants drawn by the shared renderer in English and Arabic, by day and by night, active and always-on, to
+`app/build/design/studio`; checks the texts actually drawn for the language rule, that no face is blank and that
+always-on lights far fewer pixels), `StudioEditorTest` (phone: the editor in English and Arabic, choosing an element
+through the UI, undo, each panel, the send states, the Watch page card; language check on every text and label;
+renders in `app/build/screenshots`, 90–99), `StudioWearTest` (watch: the new settings pages and the face page in use,
+not chosen, and unsupported, in English and Arabic).
+
+**Needs a real watch.** That the face appears in the Galaxy Watch 5 Pro's face list and draws as the renders show; the
+"Show Minhad Studio" confirmation on Samsung's One UI Watch (or only the touch-and-hold guidance); always-on look,
+pixel shift and its battery cost over a day; touch actions; the redraw when a design arrives; the frame pace with
+seconds; the Arabic text shaping of Reem Kufi at small sizes. The watch-face emulator workflow (`watch-face.yml`)
+covers the pushed faces only; it has not been extended to the studio face.
+
 ## Working without the phone
 
 The watch is declared standalone (`com.google.android.wearable.standalone = true`): it is fully usable with no phone app.
@@ -116,6 +205,8 @@ The watch is declared standalone (`com.google.android.wearable.standalone = true
 | `complication/*` | Next prayer, Hijri date, Qibla, Tasbih complications |
 | `NoorWearApp.kt` | App container; Ongoing Activity for the Adhan (`AlertHost.decoratePlaying`) |
 | `facepush/FacePush.kt`, `facepush/FaceUpdateReceiver.kt`, `ui/FaceSetup.kt` | The Noor watch face: install, switch in place, activate once, update after an app update; the face screen and on-watch picker |
+| `studio/StudioFaceService.kt`, `studio/StudioStore.kt`, `ui/StudioScreen.kt` | Minhad Studio (0.18): the face the app draws (shared renderer in the `face` module), the design from the phone, whether the watch can run it; the watch face page |
+| `ui/SettingsScreens.kt` | 0.18: Settings page and its detail pages (times, alerts, language and numbers) |
 
 Core additions: `dhikr/Tasbih.kt` (counter state machine), `calendar/IslamicCalendar.kt` (events), `LocalSetup.kt`.
 

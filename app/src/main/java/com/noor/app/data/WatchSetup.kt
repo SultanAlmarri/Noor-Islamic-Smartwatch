@@ -98,6 +98,9 @@ class WatchSetup(private val context: Context) {
 
     suspend fun openNoorOnWatch(nodeId: String): Boolean = startOnWatch(WatchReport.LINK_OPEN, nodeId)
 
+    /** 0.18: opens the watch app's face page, where the user can show Minhad Studio with one tap. */
+    suspend fun openStudioOnWatch(nodeId: String): Boolean = startOnWatch(WatchReport.LINK_STUDIO, nodeId)
+
     /** The face chosen in the editor (0.9.8), remembered on the phone. */
     var faceChoice: WatchFaces.Choice
         get() = WatchFaces.parse(prefs.getString(KEY_FACE, null)) ?: WatchFaces.DEFAULT
