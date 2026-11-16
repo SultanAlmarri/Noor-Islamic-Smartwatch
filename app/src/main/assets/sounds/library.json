@@ -2,10 +2,10 @@
  "version": 1,
  "sounds": [
   {
-   "id": "adhan.makkah_maghrib_2012",
+   "id": "adhan.makkah",
    "kind": "adhan",
    "title_en": "Makkah",
-   "title_ar": "مكة المكرمة",
+   "title_ar": "مكة",
    "place_en": "al-Masjid al-Haram · Maghrib, 2012",
    "place_ar": "المسجد الحرام · المغرب، 2012",
    "categories": [
@@ -17,210 +17,27 @@
    "country_en": "Saudi Arabia",
    "country_ar": "السعودية",
    "year": 2012,
-   "file": "sounds/adhan_makkah_maghrib_2012.ogg",
+   "file": "sounds/adhan_makkah.ogg",
    "seconds": 176.5,
    "short": {
-    "file": "sounds/adhan_makkah_maghrib_2012_short.ogg",
-    "seconds": 32.1
+    "file": "sounds/adhan_makkah_short.ogg",
+    "seconds": 16.2
    },
    "credit": {
     "author": "3omar Faruq",
     "licence": "CC BY 3.0",
     "licence_url": "https://creativecommons.org/licenses/by/3.0",
     "source": "https://commons.wikimedia.org/wiki/File:Maghrib_Adhan_at_the_Masjid_al_Haram,_Mecca_-_25_Feb,_2012.webm",
-    "changes": "Audio only (video removed); full version: 114.2–290.7 s of the original; short version: 114.2–146.3 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
+    "changes": "Audio only; full version: 114.2–290.7 s of the original; opening (“Allahu Akbar, Allahu Akbar”): 114.2–130.4 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
    },
-   "note_en": "Recorded among the worshippers in the Haram, so the crowd can be heard.",
-   "note_ar": "سُجّل بين المصلّين في الحرم، لذا يُسمع صوت الحشود."
+   "note_en": "Recorded among the worshippers in the Haram, so the crowd can be heard between the phrases.",
+   "note_ar": "سُجّل بين المصلّين في الحرم، لذا يُسمع صوت الحشود بين الجمل."
   },
   {
-   "id": "adhan.makkah_2013",
-   "kind": "adhan",
-   "title_en": "Makkah (opening)",
-   "title_ar": "مكة المكرمة (المطلع)",
-   "place_en": "al-Masjid al-Haram · 2013",
-   "place_ar": "المسجد الحرام · 2013",
-   "categories": [
-    "renowned",
-    "traditional"
-   ],
-   "fajr": false,
-   "region": "haramain",
-   "country_en": "Saudi Arabia",
-   "country_ar": "السعودية",
-   "year": 2013,
-   "short": {
-    "file": "sounds/adhan_makkah_2013_short.ogg",
-    "seconds": 25.7
-   },
-   "credit": {
-    "author": "Seyfula Islam",
-    "licence": "CC BY 3.0",
-    "licence_url": "https://creativecommons.org/licenses/by/3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Adhan,_Great_Mosque_of_Mecca_-_Jan_21,_2013.webm",
-    "changes": "Audio only (video removed); short version: 7.8–33.5 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
-   },
-   "note_en": "The original recording stops before the end of the Adhan, so only its opening is offered.",
-   "note_ar": "التسجيل الأصلي ينقطع قبل نهاية الأذان، لذا يُقدَّم مطلعه فقط."
-  },
-  {
-   "id": "adhan.madinah_2018",
-   "kind": "adhan",
-   "title_en": "Madinah (opening)",
-   "title_ar": "المدينة المنورة (المطلع)",
-   "place_en": "Madinah · 2018",
-   "place_ar": "المدينة المنورة · 2018",
-   "categories": [
-    "renowned",
-    "traditional"
-   ],
-   "fajr": false,
-   "region": "haramain",
-   "country_en": "Saudi Arabia",
-   "country_ar": "السعودية",
-   "year": 2018,
-   "short": {
-    "file": "sounds/adhan_madinah_2018_short.ogg",
-    "seconds": 29.45
-   },
-   "credit": {
-    "author": "B9.",
-    "licence": "Public domain",
-    "licence_url": "",
-    "source": "https://commons.wikimedia.org/wiki/File:Oraci%C3%B3n_Al-Azzan.ogg",
-    "changes": "Audio only (video removed); short version: 0.55–30.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
-   },
-   "note_en": "The recording contains the opening takbir only.",
-   "note_ar": "يحتوي التسجيل على التكبير الأول فقط."
-  },
-  {
-   "id": "adhan.malmo_fajr_2012",
-   "kind": "adhan",
-   "title_en": "Malmö",
-   "title_ar": "مالمو",
-   "place_en": "Islamic Center Malmö, Sweden · 2012",
-   "place_ar": "المركز الإسلامي في مالمو، السويد · 2012",
-   "categories": [
-    "fajr",
-    "regional"
-   ],
-   "fajr": true,
-   "region": "europe",
-   "country_en": "Sweden",
-   "country_ar": "السويد",
-   "year": 2012,
-   "file": "sounds/adhan_malmo_fajr_2012.ogg",
-   "seconds": 242.95,
-   "short": {
-    "file": "sounds/adhan_malmo_fajr_2012_short.ogg",
-    "seconds": 44.4
-   },
-   "credit": {
-    "author": "Islamic Center Malmö",
-    "licence": "CC BY 3.0",
-    "licence_url": "https://creativecommons.org/licenses/by/3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Eid_al-Fitr_Fajr_azan_at_Malm%C3%B6_Mosque_-_19_August_2012.webm",
-    "changes": "Audio only (video removed); full version: 4.6–247.55 s of the original; short version: 4.6–49.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
-   },
-   "note_en": "Includes “As-salatu khayrun min an-nawm”. The original recording ends during the last phrase; a short fade was added.",
-   "note_ar": "يتضمن «الصلاة خير من النوم». ينتهي التسجيل الأصلي أثناء العبارة الأخيرة، فأضيف تلاشٍ قصير."
-  },
-  {
-   "id": "adhan.shalqar_2014",
-   "kind": "adhan",
-   "title_en": "Shalqar",
-   "title_ar": "شالقار",
-   "place_en": "Matey Qoqanuly Mosque, Kazakhstan · 2014",
-   "place_ar": "مسجد ماتاي قوقانولي، كازاخستان · 2014",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "asia",
-   "country_en": "Kazakhstan",
-   "country_ar": "كازاخستان",
-   "year": 2014,
-   "file": "sounds/adhan_shalqar_2014.ogg",
-   "seconds": 131.7,
-   "short": {
-    "file": "sounds/adhan_shalqar_2014_short.ogg",
-    "seconds": 23.2
-   },
-   "credit": {
-    "author": "Esetok",
-    "licence": "CC BY-SA 4.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Adhan_in_Shalqar_mosque.webm",
-    "changes": "Audio only (video removed); full version: 2.8–134.5 s of the original; short version: 2.8–26.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 4.0"
-   }
-  },
-  {
-   "id": "adhan.casablanca_2019",
-   "kind": "adhan",
-   "title_en": "Casablanca",
-   "title_ar": "الدار البيضاء",
-   "place_en": "Beside the Hassan II Mosque, Morocco · 2019",
-   "place_ar": "بجوار مسجد الحسن الثاني، المغرب · 2019",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "africa",
-   "country_en": "Morocco",
-   "country_ar": "المغرب",
-   "year": 2019,
-   "file": "sounds/adhan_casablanca_2019.ogg",
-   "seconds": 92.1,
-   "short": {
-    "file": "sounds/adhan_casablanca_2019_short.ogg",
-    "seconds": 30.9
-   },
-   "credit": {
-    "author": "Fraguando",
-    "licence": "CC BY-SA 4.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Llamada_a_oraci%C3%B3n_Mezquita_Hassan_II.wav",
-    "changes": "Audio only (video removed); full version: 3.8–95.9 s of the original; short version: 3.8–34.7 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 4.0"
-   },
-   "note_en": "An outdoor recording by the Atlantic; the sea and the city can be heard.",
-   "note_ar": "تسجيل في الهواء الطلق قرب المحيط الأطلسي؛ يُسمع البحر والمدينة."
-  },
-  {
-   "id": "adhan.istanbul_2025",
-   "kind": "adhan",
-   "title_en": "Istanbul (street recording)",
-   "title_ar": "إسطنبول (تسجيل من الشارع)",
-   "place_en": "Istanbul, Türkiye · 2025",
-   "place_ar": "إسطنبول، تركيا · 2025",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "middle_east",
-   "country_en": "Türkiye",
-   "country_ar": "تركيا",
-   "year": 2025,
-   "short": {
-    "file": "sounds/adhan_istanbul_2025_short.ogg",
-    "seconds": 50.0
-   },
-   "credit": {
-    "author": "Viceskeeni2",
-    "licence": "CC0",
-    "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-    "source": "https://commons.wikimedia.org/wiki/File:Adhan_in_Istanbul.webm",
-    "changes": "Audio only (video removed); short version: 0.0–50.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
-   },
-   "note_en": "A 50-second excerpt recorded in the street, with the city around it.",
-   "note_ar": "مقطع من 50 ثانية سُجّل في الشارع مع أصوات المدينة."
-  },
-  {
-   "id": "adhan.madinah_prophets_mosque",
+   "id": "adhan.madinah",
    "kind": "adhan",
    "title_en": "Madinah",
-   "title_ar": "المدينة المنورة",
+   "title_ar": "المدينة",
    "place_en": "The Prophet's Mosque",
    "place_ar": "المسجد النبوي",
    "categories": [
@@ -231,307 +48,144 @@
    "region": "haramain",
    "country_en": "Saudi Arabia",
    "country_ar": "السعودية",
-   "file": "sounds/adhan_madinah_prophets_mosque.ogg",
+   "file": "sounds/adhan_madinah.ogg",
    "seconds": 185.8,
    "short": {
-    "file": "sounds/adhan_madinah_prophets_mosque_short.ogg",
-    "seconds": 33.9
+    "file": "sounds/adhan_madinah_short.ogg",
+    "seconds": 19.2
    },
    "credit": {
     "author": "ejaz215",
     "licence": "CC BY 3.0",
     "licence_url": "https://creativecommons.org/licenses/by/3.0",
     "source": "https://commons.wikimedia.org/wiki/File:33937_ejaz215_call-to-prayer-from-the-prophet-s-mo.ogg",
-    "changes": "Audio only (video removed); full version: 0.6–186.4 s of the original; short version: 0.6–34.5 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
+    "changes": "Audio only; full version: 0.6–186.4 s of the original; opening (“Allahu Akbar, Allahu Akbar”): 0.6–19.8 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
    }
   },
   {
-   "id": "adhan.mahur_iran",
-   "kind": "adhan",
-   "title_en": "Iran · Dastgah Mahur",
-   "title_ar": "إيران · دستگاه ماهور",
-   "place_en": "Saeed Hatamzadeh-Varmazyar · 2015",
-   "place_ar": "سعيد حاتم زاده ورمزيار · 2015",
+   "id": "fx.birds",
+   "kind": "alt",
+   "title_en": "Birds",
+   "title_ar": "عصافير",
+   "place_en": "Dawn chorus, Yellowstone National Park",
+   "place_ar": "جوقة الفجر، متنزه يلوستون الوطني",
    "categories": [
-    "regional"
+    "nature"
    ],
-   "fajr": false,
-   "region": "middle_east",
-   "country_en": "Iran",
-   "country_ar": "إيران",
-   "year": 2015,
-   "file": "sounds/adhan_mahur_iran.ogg",
-   "seconds": 163.3,
+   "file": "sounds/fx_birds.ogg",
+   "seconds": 31.6,
    "short": {
-    "file": "sounds/adhan_mahur_iran_short.ogg",
-    "seconds": 42.3
+    "file": "sounds/fx_birds_short.ogg",
+    "seconds": 1.25
    },
    "credit": {
-    "author": "Saeed Hatamzadeh-Varmazyar",
-    "licence": "CC BY-SA 4.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:AzaanMaahur.ogg",
-    "changes": "Audio only (video removed); full version: 3.3–166.6 s of the original; short version: 3.3–45.6 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 4.0"
-   },
-   "note_en": "Sung in the Persian dastgah Mahur. Adhans in Iran usually follow the Shia wording, which adds phrases; listen before choosing it.",
-   "note_ar": "بمقام «ماهور» الفارسي. الأذان في إيران يتبع عادة الصيغة الشيعية التي تضيف عبارات؛ استمع إليه قبل اختياره."
-  },
-  {
-   "id": "adhan.sobhdel_iran",
-   "kind": "adhan",
-   "title_en": "Hussein Sobhdel (opening)",
-   "title_ar": "حسين صبحدل (المطلع)",
-   "place_en": "Iran",
-   "place_ar": "إيران",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "middle_east",
-   "country_en": "Iran",
-   "country_ar": "إيران",
-   "short": {
-    "file": "sounds/adhan_sobhdel_iran_short.ogg",
-    "seconds": 40.5
-   },
-   "credit": {
-    "author": "حسین صبحدل",
-    "licence": "CC BY-SA 4.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:%D8%A7%D8%B0%D8%A7%D9%86_%D8%AD%D8%B3%DB%8C%D9%86_%D8%B5%D8%A8%D8%AD%D8%AF%D9%84.webm",
-    "changes": "Audio only (video removed); short version: 2.5–43.0 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 4.0"
-   },
-   "note_en": "Only the opening takbir is offered: the original continues with a long, ornate Adhan and further recordings.",
-   "note_ar": "يُقدَّم التكبير الأول فقط: يستمر التسجيل الأصلي بأذان طويل مزخرف ثم بتسجيلات أخرى."
-  },
-  {
-   "id": "adhan.isfahan_2016",
-   "kind": "adhan",
-   "title_en": "Isfahan (excerpt)",
-   "title_ar": "أصفهان (مقطع)",
-   "place_en": "Shah Mosque, Isfahan · 2016",
-   "place_ar": "مسجد الشاه، أصفهان · 2016",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "middle_east",
-   "country_en": "Iran",
-   "country_ar": "إيران",
-   "year": 2016,
-   "short": {
-    "file": "sounds/adhan_isfahan_2016_short.ogg",
-    "seconds": 42.4
-   },
-   "credit": {
-    "author": "10EldarionElessar",
-    "licence": "CC BY 3.0",
-    "licence_url": "https://creativecommons.org/licenses/by/3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Tour_guide_recite_Adhan_in_the_Shah_mosque_in_Isfahan,_Iran.webm",
-    "changes": "Audio only (video removed); short version: 0.0–42.4 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
-   },
-   "note_en": "Recited by a guide under the great dome, whose echo carries the voice.",
-   "note_ar": "يرفعه مرشد تحت القبة الكبرى، وصداها يحمل الصوت."
-  },
-  {
-   "id": "adhan.jaffa_2011",
-   "kind": "adhan",
-   "title_en": "Jaffa (excerpt)",
-   "title_ar": "يافا (مقطع)",
-   "place_en": "Mahmoudiya Mosque, Jaffa · 2011",
-   "place_ar": "مسجد المحمودية، يافا · 2011",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "middle_east",
-   "country_en": "Palestine",
-   "country_ar": "فلسطين",
-   "year": 2011,
-   "short": {
-    "file": "sounds/adhan_jaffa_2011_short.ogg",
-    "seconds": 38.3
-   },
-   "credit": {
-    "author": "Deror_avi",
-    "licence": "CC BY-SA 3.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Jaffa_Muezzin_P1020417.ogv",
-    "changes": "Audio only (video removed); short version: 0.2–38.5 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 3.0"
-   }
-  },
-  {
-   "id": "adhan.marrakech_koutoubia",
-   "kind": "adhan",
-   "title_en": "Marrakech (excerpt)",
-   "title_ar": "مراكش (مقطع)",
-   "place_en": "Koutoubia Mosque",
-   "place_ar": "جامع الكتبية",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "africa",
-   "country_en": "Morocco",
-   "country_ar": "المغرب",
-   "short": {
-    "file": "sounds/adhan_marrakech_koutoubia_short.ogg",
-    "seconds": 20.7
-   },
-   "credit": {
-    "author": "No machine-readable author provided. Txo assumed (based on copyright claims).",
+    "author": "National Park Service (Yellowstone National Park)",
     "licence": "Public domain",
-    "licence_url": "",
-    "source": "https://commons.wikimedia.org/wiki/File:Llamada_a_oracion_desde_Kutubiya.ogg",
-    "changes": "Audio only (video removed); short version: 6.0–26.7 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
+    "licence_url": "https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm",
+    "source": "https://www.nps.gov/yell/learn/photosmultimedia/sounds-dawnchorus.htm",
+    "changes": "long version: 0.0–31.6 s of the original; short version: 1.05–2.3 s; fade in/out, 40 Hz high-pass, loudness normalised to -16 LUFS (less where the peak limit requires), mono Ogg Vorbis."
+   },
+   "note_en": "The short version is two chirps.",
+   "note_ar": "النسخة القصيرة زقزقتان."
+  },
+  {
+   "id": "fx.rooster",
+   "kind": "alt",
+   "title_en": "Rooster",
+   "title_ar": "ديك",
+   "place_en": "A farm in Houx, France",
+   "place_ar": "مزرعة في أوو، فرنسا",
+   "categories": [
+    "nature"
+   ],
+   "file": "sounds/fx_rooster.ogg",
+   "seconds": 31.3,
+   "short": {
+    "file": "sounds/fx_rooster_short.ogg",
+    "seconds": 3.6
+   },
+   "credit": {
+    "author": "Vincent Duseigne",
+    "licence": "CC BY 3.0",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "source": "https://archive.org/details/aporee_34557_39722",
+    "changes": "long version: 10.3–41.6 s of the original; short version: 37.7–41.3 s; fade in/out, 40 Hz high-pass, loudness normalised to -16 LUFS (less where the peak limit requires), mono Ogg Vorbis."
+   },
+   "note_en": "The rooster crows three times; the short version is one crow.",
+   "note_ar": "يصيح الديك ثلاث مرات؛ النسخة القصيرة صيحة واحدة."
+  },
+  {
+   "id": "fx.waves",
+   "kind": "alt",
+   "title_en": "Sea waves",
+   "title_ar": "أمواج البحر",
+   "place_en": "A rocky shore in Yilan, Taiwan",
+   "place_ar": "شاطئ صخري في إيلان، تايوان",
+   "categories": [
+    "nature"
+   ],
+   "file": "sounds/fx_waves.ogg",
+   "seconds": 30.0,
+   "short": {
+    "file": "sounds/fx_waves_short.ogg",
+    "seconds": 5.0
+   },
+   "credit": {
+    "author": "Wu Tsan-Cheng (吳燦政)",
+    "licence": "CC BY 3.0",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "source": "https://archive.org/details/aporee_24350_28262",
+    "changes": "long version: 8.0–38.0 s of the original; short version: 9.0–14.0 s; fade in/out, 40 Hz high-pass, loudness normalised to -16 LUFS (less where the peak limit requires), mono Ogg Vorbis."
+   },
+   "note_en": "The short version is one wave.",
+   "note_ar": "النسخة القصيرة موجة واحدة."
+  },
+  {
+   "id": "fx.rain",
+   "kind": "alt",
+   "title_en": "Rain",
+   "title_ar": "مطر",
+   "place_en": "Steady rain in Taitung, Taiwan",
+   "place_ar": "مطر متواصل في تايتونغ، تايوان",
+   "categories": [
+    "nature"
+   ],
+   "file": "sounds/fx_rain.ogg",
+   "seconds": 30.0,
+   "short": {
+    "file": "sounds/fx_rain_short.ogg",
+    "seconds": 4.0
+   },
+   "credit": {
+    "author": "Wu Tsan-Cheng (吳燦政)",
+    "licence": "CC BY 3.0",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+    "source": "https://archive.org/details/aporee_39377_45721",
+    "changes": "long version: 20.0–50.0 s of the original; short version: 30.0–34.0 s; fade in/out, 40 Hz high-pass, loudness normalised to -16 LUFS (less where the peak limit requires), mono Ogg Vorbis."
    }
   },
   {
-   "id": "adhan.ghana_ramadan_2026",
-   "kind": "adhan",
-   "title_en": "Ghana",
-   "title_ar": "غانا",
-   "place_en": "Ramadan 2026",
-   "place_ar": "رمضان 2026",
+   "id": "fx.stream",
+   "kind": "alt",
+   "title_en": "Stream",
+   "title_ar": "جدول ماء",
+   "place_en": "A mountain stream, Rocky Mountain National Park",
+   "place_ar": "جدول جبلي، متنزه جبال روكي الوطني",
    "categories": [
-    "regional"
+    "nature"
    ],
-   "fajr": false,
-   "region": "africa",
-   "country_en": "Ghana",
-   "country_ar": "غانا",
-   "year": 2026,
-   "file": "sounds/adhan_ghana_ramadan_2026.ogg",
-   "seconds": 83.1,
+   "file": "sounds/fx_stream.ogg",
+   "seconds": 30.0,
    "short": {
-    "file": "sounds/adhan_ghana_ramadan_2026_short.ogg",
-    "seconds": 18.7
+    "file": "sounds/fx_stream_short.ogg",
+    "seconds": 4.0
    },
    "credit": {
-    "author": "daSupremo",
-    "licence": "CC BY-SA 4.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Athan_during_Ramadan_2.wav",
-    "changes": "Audio only (video removed); full version: 0.5–83.6 s of the original; short version: 0.5–19.2 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 4.0"
-   },
-   "note_en": "A brisk call, under two minutes.",
-   "note_ar": "أذان سريع، أقل من دقيقتين."
-  },
-  {
-   "id": "adhan.ghana_ramadan_2026_b",
-   "kind": "adhan",
-   "title_en": "Ghana (opening)",
-   "title_ar": "غانا (المطلع)",
-   "place_en": "Ramadan 2026",
-   "place_ar": "رمضان 2026",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "africa",
-   "country_en": "Ghana",
-   "country_ar": "غانا",
-   "year": 2026,
-   "short": {
-    "file": "sounds/adhan_ghana_ramadan_2026_b_short.ogg",
-    "seconds": 22.8
-   },
-   "credit": {
-    "author": "daSupremo",
-    "licence": "CC BY-SA 4.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Athan_in_Ramadan.wav",
-    "changes": "Audio only (video removed); short version: 0.7–23.5 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 4.0"
-   }
-  },
-  {
-   "id": "adhan.nigeria_2026",
-   "kind": "adhan",
-   "title_en": "Nigeria",
-   "title_ar": "نيجيريا",
-   "place_en": "2026",
-   "place_ar": "2026",
-   "categories": [
-    "regional"
-   ],
-   "fajr": false,
-   "region": "africa",
-   "country_en": "Nigeria",
-   "country_ar": "نيجيريا",
-   "year": 2026,
-   "file": "sounds/adhan_nigeria_2026.ogg",
-   "seconds": 64.8,
-   "short": {
-    "file": "sounds/adhan_nigeria_2026_short.ogg",
-    "seconds": 19.6
-   },
-   "credit": {
-    "author": "Isaacayodele32",
-    "licence": "CC BY-SA 4.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Call_to_prayer.ogg",
-    "changes": "Audio only (video removed); full version: 0.0–64.8 s of the original; short version: 0.0–19.6 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 4.0"
-   },
-   "note_en": "A brisk call, about a minute.",
-   "note_ar": "أذان سريع، نحو دقيقة."
-  },
-  {
-   "id": "adhan.adhan_beautiful_2022",
-   "kind": "adhan",
-   "title_en": "Recording 2022 · A",
-   "title_ar": "تسجيل 2022 · أ",
-   "place_en": "Place not stated by the recordist",
-   "place_ar": "لم يذكر المسجِّل المكان",
-   "categories": [
-    "traditional"
-   ],
-   "fajr": false,
-   "year": 2022,
-   "file": "sounds/adhan_adhan_beautiful_2022.ogg",
-   "seconds": 152.1,
-   "short": {
-    "file": "sounds/adhan_adhan_beautiful_2022_short.ogg",
-    "seconds": 30.2
-   },
-   "credit": {
-    "author": "Adam-synagda",
-    "licence": "CC0",
-    "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-    "source": "https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg",
-    "changes": "Audio only (video removed); full version: 0.4–152.5 s of the original; short version: 0.4–30.6 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis."
-   }
-  },
-  {
-   "id": "adhan.adhan_andrewler_2022",
-   "kind": "adhan",
-   "title_en": "Recording 2022 · B",
-   "title_ar": "تسجيل 2022 · ب",
-   "place_en": "Place not stated by the recordist",
-   "place_ar": "لم يذكر المسجِّل المكان",
-   "categories": [
-    "traditional"
-   ],
-   "fajr": false,
-   "year": 2022,
-   "file": "sounds/adhan_adhan_andrewler_2022.ogg",
-   "seconds": 180.6,
-   "short": {
-    "file": "sounds/adhan_adhan_andrewler_2022_short.ogg",
-    "seconds": 30.9
-   },
-   "credit": {
-    "author": "Andrewler",
-    "licence": "CC BY-SA 4.0",
-    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Azan.ogg",
-    "changes": "Audio only (video removed); full version: 0.4–181.0 s of the original; short version: 0.4–31.3 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS, mono Ogg Vorbis.",
-    "derivative_licence": "CC BY-SA 4.0"
+    "author": "Jacob Job / National Park Service (Rocky Mountain National Park)",
+    "licence": "Public domain",
+    "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
+    "source": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm",
+    "changes": "long version: 30.0–60.0 s of the original; short version: 40.0–44.0 s; fade in/out, 40 Hz high-pass, loudness normalised to -16 LUFS (less where the peak limit requires), mono Ogg Vorbis."
    }
   }
  ]
