@@ -337,7 +337,8 @@ class SkyDirectorTest {
             // low sky has its hours (no thunderstorm over the arctic).
             val share = closedLegs.toFloat() / dayLegs
             assertTrue("$biome: closed for ${share * 100} % of the daylight", share <= (if (biome == Biome.DUNES) 0.04f else 0.13f))
-            assertEquals(biome.id, SkyDirector.SETS[2].toSet() - (if (biome == Biome.ARCTIC) setOf("lo_storm") else emptySet()), seenLow)
+            // (No thunderstorm over the arctic, near or far.)
+            assertEquals(biome.id, SkyDirector.SETS[2].toSet() - (if (biome == Biome.ARCTIC) SkyDirector.THUNDER.keys else emptySet()), seenLow)
         }
         // The hours of colour keep room for the Sun under cloud that takes its colour, unless the day's closed spell
         // falls on them: at sunset the low sky is open enough (never a full overcast) on nine days in ten, and there
@@ -414,6 +415,15 @@ class SkyDirectorTest {
         }
         // Over the sceneries and a few months of days, every kind of sky has its day.
         for (level in 0..2) assertEquals(SkyDirector.SETS[level].toSet(), seen[level])
+        // Every set has its pictures; the lightning strikes where each thunderstorm set's own file says its towers
+        // stand (sky.json, "towers"; lo_storm's predates that and is the helper's measure).
+        for (level in 0..2) for (set in SkyDirector.SETS[level]) {
+            val json = java.io.File("src/main/assets/sky2/clouds/$set/sky.json")
+            assertTrue("$set has its pictures", json.exists() && java.io.File("src/main/assets/sky2/clouds/$set/a.webp").exists())
+            val towers = Regex("\"towers\"\\s*:\\s*\\[([^]]*)]").find(json.readText())?.groupValues?.get(1)
+                ?.split(',')?.map { it.trim().toFloat() }
+            if (towers != null) assertEquals(set, towers, SkyDirector.THUNDER.getValue(set).toList())
+        }
         // The shaders know how far apart the sets of a level stand (layer.frag ends a set by it).
         assertTrue(java.io.File("src/main/assets/sky2/common.glsl").readText().contains("#define SKY_PITCH ${SkyDirector.PITCH.toInt()}.0"))
     }

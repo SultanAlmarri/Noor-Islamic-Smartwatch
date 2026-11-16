@@ -17,6 +17,7 @@ import glob
 import json
 import os
 import sys
+import zlib
 
 import numpy as np
 
@@ -25,8 +26,8 @@ import cloudgen      # noqa: E402
 
 root = os.path.abspath(os.path.join(os.path.dirname(sys.executable), '..', '..', '..'))
 for d in (root, os.path.join(root, 'blender.shared')):
-    if os.path.isdir(d):
-        os.add_dll_directory(d)
+    if os.path.isdir(d) and hasattr(os, 'add_dll_directory'):          # (Windows only; on Linux run it inside Blender:
+        os.add_dll_directory(d)                                        #  blender -b --factory-startup -P cloudprep.py)
 import openvdb       # noqa: E402
 
 TOOLS = os.path.join(os.path.expanduser('~'), 'ProjectMinhad', 'NoorTools')
@@ -36,9 +37,12 @@ OUT = os.path.join(TOOLS, 'work', 'clouds_low', 'cg')
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    info = {}
+    path = os.path.join(OUT, 'info.json')
+    info = json.load(open(path)) if os.path.exists(path) else {}      # (clouds prepared before are kept)
     for f in sorted(glob.glob(os.path.join(SRC, '*', '*.vdb'))):
         name = os.path.basename(os.path.dirname(f))
+        if name in info and all(os.path.exists(p) for p in info[name]['lods']):
+            continue
         g = openvdb.read(f, 'density')
         lo, hi = g.evalActiveVoxelBoundingBox()
         vs = g.transform.voxelSize()[0]
@@ -48,7 +52,7 @@ def main():
         # The base: the level at which the cloud first spreads to a good part of its full width. Under it, wisps.
         spread = (arr > 0.1).mean(axis=(0, 2))
         base = int(np.argmax(spread >= 0.45 * spread.max()))
-        rng = np.random.default_rng(abs(hash(name)) % (2 ** 31))
+        rng = np.random.default_rng(zlib.crc32(name.encode()))             # (hash() differs from run to run)
         wander = cloudgen.smooth_field((dim[0], dim[2]), 1.0, 14.0, rng) * 1.6 + cloudgen.smooth_field((dim[0], dim[2]), 1.0, 4.0, rng) * 0.8
         y = np.arange(dim[1], dtype=np.float32)[None, :, None]
         ramp = np.clip((y - (base - 1.0 + wander[:, None, :])) / 7.0, 0.0, 1.0)

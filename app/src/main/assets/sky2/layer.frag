@@ -74,7 +74,11 @@ void main() {
     float azs = (uCam.w > 0.5 ? -az : az) * DEG;                    // (the scene's own x runs the other way when mirrored)
     float sunAz = atan(uSunDir.x, uSunDir.z);
     float elThere = uSunEl + km * cos(azs - sunAz) / 111.2;
-    float high = uLay.y < 0.5 ? 2.5 : uLay.y < 1.5 ? 5.5 : 9.5;
+    // (How high this part of the cloud stands, from how far it is and how high it is seen, the Earth curving away
+    // under it: the head of a thunderstorm stands ten kilometres and more up and keeps the Sun long after its base
+    // and the low clouds round it have lost it, pink and gold over a grey sky. A layer's own height is the least.)
+    float high = uLay.y < 0.5 ? 1.2 : uLay.y < 1.5 ? 4.0 : 8.0;
+    high = clamp(max(high, km * max(sin(el * DEG), 0.0) + km * km / 12742.0), 0.2, 14.0);
     vec3 direct = warm(transmittance(high, sin(elThere * DEG)) * mSunWhite()) * (1.0 - moonW) + mMoonLight() * moonW;
     vec3 ambTop = mAmbTop(), ambLow = mAmbLow();
     vec3 dome = mix(ambLow, ambTop, 0.6);

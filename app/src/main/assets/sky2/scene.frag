@@ -232,7 +232,7 @@ vec3 cloudsOver(vec3 col, vec2 vp, out float through) {
         form = form / (form + 0.10);
         float fall = 0.85 * exp(-sq(th / 0.055)) + 0.40 * exp(-sq(th / 0.14)) + 0.03;
         float veins = texture(tNoise2D, vp / uView.x * 3.1 + uFlash.xy * 7.0).b;
-        c.rgb += c.a * vec3(0.72, 0.80, 1.0) * uFlash.w * dark * fall * (0.35 + 0.65 * form) * (0.7 + 0.6 * veins) * 0.95;
+        c.rgb += c.a * vec3(0.72, 0.80, 1.0) * uFlash.w * dark * fall * (0.15 + 0.85 * form) * (0.7 + 0.6 * veins) * 0.48;
     }
     col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
     return col;

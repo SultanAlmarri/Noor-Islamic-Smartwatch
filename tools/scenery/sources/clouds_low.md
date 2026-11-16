@@ -62,3 +62,33 @@ ground under a cloud lies in that cloud's shadow, the more of it the larger the 
 base by ground in the open. In `lo_towers`, `lo_storm`, `lo_front` and `lo_broken` the towering clouds are set out
 nearly as dense as the small ones (0.85; `sky_low.py` set them out at half), so their shaded sides are grey. Reference photographs (Wikimedia Commons, fetched through its API) were
 only looked at.
+
+## The thunderstorm skies of 0.14 (`lo_cb_far`, `lo_cb_line`, `lo_congestus`; `tools/scenery/sky_cb.py`)
+
+Made on a Linux machine without the owner's PC, so the CGHEVEN volumes were fetched again (16 November 2026), with
+curl (`-A 'scenery-tools/1.0'`), from the file each asset page names (`https://cgheven.com/assets/hero-cumulus-cloud-vdb-<NN>`
+and `.../hero-congestus-cloud-vdb-<NN>`; the files are RAR archives on `cdn.cgheven.com`, unpacked with `unar`).
+
+- Licence (https://cgheven.com/licensing, "last updated October 24, 2026", read 16 November 2026): free assets may
+  be used in personal and commercial work, in "finished work that contains them: videos, films, ads, games and
+  renders", no credit needed; **never "share, resell, re-upload or give away the original files"**; and no training
+  of AI models on them. (The asset pages' own description now says "Free CC0 Public Domain asset"; the licensing
+  page is the stricter of the two and is what we keep to.) So, as before: the `.vdb` files and every working copy
+  stay outside the repository (`/opt/noortools/assets/cgheven/`, `/opt/noortools/work/clouds_low/cg/`), only
+  pictures rendered from them are shipped. Credit, though not asked for: "Cloud volumes by CGHEVEN (Ammar Khan)".
+- **Other clouds than the 0.12 sets use** (the owner: the same few clouds keep coming round):
+  cumulus 05, 07, 09, 13, 14, 17, 24, 25, 38, 44, 47, 49 and congestus 02, 03, 04, 07, 10, 11, 13, 14, 18, 24, 26
+  (and congestus 27, fetched first to try the way; it is in no set).
+- Not usable on that day: the archives of congestus 28, 31, 34, 39 and 44 all hold the file of congestus 27 (the
+  site's mistake: the same bytes), and those of cumulus 27, 29, 30 and 41 break off before their end.
+- Which set uses which:
+
+| Set | CGHEVEN clouds used | Ours |
+|---|---|---|
+| `lo_cb_far` | congestus 07, 24, 26, 11, 03, 18, 13, 04 stacked and grown together (the storm's towers: one cloud standing on another, their joins buried), congestus 02, 10, 14 (the flanking line), the twelve cumulus (round its foot and in the fair sky) | the anvil, the dark shelf of the base, the veil of rain (`cloudgen_cb.py`: volumes from random patterns with fixed seeds); where everything stands |
+| `lo_cb_line` | the eleven congestus, stacked (three storms and three lesser cells), the twelve cumulus | the mature storm's anvil, base and rain; the old storm's long thinning anvil and its last rain; the cap of smooth cloud over the young tower |
+| `lo_congestus` | the eleven congestus, stacked (five towers) and single (far ones), the twelve cumulus | the cap cloud over one tower; where everything stands |
+
+Reference photographs of real cumulonimbus (twelve, from Wikimedia Commons' categories "Cumulonimbus incus",
+"Cumulonimbus calvus" and "Cumulonimbus capillatus", fetched slowly through its API as thumbnails) were only looked
+at, on the machine that made the sets; none is used, copied or shipped.
