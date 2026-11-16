@@ -944,3 +944,82 @@ compiled programs); how long it takes there is not known.
 - Leftovers that do nothing: `uCloudF*`, the bench's `mix*` values, `uSky.z` (the flash is `uFlash` now).
 - A thunderhead's tower is taken to stand 14 degrees right of its set's middle (the helper's note); the stroke is
   placed by that number, not by the picture.
+
+## 24. Off the PC; far land, sunsets, variety, fog, lightning, seasons, a new interface, tester's options (0.14.0, 16 November 2026, phone only)
+
+**What the owner asked.** On 15 November, an hour after 0.13.0, he installed it ("it's fine") and wrote a long
+list into the PC's chat: sunrise and sunset "really beautiful... it reflects its colors on the clouds", judged by
+photographs; the beach without its distant land ("open ocean"); the Pacific Northwest's mountain "a chain of
+mountains"; "distant terrain just turns invisible during midday... in all sceneries"; the red rock "totally
+redone... I hate the way it looks"; real seasons ("it's just snow and that's it. The trees don't change color");
+tester's options ("where I can control the seasons and times and location... a demo... just for me, the
+developer... removed once the app is released"); an opening animation ("as soon as I open the app"); the
+interface ("totally revolutionize the user interface and keep the Apple aesthetic... a lot more intuitive");
+bugs; "finish the job... This update should bring us very close to releasing the app." With that he lifted rule 5
+of CLAUDE.md for the interface (not for the Qibla screen's design, which he likes). The PC chat worked on it for
+seven minutes; then the PC was gone.
+
+On 16 November, in a cloud session from his phone, he added: "the same cloud types just keep cycling over and
+over again, which is extremely boring... It's just overcast, and then it's overcast again... I want the entire day
+to have a lot of variety"; "distant thunderstorms with lightning... look at actual photos of cumulonimbus
+clouds"; "early in the morning, you might have fog"; "If you think of more features. And I want you to finish
+the job. Prove it how you see fit."
+
+**The PC is gone ("I lost access to my PC for a long time").** Nothing on it can be reached: the seven minutes of
+0.14 work (branch `sky/014`, never pushed), Blender and `NoorTools` (the downloaded scans, elevation models and
+cloud volumes; the work files), `adb` for the watch, and one of the two copies of `noor-release.jks` section 7
+names (the other is in the owner's backup archive: he was asked to make sure that archive is not on the PC too).
+Everything in the repository was safe. Development moved to Claude Code cloud sessions the same day, and
+everything the PC did was shown to work there (CLAUDE.md, "Working in a cloud session"):
+
+- the Android build and its tests (JDK 17 and the SDK are fetched by the environment's set-up script; Maven
+  Central answers "429 Too Many Requests" there, so Gradle asks Google's mirror of it first);
+- the design bench, in the session's headless Chromium (a software GPU: about a minute for a sheet of a dozen
+  tiles);
+- Blender 4.5.16 with Cycles on the CPU: the dunes preview took 66 seconds where the PC took a quarter of a
+  minute. Four cores and 15 GB are all there is: one bake at a time, a second Blender only for composing, and a
+  render that takes more than the machine has is killed without a word (it happened to the red rock's helper
+  once).
+
+**What 0.14.0 is** (each is in [DESIGN.md](DESIGN.md#the-real-sky-011) under its own heading)
+
+1. *Far land stays in sight.* Two causes of "invisible at midday", both in `landAt`: mist was spread through the
+   whole depth of the air (the forest lake always has some, and it took the mountain), and the air in front of far
+   land had the colour of the sky right behind that land (a hazy mountain painted in exactly what it stood
+   against). The PC chat had suspected 0.13's rain veil: that too is gentler now (a far ridge fades to a shape),
+   and it rains only out of a closed sky.
+2. *The beach has an open horizon* (`tools/scenery/open_horizon.py`: nothing rendered again).
+3. *Sunrise and sunset*, beside photographs from Wikimedia Commons: each cloud has the Sun of the place where it
+   stands (far clouds stay gold after sunset, the high ones last), light through thin cloud near the Sun, light
+   catching the folds of cloud undersides, slate shade, less salmon in the last light, ozone 1.5 instead of 2.2
+   times the real amount, bright colours toned channel by channel, the hour of colour exposed for its sky.
+4. *The day is a walk through different skies* (`SkyDirector.programme`), and every set also passes turned about.
+5. *Morning fog* (`SkyState.fog`, `uFog`).
+6. *Lightning that lights the cloud, and strokes to the ground* (`uBolt`).
+7. *Seasons as pictures* (`Seasons`; `a_<season>.webp`, `k_<season>.webp`): the mechanism. Which sceneries have
+   such pictures is said below.
+8. *The interface* ([UI_014_NOTES.md](UI_014_NOTES.md), the helper's own account: one page system, grouped
+   lists, sheets, the tab bar, Today's bells and floating "Today", Adhan in order of use, Settings in order of
+   need, 17 bugs fixed) and *the opening* ("first light": the launch screen is the sky's waiting colour with
+   Noor's mark; light gathers, travels to where the Sun is, and the dusk opens from there; 2.3 s at most, a touch
+   skips it; it waits up to 0.7 s for the real sky's first picture, `RealSky.waitingForPicture`).
+9. *Tester's options* (`com.noor.app.testing`: `Tester`, `TestingScreen`, `TesterBanner`; Settings → Testing):
+   time of day, a day that runs by itself, season, kind of weather and "another sky of this kind", fog, scenery,
+   the place chooser, and a demo of nine stops (every scenery through a whole day in a season and a weather of
+   its own). Nothing is stored; only the home screen's sky is changed; a strip over the tab bar says so while it
+   is on. **For testing only: to be removed before release** (the owner's word). Search for `Tester.` and
+   `Routes.TESTING`.
+
+**How it was made.** The lead did the sky (shaders, director, engine, bench) and the tester's options; helpers
+in git worktrees of their own did the interface, the red rock and the cumulonimbus sets (one Blender bake at a
+time). The lead looked at every picture a change made, beside photographs where the owner had asked for that.
+
+**Decisions taken for the owner** (he wants technical and design decisions made; these are the ones he may want
+to change)
+
+- The opening replays when Noor comes back to the home screen after 15 minutes away, not only on a cold start
+  (Android keeps the app alive, so "as soon as I open the app" would otherwise seem to work only sometimes).
+  `Opening.RETURN_AFTER_MS`.
+- The desert keeps the most open sky (one day in four shows three kinds of low cloud, not four or more).
+- Tester's options are English only and are not stored.
+- Released in parts rather than held for the slowest bake: what needs Blender arrives as each bake is done.
