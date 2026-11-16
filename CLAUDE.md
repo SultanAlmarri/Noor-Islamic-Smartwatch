@@ -116,6 +116,7 @@ in this file's history.
 | `app` | Phone app (Jetpack Compose, Material 3). Home = `ui/today/` (`TodayScreen.kt`, `LivingSky.kt`, `HomeSky.kt`); its scene since 0.10 = `sky/` (the real sky's renderer) with shaders and baked pictures in `app/src/main/assets/sky2` |
 | `wear` | Watch app (Compose for Wear OS M3, tiles, complications, Watch Face Push) |
 | `alerts`, `shared` | Android libraries used by both apps |
+| `face` | 0.18: the Minhad Studio watch face's renderer (plain Canvas), shared by the phone's editor and the watch's face, so the preview is the face; the design format is `core/prayer/.../face/FaceDesign` |
 | `legacy/` | Frozen watch face v1.3.2: source and APK. **Read-only** |
 | `tools/sky3d` | The real sky's design bench: the phone's own shaders and pictures in a web page (WebGL 2) |
 | `tools/scenery` | Makes the real sky's pictures (Blender Cycles on the owner's PC): each scenery's land, each kind of cloud, the Milky Way |

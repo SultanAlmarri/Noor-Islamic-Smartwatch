@@ -4,7 +4,7 @@
     <string name="studio_card_body">صمّم واجهة ساعتك بنفسك: ما تعرضه وأين، وألوانها وخطها وعقاربها وشكلها في وضع العرض الدائم. بلمسة واحدة تصل إلى ساعتك.</string>
     <string name="studio_card_open">صمّم واجهة ساعتك</string>
     <string name="studio_card_edit">عدّل تصميمك</string>
-    <string name="studio_hint">انقر مكانًا على الواجهة لتختار ما يوضع فيه. المس مطوّلًا لتنقله.</string>
+    <string name="studio_hint">انقر مكانًا لتختار ما فيه، والمس مطوّلًا لتنقله.</string>
     <string name="studio_undo">تراجع</string>
     <string name="studio_redo">إعادة</string>
     <string name="studio_aod">العرض الدائم</string>

@@ -5,7 +5,7 @@
     <string name="studio_card_body">Design your own watch face: what it shows and where, its colours, font, hands and always-on look. One tap puts it on your watch.</string>
     <string name="studio_card_open">Design your watch face</string>
     <string name="studio_card_edit">Edit your design</string>
-    <string name="studio_hint">Tap a place on the face to choose what goes there. Touch and hold to move it.</string>
+    <string name="studio_hint">Tap a place to choose what goes there; hold to move it.</string>
     <string name="studio_undo">Undo</string>
     <string name="studio_redo">Redo</string>
     <string name="studio_aod">Always-on</string>
