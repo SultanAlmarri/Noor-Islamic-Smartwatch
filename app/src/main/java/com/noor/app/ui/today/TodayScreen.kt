@@ -226,6 +226,12 @@ private class HeroGeometry(top: Dp, height: Dp) {
     }
 }
 
+/** (0.18) Reads the moment shown in a scope of its own, so only [content] is composed again as it moves. */
+@Composable
+private fun AtMoment(shown: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>, content: @Composable (Double) -> Unit) {
+    content(shown.value.toDouble())
+}
+
 /** The whole Today screen for a given state; stateless so previews and tests can render any date. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -525,12 +531,15 @@ private fun SkyHeader(
             if (real != null) detectTapGestures(onTap = { RealSky.gust() })
         },
     ) {
-        val display = shown.value.toDouble()
-        LivingSky(
-            scene, layout, display = display, scrubbing = scrubbing || intro, page = c.background, description = desc,
-            modifier = Modifier.fillMaxSize(), parallax = { scroll.value.toFloat() }, stillTime = previewSkyTime,
-            opening = { opening.value }, real = real,
-        )
+        // (0.18) The moment is read inside its own scope: a drag or the opening's sweep recomposes the sky, not the
+        // whole header with its text at every frame.
+        AtMoment(shown) { display ->
+            LivingSky(
+                scene, layout, display = display, scrubbing = scrubbing || intro, page = c.background, description = desc,
+                modifier = Modifier.fillMaxSize(), parallax = { scroll.value.toFloat() }, stillTime = previewSkyTime,
+                opening = { opening.value }, real = real,
+            )
+        }
 
         Column(
             Modifier.fillMaxWidth().padding(top = top + 6.dp).padding(horizontal = 20.dp)
@@ -588,8 +597,7 @@ private fun SkyHeader(
                         )
                     }
                 }
-                if (away > 0f) {
-                    val f0 = shown.value.toDouble()
+                if (away > 0f) AtMoment(shown) { f0 ->
                     val at = caught?.second ?: scene.instantAt(f0).plusSeconds(30).truncatedTo(ChronoUnit.MINUTES)
                     ScrubReadout(
                         at = at, prayer = caught?.first, elevation = scene.elevationAt(f0), now = u.now, zone = place.zone, date = today, f = f, countdownMax = hero.countdownMax,
@@ -600,7 +608,9 @@ private fun SkyHeader(
         }
         // 0.15: the sky's gesture said once, where it is done, until it has been used (help in context, not a tour):
         // a capsule of glass low on the sky. It goes at the first drag and does not come back.
-        val hintShown = showScrubHint && !scrubbing && opening.value >= 1f
+        // (Whether the opening is over, not where it is: read at every frame of it, it recomposed the header each frame.)
+        val opened by remember { androidx.compose.runtime.derivedStateOf { opening.value >= 1f } }
+        val hintShown = showScrubHint && !scrubbing && opened
         val hintAlpha by animateFloatAsState(if (hintShown) 1f else 0f, tween(if (hintShown) 900 else 250), label = "scrubHint")
         if (hintAlpha > 0.01f) Row(
             Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp, start = 24.dp, end = 24.dp).graphicsLayer { alpha = hintAlpha }
