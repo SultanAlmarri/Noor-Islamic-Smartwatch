@@ -51,6 +51,8 @@ internal class SkyState(
      * the Sun's light the sky as a whole takes from the land: an overcast, or a cloud standing over the Sun just now.
      */
     val overcast: Float = 0f, val shade: Float = 0f,
+    /** (0.14) Fog lying on the water or the ground: the mornings that have it, from before dawn until the Sun has burnt it off. */
+    val fog: Float = 0f,
 )
 
 /**
@@ -617,6 +619,20 @@ internal object SkyDirector {
         val full = clouds[2].sumOf { (it.weight * share(it.offset) * (if (it.set == "lo_overcast" || it.set == "lo_storm") 1f else 0f)).toDouble() }.toFloat().coerceIn(0f, 1f)
         val sunPart = ((1f - covered) * (1f - smooth(0.6f, 0.92f, overcast)) * (1f - full)).coerceIn(0f, 1f)
         val shade = max(overcast, 0.6f * (1f - sunPart))
+        // (0.14) Morning fog, on the mornings that have it (most often over the forest lake and in the green hills'
+        // valley, in the cold half of the year; now and then over the sea, the fjord, the red rock and, as on the
+        // Gulf's winter mornings, the dunes): it gathers in the last hours of the night, is deepest about sunrise and
+        // is burnt off an hour or two after it. Never on a stormy day: fog needs still air.
+        val fogChance = when (biome) {
+            Biome.RAINFOREST -> 0.32f + 0.22f * winter
+            Biome.MEADOW -> 0.22f + 0.28f * winter
+            Biome.OCEAN -> 0.20f
+            Biome.ARCTIC -> 0.24f
+            Biome.CANYON -> 0.06f + 0.10f * winter
+            Biome.DUNES -> 0.06f + 0.18f * winter
+        }
+        val fog = if (day(20) < fogChance && w.type != Weather.STORMY)
+            (0.55f + 0.45f * day(21)) * smooth(rise - 3.5f, rise - 1.2f, h) * (1f - smooth(rise + 0.7f, rise + 2.2f + 1.2f * day(22), h)) else 0f
         // (0.14) It rains only out of a sky that is closed, as far as it is closed: rain out of a sunny sky with a
         // few clouds in it was a grey veil over the distance that nothing in the picture accounted for.
         val falling = rain * smooth(0.12f, 0.45f, overcast)
@@ -629,7 +645,7 @@ internal object SkyDirector {
             haze = haze, mist = mist, dust = dust, wind = windy, season = season, snow = snow,
             // (Where snow lies, what falls is snow: the ground is not wet.)
             wet = smooth(0.15f, 0.5f, falling) * (1f - smooth(0.4f, 0.6f, snow)),
-            aurora = aurora, waterRough = rough,
+            aurora = aurora, waterRough = rough, fog = fog,
         )
     }
 }
@@ -701,6 +717,8 @@ internal class RealSkyFrame(
     val shownAtMs: Long = 0L,
     /** The time of year the land is shown in (0 = midwinter .. 0.5 = midsummer): see [Seasons]. */
     val year: Float = 0.5f,
+    /** Testing only (Tester): the fog to show whatever the morning; null: the director's. */
+    val fogShown: Float? = null,
 ) {
     val haze: Float get() = state.haze
 
@@ -744,6 +762,7 @@ internal class RealSkyFrame(
         u["uFlash"] = floatArrayOf(strike[0], strike[1], strike[2], flash)
         u["uLand"] = floatArrayOf(biome.ordinal.toFloat(), s.season, s.snow, s.wet)
         u["uAir"] = floatArrayOf(s.mist, s.rain, (s.wind + 0.8f * gust).coerceAtMost(1f), s.dust)
+        u["uFog"] = floatArrayOf(fogShown ?: s.fog, 0f, 0f, 0f)
         u["uWater"] = floatArrayOf((s.waterRough + 0.22f * gust).coerceAtMost(1f), biome.waterClear, 0f, 0f)
         u["uTouch"] = floatArrayOf(0f, 0f, 1000f, 0f)
         // Life: by day a flock of birds crosses the sky every few minutes (not in rain, nor under a storm); by night
@@ -828,7 +847,7 @@ internal class RealSkyFrame(
         fun of(
             scene: SkyScene, view: SkyView, look: SkyLook, biome: Biome, weather: Weather, year: Float, display: Double, shownAt: Instant,
             w: Float, h: Float, textBottom: Float, panelTop: Float, panelRadius: Float, lightGlass: Boolean, tint: FloatArray,
-            fade: Float, busy: Boolean, still: Boolean, lapse: Float, trueStars: Boolean = false,
+            fade: Float, busy: Boolean, still: Boolean, lapse: Float, trueStars: Boolean = false, fogShown: Float? = null,
         ): RealSkyFrame {
             val focalPx = biome.focal * w
             val horizon = view.horizonY
@@ -879,7 +898,7 @@ internal class RealSkyFrame(
                 look.night, Array(5) { m(cel[it]) },
                 hour = (display * 24).toFloat(), seed = (weather.seedX + weather.seedY * 0.37f),
                 textBottom = textBottom, panelTop = panelTop, panelRadius = panelRadius, lightGlass = lightGlass, tint = tint,
-                fade = fade, busy = busy, still = still, lapse = lapse, shownAtMs = shownAt.toEpochMilli(), year = year,
+                fade = fade, busy = busy, still = still, lapse = lapse, shownAtMs = shownAt.toEpochMilli(), year = year, fogShown = fogShown,
             )
         }
     }

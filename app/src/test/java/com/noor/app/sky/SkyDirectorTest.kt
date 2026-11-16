@@ -10,6 +10,7 @@ import kotlin.math.abs
 import kotlin.math.asin
 import kotlin.math.atan
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.sin
 
 /**
@@ -23,7 +24,7 @@ class SkyDirectorTest {
     /** The Sun's height through a day at a mid latitude, good enough to drive the director. */
     private fun sunEl(f: Double) = asin(sin(25 * PI / 180) * sin(-18 * PI / 180) + cos(25 * PI / 180) * cos(-18 * PI / 180) * cos((f - 0.5) * 2 * PI)) * 180 / PI
 
-    private fun values(s: SkyState) = listOf(s.cover, s.kind, s.mid, s.midForm, s.cirrus, s.veil, s.storm, s.showers, s.rain, s.mist, s.dust, s.wind, s.season, s.snow, s.wet, s.aurora, s.waterRough, s.cluster)
+    private fun values(s: SkyState) = listOf(s.cover, s.kind, s.mid, s.midForm, s.cirrus, s.veil, s.storm, s.showers, s.rain, s.mist, s.dust, s.wind, s.season, s.snow, s.wet, s.aurora, s.fog, s.waterRough, s.cluster)
 
     @Test fun yearFollowsTheHemisphere() {
         val midwinter = Instant.parse("2026-12-21T12:00:00Z"); val midsummer = Instant.parse("2026-06-21T12:00:00Z")
@@ -351,6 +352,38 @@ class SkyDirectorTest {
         }
         assertTrue("room for the Sun at sunset on $room of $all days", room >= all * 0.9f)
         assertTrue("cloud to take the colour at sunset on $lit of $all days", lit >= all * 0.9f)
+    }
+
+    /** The owner: "early in the morning, you might have fog." */
+    @Test fun someMorningsHaveFogAndTheSunBurnsItOff() {
+        val rise = 6.2f; val set = 17.9f
+        for (biome in Biome.entries) for (year in listOf(0.05f, 0.5f)) {
+            var foggy = 0; val days = 200
+            for (day in 0 until days) {
+                val w = SkyDirector.weather(day * 86_969L + biome.ordinal * 13L + 1, biome, year)
+                fun fog(h: Float) = SkyDirector.at(biome, w, h / 24.0, sunEl(h / 24.0), year, 0.2f, rise, set).fog
+                // By late morning it has gone, and it does not come back with the evening.
+                for (h in listOf(10.5f, 12f, 15f, 18f, 21f, 0.5f)) assertEquals("$biome day $day at $h", 0f, fog(h), 0f)
+                // It gathers and thins by degrees: never at a stroke.
+                var prev = fog(2f); var most = prev
+                var h = 2f
+                while (h < 10.5f) {
+                    h += 1f / 60
+                    val now = fog(h)
+                    assertTrue("$biome day $day: fog in bounds ($now)", now in 0f..1f)
+                    assertTrue("$biome day $day at $h: fog steps by ${abs(now - prev)}", abs(now - prev) < 0.02f)
+                    most = max(most, now); prev = now
+                }
+                if (most > 0.4f) {
+                    foggy++
+                    // A foggy morning has its fog at sunrise.
+                    assertTrue("$biome day $day: fog at sunrise", fog(rise) > 0.4f)
+                    assertTrue("no fog on a stormy day", w.type != com.noor.app.ui.today.Weather.STORMY)
+                }
+            }
+            // Every scenery has foggy mornings, and most of its mornings are clear.
+            assertTrue("$biome at $year: $foggy foggy mornings of $days", foggy >= 6 && foggy <= days * 0.6f)
+        }
     }
 
     @Test fun theDirectorChoosesCloudSetsThatExist() {

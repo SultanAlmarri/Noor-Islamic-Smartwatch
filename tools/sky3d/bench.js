@@ -83,6 +83,7 @@ const P = {
   cirrus: 0.35, veil: 0.0, showers: 0.0, seed: 3.0, haze: 1.0, time: 100, windLow: 0.012, windMid: 0.02,
   biome: 0, season: 0.3, snow: 0.0, wet: 0.0, mist: 0.0, rain: 0.0, windForce: 0.3, dust: 0.0,
   aurora: 0.0, flash: 0.0, flashAz: 10, flashEl: 9, rainbow: 0.0, waterRough: 0.3, waterClear: 0.2,
+ fog: 0,                                        // fog lying on the water or the ground, 0..1 (0.14)
   year: null,                                    // the land's time of year (0 midwinter .. 0.5 midsummer; null: its pictures as they are)
   trueStars: false,                              // the stars where they truly are (off: the finest night sky)
   birds: -1, birdsHeight: 0.14, meteor: 0,       // a flock (0..1 across the sky; -1 none), a shooting star (0..1; 0 none)
@@ -188,7 +189,7 @@ function updateUniforms() {
     uCloudC: [P.seed, P.cirrus, P.veil, P.showers],
     uWind: [P.time * P.windLow + P.tod * 24 * 9, P.time * P.windLow * 0.25, P.time * P.windMid + P.tod * 24 * 14, P.time * P.windMid * 0.2],
     uSteps: P.steps,
-    uSky: [P.aurora, 0, P.flash, P.rainbow], uFlash: [Math.sin(P.flashAz * DEG) * Math.cos(P.flashEl * DEG), Math.sin(P.flashEl * DEG), Math.cos(P.flashAz * DEG) * Math.cos(P.flashEl * DEG), P.flash], uLand: [P.biome, P.season, P.snow, P.wet], uAir: [P.mist, P.rain, P.windForce, P.dust],
+    uSky: [P.aurora, 0, P.flash, P.rainbow], uFlash: [Math.sin(P.flashAz * DEG) * Math.cos(P.flashEl * DEG), Math.sin(P.flashEl * DEG), Math.cos(P.flashAz * DEG) * Math.cos(P.flashEl * DEG), P.flash], uLand: [P.biome, P.season, P.snow, P.wet], uAir: [P.mist, P.rain, P.windForce, P.dust], uFog: [P.fog, 0, 0, 0],
     uTouch: [0, 0, 1e3, 0], uBiome: P.biome,
     uSunPart: [P.sunPart, P.halo, P.shade, P.overcast], uBirds: [P.birds, P.birdsHeight, P.seed, 1], uMeteor: [P.meteor, 0.62, 0.10, 0.9],
     uText: [P.text ? P.textBottom * H : 0, 0, 0, 0],

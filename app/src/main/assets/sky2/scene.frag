@@ -26,6 +26,7 @@ uniform sampler2D tLandA2;    // the land's colours in the season the year is tu
 uniform sampler2D tLandK2;    // again where a scenery has no other season), and
 uniform vec4 uSeason;         // how far it has turned, 0..1; how much of its own snow the renderer lays (0: the pictures carry it)
 uniform vec4 uAir;            // mist near the ground, rain here, wind strength, dust
+uniform vec4 uFog;            // fog lying on the ground or the water (0.14): how much, 0..1; -, -, -
 uniform vec4 uWater;          // roughness of the water (0 glass .. 1 storm), its clearness, -, -
 uniform vec4 uTouch;          // where the scene was last touched (px), seconds since, strength
 uniform vec4 uBirds;          // a flock crossing the sky: how far across (0..1; below 0 = none), its height (of the
@@ -800,6 +801,36 @@ void main() {
         vec3 lit = mSunGround() * 0.70 * (0.30 + 0.70 * saturate(uLightDir.y * 2.5)) * (1.0 - moonF) + mMoonLight() * moonF
                  + mix(mAmbLow(), mAmbTop(), 0.6) + mGlow() * 0.6 + vec3(0.034, 0.052, 0.105) * uNight;
         col = mix(col, 0.80 * lit, saturate(foam) * 0.92);
+    }
+
+    // Fog (0.14: the owner, "early in the morning, you might have fog"). A shallow fog, the kind a still night
+    // leaves on water and in hollows: it lies on the water where the scenery has water, else on the ground at the
+    // eye's foot, a few tens of metres deep. Along the ground the sight runs out in a few hundred metres; a tree
+    // top, a hill, a mountain stand out of it, the upper sky is clear over it, and from a hill above a lake it is a
+    // white sea in the valley. Towards the low Sun it glows with the Sun's colour.
+    if (uFog.x > 0.003) {
+        // (How far the thing seen is: the land, or the water's surface in front of its bed.)
+        float seen = t;
+        if (water > 0.03 && rd.y < -0.0005) seen = min(seen, mix(t, uLandInfo.y / -rd.y, smoothstep(0.80, 0.98, water)));
+        float ya = (uLandInfo.y > 0.001 ? uLandInfo.y : uCam.z) * 0.001;          // the eye over the fog's floor, km
+        float yb = max(ya + rd.y * seen * 0.001, 0.0);
+        // (Deeper where it is looked down on from high above: a valley's fog, not a meadow's.)
+        float HF = clamp(ya * 0.35, 0.022, 0.07);
+        float lay = abs(yb - ya) > 1e-4 ? HF / (yb - ya) * (exp(-ya / HF) - exp(-yb / HF)) : exp(-ya / HF);
+        // (It lies in banks, thicker here and thinner there, and they drift.)
+        float banks = 0.65 + 0.7 * texture(tNoise2D, vec2(atan(rd.x, rd.z) * 0.8 + uTime * 0.0016, 0.31 + log2(max(seen, 10.0)) * 0.13)).r;
+        float depth = 3.4 * uFog.x * banks * seen * 0.001 * lay;
+        // (Water mirrors the fog that lies on it: what a ripple far off reflects left it nearly level, through the
+        // whole length of the fog; near the eye it mirrors the clear sky overhead. Without this the lake lay dark
+        // and sharp under a bright fog, with a line between them.)
+        if (water > 0.03 && rd.y < -0.0005) depth += smoothstep(0.80, 0.98, water) * 3.4 * uFog.x * banks * HF / max(-rd.y, 0.004) * 0.8;
+        float thick = 1.0 - exp(-depth);
+        float moonF = smoothstep(-6.0, -10.0, uSunEl);
+        vec3 ambF = mix(mAmbLow(), mAmbTop(), 0.5) + vec3(0.034, 0.052, 0.105) * uNight;
+        float towards = pow(saturate(dot(rd, uSunDir)), 5.0);
+        vec3 fogCol = ambF * 1.25 + mSunGround() * (0.30 + 1.1 * towards) * (1.0 - moonF) * smoothstep(-3.0, 2.0, uSunEl)
+                    + mGlow() * (0.2 + 0.7 * towards) + mMoonLight() * moonF * 0.5;
+        col = mix(col, fogCol, min(thick, 0.985));
     }
 
     // Rain here. What is far off stands behind more of it: the land fades into a grey veil with its distance (a wood

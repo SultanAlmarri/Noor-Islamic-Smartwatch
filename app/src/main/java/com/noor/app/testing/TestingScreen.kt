@@ -111,6 +111,12 @@ fun TestingScreen(
         }
 
         Card {
+            val fog = t.fog
+            Title("Morning fog", if (fog == null) "The day's own: some mornings have fog, from before dawn until an hour or two after sunrise." else "Fog is shown at any hour, ${if (fog <= 0f) "none" else "%d %%".format((fog * 100).toInt())}. It looks its best about sunrise.")
+            Chips(listOf<Pair<String, Float?>>("The day's own" to null, "None" to 0f, "Light" to 0.4f, "Thick" to 0.75f, "Thickest" to 1f), selected = { it == fog }) { t.fog = it; if (it != null) t.on = true }
+        }
+
+        Card {
             Title("Scenery", "This changes the scenery in Settings (it stays after testing).")
             Chips(listOf("Automatic" to Scenery.AUTO) + Tester.SCENERY_NAMES.map { it.value to it.key }, selected = { it == scenery }) { setScenery(it) }
         }

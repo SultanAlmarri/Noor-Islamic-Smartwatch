@@ -527,6 +527,7 @@ internal fun LivingSky(
                     scene, v, l, real.biome, wx, year, display, scene.instantAt(display), real.w, real.h,
                     textBottom = v.cloudTopY - 8 * densityValue, panelTop = real.panelTop, panelRadius = real.radius, lightGlass = real.lightGlass, tint = real.tint,
                     fade = smoothstep(0f, 0.38f, o), busy = scrubbing || o < 1f, still = !ambient, lapse = OpeningSky.cloudLapse(o), trueStars = real.trueStars,
+                    fogShown = if (tester.on) tester.fog else null,
                 )
             }
         }

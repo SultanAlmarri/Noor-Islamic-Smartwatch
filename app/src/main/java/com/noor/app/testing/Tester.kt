@@ -44,6 +44,9 @@ object Tester {
     /** Another day's sky of the same kind: counts up for "another one". */
     var weatherDay by mutableIntStateOf(0)
 
+    /** Morning fog, whatever the morning: 0 none .. 1 the thickest; null: the day's own (some mornings have it). */
+    var fog by mutableStateOf<Float?>(null)
+
     /** What the demo is showing now, for the banner on the home screen; null when it is not running. */
     var demoLabel by mutableStateOf<String?>(null)
 
@@ -62,7 +65,7 @@ object Tester {
 
     fun reset() {
         stopDemo()
-        on = false; time = null; playing = false; year = null; weather = null; weatherDay = 0
+        on = false; time = null; playing = false; year = null; weather = null; weatherDay = 0; fog = null
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
