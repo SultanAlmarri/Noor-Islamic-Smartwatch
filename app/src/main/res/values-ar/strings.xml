@@ -553,7 +553,7 @@
     <string name="settings_appearance">المظهر</string>
     <string name="settings_language">اللغة والمنطقة</string>
     <string name="adhan_attention">يحتاج إلى انتباهك</string>
-    <string name="adhan_prayers_footer">اضغط على الصلاة لصوتها وأيامها وتذكيراتها.</string>
+    <string name="adhan_prayers_footer">اضغط على الصلاة لصوتها ونوع تنبيهها وأيامها.</string>
     <string name="today_row_alert">التنبيه: %1$s</string>
     <string name="today_row_open">إعدادات التنبيه</string>
     <string name="opening_skip">تخطٍّ</string>
@@ -603,7 +603,7 @@
     <string name="adhan_action_volume">فتح إعدادات الصوت</string>
     <string name="cd_today_now">اليوم، الآن</string>
     <string name="history_fix_dnd">السماح بالمنبّهات في وضع عدم الإزعاج</string>
-    <string name="adhan_alert_options">خيارات التنبيه</string>
+    <string name="adhan_alert_options">إعدادات أخرى</string>
     <string name="settings_watch_note">نور على معصمك: التثبيت والمزامنة ووجه الساعة</string>
     <!-- 0.16: the Adhan section redone. -->
     <string name="adhan_voice">صوت الأذان</string>
@@ -629,4 +629,43 @@
     <string name="before_all">قبل كل أذان</string>
     <string name="after_all">بعد كل أذان</string>
     <string name="days_none">لا أيام</string>
+    <!-- 0.17: alarms before and after a prayer, as in the Clock app. -->
+    <string name="alarms_title">المنبهات</string>
+    <string name="alarm_add">إضافة منبه</string>
+    <string name="alarm_full">٢٠ منبهًا: أقصى ما يتسع له نور</string>
+    <string name="alarms_empty_footer">استيقظ قبل الفجر، أو تذكَّر بعد الأذان: مثلًا ٢٥ دقيقة قبل الفجر.</string>
+    <string name="alarms_footer">ترن المنبهات على هذا الهاتف، حتى إن كان الأذان متوقفًا.</string>
+    <string name="alarm_new">منبه جديد</string>
+    <string name="alarm_edit">تعديل المنبه</string>
+    <string name="alarm_before">%1$s قبل %2$s</string>
+    <string name="alarm_after">%1$s بعد %2$s</string>
+    <string name="alarm_before_word">قبل</string>
+    <string name="alarm_after_word">بعد</string>
+    <string name="alarm_minutes_word">دقيقة</string>
+    <string name="alarm_less">دقائق أقل</string>
+    <string name="alarm_more">دقائق أكثر</string>
+    <string name="alarm_rings_today">اليوم %1$s</string>
+    <string name="alarm_rings_tomorrow">غدًا %1$s</string>
+    <string name="alarm_rings_on">%1$s %2$s</string>
+    <string name="alarm_none_week">لا يرن في الأسبوع القادم</string>
+    <string name="alarm_repeat">الأيام</string>
+    <string name="alarm_label_hint">الاسم (اختياري)</string>
+    <string name="alarm_sound">الصوت</string>
+    <string name="alarm_sound_phone">صوت منبه الهاتف</string>
+    <string name="alarm_sound_notification">إشعار فقط</string>
+    <string name="alarm_sound_add">إضافة تسجيل…</string>
+    <string name="alarm_sound_footer">لا يُشغِّل المنبه الأذان أبدًا، فلا يُظَنّ أنه نداء الصلاة.</string>
+    <string name="alarm_snooze">الغفوة</string>
+    <string name="alarm_save">حفظ</string>
+    <string name="alarm_delete">حذف المنبه</string>
+    <string name="alarm_try">جرّبه بعد %1$s ثوانٍ</string>
+    <string name="alarm_try_sent">يرن المنبه بعد ٥ ثوانٍ.</string>
+    <plurals name="alarm_minutes">
+        <item quantity="zero">%s دقيقة</item>
+        <item quantity="one">دقيقة</item>
+        <item quantity="two">دقيقتان</item>
+        <item quantity="few">%s دقائق</item>
+        <item quantity="many">%s دقيقة</item>
+        <item quantity="other">%s دقيقة</item>
+    </plurals>
 </resources>

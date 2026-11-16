@@ -7,9 +7,13 @@ import android.content.Intent
 import android.os.Build
 import com.noor.prayer.Prayer
 import com.noor.prayer.WatchConfig
+import com.noor.prayer.alerts.AlarmPlanner
 import com.noor.prayer.alerts.AlertPlanner
+import com.noor.prayer.alerts.PlannedAlarm
+import com.noor.prayer.alerts.PrayerAlarm
 import com.noor.prayer.alerts.PlannedAlert
 import com.noor.prayer.alerts.PlannedReminder
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 
@@ -31,6 +35,16 @@ object AlertScheduler {
     /** 0.16: reminders after a prayer (the iqamah) use REQUEST_BASE + 30 + prayer, with the same action. */
     private const val AFTER_OFFSET = 30
     const val EXTRA_AFTER = "after"
+    /** 0.17: the user's alarms before and after prayers: REQUEST_BASE + 100 + id; snoozed, + 200 + id; tried, + 60. */
+    const val ACTION_ALARM = "com.noor.alerts.ALARM"
+    /** 0.17: "Dismiss" on a snoozed alarm's note. */
+    const val ACTION_ALARM_DISMISS = "com.noor.alerts.ALARM_DISMISS"
+    private const val ALARM_OFFSET = 100
+    private const val SNOOZE_OFFSET = 200
+    const val EXTRA_ALARM = "alarm"
+    const val EXTRA_SNOOZE = "snooze"
+    /** An alarm being tried: the alarm itself (it rings whether or not it is saved). */
+    const val EXTRA_ALARM_TEXT = "alarmText"
     const val EXTRA_PRAYER = "prayer"
     const val EXTRA_DATE = "date"
     const val EXTRA_AT = "at"
@@ -51,7 +65,78 @@ object AlertScheduler {
         val plan = if (host != null && alerts != null) AlertPlanner.plan(config, alerts, host.alertDevice, now) else emptyList()
         val reminders = if (host != null && alerts != null) AlertPlanner.reminders(config, alerts, host.alertDevice, now) +
             AlertPlanner.afterReminders(config, alerts, host.alertDevice, now) else emptyList()
+        // (0.17: the alarms ring on the phone only, whichever device the Adhan is on, and whether or not it is on.)
+        val alarms = if (host?.ringsAlarms == true && config != null && alerts != null) AlarmPlanner.plan(config, alerts, now) else emptyList()
+        applyAlarms(context, alarms)
         return apply(context, config, plan, reminders)
+    }
+
+    /**
+     * 0.17: one alarm-clock alarm for each of the user's alarms that is on (its next ring), as the Clock app sets them:
+     * exact even in deep sleep, and shown by Android as the next alarm.
+     */
+    private fun applyAlarms(context: Context, alarms: List<PlannedAlarm>) {
+        val am = context.getSystemService(AlarmManager::class.java)
+        val exact = canScheduleExact(context)
+        val byId = alarms.associateBy { it.alarm.id }
+        for (id in 1..PrayerAlarm.MAX) {
+            val p = byId[id]
+            if (p == null) {
+                alarmPending(context, id, null, PendingIntent.FLAG_NO_CREATE)?.let { pi -> am?.cancel(pi); pi.cancel() }
+                continue
+            }
+            val pi = alarmPending(context, id, p, PendingIntent.FLAG_UPDATE_CURRENT) ?: continue
+            arm(context, am, p.at.toEpochMilli(), pi, exact)
+        }
+    }
+
+    private fun alarmPending(context: Context, id: Int, p: PlannedAlarm?, flag: Int): PendingIntent? {
+        val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_ALARM).putExtra(EXTRA_ALARM, id)
+        if (p != null) intent.putExtra(EXTRA_DATE, p.date.toString()).putExtra(EXTRA_AT, p.at.toEpochMilli())
+        return PendingIntent.getBroadcast(context, REQUEST_BASE + ALARM_OFFSET + id, intent, flag or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    private fun snoozePending(context: Context, id: Int, flag: Int, extras: (Intent) -> Unit = {}): PendingIntent? {
+        val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_ALARM).putExtra(EXTRA_ALARM, id).putExtra(EXTRA_SNOOZE, true)
+        extras(intent)
+        return PendingIntent.getBroadcast(context, REQUEST_BASE + SNOOZE_OFFSET + id, intent, flag or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    /** 0.17: the alarm that was ringing ([req]) rings again in its snooze minutes; a note says until when. */
+    internal fun snooze(context: Context, req: PlayRequest) {
+        val am = context.getSystemService(AlarmManager::class.java) ?: return
+        val at = System.currentTimeMillis() + req.snoozeMinutes * 60_000L
+        val pi = snoozePending(context, req.alarmId, PendingIntent.FLAG_UPDATE_CURRENT) { i ->
+            i.putExtra(EXTRA_DATE, req.alarmDate ?: LocalDate.now().toString()).putExtra(EXTRA_AT, at)
+            if (req.alarmText != null) i.putExtra(EXTRA_ALARM_TEXT, req.alarmText)
+        } ?: return
+        arm(context, am, at, pi, canScheduleExact(context))
+        alertScope.launch {
+            val config = runCatching { context.alertHost?.alertConfig() }.getOrNull() ?: return@launch
+            val text = AlertText(context, config)
+            AlertNotifications.postSnoozed(context, req.alarmId, req.title, text.string(R.string.noor_alarm_snoozed, text.time(Instant.ofEpochMilli(at))),
+                Instant.ofEpochMilli(at), text.string(R.string.noor_alarm_dismiss))
+        }
+    }
+
+    /** 0.17: a snoozed alarm will not ring again (its note's Dismiss, or the alarm turned off or deleted). */
+    fun cancelSnooze(context: Context, id: Int) {
+        snoozePending(context, id, PendingIntent.FLAG_NO_CREATE)?.let { pi -> context.getSystemService(AlarmManager::class.java)?.cancel(pi); pi.cancel() }
+        AlertNotifications.cancel(context, AlertNotifications.snoozedId(id))
+    }
+
+    /**
+     * 0.17: [alarm] rings in [seconds] exactly as it will (its sound, vibration and Snooze), saved or not: the same
+     * kind of alarm, the same receiver and the same ringing screen.
+     */
+    fun tryAlarm(context: Context, alarm: PrayerAlarm, seconds: Int = 5): Boolean {
+        val am = context.getSystemService(AlarmManager::class.java) ?: return false
+        val at = System.currentTimeMillis() + seconds * 1000L
+        val a = if (alarm.id in 1..PrayerAlarm.MAX) alarm else alarm.copy(id = PrayerAlarm.MAX)
+        val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_ALARM).putExtra(EXTRA_ALARM, a.id)
+            .putExtra(EXTRA_DATE, LocalDate.now().toString()).putExtra(EXTRA_AT, at).putExtra(EXTRA_ALARM_TEXT, a.normalized().encode())
+        val pi = PendingIntent.getBroadcast(context, REQUEST_BASE + 60, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        return runCatching { arm(context, am, at, pi, canScheduleExact(context)) }.isSuccess
     }
 
     internal fun apply(context: Context, config: WatchConfig?, plan: List<PlannedAlert>, reminders: List<PlannedReminder> = emptyList()): ScheduleStatus {

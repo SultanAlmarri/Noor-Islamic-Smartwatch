@@ -28,7 +28,10 @@ import com.noor.prayer.Prayer
 import com.noor.prayer.WatchReport
 import com.noor.prayer.alerts.AlertDevice
 import com.noor.prayer.alerts.AlertMode
+import com.noor.prayer.alerts.AlarmPlanner
 import com.noor.prayer.alerts.AlertPlanner
+import com.noor.prayer.alerts.PlannedAlarm
+import com.noor.prayer.alerts.PrayerAlarm
 import com.noor.prayer.alerts.AlertSettings
 import com.noor.prayer.alerts.PlannedAlert
 import com.noor.prayer.alerts.PrayerAlert
@@ -60,6 +63,9 @@ data class Readiness(
 
 /** The watch's side, from its last report. */
 data class WatchAlertState(val node: WatchNode, val report: WatchReport?)
+
+/** 0.17: each alarm's next ring (by id), today's prayer times, and the zone they are told in. */
+data class Rings(val next: Map<Int, PlannedAlarm> = emptyMap(), val today: Map<Prayer, Instant> = emptyMap(), val zone: ZoneId = ZoneId.systemDefault())
 
 /** The next alert this phone will give. */
 data class NextAlert(val planned: PlannedAlert, val zone: ZoneId)
@@ -94,6 +100,64 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             kotlinx.coroutines.delay((java.time.Duration.between(Instant.now(), at).toMillis() + 1_000).coerceAtLeast(1_000))
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * 0.17: when each alarm rings next (by id), from the same planner the scheduler arms, and today's prayer times for
+     * the prayers' rows; worked out again when the settings change, the screen comes back, or an alarm has rung.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val rings: StateFlow<Rings> = combine(repo.settings, shownAgain) { s, _ -> s }.transformLatest { s ->
+        while (true) {
+            val c = WearSync.configFor(s, System.currentTimeMillis(), container.timetables)
+            val now = Instant.now()
+            val r = if (c == null) Rings() else Rings(
+                (c.alerts?.alarms.orEmpty()).mapNotNull { AlarmPlanner.next(c, it, now) }.associateBy { it.alarm.id },
+                c.day(java.time.LocalDate.now(c.zone)).let { d -> Prayer.entries.mapNotNull { p -> d.instant(p)?.let { p to it } }.toMap() },
+                c.zone)
+            emit(r)
+            val soonest = (r.next.values.map { it.at } + listOfNotNull(java.time.LocalDate.now(r.zone).plusDays(1).atStartOfDay(r.zone).toInstant())).minOrNull() ?: break
+            kotlinx.coroutines.delay((java.time.Duration.between(Instant.now(), soonest).toMillis() + 1_000).coerceIn(1_000, 3_600_000))
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, Rings())
+
+    /** 0.17: when [alarm] would ring next if saved as it is (the editor's line "Tomorrow at 4:27 AM"). */
+    fun nextRing(alarm: PrayerAlarm): PlannedAlarm? {
+        val s = settings.value ?: return null
+        val c = WearSync.configFor(s, System.currentTimeMillis(), container.timetables) ?: return null
+        return AlarmPlanner.next(c, alarm.normalized(), Instant.now())
+    }
+
+    /** Saves [alarm] (new with id 0); turned off, a snooze of it is cancelled too. */
+    fun saveAlarm(alarm: PrayerAlarm) = viewModelScope.launch {
+        repo.updateAlerts { it.withAlarm(alarm) }
+        if (!alarm.enabled && alarm.id != 0) AlertScheduler.cancelSnooze(getApplication(), alarm.id)
+    }
+
+    fun setAlarmOn(id: Int, on: Boolean) = viewModelScope.launch {
+        repo.updateAlerts { s -> s.alarms.firstOrNull { it.id == id }?.let { s.withAlarm(it.copy(enabled = on)) } ?: s }
+        if (!on) AlertScheduler.cancelSnooze(getApplication(), id)
+    }
+
+    fun deleteAlarm(id: Int) = viewModelScope.launch {
+        repo.updateAlerts { it.withoutAlarm(id) }
+        AlertScheduler.cancelSnooze(getApplication(), id)
+    }
+
+    /** [alarm] rings in five seconds, as it will (saved or not). */
+    fun tryAlarm(alarm: PrayerAlarm) {
+        val ctx = getApplication<Application>()
+        stopPreview()
+        _message.value = ctx.getString(if (AlertScheduler.tryAlarm(ctx, alarm, 5)) com.noor.app.R.string.alarm_try_sent else com.noor.app.R.string.adhan_test_failed)
+    }
+
+    /** A recording added for an alarm: [onAdded] gets its id. */
+    fun importForAlarm(uri: Uri, onAdded: (String) -> Unit) = viewModelScope.launch {
+        val ctx = getApplication<Application>()
+        val result = withContext(Dispatchers.IO) { container.customSounds.import(ctx.contentResolver, uri, null) }
+        _custom.value = container.customSounds.list()
+        if (result is ImportResult.Ok) { onAdded(result.sound.id); _message.value = ctx.getString(com.noor.app.R.string.adhan_import_ok, result.sound.name) }
+        else importSoundResult(result)
+    }
 
     val hasLocation: StateFlow<Boolean> = repo.settings.map { WearSync.configFor(it, 0L, container.timetables) != null }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
@@ -156,7 +220,6 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun enableOnly(p: Prayer) = update { s -> Prayer.entries.fold(s.copy(enabled = true)) { x, q -> x.with(q, x.alert(q).copy(enabled = q == p)) } }
     fun setDevice(d: AlertDevice) = update { it.copy(device = d) }
     fun setGradual(seconds: Int) = update { it.copy(gradualSeconds = seconds) }
-    fun setReminder(minutes: Int) = update { it.copy(reminderMinutes = minutes.takeIf { m -> m in AlertSettings.REMINDER_CHOICES } ?: 0) }
     /** The switch reads "Play in silent mode and Do Not Disturb": on = play like an alarm (the default). */
     fun setPlayInSilentMode(on: Boolean) = update { it.copy(quietWhenSilent = !on) }
     fun setPrayer(p: Prayer, change: (PrayerAlert) -> PrayerAlert) = update { s -> s.with(p, change(s.alert(p))) }
@@ -275,10 +338,6 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setDays(p: Prayer, days: Int) = setPrayer(p) { it.copy(days = days) }
-    fun setBefore(p: Prayer, minutes: Int) = update { it.withBefore(p, minutes) }
-    fun setAfter(p: Prayer, minutes: Int) = setPrayer(p) { it.copy(afterMinutes = minutes) }
-    fun setBeforeAll(minutes: Int) = update { it.withBeforeForAll(minutes) }
-    fun setAfterAll(minutes: Int) = update { s -> Prayer.entries.fold(s) { x, p -> x.with(p, x.alert(p).copy(afterMinutes = minutes)) } }
 
     fun renameSound(id: String, name: String) = viewModelScope.launch {
         withContext(Dispatchers.IO) { container.customSounds.rename(id, name) }
@@ -293,7 +352,9 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteSound(id: String) = viewModelScope.launch {
         if (_preview.value?.id == id) stopPreview()
         val users = usersOf(id)
-        repo.updateAlerts { s ->
+        repo.updateAlerts { s0 ->
+            // (0.17: an alarm that rang with it rings with the phone's alarm sound.)
+            val s = s0.alarms.filter { it.customId == id }.fold(s0) { acc, a -> acc.withAlarm(a.copy(sound = com.noor.prayer.alerts.AlarmSound.PHONE_ALARM, customId = null)) }
             users.fold(s) { acc, p ->
                 acc.with(p, acc.alert(p).copy(mode = if (p == Prayer.SHURUQ) AlertMode.SOUND else AlertMode.ADHAN,
                     soundId = when (p) { Prayer.SHURUQ -> SoundIds.DEFAULT_SOUND; Prayer.FAJR -> SoundIds.DEFAULT_FAJR_ADHAN; else -> SoundIds.DEFAULT_ADHAN }))

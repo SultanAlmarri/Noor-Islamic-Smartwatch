@@ -39,6 +39,8 @@ class AlertPlayer(context: Context) {
     private var started = false
     private var source: SoundSource? = null
     private var recoveries = 0
+    /** 0.17: an alarm's sound plays over and over until it is stopped (or its time limit). */
+    private var loop = false
     private val events = ArrayList<String>()
 
     val isPlaying: Boolean get() = player != null
@@ -52,8 +54,9 @@ class AlertPlayer(context: Context) {
      * @param volumePercent percent of the alarm volume (perceptual curve).
      * @param onEnd called once on the main thread with how it ended.
      */
-    fun play(source: SoundSource, volumePercent: Int, gradualSeconds: Int, maxSeconds: Int, onEnd: (PlayResult) -> Unit) {
+    fun play(source: SoundSource, volumePercent: Int, gradualSeconds: Int, maxSeconds: Int, loop: Boolean = false, onEnd: (PlayResult) -> Unit) {
         stop(notify = false)
+        this.loop = loop
         this.onEnd = onEnd
         this.source = source
         target = gain(volumePercent)
@@ -84,7 +87,9 @@ class AlertPlayer(context: Context) {
             when (source) {
                 is SoundSource.Asset -> app.assets.openFd(source.path).use { fd -> mp.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length) }
                 is SoundSource.LocalFile -> mp.setDataSource(source.file.absolutePath)
+                is SoundSource.System -> mp.setDataSource(app, android.net.Uri.parse(source.uri))
             }
+            mp.isLooping = loop
             val v = if (started) currentGain() else if (rampMs > 0) START_GAIN * target else target
             mp.setVolume(v, v)
             mp.setOnPreparedListener {

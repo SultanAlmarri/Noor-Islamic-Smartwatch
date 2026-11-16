@@ -10,7 +10,11 @@ import android.os.Build
 import android.util.Log
 import com.noor.prayer.Prayer
 import com.noor.prayer.WatchConfig
+import com.noor.prayer.alerts.AlarmPlanner
+import com.noor.prayer.alerts.AlarmSound
 import com.noor.prayer.alerts.AlertMode
+import com.noor.prayer.alerts.PlannedAlarm
+import com.noor.prayer.alerts.PrayerAlarm
 import com.noor.prayer.alerts.AlertPlanner
 import com.noor.prayer.alerts.AlertSettings
 import com.noor.prayer.alerts.FireDecision
@@ -30,10 +34,17 @@ class AlertReceiver : BroadcastReceiver() {
         val app = context.applicationContext
         val firedAt = System.currentTimeMillis()
         val pending = goAsync()
-        val reminder = intent.action == AlertScheduler.ACTION_REMIND
+        // (0.17: the user's alarms are neither a prayer alert nor in its history, like the reminders.)
+        val alarm = intent.action == AlertScheduler.ACTION_ALARM || intent.action == AlertScheduler.ACTION_ALARM_DISMISS
+        val reminder = intent.action == AlertScheduler.ACTION_REMIND || alarm
         alertScope.launch {
             try {
-                if (reminder) remind(app, intent, firedAt) else handle(app, intent, firedAt)
+                when (intent.action) {
+                    AlertScheduler.ACTION_REMIND -> remind(app, intent, firedAt)
+                    AlertScheduler.ACTION_ALARM -> alarm(app, intent, firedAt)
+                    AlertScheduler.ACTION_ALARM_DISMISS -> AlertScheduler.cancelSnooze(app, intent.getIntExtra(AlertScheduler.EXTRA_ALARM, 0))
+                    else -> handle(app, intent, firedAt)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Alert failed", e)
                 // A reminder is only a notification; the alert history is for the prayer alerts themselves.
@@ -58,6 +69,30 @@ class AlertReceiver : BroadcastReceiver() {
             AlertPlanner.onAfter(config, alerts, host.alertDevice, prayer, date, Instant.ofEpochMilli(firedAt))
         else AlertPlanner.onRemind(config, alerts, host.alertDevice, prayer, date, Instant.ofEpochMilli(firedAt))
         AlertNotifications.postReminder(context, config, due ?: return)
+    }
+
+    /**
+     * 0.17: one of the user's alarms (before or after a prayer), checked again against the current times and choices;
+     * or it rings again after Snooze; or it is being tried.
+     */
+    private suspend fun alarm(context: Context, intent: Intent, firedAt: Long) {
+        val id = intent.getIntExtra(AlertScheduler.EXTRA_ALARM, 0)
+        val date = intent.getStringExtra(AlertScheduler.EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return
+        val host = context.alertHost ?: return
+        val config = host.alertConfig() ?: return
+        val alerts = config.alerts ?: AlertSettings()
+        val now = Instant.ofEpochMilli(firedAt)
+        val text = intent.getStringExtra(AlertScheduler.EXTRA_ALARM_TEXT)
+        val tried = text?.let { PrayerAlarm.decode(it) }
+        val snoozed = intent.getBooleanExtra(AlertScheduler.EXTRA_SNOOZE, false)
+        if (snoozed) AlertNotifications.cancel(context, AlertNotifications.snoozedId(id))
+        val planned = when {
+            tried != null -> PlannedAlarm(tried, date, config.day(date).instant(tried.prayer) ?: now, now)
+            // (Snoozed: it rings again unless it was turned off or deleted meanwhile.)
+            snoozed -> alerts.alarms.firstOrNull { it.id == id && it.enabled }?.let { a -> PlannedAlarm(a, date, config.day(date).instant(a.prayer) ?: now, now) }
+            else -> AlarmPlanner.onFire(config, alerts, id, date, now)
+        } ?: return
+        AlarmDispatcher.ring(context, config, alerts, planned, tried = text.takeIf { tried != null })
     }
 
     private suspend fun handle(context: Context, intent: Intent, firedAt: Long) {
@@ -261,4 +296,66 @@ internal object AlertDispatcher {
         Substitution.SOUND_MISSING -> text.string(R.string.noor_alert_sub_sound)
         Substitution.FAJR_ADHAN_OUTSIDE_FAJR -> text.string(R.string.noor_alert_sub_fajr)
     }
+}
+
+/** 0.17: turns one of the user's alarms into a ringing alarm (or, for a notification-only alarm, a notification). */
+internal object AlarmDispatcher {
+    fun ring(context: Context, config: WatchConfig, alerts: AlertSettings, p: PlannedAlarm, tried: String? = null) {
+        AlertNotifications.ensureChannels(context)
+        val text = AlertText(context, config)
+        val a = p.alarm
+        val title = text.alarmTitle(a, p.date)
+        val body = text.alarmBody(a, p.date, p.prayerAt)
+        val id = AlertNotifications.alarmId(a.id)
+        if (a.sound == AlarmSound.NOTIFICATION) { AlertNotifications.postAlarmNote(context, a.id, title, body, p.at); return }
+
+        // The same rules as the Adhan: never during a call, never without a notification to stop it, and quiet in
+        // silent mode only if the user chose that.
+        when (val quiet = AlertDispatcher.quietReason(context, alerts)) {
+            null -> Unit
+            AlertDispatcher.Quiet.NO_NOTIFICATIONS -> return
+            else -> {
+                val am = context.getSystemService(AudioManager::class.java)
+                if (quiet == AlertDispatcher.Quiet.RINGER_SILENT && a.vibrate && am?.ringerMode == AudioManager.RINGER_MODE_VIBRATE) AdhanService.vibrate(context)
+                val note = when (quiet) {
+                    AlertDispatcher.Quiet.DND -> R.string.noor_alert_quiet_dnd
+                    AlertDispatcher.Quiet.RINGER_SILENT -> R.string.noor_alert_quiet_ringer
+                    AlertDispatcher.Quiet.IN_CALL -> R.string.noor_alert_quiet_call
+                    else -> R.string.noor_alert_dnd_blocks_alarms
+                }
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, p.at, text.string(note))
+                return
+            }
+        }
+
+        val phone = phoneAlarmSound(context)
+        val own = if (a.sound == AlarmSound.CUSTOM) a.customId?.let { cid -> CustomSounds(context).let { c -> c.get(cid)?.let { c.file(it) } } } else null
+        val source: SoundSource? = own?.let { SoundSource.LocalFile(it) } ?: phone
+        val fallback: SoundSource? = if (own != null) phone else SoundSource.System(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI.toString()).takeIf { it != source }
+        if (source == null) {
+            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, text.string(R.string.noor_alarm_failed)); return
+        }
+        val req = PlayRequest(id, title, body, p.at.toEpochMilli(), null, text.string(R.string.noor_alert_stop), source,
+            volumePercent = 100, gradualSeconds = alerts.gradualSeconds, maxSeconds = RING_SECONDS, vibrate = a.vibrate, keepNotification = false,
+            fallback = fallback, failedNote = text.string(R.string.noor_alarm_failed),
+            alarmId = a.id, snoozeMinutes = a.snoozeMinutes, loop = true, alarmDate = p.date.toString(),
+            snoozeLabel = if (a.snoozeMinutes > 0) text.string(R.string.noor_alarm_snooze, text.number(a.snoozeMinutes)) else null,
+            alarmText = tried)
+        try {
+            AdhanService.start(context, req)
+        } catch (e: Exception) {
+            Log.e("NoorAlert", "Alarm could not ring", e)
+            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, text.string(R.string.noor_alarm_failed))
+        }
+    }
+
+    /** An alarm left ringing stops by itself after ten minutes, as the Clock app's do. */
+    const val RING_SECONDS = 600
+
+    /** The phone's alarm sound (or, if it has none, its ringtone), as the Clock app would ring with. */
+    fun phoneAlarmSound(context: Context): SoundSource? = runCatching {
+        (android.media.RingtoneManager.getActualDefaultRingtoneUri(context, android.media.RingtoneManager.TYPE_ALARM)
+            ?: android.media.RingtoneManager.getActualDefaultRingtoneUri(context, android.media.RingtoneManager.TYPE_RINGTONE))
+            ?.let { SoundSource.System(it.toString()) }
+    }.getOrNull() ?: SoundSource.System(android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI.toString())
 }

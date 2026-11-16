@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,14 +58,15 @@ class AdhanAlertActivity : AppCompatActivity() {
             val now by AdhanService.nowPlaying.collectAsState()
             LaunchedEffect(now) { if (now == null) finish() }
             NoorTheme(ThemeMode.DARK) {
-                AdhanScreen(now, onStop = { AdhanService.stop(this); finish() }, onClose = { finish() })
+                AdhanScreen(now, onStop = { AdhanService.stop(this); finish() }, onClose = { finish() },
+                    onSnooze = { AdhanService.snooze(this); finish() })
             }
         }
     }
 }
 
 @Composable
-internal fun AdhanScreen(now: AdhanService.Playing?, onStop: () -> Unit, onClose: () -> Unit) {
+internal fun AdhanScreen(now: AdhanService.Playing?, onStop: () -> Unit, onClose: () -> Unit, onSnooze: () -> Unit = {}) {
     val sky = Sky.colors(-6.0, true)
     Box(
         Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(sky.zenith, sky.mid, sky.horizon))).systemBarsPadding(),
@@ -72,13 +74,24 @@ internal fun AdhanScreen(now: AdhanService.Playing?, onStop: () -> Unit, onClose
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(painterResource(R.drawable.ic_notification), null, tint = Sky.GoldOnSky, modifier = Modifier.size(44.dp))
+            // (0.17: one of the user's alarms wears an alarm clock, so it is never taken for the Adhan.)
+            if ((now?.alarmId ?: 0) != 0) Icon(androidx.compose.material.icons.Icons.Rounded.Alarm, null, tint = Sky.GoldOnSky, modifier = Modifier.size(44.dp))
+            else Icon(painterResource(R.drawable.ic_notification), null, tint = Sky.GoldOnSky, modifier = Modifier.size(44.dp))
             Text(now?.title ?: "", style = MaterialTheme.typography.displaySmall, color = Sky.OnSky, textAlign = TextAlign.Center)
             if (!now?.body.isNullOrBlank()) Text(now!!.body, style = MaterialTheme.typography.titleMedium, color = Sky.OnSkySecondary, textAlign = TextAlign.Center)
             Spacer(Modifier.height(36.dp))
             Button(onClick = onStop, shape = CircleShape, modifier = Modifier.size(132.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Sky.GoldOnSky, contentColor = Color(0xFF14110A))) {
                 Text(stringResource(R.string.adhan_screen_stop), fontSize = 22.sp, style = MaterialTheme.typography.titleLarge)
+            }
+            // 0.17: an alarm's Snooze ("Snooze 10 min"), wide and easy to hit half asleep.
+            now?.snoozeLabel?.let { label ->
+                Spacer(Modifier.height(16.dp))
+                androidx.compose.material3.OutlinedButton(onClick = onSnooze, shape = CircleShape, modifier = Modifier.fillMaxWidth().height(56.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Sky.GoldOnSky),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Sky.GoldOnSky)) {
+                    Text(label, style = MaterialTheme.typography.titleMedium)
+                }
             }
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onClose) {

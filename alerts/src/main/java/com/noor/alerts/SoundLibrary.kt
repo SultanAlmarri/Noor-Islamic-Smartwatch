@@ -58,6 +58,8 @@ data class SoundEntry(
 sealed interface SoundSource {
     data class Asset(val path: String) : SoundSource
     data class LocalFile(val file: File) : SoundSource
+    /** 0.17: a sound of the phone's own (its alarm sound, for alarms), by its content address. */
+    data class System(val uri: String) : SoundSource
 }
 
 /** Why the sound that plays differs from the one chosen. Always shown to the user, never silent. */

@@ -44,6 +44,12 @@ interface AlertHost {
      */
     fun adhanScreen(context: Context): Intent? = null
 
+    /**
+     * 0.17: this device rings the user's alarms set before and after the prayers (the phone). False on the watch: its
+     * alerts follow the phone's choice of device, the alarms do not (yet).
+     */
+    val ringsAlarms: Boolean get() = false
+
     /** Arm prayer alarms as alarm-clock alarms (the phone, for Android 17's background audio rules); false keeps exact alarms. */
     val alarmClockAlarms: Boolean get() = false
 

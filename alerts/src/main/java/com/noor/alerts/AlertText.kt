@@ -58,5 +58,19 @@ internal class AlertText(context: Context, private val config: WatchConfig) {
         return if (p == Prayer.SHURUQ) string(R.string.noor_after_title_sunrise, m) else string(R.string.noor_after_title, prayer(p, date), m)
     }
 
+    /** 0.17: "25 minutes before Fajr", "10 minutes after Dhuhr". */
+    fun alarmRelation(a: com.noor.prayer.alerts.PrayerAlarm, date: LocalDate): String {
+        val m = ctx.resources.getQuantityString(R.plurals.noor_remind_minutes, a.minutes, number(a.minutes))
+        return string(if (a.after) R.string.noor_alarm_after else R.string.noor_alarm_before, m, prayer(a.prayer, date))
+    }
+
+    /** 0.17: an alarm's name: its label, or what it is ("25 minutes before Fajr"). */
+    fun alarmTitle(a: com.noor.prayer.alerts.PrayerAlarm, date: LocalDate): String = a.label.ifBlank { alarmRelation(a, date) }
+
+    /** 0.17: "Fajr 4:52 AM · Dubai" (with the label as the title, what it is first). */
+    fun alarmBody(a: com.noor.prayer.alerts.PrayerAlarm, date: LocalDate, prayerAt: Instant): String =
+        listOfNotNull(if (a.label.isNotBlank()) alarmRelation(a, date) else null, prayer(a.prayer, date) + " " + time(prayerAt), place.ifBlank { null })
+            .joinToString(" · ")
+
     fun body(p: Prayer, at: Instant): String = listOf(time(at), place).filter { it.isNotBlank() }.joinToString(" · ")
 }

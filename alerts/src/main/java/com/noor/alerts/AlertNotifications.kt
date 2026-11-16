@@ -134,7 +134,7 @@ object AlertNotifications {
             .setLocalOnly(true)
 
     /** The ongoing notification while a sound plays, with Stop. */
-    internal fun playing(context: Context, title: String, body: String, at: Instant, detail: String?, stopLabel: String): Notification {
+    internal fun playing(context: Context, title: String, body: String, at: Instant, detail: String?, stopLabel: String, snoozeLabel: String? = null): Notification {
         val stop = PendingIntent.getService(context, 1, Intent(context, AdhanService::class.java).setAction(AdhanService.ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return base(context, CHANNEL_ADHAN, title, body, at)
@@ -146,6 +146,11 @@ object AlertNotifications {
             // Adhan), and updates do not alert again.
             .setOnlyAlertOnce(true)
             .apply { if (detail != null) setStyle(NotificationCompat.BigTextStyle().bigText("$body\n$detail")) }
+            .apply {
+                // 0.17: an alarm's Snooze, before its Stop (as the Clock app has them).
+                if (snoozeLabel != null) addAction(0, snoozeLabel, PendingIntent.getService(context, 3,
+                    Intent(context, AdhanService::class.java).setAction(AdhanService.ACTION_SNOOZE), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+            }
             .addAction(0, stopLabel, stop)
             .setDeleteIntent(stop)
             .apply { fullScreen(context)?.let { setFullScreenIntent(it, true) } }
@@ -176,6 +181,45 @@ object AlertNotifications {
     }
 
     internal fun idFor(p: Prayer) = ID_PRAYER_BASE + p.ordinal
+
+    /** 0.17: an alarm's own notification (a notification-only alarm, or one that could not ring). */
+    internal fun alarmId(id: Int) = ID_ALARM_BASE + id
+    /** 0.17: "Snoozed until 4:37 AM", while an alarm is snoozed. */
+    internal fun snoozedId(id: Int) = ID_ALARM_BASE + 50 + id
+    private const val ID_ALARM_BASE = 4400
+
+    /** 0.17: a notification-only alarm ("25 min before Fajr"), with the phone's notification sound. */
+    internal fun postAlarmNote(context: Context, id: Int, title: String, body: String, at: Instant) {
+        ensureChannels(context)
+        if (!canPost(context, CHANNEL_REMIND)) return
+        val n = base(context, CHANNEL_REMIND, title, body, at)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setTimeoutAfter(60 * 60_000L)
+            .build()
+        runCatching { NotificationManagerCompat.from(context).notify(alarmId(id), n) }
+    }
+
+    /** 0.17: while an alarm is snoozed: until when, with Dismiss (which cancels the snooze). */
+    internal fun postSnoozed(context: Context, id: Int, title: String, text: String, until: Instant, dismissLabel: String) {
+        ensureChannels(context)
+        if (!canPost(context, CHANNEL_SILENT)) return
+        val dismiss = PendingIntent.getBroadcast(context, 7300 + id,
+            Intent(context, AlertReceiver::class.java).setAction(AlertScheduler.ACTION_ALARM_DISMISS).putExtra(AlertScheduler.EXTRA_ALARM, id),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val n = base(context, CHANNEL_SILENT, title, text, until)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setOngoing(true)
+            .addAction(0, dismissLabel, dismiss)
+            .build()
+        runCatching { NotificationManagerCompat.from(context).notify(snoozedId(id), n) }
+    }
+
+    internal fun cancel(context: Context, notificationId: Int) {
+        runCatching { NotificationManagerCompat.from(context).cancel(notificationId) }
+    }
 
     /** The backup alert: Android plays the short Adhan of [CHANNEL_BACKUP] with it. Alarm category, so DND treats it as an alarm. */
     internal fun postBackup(context: Context, id: Int, title: String, body: String, at: Instant, note: String?) {

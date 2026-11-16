@@ -91,7 +91,7 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL, ADHAN_HISTORY, SCENERY, ADHAN_VOICE }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL, ADHAN_HISTORY, SCENERY, ADHAN_VOICE, ALARM_EDIT, ALARM_RING }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -132,6 +132,7 @@ class ScreenshotTest {
         var clock by mutableStateOf(now)
         var fontScale by mutableStateOf(1f)
         var hijriCalendar by mutableStateOf(false)
+        var alarmEdit by mutableStateOf(0)
         val sgBase = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualPlace = com.noor.app.data.KnownLocation(
             com.noor.prayer.GeoPoint(1.28967, 103.85007), "Asia/Singapore", "Singapore", "SG", null, 0L, "سنغافورة"))
         com.noor.app.ui.today.SkyCompute.synchronous = true
@@ -198,6 +199,10 @@ class ScreenshotTest {
                             Screen.ADHAN_SOUNDS -> com.noor.app.ui.adhan.MySoundsScreen(pad, {})
                             Screen.ADHAN_HISTORY -> com.noor.app.ui.adhan.AlertHistoryScreen(pad, {})
                             Screen.ADHAN_VOICE -> com.noor.app.ui.adhan.VoiceScreen(pad, null, {})
+                            Screen.ALARM_EDIT -> androidx.compose.runtime.key(alarmEdit) { com.noor.app.ui.adhan.AlarmScreen(pad, alarmEdit, {}) }
+                            Screen.ALARM_RING -> com.noor.app.adhan.AdhanScreen(com.noor.alerts.AdhanService.Playing(
+                                if (arabic) "٢٥ دقيقة قبل الفجر" else "25 minutes before Fajr", if (arabic) "الفجر ٥:١٢ ص · دبي" else "Fajr 5:12 AM · Dubai",
+                                clock.toEpochMilli(), 2, if (arabic) "غفوة ١٠ د" else "Snooze 10 min"), {}, {}, {})
                             Screen.ONBOARDING -> com.noor.app.ui.onboarding.OnboardingScreen(pad, {}, {})
                             Screen.CITIES -> com.noor.app.ui.location.LocationScreen(pad, {})
                             Screen.SCENERY -> com.noor.app.ui.settings.SceneryScreen(pad, {})
@@ -318,29 +323,45 @@ class ScreenshotTest {
         arabic = true; shot("82_adhan_fajr_alerts_off_ar", "تشغيل تنبيهات الصلاة"); arabic = false
         screen = Screen.ADHAN
         runBlocking { app.container.settings.updateAlerts { it.copy(enabled = true, device = com.noor.prayer.alerts.AlertDevice.BOTH) } }
-        shot("27_adhan_on_night_en", "Alert options")
+        shot("27_adhan_on_night_en", "More settings")
         // 0.15.2: what is set once (the reminder, phone or watch, the sound's behaviour) is on a page of its own.
-        rule.onAllNodes(androidx.compose.ui.test.hasText("Alert options")).onFirst().performScrollTo().performClick()
+        rule.onAllNodes(androidx.compose.ui.test.hasText("More settings")).onFirst().performScrollTo().performClick()
         shot("83_adhan_options_night_en", "Gradual volume")
         screen = Screen.WATCH; rule.waitForIdle()
         screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Malmö")
         screen = Screen.ADHAN_SHURUQ; runBlocking {
-            // (0.16: no alert sounds any more: sunrise with a notification, a reminder after it and some days only.)
+            // (0.16: no alert sounds any more: sunrise with a notification, a reminder after it and some days only. 0.17:
+            // the reminder becomes an alarm, "15 min after Sunrise", which posts a notification as the reminder did.)
             app.container.settings.updateAlerts { it.with(com.noor.prayer.Prayer.SHURUQ, it.alert(com.noor.prayer.Prayer.SHURUQ).copy(enabled = true,
                 mode = com.noor.prayer.alerts.AlertMode.NOTIFICATION, afterMinutes = 15, days = 0b0011111)) }
         }
-        shot("29_adhan_sunrise_night_en", "After the Adhan")
+        shot("29_adhan_sunrise_night_en", "Tue")
+        // 0.17: alarms before and after the prayers, in the Adhan tab's list and in their editor; and ringing.
+        runBlocking { app.container.settings.updateAlerts { it.withAlarm(com.noor.prayer.alerts.PrayerAlarm(0, com.noor.prayer.Prayer.FAJR, 25, after = false))
+            .withAlarm(com.noor.prayer.alerts.PrayerAlarm(0, com.noor.prayer.Prayer.DHUHR, 10, after = true, days = 0b0011111, snoozeMinutes = 5)) } }
+        val fajrAlarm = runBlocking { app.container.settings.current().alerts.alarms.first { it.prayer == com.noor.prayer.Prayer.FAJR }.id }
+        screen = Screen.ADHAN; rule.waitUntil(20_000) { rule.onAllNodesWithText("Add alarm").fetchSemanticsNodes().isNotEmpty() }
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Add alarm")).onFirst().performScrollTo()
+        shot("87_adhan_alarms_night_en", "25 min before Fajr")
+        arabic = true; rule.waitUntil(20_000) { rule.onAllNodesWithText("إضافة منبه").fetchSemanticsNodes().isNotEmpty() }
+        rule.onAllNodes(androidx.compose.ui.test.hasText("إضافة منبه")).onFirst().performScrollTo()
+        shot("88_adhan_alarms_night_ar", "قبل الفجر"); arabic = false
+        alarmEdit = 0; screen = Screen.ALARM_EDIT; shot("89_alarm_new_night_en", "New alarm")
+        alarmEdit = fajrAlarm; arabic = true; shot("90_alarm_edit_night_ar", "تعديل المنبه"); arabic = false
+        theme = ThemeMode.LIGHT; shot("91_alarm_edit_day_en", "Edit alarm"); theme = ThemeMode.DARK
+        screen = Screen.ALARM_RING; shot("92_alarm_ringing_night_en", "Snooze 10 min")
+        arabic = true; shot("93_alarm_ringing_night_ar", "غفوة"); arabic = false
         // 0.16: the voices, named as on the owner's clock.
         screen = Screen.ADHAN_VOICE; shot("85_adhan_voice_night_en", "Al-Quds")
         arabic = true; shot("86_adhan_voice_night_ar", "القدس"); arabic = false
         screen = Screen.ADHAN_LIBRARY; shot("30_adhan_library_night_en", "Casablanca")
         screen = Screen.ADHAN_SOUNDS; shot("31_adhan_my_sounds_night_en", "Import a sound")
         arabic = true; screen = Screen.ADHAN_LIBRARY; shot("54_adhan_library_night_ar", "الدار البيضاء"); arabic = false
-        screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "خيارات التنبيه")
-        rule.onAllNodes(androidx.compose.ui.test.hasText("خيارات التنبيه")).onFirst().performScrollTo().performClick()
+        screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "إعدادات أخرى")
+        rule.onAllNodes(androidx.compose.ui.test.hasText("إعدادات أخرى")).onFirst().performScrollTo().performClick()
         shot("84_adhan_options_night_ar", "التنبيه على")
         screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "مالمو")
-        arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Alert options")
+        arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "More settings")
         screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Malmö")
         theme = ThemeMode.DARK
         // Alert history (0.9): what really happened at each alert, with examples of each kind of outcome.

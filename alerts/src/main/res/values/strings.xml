@@ -40,4 +40,11 @@
     <!-- 0.16: a reminder after a prayer began (the iqamah); the minutes are noor_remind_minutes. -->
     <string name="noor_after_title">%1$s began %2$s ago</string>
     <string name="noor_after_title_sunrise">Sunrise was %1$s ago</string>
+    <!-- 0.17: the user's alarms before and after a prayer; %1$s of before/after is noor_remind_minutes. -->
+    <string name="noor_alarm_before">%1$s before %2$s</string>
+    <string name="noor_alarm_after">%1$s after %2$s</string>
+    <string name="noor_alarm_snooze">Snooze %1$s min</string>
+    <string name="noor_alarm_snoozed">Snoozed until %1$s</string>
+    <string name="noor_alarm_dismiss">Dismiss</string>
+    <string name="noor_alarm_failed">The alarm could not play its sound.</string>
 </resources>

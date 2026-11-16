@@ -91,7 +91,43 @@ data class AlertSettings(
      * [REMINDER_CHOICES]. A reminder comes for every prayer that alerts on the device, on that device only.
      */
     val reminderMinutes: Int = 0,
+    /**
+     * 0.17: alarms a number of minutes before or after a prayer ("25 minutes before Fajr"), each with its own switch.
+     * They ring on the phone, whether or not the Adhan is on. Ordered as the user added them.
+     */
+    val alarms: List<PrayerAlarm> = emptyList(),
 ) {
+    /** [a] added (with the first free id when its id is 0) or put in place of the alarm with its id. */
+    fun withAlarm(a: PrayerAlarm): AlertSettings {
+        val id = if (a.id in 1..PrayerAlarm.MAX) a.id else nextAlarmId() ?: return this
+        val x = a.copy(id = id).normalized()
+        return copy(alarms = if (alarms.any { it.id == id }) alarms.map { if (it.id == id) x else it } else alarms + x)
+    }
+
+    fun withoutAlarm(id: Int): AlertSettings = copy(alarms = alarms.filterNot { it.id == id })
+
+    /** The id a new alarm gets, or null when there are [PrayerAlarm.MAX] already. */
+    fun nextAlarmId(): Int? = (1..PrayerAlarm.MAX).firstOrNull { id -> alarms.none { it.id == id } }
+
+    /**
+     * 0.17: the reminders before and after each prayer (0.9.9 and 0.16) become alarms that post a notification, as
+     * they did, so nothing the user set is lost and everything of the kind is in one place: the alarms. Their
+     * fields are cleared. Settings without any reminder come back unchanged.
+     */
+    fun remindersAsAlarms(): AlertSettings {
+        if (reminderMinutes <= 0 && Prayer.entries.none { alert(it).beforeMinutes > 0 || alert(it).afterMinutes > 0 }) return this
+        var s = this
+        for (after in listOf(false, true)) for (p in Prayer.entries) {
+            val a = alert(p)
+            val m = if (after) a.afterMinutes else beforeOf(p)
+            // (A prayer whose alert is off never reminded: it gets no alarm.)
+            if (m <= 0 || !a.enabled) continue
+            s = s.withAlarm(PrayerAlarm(0, p, m, after, enabled = enabled, days = a.days, sound = AlarmSound.NOTIFICATION,
+                vibrate = false, snoozeMinutes = 0))
+        }
+        return Prayer.entries.fold(s.copy(reminderMinutes = 0)) { x, p -> x.with(p, x.alert(p).copy(beforeMinutes = 0, afterMinutes = 0)) }
+    }
+
     fun alert(p: Prayer): PrayerAlert = (perPrayer[p] ?: DEFAULTS.getValue(p)).normalized(p)
 
     /** True when [p] should produce any alert on [onDevice]. */
@@ -134,6 +170,8 @@ data class AlertSettings(
             val extra = if (a.days != PrayerAlert.ALL_DAYS || a.beforeMinutes > 0 || a.afterMinutes > 0) ",${a.days},${a.beforeMinutes},${a.afterMinutes}" else ""
             add("${p.name}=${if (a.enabled) 1 else 0},${a.mode.name},${a.soundId ?: ""},${a.volumePercent},${if (a.vibrate) 1 else 0},${a.maxSeconds}$extra")
         }
+        // 0.17: a new field, written only when there are alarms (older readers ignore it).
+        if (alarms.isNotEmpty()) add("alarms=" + alarms.joinToString("|") { it.encode() })
     }.joinToString(";")
 
     companion object {
@@ -183,6 +221,7 @@ data class AlertSettings(
                 // ("pre" alone, as before 0.16: the lead for every prayer. Written beside per-prayer leads only for old
                 // watches: then the prayers' own leads are what counts.)
                 reminderMinutes = if (Prayer.entries.any { (m[it.name]?.split(',')?.size ?: 0) > 6 }) 0 else pre,
+                alarms = m["alarms"]?.split('|')?.mapNotNull { PrayerAlarm.decode(it) }?.distinctBy { it.id }?.take(PrayerAlarm.MAX).orEmpty(),
             )
         }
     }

@@ -144,9 +144,10 @@ class SettingsRepository(private val context: Context) {
 
 /**
  * 0.16: the phone has no alert sounds any more (the owner wants no music): a prayer set to one (AlertMode.SOUND) alerts
- * with the phone's own notification sound instead.
+ * with the phone's own notification sound instead. 0.17: reminders before and after a prayer are alarms now
+ * ([AlertSettings.remindersAsAlarms]).
  */
-internal fun phoneAlerts(a: AlertSettings): AlertSettings = com.noor.prayer.Prayer.entries.fold(a) { s, p ->
+internal fun phoneAlerts(a: AlertSettings): AlertSettings = com.noor.prayer.Prayer.entries.fold(a.remindersAsAlarms()) { s, p ->
     val x = s.alert(p)
     if (x.mode == com.noor.prayer.alerts.AlertMode.SOUND) s.with(p, x.copy(mode = com.noor.prayer.alerts.AlertMode.NOTIFICATION, soundId = null)) else s
 }

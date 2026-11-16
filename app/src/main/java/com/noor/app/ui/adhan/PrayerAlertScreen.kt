@@ -118,8 +118,6 @@ fun PrayerAlertScreen(
     val lib = vm.library
     val snackbar = remember { SnackbarHostState() }
     var stopDialog by rememberSaveable { mutableStateOf(false) }
-    var beforeDialog by rememberSaveable { mutableStateOf(false) }
-    var afterDialog by rememberSaveable { mutableStateOf(false) }
     val previewLabel = stringResource(R.string.adhan_preview)
 
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); vm.consumeMessage() } }
@@ -150,13 +148,15 @@ fun PrayerAlertScreen(
         }
 
         if (a.enabled) {
-            // 0.16: what kind of alert (no tones any more: the Adhan, its opening, the user's own sound, a notification,
-            // or silently); then the voice, as one row; then when: the days, and reminders before and after.
+            // 0.16: what kind of alert (no tones any more); then the voice, as one row; then the days.
+            // 0.17: four kinds for a prayer, two by two: the Adhan, its opening, a notification, silently. The user's own
+            // recording is one of the voices (the voice row), so it is no longer a kind of its own here; one chosen
+            // there shows as the Adhan.
             Column {
                 SectionHeader(stringResource(R.string.adhan_type))
                 val modes = if (prayer == Prayer.SHURUQ) listOf(AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
-                else listOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
-                ModeTiles(modes, a.mode) { vm.setMode(prayer, it) }
+                else listOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.NOTIFICATION, AlertMode.SILENT)
+                ModeTiles(modes, if (prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM) AlertMode.ADHAN else a.mode) { vm.setMode(prayer, it) }
             }
 
             if (a.mode in VOICE_MODES) {
@@ -168,14 +168,9 @@ fun PrayerAlertScreen(
                 }
             }
 
-            SettingsSection(stringResource(R.string.when_title)) {
+            // (0.17: alarms before and after a prayer are on the Adhan tab, under Alarms.)
+            SettingsSection(stringResource(R.string.alarm_repeat), footer = daysLabel(a.days, f)) {
                 DaysRow(a.days, f) { d -> if (d != 0) vm.setDays(prayer, d) }
-                SettingsDivider()
-                SettingsItem(Icons.Rounded.AlarmAdd, stringResource(R.string.before_title), null, onClick = { beforeDialog = true },
-                    detail = minutesLabel(alerts.beforeOf(prayer), f))
-                SettingsDivider()
-                SettingsItem(Icons.Rounded.Groups, stringResource(R.string.after_title), null, onClick = { afterDialog = true },
-                    detail = minutesLabel(a.afterMinutes, f))
             }
 
             if (a.mode.playsAudio) {
@@ -208,10 +203,6 @@ fun PrayerAlertScreen(
         }
     }
 
-    if (beforeDialog) ChoiceDialog(stringResource(R.string.before_title), com.noor.prayer.alerts.PrayerAlert.BEFORE_CHOICES.map { it to minutesLabel(it, f) },
-        alerts.beforeOf(prayer), onSelect = { m -> vm.setBefore(prayer, m) }, onDismiss = { beforeDialog = false })
-    if (afterDialog) ChoiceDialog(stringResource(R.string.after_title), com.noor.prayer.alerts.PrayerAlert.AFTER_CHOICES.map { it to minutesLabel(it, f) },
-        a.afterMinutes, onSelect = { m -> vm.setAfter(prayer, m) }, onDismiss = { afterDialog = false })
     if (stopDialog) {
         ChoiceDialog(stringResource(R.string.adhan_stop_after), listOf(0, 30, 60, 120, 180).map { it to stopLabel(it, f) }, a.maxSeconds,
             onSelect = { sec -> vm.setPrayer(prayer) { it.copy(maxSeconds = sec) } }, onDismiss = { stopDialog = false })
