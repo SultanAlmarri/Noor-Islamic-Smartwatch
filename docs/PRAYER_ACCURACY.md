@@ -1,6 +1,6 @@
 # Prayer-time accuracy
 
-Status on 4 November 2026. Every figure here is produced by tests in this repository; none is estimated.
+Status on 16 November 2026. Every figure here is produced by tests in this repository; none is estimated.
 
 ## Dubai — IACAD (Dulook DXB)
 
@@ -50,7 +50,11 @@ calendar by a day: on 4 November 2026 Umm al-Qura gives 24 Jumada al-Ula 1448, I
 | Profile | Status |
 |---|---|
 | UAE — Awqaf | Provisional: 164/180 (91%) against one secondary month (godubai.com, November 2026). To be validated against Awqaf's own tables |
-| Muslim World League, Umm al-Qura, Egypt, Karachi, ISNA, Kuwait, Qatar, Singapore, Türkiye, Tehran | The methods' published parameters, as in watch face 1.3.2; not yet compared with each authority's own tables |
+| Türkiye — Diyanet | Against Diyanet's published times for Istanbul, 16–22 Nov 2026 (42 times, calculated at Istanbul's centre): **31 exact (74%), every other one 1 minute**. Locked by `WorldAuthoritiesTest.diyanetIstanbulAgreementIsAsDocumented`. One city, one week |
+| Malaysia — JAKIM | Against JAKIM's e-Solat table for zone WLY01 (Kuala Lumpur), 17–23 Nov 2026 (42 times, calculated at KL's centre): **5 exact; Fajr, Dhuhr, Asr and Isha 1–3 minutes earlier than JAKIM's**, Shuruq and Maghrib within 1. Consistent with JAKIM's precautionary minutes and zone reference points, which are not modelled; nothing was tuned. Locked by `WorldAuthoritiesTest.jakimKualaLumpurAgreementIsAsDocumented` |
+| Moonsighting Committee Worldwide (0.18) | Reproduces the reference times of Batoul Apps' Adhan libraries for London (5 days of 2016, Hanafi Asr) **30/30 to the minute**: a check of the seasonal-twilight implementation against an independent one, not against an official timetable. Locked by `WorldAuthoritiesTest.moonsightingMatchesTheAdhanReferenceForLondon` |
+| Muslim World League, Umm al-Qura, Egypt, Karachi, ISNA, Kuwait, Qatar, Singapore, Tehran, Indonesia | The methods' published parameters, as in watch face 1.3.2; not yet compared with each authority's own tables |
+| Morocco, Algeria, Tunisia, Jordan, Portugal, Russia, Brunei, France (UOIF), Shia Ithna Ashari (0.18) | Parameters as documented by secondary references (docs/AUTHORITIES.md gives each source and a confidence); not yet compared with any authority's own tables. `WorldAuthoritiesTest` checks that each gives six times in order through the year in its reference city and follows its own rules (Jordan's and Portugal's Maghrib minutes, Morocco's minutes, the Jafari Maghrib angle, Umm al-Qura's Ramadan Isha) |
 
 ## Continuing tests
 
