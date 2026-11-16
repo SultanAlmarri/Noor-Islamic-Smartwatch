@@ -1071,7 +1071,7 @@ to change)
 - Tester's options: English only; cannot yet be driven from the emulator workflow.
 - Leftovers from 0.13 stay: `uCloudF*`, the bench's `mix*` values.
 
-## 25. The app lives in the sky; a chain of mountains, Red Rock's seasons, a line of storms (0.15.0, 16 November 2026, phone only)
+## 25. The app lives in the sky; a chain of mountains, Red Rock's seasons, a line of storms (0.15.0 and 0.15.1, 16 November 2026, phone only)
 
 Made in a cloud session (Claude Opus, picking up from Claude Fable when its limit was reached).
 
@@ -1163,4 +1163,7 @@ Made in a cloud session (Claude Opus, picking up from Claude Fable when its limi
   pass runs. They run again after its winter (`meadow_redo.sh`). `lo_congestus` and the green hills' seasons are
   added when they are done (0.15.1).
 - The Testing page is still English only, and goes before release with `com.noor.app.testing`.
-
+- 0.15.1 (versionCode 30) carries the two rounds of review, Red Rock's spring and `lo_congestus` (swelling cumulus,
+  a few towering near; a column of flat cloudlets taken out of it as from `lo_cb_line`). GitHub's build of the work
+  branch with the third round (run 43898096062, workflow_dispatch): every test, both APKs, the watch face's check.
+  The green hills' seasons are still rendering and come in a later update.
