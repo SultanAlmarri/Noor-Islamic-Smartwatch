@@ -12,8 +12,8 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 26
         targetSdk = 35
-        versionCode = 33
-        versionName = "0.17.0"
+        versionCode = 34
+        versionName = "0.18.0"
     }
 
     signingConfigs {
@@ -62,6 +62,7 @@ dependencies {
     implementation(project(":core:prayer"))
     implementation(project(":alerts"))
     implementation(project(":shared"))
+    implementation(project(":face"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)

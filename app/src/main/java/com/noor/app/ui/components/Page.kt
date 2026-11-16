@@ -194,7 +194,7 @@ fun <T> ChoiceChips(options: List<Pair<T, String>>, selected: T, onSelect: (T) -
         options.forEach { (value, label) ->
             val on = value == selected
             Box(
-                Modifier.heightIn(min = 48.dp).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.RadioButton) { onSelect(value) }
+                Modifier.heightIn(min = 48.dp).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.RadioButton, onClick = withTick { onSelect(value) })
                     .semantics { this.selected = on },
                 contentAlignment = Alignment.Center,
             ) {
@@ -260,7 +260,7 @@ fun NoorButton(
     val fg = when { danger -> c.danger; kind == ButtonKind.Filled -> c.onGold; else -> c.goldText }
     Row(
         modifier.heightIn(min = 50.dp).clip(shape).background(bg)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = ripple(color = fg), enabled = enabled, role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = ripple(color = fg), enabled = enabled, role = Role.Button, onClick = withTick(onClick))
             .graphicsLayer { alpha = if (enabled) 1f else 0.45f }.padding(horizontal = 20.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {

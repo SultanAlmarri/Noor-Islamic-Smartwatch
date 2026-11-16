@@ -59,6 +59,8 @@ data class Readiness(
     val exactAlarms: Boolean = true,
     val alarmVolume: Float = 1f,
     val batteryRestricted: Boolean = false,
+    /** 0.18: Android 14+ lets the Adhan's screen show over the lock screen (it keeps the sound playing on Android 17). */
+    val fullScreenAllowed: Boolean = true,
 )
 
 /** The watch's side, from its last report. */
@@ -207,6 +209,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             exactAlarms = AlertScheduler.canScheduleExact(ctx),
             alarmVolume = AlertPlayer.alarmVolume(ctx),
             batteryRestricted = ctx.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(ctx.packageName) == false,
+            fullScreenAllowed = Build.VERSION.SDK_INT < 34 || nm?.canUseFullScreenIntent() != false,
         )
         viewModelScope.launch {
             _history.value = withContext(Dispatchers.IO) { AlertLog.all(ctx) }
@@ -241,7 +244,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
                 ?: if (p == Prayer.FAJR) SoundIds.DEFAULT_FAJR_ADHAN else SoundIds.DEFAULT_ADHAN
             AlertMode.ADHAN_SHORT -> a.soundId?.takeIf { it == SoundIds.RANDOM } ?: a.soundId?.let { library.byId(it) }?.takeIf { it in library.adhansFor(p) }?.id
                 ?: if (p == Prayer.FAJR) SoundIds.DEFAULT_FAJR_ADHAN else SoundIds.DEFAULT_ADHAN
-            AlertMode.SOUND -> a.soundId?.takeIf { it.startsWith("alt.") } ?: SoundIds.DEFAULT_SOUND
+            AlertMode.SOUND -> a.soundId?.takeIf { library.byId(it)?.let { e -> e in library.sounds } == true } ?: SoundIds.DEFAULT_SOUND
             AlertMode.CUSTOM -> a.soundId?.takeIf(SoundIds::isCustom) ?: _custom.value.firstOrNull()?.id
             AlertMode.NOTIFICATION, AlertMode.SILENT -> a.soundId
         }
@@ -267,6 +270,14 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun stopPreview() { player.stop(); _preview.value = null }
+
+    /** 0.18: the phone's alarm sound ([SYS_ALARM]) or ringtone ([SYS_RINGTONE]), as an alarm would play it. */
+    fun previewSystem(which: String) {
+        val ctx = getApplication<Application>()
+        val type = if (which == SYS_RINGTONE) android.media.RingtoneManager.TYPE_RINGTONE else android.media.RingtoneManager.TYPE_ALARM
+        val uri = runCatching { android.media.RingtoneManager.getActualDefaultRingtoneUri(ctx, type) }.getOrNull() ?: android.media.RingtoneManager.getDefaultUri(type) ?: return
+        play(PreviewKey(which, false), SoundSource.System(uri.toString()), 90)
+    }
 
     fun importSound(uri: Uri, replaceId: String? = null, forPrayer: Prayer? = null) = viewModelScope.launch {
         val ctx = getApplication<Application>()
@@ -297,37 +308,53 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun applyVoice(target: Prayer?, voice: String) = update { s0 ->
         var s = s0
-        if (voice == SoundIds.RANDOM && s.favourites.size < 2)
-            s = s.copy(favourites = (s.favourites + VOICE_LIBRARY_IDS).distinct())
-        val entry = library.byId(voice)
+        // ("Random": a different one of the voices each time, Fajr's own recordings at Fajr.)
+        if (voice == SoundIds.RANDOM) s = s.copy(favourites = library.adhans.map { it.id }.filter { id -> VOICE_LIBRARY_IDS.any { id == it || id == it + "_fajr" } })
         val custom = SoundIds.isCustom(voice)
         for (p in Prayer.entries) {
             if (p == Prayer.SHURUQ) continue
             if (target != null && p != target) continue
             val a = s.alert(p)
+            // (For every prayer: those that call the Adhan; a prayer set to a notification or a sound keeps it.)
             if (target == null && a.mode !in VOICE_MODES) continue
-            if (target == null && p == Prayer.FAJR && entry?.fajr != true && voice != SoundIds.RANDOM) continue
+            // 0.18: Fajr takes the voice's own Fajr recording ("As-salatu khayrun min an-nawm") when there is one; for
+            // every prayer at once, a voice without one leaves Fajr on the Fajr Adhan it has (never a plain Adhan at Fajr).
+            val own = if (p == Prayer.FAJR) fajrOf(voice, this, _custom.value) else voice
+            if (p == Prayer.FAJR && target == null && own == voice && library.byId(a.soundId)?.fajr == true && voice != SoundIds.RANDOM) continue
+            val id = own
+            val entry = library.byId(id)
             val mode = when {
                 custom -> AlertMode.CUSTOM
                 a.mode == AlertMode.ADHAN_SHORT -> AlertMode.ADHAN_SHORT
                 entry != null && !entry.hasFullRecording -> AlertMode.ADHAN_SHORT
                 else -> AlertMode.ADHAN
             }
-            s = s.with(p, a.copy(enabled = true, mode = mode, soundId = voice))
+            s = s.with(p, a.copy(enabled = a.enabled || target != null, mode = mode, soundId = id))
         }
         s
     }
 
-    /** An imported file as one of the voices ([name]: "Al-Quds", "Egypt", "Riyadh"…), then used as [applyVoice] would. */
-    fun importVoice(uri: Uri, name: String, target: Prayer?) = viewModelScope.launch {
+    /** 0.18: the volume of every prayer's alert at once (each can still have its own, on its page). */
+    fun setVolumeAll(percent: Int) = update { s -> Prayer.entries.fold(s) { x, p -> x.with(p, x.alert(p).copy(volumePercent = percent)) } }
+
+    /**
+     * Files imported as one of the voices ([name]: "Al-Quds", "Egypt", "Dubai"…), then used as [applyVoice] would. 0.18:
+     * a file whose name says Fajr ("… Fajr", "… الفجر") becomes the voice's Fajr recording, played at Fajr.
+     */
+    fun importVoice(uris: List<Uri>, name: String, target: Prayer?) = viewModelScope.launch {
         val ctx = getApplication<Application>()
-        val result = withContext(Dispatchers.IO) { container.customSounds.import(ctx.contentResolver, uri, null) }
-        if (result is ImportResult.Ok) {
-            withContext(Dispatchers.IO) { container.customSounds.rename(result.sound.id, name) }
-            _custom.value = container.customSounds.list()
-            applyVoice(target, result.sound.id)
-            _message.value = ctx.getString(com.noor.app.R.string.adhan_import_ok, name)
-        } else importSoundResult(result)
+        var main: String? = null
+        for (uri in uris.take(2)) {
+            val display = runCatching { ctx.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { c -> if (c.moveToFirst()) c.getString(0) else null } }.getOrNull().orEmpty()
+            val fajr = Regex("fajr|الفجر|فجر", RegexOption.IGNORE_CASE).containsMatchIn(display) && uris.size > 1
+            val result = withContext(Dispatchers.IO) { container.customSounds.import(ctx.contentResolver, uri, null) }
+            if (result !is ImportResult.Ok) { importSoundResult(result); continue }
+            withContext(Dispatchers.IO) { container.customSounds.rename(result.sound.id, if (fajr) "$name Fajr" else name) }
+            if (!fajr) main = result.sound.id
+        }
+        _custom.value = container.customSounds.list()
+        main?.let { applyVoice(target, it); _message.value = ctx.getString(com.noor.app.R.string.adhan_import_ok, name) }
     }
 
     private fun importSoundResult(result: ImportResult) {
@@ -371,7 +398,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         val ctx = getApplication<Application>()
         stopPreview()
         _message.value = ctx.getString(
-            if (AlertScheduler.scheduleTest(ctx, p, 10)) com.noor.app.R.string.adhan_test_sent else com.noor.app.R.string.adhan_test_failed)
+            if (AlertScheduler.scheduleTest(ctx, p, 10)) com.noor.app.R.string.adhan_test_sent else com.noor.app.R.string.adhan_test_failed, digits(10))
     }
 
     /**
@@ -396,7 +423,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         val zone = ZoneId.systemDefault()
         fun t(ms: Long) = java.time.Instant.ofEpochMilli(ms).atZone(zone).toLocalDateTime().withNano(0).toString()
         return buildString {
-            appendLine("Noor ${com.noor.app.BuildConfigInfo.versionName} alert report, ${t(System.currentTimeMillis())} ($zone)")
+            appendLine("Minhad ${com.noor.app.BuildConfigInfo.versionName} alert report, ${t(System.currentTimeMillis())} ($zone)")
             appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
             appendLine("Notifications allowed: ${r.notificationsAllowed}; Adhan category blocked: ${r.adhanChannelBlocked}")
             appendLine("Exact alarms: ${r.exactAlarms}; alarm volume: ${Math.round(r.alarmVolume * 100)}%; ringer mode: ${am?.ringerMode}")
@@ -419,11 +446,24 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 
     fun consumeMessage() { _message.value = null }
 
+    /** [n] in the digits the user chose and the app's language (for messages built here). */
+    private fun digits(n: Int): String {
+        val s = settings.value ?: return n.toString()
+        val ar = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language == "ar" ||
+            (androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().isEmpty && java.util.Locale.getDefault().language == "ar")
+        return com.noor.app.util.Formatter(ar, s.numerals, s.timeFormat).number(n)
+    }
+
     override fun onCleared() { player.stop(notify = false) }
 }
+
+/** Preview keys of the phone's own sounds. */
+internal const val SYS_ALARM = "sys.alarm"
+internal const val SYS_RINGTONE = "sys.ringtone"
 
 /** The kinds of alert a voice applies to: the Adhan, its opening, the user's own sound. */
 internal val VOICE_MODES = setOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.CUSTOM)
 
 /** The library recordings behind the voices named as on the owner's clock (Makkah, Madinah). */
-internal val VOICE_LIBRARY_IDS = listOf("adhan.makkah_maghrib_2012", "adhan.madinah_prophets_mosque")
+/** 0.18: the owner's five voices, as the library names them (a voice the library lacks is the user's own recording). */
+internal val VOICE_LIBRARY_IDS = listOf("adhan.makkah", "adhan.madinah", "adhan.alquds", "adhan.egypt", "adhan.dubai")

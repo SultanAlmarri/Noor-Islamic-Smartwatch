@@ -123,7 +123,7 @@ fun PrayerAlertScreen(
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); vm.consumeMessage() } }
     StopPreviewOnLeave(vm)
     val ready by vm.readiness.collectAsStateWithLifecycle()
-    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
+    val notifPermission = com.noor.app.ui.components.rememberNotificationRequest { vm.refresh() }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) vm.importSound(uri, forPrayer = prayer) }
 
     NoorPage(f.prayerName(prayer), contentPadding, onBack = onBack,
@@ -133,16 +133,16 @@ fun PrayerAlertScreen(
         if (!alerts.enabled) SettingsSection("") {
             WarningRow(stringResource(R.string.adhan_master_off_here), stringResource(R.string.adhan_turn_on), {
                 vm.setEnabled(true)
-                if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission()
             })
         }
-        SettingsSection("", footer = if (prayer == Prayer.SHURUQ) stringResource(R.string.adhan_sunrise_note) else null) {
+        SettingsSection("") {
             // (0.15: the switch says what will happen: off while all alerts are off. Turned on then, it turns the
             // alerts on for this prayer alone, as on the Adhan tab.)
             SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_alert_for, f.prayerName(prayer)), null, alerts.enabled && a.enabled) { on ->
                 if (on && !alerts.enabled) {
                     vm.enableOnly(prayer)
-                    if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission()
                 } else vm.setPrayer(prayer) { it.copy(enabled = on) }
             }
         }
@@ -154,16 +154,17 @@ fun PrayerAlertScreen(
             // there shows as the Adhan.
             Column {
                 SectionHeader(stringResource(R.string.adhan_type))
-                val modes = if (prayer == Prayer.SHURUQ) listOf(AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
-                else listOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.NOTIFICATION, AlertMode.SILENT)
+                // (0.18: the sound effects are back, as Sound: birds and the like, real recordings.)
+                val modes = if (prayer == Prayer.SHURUQ) listOf(AlertMode.SOUND, AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
+                else listOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.SOUND, AlertMode.NOTIFICATION, AlertMode.SILENT)
                 ModeTiles(modes, if (prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM) AlertMode.ADHAN else a.mode) { vm.setMode(prayer, it) }
             }
 
-            if (a.mode in VOICE_MODES) {
-                val chosen = lib.byId(a.soundId)
-                val fajrWarn = if (prayer == Prayer.FAJR && chosen != null && !chosen.fajr) stringResource(R.string.adhan_fajr_warn) else null
-                SettingsSection("", footer = fajrWarn) {
-                    SettingsItem(Icons.Rounded.RecordVoiceOver, stringResource(R.string.adhan_voice), null, onClick = onOpenVoice,
+            if (a.mode in VOICE_MODES || a.mode == AlertMode.SOUND) {
+                SettingsSection("") {
+                    if (a.mode == AlertMode.SOUND || prayer == Prayer.SHURUQ) SettingsItem(Icons.Rounded.MusicNote, stringResource(R.string.adhan_sound_title), null, onClick = onOpenVoice,
+                        detail = lib.byId(a.soundId)?.title(ar) ?: custom.firstOrNull { it.id == a.soundId }?.name)
+                    else SettingsItem(Icons.Rounded.RecordVoiceOver, stringResource(R.string.adhan_voice), null, onClick = onOpenVoice,
                         detail = voiceName(a.soundId, vm, custom, ar) ?: stringResource(R.string.voice_add))
                 }
             }
@@ -198,7 +199,6 @@ fun PrayerAlertScreen(
 
             Column {
                 NoorButton(stringResource(R.string.adhan_test), { vm.test(prayer) }, Modifier.fillMaxWidth(), kind = ButtonKind.Tonal)
-                SectionFooter(stringResource(R.string.adhan_test_desc))
             }
         }
     }
@@ -299,7 +299,7 @@ internal fun DaysRow(days: Int, f: Formatter, onChange: (Int) -> Unit) {
             Box(
                 Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape)
                     .background(if (on) c.gold else c.glassRaised)
-                    .toggleable(on, role = Role.Checkbox) { onChange(if (it) days or bit else days and bit.inv()) }
+                    .toggleable(on, role = Role.Checkbox, onValueChange = com.noor.app.ui.components.withTick<Boolean> { onChange(if (it) days or bit else days and bit.inv()) })
                     .semantics { contentDescription = d.getDisplayName(java.time.format.TextStyle.FULL, f.locale) },
                 contentAlignment = Alignment.Center,
             ) {

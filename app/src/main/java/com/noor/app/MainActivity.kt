@@ -192,6 +192,20 @@ class MainActivity : AppCompatActivity() {
         stoppedAt = 0L
         if (Opening.replaysOnReturn(away, animationsOn(this), opening.onHome)) opening.begin(OpeningMode.FULL, veil = false, now = true)
     }
+
+    /**
+     * 0.18: the app's language can also be changed in Android's own settings ("App languages", Android 13+); the stored
+     * choice follows it, so notifications, the notification bar, widgets and the watch speak the same language.
+     */
+    override fun onResume() {
+        super.onResume()
+        val tag = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language ?: ""
+        val lang = com.noor.app.data.Language.entries.firstOrNull { it.tag == tag } ?: com.noor.app.data.Language.SYSTEM
+        val repo = (application as NoorApplication).container.settings
+        lifecycleScope.launch {
+            if (repo.current().language != lang) { repo.setLanguage(lang); com.noor.alerts.AlertNotifications.ensureChannels(this@MainActivity) }
+        }
+    }
 }
 
 /** Whether the sun is up where the user is (between today's Shuruq and Maghrib); re-evaluated every minute. */
@@ -231,6 +245,8 @@ internal object Routes {
     const val ONBOARDING = "onboarding"
     const val PRAYERS = "prayers"
     const val WATCH = "watch"
+    /** 0.18: Minhad Studio, the watch-face editor (from the Watch page). */
+    const val WATCH_STUDIO = "watch/studio"
     const val QIBLA = "qibla"
     const val SETTINGS = "settings"
     const val CITIES = "cities"
@@ -254,7 +270,7 @@ internal object Routes {
     // opens from Settings, set up once and left.
     val tabs = listOf(PRAYERS, QIBLA, ADHAN, SETTINGS)
     /** Pages that are a task of their own, shown without the tab bar (0.15: every other page keeps it). */
-    val withoutTabBar = setOf(ONBOARDING, CITIES)
+    val withoutTabBar = setOf(ONBOARDING, CITIES, WATCH_STUDIO)
 }
 
 // Tabs cross-fade (they are siblings). A page pushed from a tab comes in from the side one reads towards, and leaves
@@ -359,7 +375,10 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_HISTORY) { com.noor.app.ui.adhan.AlertHistoryScreen(content, onBack = { nav.popBackStack() }) }
-            composable(Routes.WATCH) { WatchScreen(content, onOpenAdhan = { openTab(Routes.ADHAN) }, onBack = { nav.popBackStack() }) }
+            composable(Routes.WATCH) {
+                WatchScreen(content, onOpenAdhan = { openTab(Routes.ADHAN) }, onBack = { nav.popBackStack() }, onOpenStudio = { nav.navigate(Routes.WATCH_STUDIO) })
+            }
+            composable(Routes.WATCH_STUDIO) { com.noor.app.ui.watch.studio.StudioScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) },
                     onOpenRoute = { r ->
@@ -459,7 +478,7 @@ private fun RowScope.Tab(selected: Boolean, icon: Painter, label: String, onClic
     val lift by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 0.55f, stiffness = 420f), label = "tabLift")
     Column(
         Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(50))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab, onClick = onClick)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab, onClick = com.noor.app.ui.components.withTick(onClick))
             .semantics { this.selected = selected },
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {

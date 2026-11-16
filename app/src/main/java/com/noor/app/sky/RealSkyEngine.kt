@@ -505,15 +505,28 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
      * (0.18) Buffers for decoded pixels, used again rather than made anew for every picture (each was 4 to 10 MB of
      * garbage, made while the screen was moving).
      */
-    private val buffers = ConcurrentLinkedQueue<ByteBuffer>()
+    private val buffers = ArrayList<ByteBuffer>()
+    private var pooledBytes = 0L
+    // (Claimed and given back under one lock: two reading threads must never take the same buffer. The pool keeps at
+    // most POOL_BYTES, and is emptied when Android asks the app to give memory back.)
     private fun buffer(bytes: Int): ByteBuffer {
-        val it = buffers.iterator()
-        while (it.hasNext()) { val b = it.next(); if (b.capacity() >= bytes && b.capacity() <= bytes * 2) { it.remove(); b.clear(); b.limit(bytes); return b } }
+        synchronized(buffers) {
+            val i = buffers.indexOfFirst { it.capacity() >= bytes && it.capacity() <= bytes * 2 }
+            if (i >= 0) { val b = buffers.removeAt(i); pooledBytes -= b.capacity(); b.clear(); b.limit(bytes); return b }
+        }
         return ByteBuffer.allocateDirect(bytes)
     }
-    private fun giveBack(b: ByteBuffer?) { if (b != null && buffers.size < 6) buffers.add(b) }
+    private fun giveBack(b: ByteBuffer?) {
+        if (b == null) return
+        synchronized(buffers) {
+            if (buffers.any { it === b } || pooledBytes + b.capacity() > POOL_BYTES) return
+            buffers.add(b); pooledBytes += b.capacity()
+        }
+    }
+    /** 0.18: the pooled buffers let go (Android is short of memory, or the sky is out of sight). */
+    fun trimMemory() { synchronized(buffers) { buffers.clear(); pooledBytes = 0 } }
     /** Each reading thread's own bitmap and scratch row of bytes, used again from picture to picture. */
-    private class Scratch { var bitmap: Bitmap? = null; var rgba: ByteBuffer? = null }
+    private class Scratch { var bitmap: Bitmap? = null }
     private val scratch = ThreadLocal.withInitial { Scratch() }
 
     /** Reads a picture of the APK's assets: RGBA (or one channel, [grey]) in a buffer ready for the GPU. */
@@ -535,13 +548,15 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             bmp.copyPixelsToBuffer(out); out.position(0)
             return Triple(w, h, out)
         }
-        // One channel of four: through this thread's own buffers, into one the size of the picture.
-        val rgba = s.rgba?.takeIf { it.capacity() >= w * h * 4 } ?: ByteBuffer.allocateDirect(w * h * 4).also { s.rgba = it }
-        rgba.clear(); bmp.copyPixelsToBuffer(rgba); rgba.position(0)
-        val out = buffer(w * h)
-        for (i in 0 until w * h) out.put(i, rgba.get(i * 4))
-        out.position(0)
-        return Triple(w, h, out)
+        // One channel of four: through a buffer of the pool (given back at once), into one the size of the picture.
+        val rgba = buffer(w * h * 4)
+        try {
+            bmp.copyPixelsToBuffer(rgba); rgba.position(0)
+            val out = buffer(w * h)
+            for (i in 0 until w * h) out.put(i, rgba.get(i * 4))
+            out.position(0)
+            return Triple(w, h, out)
+        } finally { giveBack(rgba) }
     }
 
     private fun bakedSet(dir: String, land: Boolean, turned: Boolean = false): Baked? {
@@ -608,8 +623,9 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             first = false
             budget -= bytes
             if (l.set == null) { night(l); continue }
-            waitingJobs.remove("${l.set.key}/${l.name}")
+            // (A set freed and asked for again has a new job under the same key: the old one's result leaves it be.)
             if (baked[l.set.key] !== l.set) { giveBack(l.pixels); continue }    // of a context that is gone
+            waitingJobs.remove("${l.set.key}/${l.name}")
             if (l.pixels == null) { l.set.missing += l.name; continue }
             val t = IntArray(1)
             GLES30.glGenTextures(1, t, 0)
@@ -1071,6 +1087,8 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
     companion object {
         private const val TAG = "NoorRealSky"
+        /** (0.18) At most this many bytes of decoding buffers are kept for the next pictures (the rest is let go). */
+        private const val POOL_BYTES = 24L * 1024 * 1024
         /** (0.18) How long a set of clouds takes to come in when its pictures were not at hand in time (ms). */
         private const val APPEAR_MS = 700L
         /** (0.18) At most this many bytes of pictures go to the GPU in one frame while the scene moves (the first always). */

@@ -38,7 +38,7 @@ object PrayerProvider {
         if (s.locationMode == LocationMode.MANUAL) {
             s.manualPlace?.let { m ->
                 return ResolvedPlace(m.point, runCatching { ZoneId.of(m.zoneId) }.getOrDefault(ZoneId.systemDefault()),
-                    m.placeName ?: "%.3f, %.3f".format(m.point.latitude, m.point.longitude), m.placeNameAr, false,
+                    m.placeName ?: "%.3f, %.3f".format(java.util.Locale.ROOT, m.point.latitude, m.point.longitude), m.placeNameAr, false,
                     m.countryCode, m.regionCode, null, m.placeContext, m.placeContextAr)
             }
             val city = s.manualCityId?.let { Places.byId(it) } ?: return null
@@ -51,7 +51,7 @@ object PrayerProvider {
             point = last.point,
             // In automatic mode the phone's own zone is authoritative (it follows the network when travelling).
             zone = ZoneId.systemDefault(),
-            nameEn = last.placeName ?: if (closeToCity) near.nameEn else "%.3f, %.3f".format(last.point.latitude, last.point.longitude),
+            nameEn = last.placeName ?: if (closeToCity) near.nameEn else "%.3f, %.3f".format(java.util.Locale.ROOT, last.point.latitude, last.point.longitude),
             nameAr = last.placeNameAr ?: if (closeToCity && last.placeName == null) near.nameAr else null,
             fromGps = true,
             countryCode = last.countryCode,

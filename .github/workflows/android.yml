@@ -41,6 +41,9 @@ jobs:
           mkdir -p out
           cp app/build/outputs/apk/release/app-release.apk out/Noor-phone.apk 2>/dev/null || true
           cp wear/build/outputs/apk/release/wear-release.apk out/Noor-watch.apk 2>/dev/null || true
+          # (0.18: the app is Minhad; the same files under its name, and under the old one so earlier links keep working.)
+          cp out/Noor-phone.apk out/Minhad-phone.apk 2>/dev/null || true
+          cp out/Noor-watch.apk out/Minhad-watch.apk 2>/dev/null || true
           cp wear/build/generated/watchface/validation.txt out/watchface-validation.txt 2>/dev/null || true
           (cd core/prayer/build && zip -qr ../../../out/engine-test-report.zip reports test-results) 2>/dev/null || true
           (cd app/build && zip -qr ../../out/app-test-report.zip reports test-results) 2>/dev/null || true
@@ -71,8 +74,11 @@ jobs:
           body: |
             Automatic build of `${{ github.sha }}` (run ${{ github.run_number }}).
             Development build signed with the public development key (signing/README.md). Not a store release.
-            Noor-phone.apk goes on the phone, Noor-watch.apk on the watch (see docs/INSTALL.md).
+            Minhad-phone.apk goes on the phone, Minhad-watch.apk on the watch (see docs/INSTALL.md). Noor-phone.apk and
+            Noor-watch.apk are the same files under the app's former name.
           files: |
+            out/Minhad-phone.apk
+            out/Minhad-watch.apk
             out/Noor-phone.apk
             out/Noor-watch.apk
             out/watchface-validation.txt

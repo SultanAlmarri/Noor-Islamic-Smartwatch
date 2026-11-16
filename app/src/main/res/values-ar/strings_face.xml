@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="studio_title">استوديو منهاد</string>
+    <string name="studio_card_body">صمّم واجهة ساعتك بنفسك: ما تعرضه وأين، وألوانها وخطها وعقاربها وشكلها في وضع العرض الدائم. بلمسة واحدة تصل إلى ساعتك.</string>
+    <string name="studio_card_open">صمّم واجهة ساعتك</string>
+    <string name="studio_card_edit">عدّل تصميمك</string>
+    <string name="studio_hint">انقر مكانًا لتختار ما فيه، والمس مطوّلًا لتنقله.</string>
+    <string name="studio_undo">تراجع</string>
+    <string name="studio_redo">إعادة</string>
+    <string name="studio_aod">العرض الدائم</string>
+    <string name="studio_active">نشطة</string>
+    <string name="studio_preview_desc">معاينة واجهة ساعتك كما ترسمها الساعة</string>
+
+    <string name="studio_tab_designs">التصاميم</string>
+    <string name="studio_tab_style">المظهر</string>
+    <string name="studio_tab_dial">المينا</string>
+    <string name="studio_tab_aod">العرض الدائم</string>
+    <string name="studio_tab_options">خيارات</string>
+
+    <string name="studio_slot_upper">الحافة العليا</string>
+    <string name="studio_slot_top">فوق الوسط</string>
+    <string name="studio_slot_center">الوسط</string>
+    <string name="studio_slot_bottom">تحت الوسط</string>
+    <string name="studio_slot_lower">الحافة السفلى</string>
+    <string name="studio_slot_left">اليسار</string>
+    <string name="studio_slot_right">اليمين</string>
+
+    <string name="studio_what_here">ما يوضع هنا</string>
+    <string name="studio_remove">إزالة</string>
+    <string name="studio_close">إغلاق</string>
+    <string name="studio_size">الحجم</string>
+    <string name="studio_size_s">صغير</string>
+    <string name="studio_size_m">متوسط</string>
+    <string name="studio_size_l">كبير</string>
+    <string name="studio_colour">اللون</string>
+    <string name="studio_colour_accent">المميّز</string>
+    <string name="studio_colour_text">النص</string>
+    <string name="studio_colour_soft">الهادئ</string>
+    <string name="studio_colour_custom">لونك الخاص</string>
+    <string name="studio_touch">عند اللمس</string>
+    <string name="studio_tap_none">لا شيء</string>
+    <string name="studio_tap_app">فتح منهاد</string>
+    <string name="studio_tap_qibla">القبلة</string>
+    <string name="studio_tap_tasbih">التسبيح</string>
+    <string name="studio_tap_calendar">التقويم</string>
+    <string name="studio_label_text">كلمات</string>
+    <string name="studio_label_hint">منهاد</string>
+
+    <string name="studio_el_time">الوقت</string>
+    <string name="studio_el_date">التاريخ</string>
+    <string name="studio_el_weekday">اليوم</string>
+    <string name="studio_el_hijri">التاريخ الهجري</string>
+    <string name="studio_el_next">الصلاة القادمة</string>
+    <string name="studio_el_countdown">العدّ التنازلي</string>
+    <string name="studio_el_times">مواقيت اليوم</string>
+    <string name="studio_el_gauge">مؤشر الصلاة</string>
+    <string name="studio_el_sun">قوس الشمس</string>
+    <string name="studio_el_qibla">القبلة</string>
+    <string name="studio_el_battery">البطارية</string>
+    <string name="studio_el_label">كلمات</string>
+
+    <string name="studio_tpl_horizon">الأفق</string>
+    <string name="studio_tpl_dial">المينا</string>
+    <string name="studio_tpl_minimal">بسيط</string>
+    <string name="studio_tpl_day">دائرة اليوم</string>
+    <string name="studio_tpl_timetable">جدول المواقيت</string>
+    <string name="studio_tpl_kufi">كوفي</string>
+    <string name="studio_tpl_sun">الشمس</string>
+    <string name="studio_templates">ابدأ من</string>
+    <string name="studio_mine">تصاميمي</string>
+    <string name="studio_mine_empty">تظهر هنا التصاميم التي تحفظها، جاهزة لتضعها على ساعتك مرة أخرى.</string>
+    <string name="studio_save">حفظ التصميم</string>
+    <string name="studio_save_title">سمِّ هذا التصميم</string>
+    <string name="studio_saved_default">واجهتي %1$d</string>
+    <string name="studio_delete">حذف</string>
+    <string name="studio_delete_named">حذف %1$s</string>
+    <string name="studio_cancel">إلغاء</string>
+
+    <string name="studio_palette">السمة</string>
+    <string name="studio_pal_gold">ذهبي</string>
+    <string name="studio_pal_emerald">زمردي</string>
+    <string name="studio_pal_turquoise">فيروزي</string>
+    <string name="studio_pal_rose">وردي</string>
+    <string name="studio_pal_silver">فضي</string>
+    <string name="studio_pal_sand">رملي</string>
+    <string name="studio_pal_dusk">شفقي</string>
+    <string name="studio_colours">الألوان</string>
+    <string name="studio_background">الخلفية</string>
+    <string name="studio_bg_black">أسود</string>
+    <string name="studio_bg_solid">لون</string>
+    <string name="studio_bg_gradient">تدرّج</string>
+    <string name="studio_bg_dunes">كثبان الليل</string>
+    <string name="studio_bg_colour">لون الخلفية</string>
+    <string name="studio_font">الخط</string>
+    <string name="studio_font_light">رفيع</string>
+    <string name="studio_font_regular">عادي</string>
+    <string name="studio_font_medium">عريض</string>
+    <string name="studio_font_kufi">كوفي</string>
+
+    <string name="studio_hands">العقارب</string>
+    <string name="studio_hands_none">بلا</string>
+    <string name="studio_hands_classic">كلاسيكية</string>
+    <string name="studio_hands_slim">رفيعة</string>
+    <string name="studio_hands_bold">عريضة</string>
+    <string name="studio_marks">العلامات</string>
+    <string name="studio_marks_none">بلا</string>
+    <string name="studio_marks_dots">نقاط</string>
+    <string name="studio_marks_minutes">دقائق</string>
+    <string name="studio_marks_numerals">أرقام</string>
+    <string name="studio_edge">حول الحافة</string>
+    <string name="studio_edge_none">لا شيء</string>
+    <string name="studio_edge_ring">حلقة الصلاة</string>
+    <string name="studio_edge_day">دائرة اليوم</string>
+    <string name="studio_edge_desc">تمتلئ حلقة الصلاة من صلاة إلى التي تليها. وتعرض دائرة اليوم اليوم كله، منتصف الليل في الأسفل والظهيرة في الأعلى، مع المواقيت الستة وموضع الشمس الآن.</string>
+    <string name="studio_seconds">الثواني</string>
+    <string name="studio_seconds_desc">عقرب ثوانٍ يتحرك، أو الثواني بجانب الوقت. يستهلك قليلًا من البطارية.</string>
+
+    <string name="studio_aod_style">شكل العرض الدائم</string>
+    <string name="studio_aod_dimmed">التصميم معتّمًا</string>
+    <string name="studio_aod_minimal">الوقت والصلاة القادمة</string>
+    <string name="studio_aod_time">الوقت فقط</string>
+    <string name="studio_aod_custom">اختر بنفسك</string>
+    <string name="studio_aod_keep">يظهر في العرض الدائم</string>
+    <string name="studio_aod_keep_desc">يبقى الوقت دائمًا.</string>
+    <string name="studio_shift">إزاحة البكسل</string>
+    <string name="studio_shift_desc">تحرّك صورة العرض الدائم قليلًا كل دقيقة، حمايةً للشاشة من الاحتراق.</string>
+    <string name="studio_outline">خطوط خارجية</string>
+    <string name="studio_outline_desc">ترسم نصوص العرض الدائم بخطوط خارجية: بكسلات مضيئة أقل وبطارية أطول.</string>
+
+    <string name="studio_language">اللغة</string>
+    <string name="studio_follow_app">كما في التطبيق</string>
+    <string name="studio_lang_en">الإنجليزية</string>
+    <string name="studio_lang_ar">العربية</string>
+    <string name="studio_digits">الأرقام</string>
+    <string name="studio_digits_western">غربية</string>
+    <string name="studio_digits_arabic">عربية مشرقية</string>
+    <string name="studio_clock">الساعة</string>
+    <string name="studio_clock_12">١٢ ساعة</string>
+    <string name="studio_clock_24">٢٤ ساعة</string>
+
+    <string name="studio_send">ضعها على ساعتي</string>
+    <string name="studio_sending">جارٍ الإرسال…</string>
+    <string name="studio_status_none">لا توجد ساعة عليها منهاد في المتناول. يصل تصميمك إلى الساعة عند اتصالها التالي.</string>
+    <string name="studio_status_sent">أُرسل. بانتظار ساعتك…</string>
+    <string name="studio_status_showing">على ساعتك، ظاهرة الآن.</string>
+    <string name="studio_status_pick">على ساعتك. لإظهارها، المس واجهة الساعة مطوّلًا، واسحب إلى استوديو منهاد وانقر عليها. يتيح Wear OS لك أنت، لا للتطبيق، اختيار الواجهة؛ تفعل ذلك مرة واحدة.</string>
+    <string name="studio_status_unsupported">جاءت ساعتك بنظام Wear OS 6 الذي لا يشغّل إلا واجهات الصيغة الحديثة، فلا يعمل استوديو منهاد عليها. واجهات منهاد في صفحة الساعة تعمل.</string>
+    <string name="studio_status_update">حدّث منهاد على ساعتك لتستخدم استوديو منهاد.</string>
+    <string name="studio_status_failed">تعذّر الوصول إلى Wear OS على هذا الهاتف. حاول مرة أخرى.</string>
+    <string name="studio_status_changed">غيّرت التصميم بعد إرساله.</string>
+
+    <string name="studio_pick_colour">اختر لونًا</string>
+    <string name="studio_hue">اللون</string>
+    <string name="studio_lightness">السطوع</string>
+    <string name="studio_done">تم</string>
+    <string name="studio_classic_title">واجهات منهاد</string>
+</resources>

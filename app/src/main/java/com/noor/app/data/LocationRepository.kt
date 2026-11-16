@@ -19,6 +19,7 @@ import com.noor.prayer.authority.Authorities
 import com.noor.prayer.geo.AddressParts
 import com.noor.prayer.geo.Gazetteer
 import com.noor.prayer.geo.PlaceNaming
+import com.noor.prayer.geo.ZoneCountries
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
@@ -43,6 +44,8 @@ class LocationRepository(
     private val context: Context,
     private val settings: SettingsRepository,
     private val gazetteer: GazetteerStore,
+    /** The offline time-zone map, whose zone at a position also gives its country when nothing names the place. */
+    private val world: WorldStore? = null,
 ) {
 
     sealed interface Result {
@@ -90,7 +93,8 @@ class LocationRepository(
         val reuseKm = if (precise) 0.3 else 3.0
         if (previous != null && previous.placeName != null && previous.precise == precise &&
             Gazetteer.distanceKm(previous.point, point) <= reuseKm
-        ) return previous.copy(point = point, zoneId = ZoneId.systemDefault().id, fixedAtEpochMs = now)
+        ) return previous.copy(point = point, zoneId = ZoneId.systemDefault().id, fixedAtEpochMs = now,
+            countryCode = previous.countryCode ?: offlineCountry(point))
 
         val en = reverseGeocode(point, Locale.ENGLISH)
         val ar = reverseGeocode(point, Locale.forLanguageTag("ar"))
@@ -100,13 +104,25 @@ class LocationRepository(
         if (label == null && gaz != null) { label = PlaceNaming.label(gaz, false); labelAr = PlaceNaming.label(gaz, true) }
 
         val near = Places.nearest(point)
-        val country = en?.countryCode ?: gaz?.countryCode ?: near.countryCode.takeIf { Places.distanceKm(near.point, point) < 150 }
+        // The country chooses the prayer-time authority (Authorities.forPlace), so it must be right wherever the user
+        // travels, also offline: the geocoder; else the offline time-zone map, whose zones follow each country's
+        // border (ZoneCountries); else the nearest town of the gazetteer; else a bundled city within 150 km.
+        // (0.18 review: a gazetteer town within 5 km comes before the map, whose simplified borders can put the other
+        // half of a twin border town, Al Ain and Al Buraimi say, in the wrong country.)
+        val gazClose = gaz?.takeIf { Gazetteer.distanceKm(it.point, point) <= 5.0 }
+        val country = en?.countryCode ?: gazClose?.countryCode ?: offlineCountry(point) ?: gaz?.countryCode
+            ?: near.countryCode.takeIf { Places.distanceKm(near.point, point) < 150 }
         val region = regionCode(en) ?: gaz?.region ?: near.region.takeIf { Places.distanceKm(near.point, point) < 40 }
         return KnownLocation(
             point = point, zoneId = ZoneId.systemDefault().id,
             placeName = label?.primary, countryCode = country, regionCode = region, fixedAtEpochMs = now,
             placeNameAr = labelAr?.primary, placeContext = label?.context, placeContextAr = labelAr?.context, precise = precise,
         )
+    }
+
+    /** The country of the time zone at [p] on the offline map; null at sea or if the map cannot be read. */
+    private suspend fun offlineCountry(p: GeoPoint): String? = world?.let { w ->
+        runCatching { ZoneCountries.of(w.timeZones().zoneAt(p.latitude, p.longitude)) }.getOrNull()
     }
 
     private fun Address.parts() = AddressParts(subLocality, locality, subAdminArea, adminArea, countryCode, countryName)

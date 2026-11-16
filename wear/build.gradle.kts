@@ -13,8 +13,8 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 33 // Wear OS 4+ (Galaxy Watch 4 and later are on Wear OS 5 or 6)
         targetSdk = 35
-        versionCode = 19
-        versionName = "0.17.0"
+        versionCode = 20
+        versionName = "0.18.0"
     }
 
     signingConfigs {
@@ -62,6 +62,7 @@ dependencies {
     implementation(project(":core:prayer"))
     implementation(project(":alerts"))
     implementation(project(":shared"))
+    implementation(project(":face"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -89,6 +90,7 @@ dependencies {
     implementation(libs.androidx.concurrent.futures)
     implementation(libs.wear.complications.source)
     implementation(libs.wear.watchfacepush)
+    implementation(libs.wear.watchface) // Minhad Studio: the face the watch app draws itself (0.18)
 
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(libs.junit)

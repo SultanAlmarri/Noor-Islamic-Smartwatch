@@ -56,6 +56,10 @@ fun Wheel(
     modifier: Modifier = Modifier,
     loop: Boolean = false,
     rowHeight: Dp = 44.dp,
+    /** False when the wheels of a row share one band, drawn behind them all (0.18: one clean line across). */
+    band: Boolean = true,
+    /** The chosen row's type size; the others are a size smaller. */
+    size: Float = 24f,
 ) {
     val c = NoorTheme.colors
     val haptics = LocalHapticFeedback.current
@@ -82,7 +86,7 @@ fun Wheel(
         }
     }
     Box(modifier.height(rowHeight * 5).semantics { contentDescription = label; stateDescription = items[centre % n] }, contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxWidth().height(rowHeight).clip(RoundedCornerShape(12.dp)).background(c.textMuted.copy(alpha = if (c.isDark) 0.16f else 0.11f)))
+        if (band) Box(Modifier.fillMaxWidth().height(rowHeight).clip(RoundedCornerShape(12.dp)).background(c.textMuted.copy(alpha = if (c.isDark) 0.16f else 0.11f)))
         LazyColumn(Modifier.fillMaxWidth().height(rowHeight * 5), state = state, flingBehavior = fling,
             contentPadding = PaddingValues(vertical = rowHeight * 2), horizontalAlignment = Alignment.CenterHorizontally) {
             items(count) { i ->
@@ -95,7 +99,7 @@ fun Wheel(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(items[i % n], maxLines = 1,
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = if (on) 24.sp else 20.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal),
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = if (on) size.sp else (size - 4f).sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal),
                         color = if (on) c.textPrimary else c.textSecondary)
                 }
             }

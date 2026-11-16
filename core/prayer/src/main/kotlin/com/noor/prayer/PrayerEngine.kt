@@ -61,7 +61,7 @@ object PrayerEngine {
         val minutes = LinkedHashMap<Prayer, Int?>()
         for (p in Prayer.entries) {
             val s = raw.getValue(p)
-            minutes[p] = if (s.isNaN()) null else round(s, profile.rounding) + profile.offset(p) + (user.minuteOffsets[p] ?: 0)
+            minutes[p] = if (s.isNaN()) null else round(s, profile.rounding(p)) + profile.offset(p, point.latitude) + (user.minuteOffsets[p] ?: 0)
         }
         return PrayerDay(date, zone, profile.id, raw, minutes)
     }
@@ -113,8 +113,24 @@ object PrayerEngine {
             else -> solve(-(profile.ishaAngle ?: 18.0), tH + 7.0, false)
         }
 
-        // High-latitude safeguard (applies only when twilight is missing or longer than the rule allows)
-        if (user.highLatitudeRule != HighLatitudeRule.NONE && !shuruq.isNaN() && !sunset.isNaN()) {
+        val shafaq = profile.seasonalTwilight
+        if (shafaq != null) {
+            // Moonsighting Committee Worldwide: the seasonal bounds take the place of a high-latitude rule.
+            if (!shuruq.isNaN() && !sunset.isNaN()) {
+                if (lat >= 55.0) {
+                    val seventh = (86400.0 - (sunset - shuruq)) / 7.0
+                    fajr = shuruq - seventh
+                    if (ishaMin == null) isha = sunset + seventh
+                }
+                val safeFajr = shuruq - MoonsightingSeason.secondsBeforeSunrise(lat, date)
+                if (fajr.isNaN() || fajr < safeFajr) fajr = safeFajr
+                if (ishaMin == null) {
+                    val safeIsha = sunset + MoonsightingSeason.secondsAfterSunset(lat, date, shafaq)
+                    if (isha.isNaN() || isha > safeIsha) isha = safeIsha
+                }
+            }
+        } else if (user.highLatitudeRule != HighLatitudeRule.NONE && !shuruq.isNaN() && !sunset.isNaN()) {
+            // High-latitude safeguard (applies only when twilight is missing or longer than the rule allows)
             val night = 86400.0 - (sunset - shuruq)
             fun portion(angle: Double) = when (user.highLatitudeRule) {
                 HighLatitudeRule.ANGLE_BASED -> angle / 60.0

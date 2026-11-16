@@ -107,7 +107,8 @@
  "season": "spring",
  "seasons": [
   "winter",
-  "summer"
+  "summer",
+  "autumn"
  ],
  "skyline": [
   0.0628,

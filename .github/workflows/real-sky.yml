@@ -43,6 +43,14 @@ jobs:
       - name: Build the debug app
         run: ./gradlew :app:assembleDebug --stacktrace
 
+      # (0.18) The build's Gradle and Kotlin daemons hold gigabytes the emulator needs: with them alive the runner ran
+      # short of memory as the app started, and the kernel killed the emulator without a word ("device not found").
+      - name: Free the build's memory for the emulator
+        run: |
+          ./gradlew --stop || true
+          pkill -f KotlinCompileDaemon || true
+          free -m
+
       - name: Each scenery through the day
         uses: reactivecircus/android-emulator-runner@v2
         env:
@@ -63,7 +71,11 @@ jobs:
 
       - name: What the renderer said
         if: always()
-        run: cat real-sky/real_sky_log.txt || true
+        run: |
+          cat real-sky/real_sky_log.txt || true
+          free -m
+          # (Whether the kernel killed anything for want of memory: the emulator dies without a message of its own.)
+          sudo dmesg 2>/dev/null | grep -iE "out of memory|oom-kill|killed process" | tail -5 | tee real-sky/oom.txt || true
 
       - uses: actions/upload-artifact@v4
         if: always()

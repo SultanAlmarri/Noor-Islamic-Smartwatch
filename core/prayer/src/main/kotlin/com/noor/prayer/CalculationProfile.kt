@@ -15,14 +15,29 @@ data class CalculationProfile(
     val ishaMinutesAfterMaghribRamadan: Int? = null,
     /** Maghrib depression angle (Tehran style), or null for sunset. */
     val maghribAngle: Double? = null,
+    /**
+     * Moonsighting Committee Worldwide's seasonal twilight, with this shafaq for Isha: Fajr is never earlier, and Isha
+     * never later, than a number of minutes from sunrise / sunset that depends on latitude and season
+     * ([MoonsightingSeason]); above 55° N a seventh of the night. It replaces the user's high-latitude rule.
+     * Null = plain angles.
+     */
+    val seasonalTwilight: Shafaq? = null,
     val asrSchool: AsrSchool = AsrSchool.STANDARD,
     /** Extra horizon depression (deg) for sunrise and sunset, beyond the Sun's radius and 34' refraction. */
     val horizonExtraDeg: Double = 0.0,
     /** When true, the observer's elevation lowers the horizon by 0.0353333 * sqrt(h) deg (IAC formula). */
     val elevationAffectsHorizon: Boolean = false,
     val rounding: Rounding = Rounding.NEAREST,
+    /** Per-prayer rounding where an authority's tables round prayers differently (overrides [rounding]). */
+    val roundingByPrayer: Map<Prayer, Rounding> = emptyMap(),
     /** Fixed precaution minutes per event, applied after rounding. */
     val offsets: Map<Prayer, Int> = emptyMap(),
+    /**
+     * Precaution minutes that replace [offsets] at or above this latitude (north or south), for authorities whose
+     * temkin grows with latitude (Kazakhstan's DUMK: 3 minutes in the south, 5 in the north); null = never.
+     */
+    val offsetsFromLatitude: Double? = null,
+    val offsetsAtHighLatitude: Map<Prayer, Int> = emptyMap(),
     /**
      * Official reference point: users within [referenceRadiusKm] of it get the authority's city times (as the authority
      * publishes one timetable for the city); users farther away are calculated at their own position.
@@ -34,4 +49,9 @@ data class CalculationProfile(
     val validationAr: String = "محسوبة وفق المعايير المنشورة للطريقة.",
 ) {
     fun offset(p: Prayer): Int = offsets[p] ?: 0
+
+    /** The precaution minutes for [p] at [latitude]. */
+    fun offset(p: Prayer, latitude: Double): Int =
+        if (offsetsFromLatitude != null && kotlin.math.abs(latitude) >= offsetsFromLatitude) offsetsAtHighLatitude[p] ?: 0 else offset(p)
+    fun rounding(p: Prayer): Rounding = roundingByPrayer[p] ?: rounding
 }
