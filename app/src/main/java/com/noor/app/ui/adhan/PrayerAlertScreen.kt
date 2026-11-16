@@ -83,6 +83,11 @@ import com.noor.app.util.Formatter
 import com.noor.prayer.Prayer
 import com.noor.prayer.alerts.AlertDevice
 import com.noor.prayer.alerts.AlertMode
+import androidx.compose.material.icons.rounded.RecordVoiceOver
+import androidx.compose.material.icons.rounded.AlarmAdd
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.Box
 
 /** A preview never plays on after its page is left or the app goes to the background. */
 @Composable
@@ -98,6 +103,8 @@ internal fun StopPreviewOnLeave(vm: AdhanViewModel) {
 fun PrayerAlertScreen(
     contentPadding: PaddingValues, prayer: Prayer, onBack: () -> Unit, onOpenMySounds: () -> Unit, vm: AdhanViewModel = viewModel(),
     onOpenLibrary: () -> Unit = {},
+    /** 0.16: the voices, for this prayer. */
+    onOpenVoice: () -> Unit = {},
 ) {
     val s = vm.settings.collectAsStateWithLifecycle().value ?: return
     val alerts = s.alerts
@@ -111,6 +118,8 @@ fun PrayerAlertScreen(
     val lib = vm.library
     val snackbar = remember { SnackbarHostState() }
     var stopDialog by rememberSaveable { mutableStateOf(false) }
+    var beforeDialog by rememberSaveable { mutableStateOf(false) }
+    var afterDialog by rememberSaveable { mutableStateOf(false) }
     val previewLabel = stringResource(R.string.adhan_preview)
 
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); vm.consumeMessage() } }
@@ -141,84 +150,32 @@ fun PrayerAlertScreen(
         }
 
         if (a.enabled) {
+            // 0.16: what kind of alert (no tones any more: the Adhan, its opening, the user's own sound, a notification,
+            // or silently); then the voice, as one row; then when: the days, and reminders before and after.
             Column {
                 SectionHeader(stringResource(R.string.adhan_type))
-                val modes = if (prayer == Prayer.SHURUQ) listOf(AlertMode.SOUND, AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
-                else AlertMode.entries
+                val modes = if (prayer == Prayer.SHURUQ) listOf(AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
+                else listOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
                 ModeTiles(modes, a.mode) { vm.setMode(prayer, it) }
-                when (a.mode) {
-                    AlertMode.NOTIFICATION -> SectionFooter(stringResource(R.string.adhan_notification_desc))
-                    AlertMode.SILENT -> SectionFooter(stringResource(R.string.adhan_silent_desc))
-                    // 0.15: what will play, named, whatever the list below shows first.
-                    else -> SectionFooter(stringResource(R.string.adhan_plays, summary(a, prayer, lib, custom, ar)))
+            }
+
+            if (a.mode in VOICE_MODES) {
+                val chosen = lib.byId(a.soundId)
+                val fajrWarn = if (prayer == Prayer.FAJR && chosen != null && !chosen.fajr) stringResource(R.string.adhan_fajr_warn) else null
+                SettingsSection("", footer = fajrWarn) {
+                    SettingsItem(Icons.Rounded.RecordVoiceOver, stringResource(R.string.adhan_voice), null, onClick = onOpenVoice,
+                        detail = voiceName(a.soundId, vm, custom, ar) ?: stringResource(R.string.voice_add))
                 }
             }
 
-            when (a.mode) {
-                AlertMode.ADHAN, AlertMode.ADHAN_SHORT -> {
-                    val short = a.mode == AlertMode.ADHAN_SHORT
-                    val list = lib.adhansFor(prayer).filter { short || it.hasFullRecording }
-                    val fajrNote = if (prayer == Prayer.FAJR) {
-                        val chosen = lib.byId(a.soundId)
-                        stringResource(if (chosen != null && !chosen.fajr) R.string.adhan_fajr_warn else R.string.adhan_fajr_note)
-                    } else null
-                    val watchNote = if (!short && alerts.device.includes(AlertDevice.WATCH)) stringResource(R.string.adhan_watch_receives) else null
-                    SettingsSection(stringResource(modeLabel(a.mode)), footer = listOfNotNull(fajrNote, watchNote).joinToString("\n\n").ifEmpty { null }) {
-                        // Random from favourites (0.9.5): a different favourite each time, none twice in a row.
-                        val usable = alerts.favourites.mapNotNull { lib.byId(it) }.filter { e -> (short || e.hasFullRecording) && (prayer == Prayer.FAJR || !e.fajr) }
-                        val randomDetail = if (usable.size >= 2) stringResource(R.string.adhan_random_detail, f.number(usable.size))
-                            else stringResource(R.string.adhan_random_needs)
-                        SoundRow(
-                            title = stringResource(R.string.adhan_random), detail = randomDetail,
-                            selected = a.soundId == com.noor.prayer.alerts.SoundIds.RANDOM, playing = false, previewLabel = previewLabel,
-                            // (Without two favourites there is nothing to take turns: the row leads to where they are marked.)
-                            onSelect = { if (usable.size >= 2) vm.setPrayer(prayer) { it.copy(soundId = com.noor.prayer.alerts.SoundIds.RANDOM) } else onOpenLibrary() },
-                            onPreview = null,
-                        )
-                        list.forEach { e ->
-                            SettingsDivider()
-                            SoundRow(
-                                title = e.title(ar), detail = adhanDetail(e, short, f, ar),
-                                selected = a.soundId == e.id, playing = preview == PreviewKey(e.id, short), previewLabel = previewLabel,
-                                onSelect = { vm.setPrayer(prayer) { it.copy(soundId = e.id) } },
-                                onPreview = { vm.previewLibrary(e.id, short, a.volumePercent) },
-                                badge = if (e.fajr) stringResource(R.string.adhan_badge_fajr) else null,
-                            )
-                        }
-                    }
-                }
-                AlertMode.SOUND -> {
-                    val groups = listOf("brief" to R.string.adhan_group_brief, "short" to R.string.adhan_group_short, "long" to R.string.adhan_group_long)
-                    groups.forEach { (cat, label) ->
-                        val items = lib.sounds.filter { cat in it.categories }
-                        if (items.isEmpty()) return@forEach
-                        SettingsSection(stringResource(label)) {
-                            items.forEachIndexed { i, e ->
-                                if (i > 0) SettingsDivider()
-                                SoundRow(e.title(ar), f.duration(e.seconds), a.soundId == e.id, preview == PreviewKey(e.id, false), previewLabel,
-                                    onSelect = { vm.setPrayer(prayer) { it.copy(soundId = e.id) } },
-                                    onPreview = { vm.previewLibrary(e.id, false, a.volumePercent) })
-                            }
-                        }
-                    }
-                }
-                AlertMode.CUSTOM -> {
-                    SettingsSection(stringResource(R.string.adhan_mode_custom),
-                        footer = if (alerts.device.includes(AlertDevice.WATCH)) stringResource(R.string.adhan_watch_receives) else null) {
-                        if (custom.isEmpty()) Text(stringResource(R.string.adhan_custom_empty), style = FootnoteStyle, color = c.textSecondary, modifier = Modifier.padding(16.dp))
-                        custom.forEachIndexed { i, cs ->
-                            if (i > 0) SettingsDivider()
-                            SoundRow(cs.name, f.duration(cs.seconds), a.soundId == cs.id, preview == PreviewKey(cs.id, false), previewLabel,
-                                onSelect = { vm.setPrayer(prayer) { it.copy(soundId = cs.id) } },
-                                onPreview = { vm.previewCustom(cs.id, a.volumePercent) })
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        NoorButton(stringResource(R.string.adhan_import), { picker.launch(CustomSounds.PICKER_TYPES) }, Modifier.weight(1f), icon = Icons.Rounded.Add)
-                        if (custom.isNotEmpty()) NoorButton(stringResource(R.string.adhan_manage), onOpenMySounds, Modifier.weight(1f), kind = ButtonKind.Tonal)
-                    }
-                }
-                AlertMode.NOTIFICATION, AlertMode.SILENT -> Unit
+            SettingsSection(stringResource(R.string.when_title)) {
+                DaysRow(a.days, f) { d -> if (d != 0) vm.setDays(prayer, d) }
+                SettingsDivider()
+                SettingsItem(Icons.Rounded.AlarmAdd, stringResource(R.string.before_title), null, onClick = { beforeDialog = true },
+                    detail = minutesLabel(alerts.beforeOf(prayer), f))
+                SettingsDivider()
+                SettingsItem(Icons.Rounded.Groups, stringResource(R.string.after_title), null, onClick = { afterDialog = true },
+                    detail = minutesLabel(a.afterMinutes, f))
             }
 
             if (a.mode.playsAudio) {
@@ -251,6 +208,10 @@ fun PrayerAlertScreen(
         }
     }
 
+    if (beforeDialog) ChoiceDialog(stringResource(R.string.before_title), com.noor.prayer.alerts.PrayerAlert.BEFORE_CHOICES.map { it to minutesLabel(it, f) },
+        alerts.beforeOf(prayer), onSelect = { m -> vm.setBefore(prayer, m) }, onDismiss = { beforeDialog = false })
+    if (afterDialog) ChoiceDialog(stringResource(R.string.after_title), com.noor.prayer.alerts.PrayerAlert.AFTER_CHOICES.map { it to minutesLabel(it, f) },
+        a.afterMinutes, onSelect = { m -> vm.setAfter(prayer, m) }, onDismiss = { afterDialog = false })
     if (stopDialog) {
         ChoiceDialog(stringResource(R.string.adhan_stop_after), listOf(0, 30, 60, 120, 180).map { it to stopLabel(it, f) }, a.maxSeconds,
             onSelect = { sec -> vm.setPrayer(prayer) { it.copy(maxSeconds = sec) } }, onDismiss = { stopDialog = false })
@@ -325,4 +286,37 @@ internal fun adhanDetail(e: SoundEntry, short: Boolean, f: Formatter, ar: Boolea
     val len = if (short) e.shortSeconds ?: 0.0 else e.seconds
     val parts = listOfNotNull(e.place(ar)?.let(f::digits), f.duration(len), if (!e.hasFullRecording) stringResource(R.string.adhan_opening_only) else null)
     return parts.joinToString(" · ")
+}
+
+/** "15 min", or "Off". */
+@Composable
+internal fun minutesLabel(m: Int, f: Formatter): String = if (m <= 0) stringResource(R.string.adhan_off) else stringResource(R.string.minutes_short, f.number(m))
+
+/**
+ * The days of the week a prayer alerts on (0.16): seven round toggles, in the week's own order for the language,
+ * lit when on. At least one stays on (no days at all is the prayer's switch, above).
+ */
+@Composable
+internal fun DaysRow(days: Int, f: Formatter, onChange: (Int) -> Unit) {
+    val c = NoorTheme.colors
+    val first = java.time.temporal.WeekFields.of(f.locale).firstDayOfWeek
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        for (k in 0 until 7) {
+            val d = first.plus(k.toLong())
+            val bit = 1 shl (d.value - 1)
+            val on = days and bit != 0
+            Box(
+                Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(if (on) c.gold else c.glassRaised)
+                    .toggleable(on, role = Role.Checkbox) { onChange(if (it) days or bit else days and bit.inv()) }
+                    .semantics { contentDescription = d.getDisplayName(java.time.format.TextStyle.FULL, f.locale) },
+                contentAlignment = Alignment.Center,
+            ) {
+                // (Arabic: the day's one-letter form, ح ن ث ر خ ج س; English: two letters.)
+                Text(if (f.arabic) d.getDisplayName(java.time.format.TextStyle.NARROW, f.locale) else f.weekdayShort(d).take(2),
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = if (f.arabic) 14.sp else 12.sp),
+                    color = if (on) c.onGold else c.textSecondary, maxLines = 1)
+            }
+        }
+    }
 }

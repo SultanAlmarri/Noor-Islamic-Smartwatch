@@ -84,7 +84,7 @@ class SettingsRepository(private val context: Context) {
             timeFormat = p.enum(K.timeFormat, TimeFormat.H12),
             theme = p.enum(K.theme, ThemeMode.SUN),
             hijriAdjust = p[K.hijri] ?: 0,
-            alerts = AlertSettings.decode(p[K.alerts]),
+            alerts = phoneAlerts(AlertSettings.decode(p[K.alerts])),
             statusNotification = p[K.status] ?: false,
             elapsedAfterPrayer = p[K.elapsed] ?: true,
             scrubHintDone = p[K.scrubHint] ?: false,
@@ -126,7 +126,7 @@ class SettingsRepository(private val context: Context) {
 
     /** Read-modify-write in one transaction, so quick successive changes never overwrite each other. */
     suspend fun updateAlerts(change: (AlertSettings) -> AlertSettings) = context.dataStore.edit {
-        it[K.alerts] = change(AlertSettings.decode(it[K.alerts])).encode()
+        it[K.alerts] = change(phoneAlerts(AlertSettings.decode(it[K.alerts]))).encode()
     }
 
     suspend fun saveLocation(l: KnownLocation) = context.dataStore.edit {
@@ -140,4 +140,13 @@ class SettingsRepository(private val context: Context) {
         if (l.regionCode != null) it[K.region] = l.regionCode else it.remove(K.region)
         it[K.lastFull] = l.encode()
     }
+}
+
+/**
+ * 0.16: the phone has no alert sounds any more (the owner wants no music): a prayer set to one (AlertMode.SOUND) alerts
+ * with the phone's own notification sound instead.
+ */
+internal fun phoneAlerts(a: AlertSettings): AlertSettings = com.noor.prayer.Prayer.entries.fold(a) { s, p ->
+    val x = s.alert(p)
+    if (x.mode == com.noor.prayer.alerts.AlertMode.SOUND) s.with(p, x.copy(mode = com.noor.prayer.alerts.AlertMode.NOTIFICATION, soundId = null)) else s
 }

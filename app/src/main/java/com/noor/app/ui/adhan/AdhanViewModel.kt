@@ -171,9 +171,9 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     /** Picking a mode keeps a sensible sound for it (a Fajr Adhan for Fajr, the chime for sounds). */
     fun setMode(p: Prayer, mode: AlertMode) = setPrayer(p) { a ->
         val keep = when (mode) {
-            AlertMode.ADHAN -> a.soundId?.let { library.byId(it) }?.takeIf { it.hasFullRecording && it in library.adhansFor(p) }?.id
+            AlertMode.ADHAN -> a.soundId?.takeIf { it == SoundIds.RANDOM } ?: a.soundId?.let { library.byId(it) }?.takeIf { it.hasFullRecording && it in library.adhansFor(p) }?.id
                 ?: if (p == Prayer.FAJR) SoundIds.DEFAULT_FAJR_ADHAN else SoundIds.DEFAULT_ADHAN
-            AlertMode.ADHAN_SHORT -> a.soundId?.let { library.byId(it) }?.takeIf { it in library.adhansFor(p) }?.id
+            AlertMode.ADHAN_SHORT -> a.soundId?.takeIf { it == SoundIds.RANDOM } ?: a.soundId?.let { library.byId(it) }?.takeIf { it in library.adhansFor(p) }?.id
                 ?: if (p == Prayer.FAJR) SoundIds.DEFAULT_FAJR_ADHAN else SoundIds.DEFAULT_ADHAN
             AlertMode.SOUND -> a.soundId?.takeIf { it.startsWith("alt.") } ?: SoundIds.DEFAULT_SOUND
             AlertMode.CUSTOM -> a.soundId?.takeIf(SoundIds::isCustom) ?: _custom.value.firstOrNull()?.id
@@ -221,6 +221,64 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             })
         }
     }
+
+    // ---- 0.16: the voice for every prayer at once, days, and reminders before and after ----
+
+    /**
+     * The Adhan's voice: a library recording, one of the user's own sounds ("custom.…"), or [SoundIds.RANDOM]; for
+     * [target] alone, or for every prayer that calls the Adhan (or plays one of the user's sounds) when null. Fajr
+     * keeps a Fajr Adhan (with "As-salatu khayrun min an-nawm") unless the voice is one, or it is chosen for Fajr alone.
+     */
+    fun applyVoice(target: Prayer?, voice: String) = update { s0 ->
+        var s = s0
+        if (voice == SoundIds.RANDOM && s.favourites.size < 2)
+            s = s.copy(favourites = (s.favourites + VOICE_LIBRARY_IDS).distinct())
+        val entry = library.byId(voice)
+        val custom = SoundIds.isCustom(voice)
+        for (p in Prayer.entries) {
+            if (p == Prayer.SHURUQ) continue
+            if (target != null && p != target) continue
+            val a = s.alert(p)
+            if (target == null && a.mode !in VOICE_MODES) continue
+            if (target == null && p == Prayer.FAJR && entry?.fajr != true && voice != SoundIds.RANDOM) continue
+            val mode = when {
+                custom -> AlertMode.CUSTOM
+                a.mode == AlertMode.ADHAN_SHORT -> AlertMode.ADHAN_SHORT
+                entry != null && !entry.hasFullRecording -> AlertMode.ADHAN_SHORT
+                else -> AlertMode.ADHAN
+            }
+            s = s.with(p, a.copy(enabled = true, mode = mode, soundId = voice))
+        }
+        s
+    }
+
+    /** An imported file as one of the voices ([name]: "Al-Quds", "Egypt", "Riyadh"…), then used as [applyVoice] would. */
+    fun importVoice(uri: Uri, name: String, target: Prayer?) = viewModelScope.launch {
+        val ctx = getApplication<Application>()
+        val result = withContext(Dispatchers.IO) { container.customSounds.import(ctx.contentResolver, uri, null) }
+        if (result is ImportResult.Ok) {
+            withContext(Dispatchers.IO) { container.customSounds.rename(result.sound.id, name) }
+            _custom.value = container.customSounds.list()
+            applyVoice(target, result.sound.id)
+            _message.value = ctx.getString(com.noor.app.R.string.adhan_import_ok, name)
+        } else importSoundResult(result)
+    }
+
+    private fun importSoundResult(result: ImportResult) {
+        val ctx = getApplication<Application>()
+        if (result is ImportResult.Rejected) _message.value = ctx.getString(when (result.reason) {
+            ImportResult.Reason.UNSUPPORTED_TYPE -> com.noor.app.R.string.adhan_import_unsupported
+            ImportResult.Reason.TOO_LARGE -> com.noor.app.R.string.adhan_import_too_large
+            ImportResult.Reason.NOT_AUDIO -> com.noor.app.R.string.adhan_import_not_audio
+            ImportResult.Reason.UNREADABLE -> com.noor.app.R.string.adhan_import_unreadable
+        })
+    }
+
+    fun setDays(p: Prayer, days: Int) = setPrayer(p) { it.copy(days = days) }
+    fun setBefore(p: Prayer, minutes: Int) = update { it.withBefore(p, minutes) }
+    fun setAfter(p: Prayer, minutes: Int) = setPrayer(p) { it.copy(afterMinutes = minutes) }
+    fun setBeforeAll(minutes: Int) = update { it.withBeforeForAll(minutes) }
+    fun setAfterAll(minutes: Int) = update { s -> Prayer.entries.fold(s) { x, p -> x.with(p, x.alert(p).copy(afterMinutes = minutes)) } }
 
     fun renameSound(id: String, name: String) = viewModelScope.launch {
         withContext(Dispatchers.IO) { container.customSounds.rename(id, name) }
@@ -299,3 +357,9 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() { player.stop(notify = false) }
 }
+
+/** The kinds of alert a voice applies to: the Adhan, its opening, the user's own sound. */
+internal val VOICE_MODES = setOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.CUSTOM)
+
+/** The library recordings behind the voices named as on the owner's clock (Makkah, Madinah). */
+internal val VOICE_LIBRARY_IDS = listOf("adhan.makkah_maghrib_2012", "adhan.madinah_prophets_mosque")

@@ -202,4 +202,4 @@ All from Wikimedia Commons, each under a licence that allows redistribution. `to
 
 ## Alert sounds
 
-Two ticks, Gentle tone, Soft chime, Subtle bell, Melodic chimes, Morning birds, Calm ambience, Wooden knock, Soft pulse, Rising tones, Water drops, Dawn bells, Singing bowl, Wind chimes are original sounds generated from code by `tools/sounds/synthesize.py` (no samples). They are released under CC0.
+The phone has none since 0.16 (the owner wants no music, nothing that sounds like it): a prayer alerts with the Adhan, its opening, the phone's own notification sound, silently, or with a sound the user imports. The watch keeps Two ticks, Gentle tone, Soft chime, Subtle bell, Melodic chimes, Morning birds, Calm ambience, Wooden knock, Soft pulse, Rising tones, Water drops, Dawn bells, Singing bowl, Wind chimes, original sounds generated from code by `tools/sounds/synthesize.py` (no samples, CC0), for its own setting on versions up to 0.9.12.

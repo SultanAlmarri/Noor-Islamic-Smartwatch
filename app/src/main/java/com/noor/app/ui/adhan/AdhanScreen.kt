@@ -62,6 +62,10 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.EventRepeat
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.AlarmAdd
+import androidx.compose.material.icons.rounded.RecordVoiceOver
 import com.noor.app.ui.components.PrayerIcon
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.settings.ChoiceDialog
@@ -100,6 +104,8 @@ fun AdhanScreen(
     onOpenHistory: () -> Unit = {},
     vm: AdhanViewModel = viewModel(),
     onOpenLocation: () -> Unit = {},
+    /** 0.16: the voices, for every prayer. */
+    onOpenVoice: () -> Unit = {},
 ) {
     val s = vm.settings.collectAsStateWithLifecycle().value ?: return
     val a = s.alerts
@@ -114,6 +120,7 @@ fun AdhanScreen(
     val context = LocalContext.current
     var gradualDialog by rememberSaveable { mutableStateOf(false) }
     var reminderDialog by rememberSaveable { mutableStateOf(false) }
+    var afterAllDialog by rememberSaveable { mutableStateOf(false) }
 
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
@@ -188,6 +195,12 @@ fun AdhanScreen(
         // 0.15: the prayers are always there, so what would happen can be seen and set before anything is on. While
         // the alerts are off their rows are quiet and their switches off; turning one on turns the alerts on, for that
         // prayer alone (it is what was asked for).
+        // 0.16: the voice, for every prayer at once (as on the owner's Al-Fajr clock: one dial, Makkah to Random).
+        SettingsSection("") {
+            val voices = Prayer.entries.filter { it != Prayer.FAJR && it != Prayer.SHURUQ && a.alert(it).mode in VOICE_MODES }.map { a.alert(it).soundId }.distinct()
+            SettingsItem(Icons.Rounded.RecordVoiceOver, stringResource(R.string.adhan_voice), null, onClick = onOpenVoice,
+                detail = if (voices.size == 1) voiceName(voices[0], vm, custom, ar) else if (voices.isEmpty()) null else stringResource(R.string.voice_mixed))
+        }
         SettingsSection(stringResource(R.string.adhan_prayers), footer = stringResource(if (a.enabled) R.string.adhan_prayers_footer else R.string.adhan_prayers_footer_off)) {
             Prayer.entries.forEachIndexed { i, p ->
                 if (i > 0) SettingsDivider()
@@ -222,7 +235,14 @@ fun AdhanScreen(
         run {
             // 0.9.9: a reminder a few minutes before every prayer that alerts.
             SettingsSection("") {
-                SettingsItem(Icons.Rounded.Schedule, stringResource(R.string.adhan_reminder), reminderLabel(a.reminderMinutes, f), onClick = { reminderDialog = true })
+                // 0.16: before and after every Adhan at once (each prayer can have its own, on its page).
+                val before = Prayer.entries.filter { a.alert(it).enabled }.map { a.beforeOf(it) }.distinct()
+                val after = Prayer.entries.filter { a.alert(it).enabled }.map { a.alert(it).afterMinutes }.distinct()
+                SettingsItem(Icons.Rounded.AlarmAdd, stringResource(R.string.before_all), null, onClick = { reminderDialog = true },
+                    detail = if (before.size <= 1) minutesLabel(before.firstOrNull() ?: 0, f) else stringResource(R.string.voice_mixed))
+                SettingsDivider()
+                SettingsItem(Icons.Rounded.Groups, stringResource(R.string.after_all), null, onClick = { afterAllDialog = true },
+                    detail = if (after.size <= 1) minutesLabel(after.firstOrNull() ?: 0, f) else stringResource(R.string.voice_mixed))
             }
 
             Column {
@@ -293,9 +313,16 @@ fun AdhanScreen(
             a.gradualSeconds, onSelect = vm::setGradual, onDismiss = { gradualDialog = false })
     }
     if (reminderDialog) {
-        ChoiceDialog(stringResource(R.string.adhan_reminder),
-            AlertSettings.REMINDER_CHOICES.map { it to reminderLabel(it, f) },
-            a.reminderMinutes, onSelect = vm::setReminder, onDismiss = { reminderDialog = false })
+        ChoiceDialog(stringResource(R.string.before_all),
+            com.noor.prayer.alerts.PrayerAlert.BEFORE_CHOICES.map { it to minutesLabel(it, f) },
+            Prayer.entries.filter { a.alert(it).enabled }.map { a.beforeOf(it) }.distinct().singleOrNull() ?: -1,
+            onSelect = vm::setBeforeAll, onDismiss = { reminderDialog = false })
+    }
+    if (afterAllDialog) {
+        ChoiceDialog(stringResource(R.string.after_all),
+            com.noor.prayer.alerts.PrayerAlert.AFTER_CHOICES.map { it to minutesLabel(it, f) },
+            Prayer.entries.filter { a.alert(it).enabled }.map { a.alert(it).afterMinutes }.distinct().singleOrNull() ?: -1,
+            onSelect = vm::setAfterAll, onDismiss = { afterAllDialog = false })
     }
 }
 
@@ -357,6 +384,11 @@ private fun PrayerAlertRow(p: Prayer, alert: PrayerAlert, summary: String, f: Fo
             Text(f.prayerName(p), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
             Text(summary, style = FootnoteStyle, color = c.textSecondary)
         }
+        // 0.16: what else is set, as small signs: a reminder before, one after, some days only.
+        val sign = c.textMuted
+        if (on && alert.beforeMinutes > 0) androidx.compose.material3.Icon(Icons.Rounded.AlarmAdd, null, tint = sign, modifier = Modifier.padding(start = 6.dp).size(15.dp))
+        if (on && alert.afterMinutes > 0) androidx.compose.material3.Icon(Icons.Rounded.Groups, null, tint = sign, modifier = Modifier.padding(start = 6.dp).size(15.dp))
+        if (on && alert.days != com.noor.prayer.alerts.PrayerAlert.ALL_DAYS) androidx.compose.material3.Icon(Icons.Rounded.EventRepeat, null, tint = sign, modifier = Modifier.padding(start = 6.dp).size(15.dp))
         Spacer(Modifier.width(12.dp))
         NoorSwitch(on, onToggle)
     }

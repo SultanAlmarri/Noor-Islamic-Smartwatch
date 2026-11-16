@@ -80,11 +80,11 @@
     <string name="reset">Reset</string>
 
     <string name="perm_title">Prayer times for where you are</string>
-    <string name="perm_body">Noor uses your approximate location to calculate prayer times and choose the right authority, such as IACAD in Dubai. Your location stays on this phone; it is never uploaded.</string>
+    <string name="perm_body">Noor uses your location to work out prayer times. It stays on this phone.</string>
     <string name="perm_allow">Use my location</string>
     <string name="perm_manual">Choose a city instead</string>
     <string name="bg_perm_title">Keep times right when you travel</string>
-    <string name="bg_perm_body">To update automatically when you are not using the app, Android needs “Allow all the time”. Noor checks rarely, with low-power location, so battery use is minimal. You can turn this off at any time.</string>
+    <string name="bg_perm_body">To keep times right when you travel, choose “Allow all the time”. Noor checks rarely and uses little battery.</string>
     <string name="bg_perm_continue">Continue</string>
     <string name="bg_perm_not_now">Not now</string>
     <string name="permission_denied">Location permission not granted. Choose a city or allow location in system settings.</string>
@@ -114,8 +114,8 @@
     <string name="qibla_needs_location">Set your location to find the Qibla.</string>
     <string name="qibla_distance">%1$s to the Kaaba</string>
     <string name="qibla_no_sensor">This phone has no compass sensor. Use the bearing below with a separate compass.</string>
-    <string name="qibla_very_close">You are within a few kilometres of the Kaaba. Face the Masjid al-Haram directly; a compass is not precise this close.</string>
-    <string name="qibla_antipode">You are near the point opposite Makkah: almost every direction is nearly equally short. The bearing shown is the great-circle one.</string>
+    <string name="qibla_very_close">You are near the Kaaba: face the Masjid al-Haram.</string>
+    <string name="qibla_antipode">You are opposite Makkah: every direction is nearly as short.</string>
     <string name="qibla_starting">Starting the compass…</string>
     <string name="qibla_hold_flat">Hold your phone flat</string>
     <string name="qibla_hold_flat_body">Lay it face up, level, for an accurate reading.</string>
@@ -130,7 +130,7 @@
     <string name="acc_fair">Fair</string>
     <string name="acc_poor">Poor</string>
     <string name="acc_estimate">The phone estimates its heading is within ±%1$s°.</string>
-    <string name="acc_interference">The magnetic field here is unusual: metal or a magnet nearby is disturbing the compass.</string>
+    <string name="acc_interference">Metal or a magnet nearby is disturbing the compass.</string>
     <string name="acc_needs_calibration">The compass needs calibrating: tap for how.</string>
     <string name="acc_status_only">Based on the sensor status reported by the phone. Tap for calibration tips.</string>
     <string name="qibla_method_note">Directions are true north. Qibla is the shortest path on the Earth\'s ellipsoid (WGS-84) to the Kaaba. Two decimals are shown; the real accuracy is the sensor\'s, shown above.</string>
@@ -144,7 +144,7 @@
     <string name="cal_live">Current accuracy: %1$s</string>
     <string name="watch_no_wear_os_title">Set up your watch first</string>
     <string name="watch_none_title">Your watch is not connected yet</string>
-    <string name="watch_none_body">Pair your Galaxy Watch with the Galaxy Wearable app (or another Wear OS watch with its companion app), keep Bluetooth on, then come back here.</string>
+    <string name="watch_none_body">Pair your watch with the Galaxy Wearable app, then come back here.</string>
     <string name="watch_generic_name">Your watch</string>
     <string name="watch_connected_short">Connected</string>
     <string name="watch_not_connected_short">Not connected now</string>
@@ -153,7 +153,7 @@
     <string name="step_app_unreached">The watch did not answer. Make sure it is connected and awake, then try again.</string>
     <string name="step_app_waiting">The Play Store is open on your watch. Tap Install there; this page updates by itself when it is done.</string>
     <string name="step_app_timeout">Not installed yet. If the Play Store page closed, open it again.</string>
-    <string name="step_app_dev">This is a development build, not from Google Play, so the watch app is installed separately (see the guide). Once Noor is on Google Play, this button opens the watch\'s Play Store for a one-tap install.</string>
+    <string name="step_app_dev">A development build: install the watch app with the guide.</string>
     <string name="step_app_todo">Opens Noor in the Play Store on your watch: one tap there installs it.</string>
     <string name="step_app_button">Install on watch</string>
     <string name="step_app_again">Open Play Store on watch again</string>
@@ -167,7 +167,7 @@
     <string name="step_face_done">In use.</string>
     <string name="step_face_waiting">Confirm on your watch. Wear OS asks once for permission to change the watch face.</string>
     <string name="step_face_installed">Added to your watch faces. Other faces are not changed.</string>
-    <string name="step_face_todo">Adds the Noor face to your watch and makes it the active face, after you confirm on the watch.</string>
+    <string name="step_face_todo">Adds the Noor face to your watch, once you confirm there.</string>
     <string name="step_face_button">Use the Noor watch face</string>
     <string name="watch_open_on_watch">Open Noor on the watch</string>
     <string name="step_face_open_first">Open Noor on the watch once to finish setting up.</string>
@@ -205,10 +205,10 @@
     <string name="adhan_action_allow">Allow</string>
     <string name="adhan_action_open">Open</string>
     <string name="adhan_action_open_watch">Open on watch</string>
-    <string name="adhan_warn_channel">The “Adhan” notification category is turned off in system settings, so the Adhan cannot play.</string>
-    <string name="adhan_warn_exact">Alerts may come a few minutes late, and only a short Adhan may play. Allow “Alarms &amp; reminders” for Noor.</string>
+    <string name="adhan_warn_channel">The Adhan’s notifications are off in Android’s settings.</string>
+    <string name="adhan_warn_exact">Alerts may come late. Allow exact alarms.</string>
     <string name="adhan_warn_volume">Your alarm volume is at zero, so the Adhan will be silent.</string>
-    <string name="adhan_warn_battery">Some phones hold back alarms to save battery. If an alert comes late, set Noor’s battery use to “Unrestricted”.</string>
+    <string name="adhan_warn_battery">If an alert comes late, set Noor’s battery use to “Unrestricted”.</string>
     <string name="adhan_warn_watch_notifications">Notifications are off on %1$s. Open Noor on the watch to allow them.</string>
     <string name="adhan_warn_watch_exact">Exact alarms are off on %1$s, so alerts there may be a few minutes late.</string>
     <string name="adhan_watch_ready">%1$s · alerts set: %2$s</string>
@@ -219,7 +219,7 @@
     <string name="adhan_device_both">Both</string>
     <string name="adhan_device_phone_desc">The phone alerts; the watch stays quiet.</string>
     <string name="adhan_device_watch_desc">The watch alerts on its own, even away from the phone; the phone stays quiet.</string>
-    <string name="adhan_device_both_desc">Both alert, each with its own alert. Nothing is mirrored, so the watch never shows the same alert twice.</string>
+    <string name="adhan_device_both_desc">Both alert, each on its own.</string>
     <string name="adhan_prayers">Prayers</string>
     <string name="adhan_off">Off</string>
     <string name="adhan_mode_adhan">Adhan</string>
@@ -228,14 +228,14 @@
     <string name="adhan_mode_custom">My sound</string>
     <string name="adhan_mode_notification">Notification</string>
     <string name="adhan_mode_silent">Silent</string>
-    <string name="adhan_sunrise_note">Sunrise is not a prayer: it marks the end of Fajr time, so the Adhan is not offered for it.</string>
+    <string name="adhan_sunrise_note">Sunrise ends Fajr time; it has no Adhan.</string>
     <string name="adhan_sound_section">Sound</string>
     <string name="adhan_gradual">Gradual volume</string>
     <string name="adhan_gradual_off">Off: starts at full volume</string>
     <string name="adhan_gradual_value">Rises over %1$s seconds</string>
     <string name="adhan_dnd">Play in silent mode and Do Not Disturb</string>
-    <string name="adhan_dnd_on">On: the Adhan plays like an alarm clock. Your Do Not Disturb setting for alarms still applies.</string>
-    <string name="adhan_dnd_off">Off: when the phone is silent, on vibrate or in Do Not Disturb, you get a silent notification instead.</string>
+    <string name="adhan_dnd_on">Plays like an alarm clock.</string>
+    <string name="adhan_dnd_off">A silent notice while the phone is silent.</string>
     <string name="adhan_volume_note">The Adhan plays on your alarm volume, so it is heard even when media is muted.</string>
     <!-- 0.9.9: reminder before each prayer -->
     <string name="adhan_reminder">Reminder before each prayer</string>
@@ -246,7 +246,7 @@
     </plurals>
     <string name="adhan_library_section">Library</string>
     <string name="adhan_library">Adhan library</string>
-    <string name="adhan_library_desc">%1$s Adhans and %2$s alert sounds, with their sources and licences</string>
+    <string name="adhan_library_desc">%1$s Adhans, with their sources and licences</string>
     <string name="adhan_my_sounds">My sounds</string>
     <string name="adhan_my_sounds_desc_empty">Import your own MP3, M4A, AAC or WAV files</string>
     <string name="adhan_my_sounds_desc">Imported: %1$s</string>
@@ -254,7 +254,7 @@
     <string name="adhan_type">Type</string>
     <string name="adhan_options">Options</string>
     <string name="adhan_fajr_note">Fajr Adhans include “As-salatu khayrun min an-nawm” (prayer is better than sleep).</string>
-    <string name="adhan_fajr_warn">This recording does not include “As-salatu khayrun min an-nawm”. A Fajr Adhan is recommended for Fajr.</string>
+    <string name="adhan_fajr_warn">This one has no “As-salatu khayrun min an-nawm”. A Fajr Adhan suits Fajr better.</string>
     <string name="adhan_badge_fajr">Fajr</string>
     <string name="adhan_opening_only">short only</string>
     <string name="adhan_volume">Volume</string>
@@ -264,7 +264,7 @@
     <string name="adhan_stop_seconds">%1$s seconds</string>
     <string name="adhan_stop_minutes">%1$s min</string>
     <string name="adhan_test">Test this alert</string>
-    <string name="adhan_test_desc">Sends this alert in 10 seconds, exactly as it will come at prayer time. Lock the phone to see it on the lock screen.</string>
+    <string name="adhan_test_desc">Comes in 10 seconds, exactly as at prayer time.</string>
     <string name="adhan_test_sent">Test alert in 10 seconds</string>
     <string name="adhan_test_failed">The test alert could not be set.</string>
     <string name="adhan_notification_desc">A standard notification with your phone’s notification sound. It follows Do Not Disturb like any other notification.</string>
@@ -275,8 +275,8 @@
     <string name="adhan_group_long">Longer</string>
     <string name="adhan_import">Import a sound</string>
     <string name="adhan_manage">Manage</string>
-    <string name="adhan_custom_empty">No sounds yet. Import an MP3, M4A, AAC or WAV file. Noor keeps its own copy, so it keeps working if you move or delete the original.</string>
-    <string name="adhan_custom_privacy">Imported sounds stay on this device (and on your watch when a prayer alerts there). They are kept through app updates.</string>
+    <string name="adhan_custom_empty">No sounds yet. Import an MP3, M4A, AAC or WAV file.</string>
+    <string name="adhan_custom_privacy">Your sounds stay on this phone.</string>
     <string name="adhan_preview">Preview</string>
     <string name="adhan_more">More</string>
     <string name="adhan_import_ok">Imported “%1$s”</string>
@@ -325,11 +325,11 @@
     <string name="watch_feature_alerts">Prayer alerts</string>
     <string name="watch_feature_alerts_desc">Choose Watch or Both in the Adhan tab</string>
     <string name="watch_feature_standalone">Works on its own</string>
-    <string name="watch_feature_standalone_desc">Can be set up on the watch with its location or a city; your phone’s settings are used whenever it sends them</string>
-    <string name="step_sync_own">The watch is using its own settings, chosen on the watch. To follow this phone again, turn off “Use this watch’s settings” in Noor’s settings on the watch.</string>
+    <string name="watch_feature_standalone_desc">Works on its own, with its own location</string>
+    <string name="step_sync_own">Using the watch’s own settings. Turn off “Use this watch’s settings” on the watch to follow this phone.</string>
     <string name="watch_feature_editor">Watch face editor</string>
     <string name="watch_feature_editor_desc">Three designs in five colours, and the original face: choose with a preview, and your watch changes at once</string>
-    <string name="offline_watch_footer">The watch uses the same place, authority and adjustments as this phone and keeps working without it.</string>
+    <string name="offline_watch_footer">Same times as this phone, even without it.</string>
     <string name="onboarding_tagline">Prayer times from the sky above you, the Qibla and the Adhan, on your phone and your watch.</string>
     <string name="onboarding_private">Your location stays on this phone.</string>
     <string name="adhan_custom_empty_title">Your own sounds</string>
@@ -338,10 +338,10 @@
     <string name="search_no_results">No place matches “%1$s”. Try the city’s name in English or Arabic.</string>
     <string name="history_title">Alert history</string>
     <string name="history_row_empty">Nothing due yet</string>
-    <string name="history_intro">What actually happened at each alert on this phone: whether the Adhan played and for how long, or why it could not.</string>
-    <string name="history_empty">No alert has been due yet. Each one will appear here with what really happened, so you can see that the Adhan played.</string>
+    <string name="history_intro">What happened at each alert.</string>
+    <string name="history_empty">Nothing yet. Each alert will appear here.</string>
     <string name="history_test">Test the Adhan in %1$s seconds</string>
-    <string name="history_test_hint">After pressing it, lock the phone. The test then runs exactly like a real prayer time, and its result appears below.</string>
+    <string name="history_test_hint">Lock the phone after pressing it.</string>
     <string name="history_share">Share report</string>
     <string name="history_test_tag">Test</string>
     <string name="history_today">Today</string>
@@ -356,11 +356,11 @@
     <string name="history_o_failed">No sound could be played. The notification sound was used.</string>
     <string name="history_o_notification">Notification, as you chose.</string>
     <string name="history_o_silent">Silent notification, as you chose.</string>
-    <string name="history_o_quiet">Silent, because the phone was on silent, vibrate or Do Not Disturb and you chose to stay quiet then.</string>
+    <string name="history_o_quiet">Silent: the phone was on silent, as you chose.</string>
     <string name="history_o_dnd">Silent: Do Not Disturb was blocking alarms.</string>
     <string name="history_o_call">Silent: a call was in progress.</string>
     <string name="history_o_no_notifications">Nothing could be shown or played: notifications are off for Noor.</string>
-    <string name="history_o_late">The phone was off or asleep, so the alarm came more than ten minutes late. A quiet notice was shown instead of the Adhan.</string>
+    <string name="history_o_late">The phone was asleep: over ten minutes late, so a quiet notice instead.</string>
     <string name="history_o_no_settings">Noor had no location or settings yet, so it could not tell which prayer was due.</string>
     <plurals name="history_late">
         <item quantity="one">%1$s min late</item>
@@ -376,7 +376,7 @@
     <string name="acc_calibrate">Calibrate first</string>
     <string name="calendar_gregorian">Gregorian</string>
     <string name="calendar_hijri">Hijri</string>
-    <string name="calendar_hijri_note">Umm al-Qura, with your Hijri adjustment. The actual start of a month can follow the local moon sighting.</string>
+    <string name="calendar_hijri_note">Umm al-Qura. A month may start a day apart by local moon sighting.</string>
     <string name="settings_alerts">Prayer alerts</string>
     <string name="settings_on">On</string>
     <string name="settings_off">Off</string>
@@ -401,7 +401,7 @@
     <string name="kw_theme">dark light night day theme appearance follow the sun</string>
     <string name="kw_watch">Galaxy Wear OS smartwatch watch face tile complication</string>
     <string name="kw_accuracy">sources accuracy official timetable IACAD licence credits</string>
-    <string name="lib_intro">%1$s recordings from %2$s countries. Each is freely licensed and credited to the person who recorded it. Tap ▶ to listen; tapping another switches at once, so you can compare voices.</string>
+    <string name="lib_intro">%1$s recordings from %2$s countries, freely licensed and credited. Tap ▶ to listen.</string>
     <string name="lib_search">Search by place, country, mosque or reciter</string>
     <string name="lib_filter_all">All</string>
     <string name="lib_filter_favourites">Favourites</string>
@@ -462,7 +462,7 @@
     <string name="loc_map_satellite">Satellite</string>
     <string name="loc_map_streets">Map</string>
     <string name="loc_map_hint">Move the map to put the pin on your spot</string>
-    <string name="loc_map_offline">The map needs an internet connection. You can still search the list or enter coordinates.</string>
+    <string name="loc_map_offline">The map needs the internet. Search or enter coordinates instead.</string>
     <string name="loc_map_search">Search the map</string>
     <string name="loc_my_location">My location</string>
     <string name="loc_coords_lat">Latitude</string>
@@ -477,16 +477,16 @@
     <string name="loc_neighbourhood">District</string>
     <!-- 0.9.8 -->
     <string name="elapsed_setting">Time since each prayer</string>
-    <string name="elapsed_setting_desc">After a prayer’s time: “+” and the time since it began, for 30 minutes while the prayer is being prayed; then the next prayer’s countdown. Off: straight to the next prayer.</string>
+    <string name="elapsed_setting_desc">For 30 minutes after a prayer begins, show the time since it began.</string>
     <string name="loc_largest_cities">Largest cities</string>
     <string name="loc_other_places">Other places</string>
     <string name="loc_region_sub">Largest: %1$s · %2$s places</string>
     <string name="loc_villages">Villages and small places (%1$s)</string>
     <string name="loc_find_in">Find a place in %1$s</string>
     <string name="scenery_title">Home screen</string>
-    <string name="scenery_intro">The landscape under the sky on the home screen. The Sun and the Moon follow your prayer times; everything else is arranged to show each place at its most beautiful.</string>
+    <string name="scenery_intro">The landscape under the home screen’s sky.</string>
     <string name="scenery_auto">Automatic</string>
-    <string name="scenery_auto_now">%1$s, for %2$s. Changes when you travel: desert dunes, the Pacific Northwest, the Arctic, the ocean, green hills or red rock.</string>
+    <string name="scenery_auto_now">%1$s, for %2$s. Changes when you travel.</string>
     <string name="scenery_auto_short">Automatic · %1$s</string>
     <string name="scenery_dunes">Dunes</string>
     <string name="scenery_hills">Hills</string>
@@ -499,11 +499,11 @@
     <string name="scenery_canyon">Red rock</string>
     <string name="scenery_meadow">Green hills</string>
     <string name="scenery_seasons_title">Seasons</string>
-    <string name="scenery_seasons_note">On: the scenery follows the real season where you are (snow in winter). Off: every scenery keeps its best look all year.</string>
+    <string name="scenery_seasons_note">Follow the real season where you are.</string>
     <string name="scenery_stars_title">Real stars</string>
-    <string name="scenery_stars_note">On: the stars and the Milky Way stand where they really are for your place and time. Off: Noor’s finest night sky, with the Milky Way across it.</string>
+    <string name="scenery_stars_note">The stars where they really are tonight.</string>
     <string name="sky_graphics_title">Sky quality</string>
-    <string name="sky_graphics_note">Automatic suits this phone. A higher quality draws a finer picture and uses more battery while the home screen is open.</string>
+    <string name="sky_graphics_note">Higher quality uses more battery.</string>
     <string name="sky_graphics_auto">Automatic</string>
     <string name="sky_graphics_ultra">Ultra</string>
     <string name="sky_graphics_high">High</string>
@@ -548,7 +548,7 @@
     <string name="settings_appearance">Appearance</string>
     <string name="settings_language">Language and region</string>
     <string name="adhan_attention">Needs your attention</string>
-    <string name="adhan_prayers_footer">Tap a prayer to choose its Adhan or sound. The switch turns that prayer’s alert on or off.</string>
+    <string name="adhan_prayers_footer">Tap a prayer for its voice, days and reminders.</string>
     <string name="today_row_alert">Alert: %1$s</string>
     <string name="today_row_open">Alert settings</string>
     <string name="opening_skip">Skip</string>
@@ -557,22 +557,22 @@
     <string name="adhan_turn_on">Turn on prayer alerts</string>
     <!-- 0.15: Settings reorganised (prayer times and language each on a page of their own). -->
     <string name="settings_group_prayer">Prayer</string>
-    <string name="high_latitude_note">Only for places far north or far south, where the sky does not grow fully dark on summer nights. Elsewhere it changes nothing.</string>
+    <string name="high_latitude_note">Only matters far north or far south.</string>
     <string name="countdown_group">Countdown</string>
     <string name="times_follow">Times follow</string>
-    <string name="times_accuracy_note">How Noor checks its times against each authority\'s own timetable, and the sources it uses.</string>
+    <string name="times_accuracy_note">How the times are checked, and the sources.</string>
     <string name="settings_found_in">In %s</string>
     <string name="sky_scrub_hint_short">Drag the sky to follow the Sun</string>
     <string name="theme_sun_short">Follow the sun</string>
     <string name="onb_adhan_title">Hear the Adhan at each prayer</string>
-    <string name="onb_adhan_body">Noor can call the Adhan when each prayer\'s time comes, even with the phone locked. Choose each prayer\'s Adhan, or a softer sound, any time on the Adhan tab.</string>
+    <string name="onb_adhan_body">Hear the Adhan at each prayer, even with the phone locked. Change it any time on the Adhan tab.</string>
     <string name="onb_adhan_on">Turn on the Adhan</string>
     <string name="cd_until">until %s</string>
     <string name="cd_since">since %s began</string>
     <string name="cd_since_sunrise">since sunrise</string>
-    <string name="adhan_prayers_footer_off">Turn on a prayer to hear its Adhan. Tap a prayer to choose its sound.</string>
+    <string name="adhan_prayers_footer_off">Turn on a prayer to hear its Adhan.</string>
     <string name="adhan_hero_blocked">Will not sound: fix what is listed below.</string>
-    <string name="adhan_test_footer">Lock the phone after pressing it: the test runs exactly as a real prayer time does, and its result is kept in the history.</string>
+    <string name="adhan_test_footer">Lock the phone after pressing it. The result goes into the history.</string>
     <string name="basis_official">Its own published times, for each day.</string>
     <string name="basis_validated">Its own method, checked against its published timetable.</string>
     <string name="basis_parameters">The method it is documented to use; not yet checked against its timetable.</string>
@@ -600,4 +600,28 @@
     <string name="history_fix_dnd">Let alarms through Do Not Disturb</string>
     <string name="adhan_alert_options">Alert options</string>
     <string name="settings_watch_note">Noor on your wrist: install, sync, the watch face</string>
+    <!-- 0.16: the Adhan section redone. -->
+    <string name="adhan_voice">Adhan voice</string>
+    <string name="voice_for">Voice for %s</string>
+    <string name="voice_makkah">Makkah</string>
+    <string name="voice_madinah">Madinah</string>
+    <string name="voice_alquds">Al-Quds</string>
+    <string name="voice_egypt">Egypt</string>
+    <string name="voice_riyadh">Riyadh</string>
+    <string name="voice_random">Random</string>
+    <string name="voice_random_detail">A different voice each time</string>
+    <string name="voice_yours">Your recording</string>
+    <string name="voice_add">Add a recording</string>
+    <string name="voice_more">More voices</string>
+    <string name="voice_fajr_note">Fajr keeps an Adhan with “As-salatu khayrun min an-nawm”.</string>
+    <string name="voice_mixed">Mixed</string>
+    <string name="when_title">When</string>
+    <string name="days_title">Days</string>
+    <string name="days_every">Every day</string>
+    <string name="before_title">Before the Adhan</string>
+    <string name="after_title">After the Adhan</string>
+    <string name="minutes_short">%s min</string>
+    <string name="before_all">Before every Adhan</string>
+    <string name="after_all">After every Adhan</string>
+    <string name="days_none">No days</string>
 </resources>

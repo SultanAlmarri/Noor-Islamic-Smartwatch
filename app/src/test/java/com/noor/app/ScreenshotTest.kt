@@ -91,7 +91,7 @@ import java.util.Locale
 class ScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL, ADHAN_HISTORY, SCENERY }
+    private enum class Screen { TODAY, TODAY_OTHER_DATE, CALENDAR, SETTINGS, WATCH, ACCURACY, QIBLA, CALIBRATION, WATCH_STATE, ADHAN, ADHAN_FAJR, ADHAN_SHURUQ, ADHAN_LIBRARY, ADHAN_SOUNDS, ONBOARDING, CITIES, SHELL, ADHAN_HISTORY, SCENERY, ADHAN_VOICE }
 
     /** Wednesday 4 November 2026, 15:29:21 in Dubai: Asr is in progress, Maghrib is next. */
     private val now = ZonedDateTime.of(2026, 11, 4, 15, 29, 21, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -197,6 +197,7 @@ class ScreenshotTest {
                             Screen.ADHAN_LIBRARY -> com.noor.app.ui.adhan.SoundLibraryScreen(pad, {})
                             Screen.ADHAN_SOUNDS -> com.noor.app.ui.adhan.MySoundsScreen(pad, {})
                             Screen.ADHAN_HISTORY -> com.noor.app.ui.adhan.AlertHistoryScreen(pad, {})
+                            Screen.ADHAN_VOICE -> com.noor.app.ui.adhan.VoiceScreen(pad, null, {})
                             Screen.ONBOARDING -> com.noor.app.ui.onboarding.OnboardingScreen(pad, {}, {})
                             Screen.CITIES -> com.noor.app.ui.location.LocationScreen(pad, {})
                             Screen.SCENERY -> com.noor.app.ui.settings.SceneryScreen(pad, {})
@@ -324,9 +325,14 @@ class ScreenshotTest {
         screen = Screen.WATCH; rule.waitForIdle()
         screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Malmö")
         screen = Screen.ADHAN_SHURUQ; runBlocking {
-            app.container.settings.updateAlerts { it.with(com.noor.prayer.Prayer.SHURUQ, it.alert(com.noor.prayer.Prayer.SHURUQ).copy(enabled = true, mode = com.noor.prayer.alerts.AlertMode.SOUND, soundId = "alt.morning_birds")) }
+            // (0.16: no alert sounds any more: sunrise with a notification, a reminder after it and some days only.)
+            app.container.settings.updateAlerts { it.with(com.noor.prayer.Prayer.SHURUQ, it.alert(com.noor.prayer.Prayer.SHURUQ).copy(enabled = true,
+                mode = com.noor.prayer.alerts.AlertMode.NOTIFICATION, afterMinutes = 15, days = 0b0011111)) }
         }
-        shot("29_adhan_sunrise_night_en", "Morning birds")
+        shot("29_adhan_sunrise_night_en", "After the Adhan")
+        // 0.16: the voices, named as on the owner's clock.
+        screen = Screen.ADHAN_VOICE; shot("85_adhan_voice_night_en", "Al-Quds")
+        arabic = true; shot("86_adhan_voice_night_ar", "القدس"); arabic = false
         screen = Screen.ADHAN_LIBRARY; shot("30_adhan_library_night_en", "Casablanca")
         screen = Screen.ADHAN_SOUNDS; shot("31_adhan_my_sounds_night_en", "Import a sound")
         arabic = true; screen = Screen.ADHAN_LIBRARY; shot("54_adhan_library_night_ar", "الدار البيضاء"); arabic = false

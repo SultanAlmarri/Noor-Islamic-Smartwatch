@@ -187,13 +187,8 @@ fun QiblaContent(
         // Accuracy
         if (reading != null && !noSensor) AccuracyCard(reading, f) { showCalibration = true }
 
-        Text(
-            buildString {
-                append(stringResource(R.string.qibla_method_note))
-                if (reading != null) append(" ").append(stringResource(R.string.qibla_declination_note, f.degrees(reading.declinationDeg)))
-            },
-            style = MaterialTheme.typography.bodySmall, color = c.textMuted,
-        )
+        // (0.16: the note on the method (true north, the ellipsoid, the decimals, the declination) is gone: the owner,
+        // "is this really even necessary to tell the user?" The method is in the docs; the screen says what to do.)
         Spacer(Modifier.height(8.dp))
     }
 

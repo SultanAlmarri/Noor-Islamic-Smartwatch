@@ -128,8 +128,9 @@ fun SoundLibraryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
         }
         Footnote(stringResource(R.string.lib_intro, f.number(lib.adhans.size), f.number(countries)))
 
-        Spacer(Modifier.height(4.dp))
-        SettingsSection(stringResource(R.string.adhan_cat_sounds), footer = stringResource(R.string.adhan_sounds_credit)) {
+        // (0.16: no alert sounds on the phone; the group is gone with them.)
+        if (lib.sounds.isNotEmpty()) Spacer(Modifier.height(4.dp))
+        if (lib.sounds.isNotEmpty()) SettingsSection(stringResource(R.string.adhan_cat_sounds), footer = stringResource(R.string.adhan_sounds_credit)) {
             lib.sounds.forEachIndexed { i, e ->
                 if (i > 0) SettingsDivider()
                 SoundRow(e.title(ar), f.duration(e.seconds), false, preview == PreviewKey(e.id, false), stringResource(R.string.adhan_preview), null,

@@ -100,8 +100,9 @@ class BundledDataTest {
             org.junit.Assert.assertTrue(it, lib.byId(it)?.let(lib::hasFull) == true)
         }
         org.junit.Assert.assertTrue(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_FAJR_ADHAN)!!.fajr)
-        org.junit.Assert.assertNotNull(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_SOUND))
         org.junit.Assert.assertTrue(lib.adhansFor(com.noor.prayer.Prayer.ASR).none { it.fajr })
-        org.junit.Assert.assertTrue(lib.sounds.map { it.categories.first() }.toSet().containsAll(setOf("brief", "short", "long")))
+        // 0.16: no alert sounds on the phone (no music, nothing that sounds like it): Adhan recordings only.
+        org.junit.Assert.assertTrue(lib.sounds.isEmpty())
+        org.junit.Assert.assertNull(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_SOUND))
     }
 }

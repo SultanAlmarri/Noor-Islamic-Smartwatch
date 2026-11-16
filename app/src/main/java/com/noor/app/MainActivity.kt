@@ -240,6 +240,9 @@ internal object Routes {
     const val ADHAN_LIBRARY = "adhan/library"
     const val ADHAN_SOUNDS = "adhan/sounds"
     const val ADHAN_HISTORY = "adhan/history"
+    /** 0.16: the voices, for one prayer ("adhan/voice/FAJR") or every prayer ("adhan/voice/ALL"). */
+    const val ADHAN_VOICE = "adhan/voice/{p}"
+    fun adhanVoice(p: Prayer?) = "adhan/voice/${p?.name ?: "ALL"}"
     fun adhanPrayer(p: Prayer) = "adhan/prayer/${p.name}"
     // 0.15.2: four, in the order of use (the owner: the watch "should just be put in the settings"): the watch's page
     // opens from Settings, set up once and left.
@@ -332,12 +335,17 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             composable(Routes.ADHAN) {
                 AdhanScreen(content, onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) },
                     onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) },
-                    onOpenHistory = { nav.navigate(Routes.ADHAN_HISTORY) }, onOpenLocation = { nav.navigate(Routes.CITIES) })
+                    onOpenHistory = { nav.navigate(Routes.ADHAN_HISTORY) }, onOpenLocation = { nav.navigate(Routes.CITIES) },
+                    onOpenVoice = { nav.navigate(Routes.adhanVoice(null)) })
             }
             composable(Routes.ADHAN_PRAYER) { e ->
                 val p = e.arguments?.getString("p")?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: Prayer.FAJR
                 PrayerAlertScreen(content, p, onBack = { nav.popBackStack() }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) },
-                    onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) })
+                    onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) }, onOpenVoice = { nav.navigate(Routes.adhanVoice(p)) })
+            }
+            composable(Routes.ADHAN_VOICE) { e ->
+                val p = e.arguments?.getString("p")?.let { n -> Prayer.entries.firstOrNull { it.name == n } }
+                com.noor.app.ui.adhan.VoiceScreen(content, p, onBack = { nav.popBackStack() })
             }
             composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(content, onBack = { nav.popBackStack() }) }
