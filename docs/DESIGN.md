@@ -148,15 +148,18 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   foreground, middle distance and far distance, built from real-world data wherever it exists (elevation models for
   the shape of the land, photogrammetry scans for its surfaces, stones, logs and plants): **Arabian dunes** (ranks of
   dunes with sharp crests and slip faces from a simulated sand sea, ripples underfoot, far ranges unbroken),
-  **Pacific Northwest** (a still lake, dark conifers, Mount Rainier from the USGS elevation model, scanned stones and
-  logs on the shore), **Arctic** (Reinefjorden in Lofoten as Norway's elevation model gives it: an unbroken wall of
+  **Pacific Northwest** (a still lake, dark conifers, scanned stones and logs on the shore, and since 0.14 a chain of
+  snow mountains over it: the Stuart Range and the Enchantments of the Washington Cascades from the USGS elevation
+  model, found by searching the model for a real view of a chain; 0.11 to 0.13 had Mount Rainier alone), **Arctic** (Reinefjorden in Lofoten as Norway's elevation model gives it: an unbroken wall of
   snow peaks over the fjord; the aurora), **Ocean** (a beach of golden sand, scanned from real beaches, its shore
   running away into the distance, the open sea coming in on it to an open horizon: the far mountains of 0.11 to
   0.13 were taken out in 0.14 at the owner's word, "I want it to be like open ocean", by
   `tools/scenery/open_horizon.py`), **Green hills** (the Diablo Range above a reservoir in spring, from the USGS
   elevation model, oaks, a meadow of scanned grass and flowers; it took the savanna's place in 0.11) and **Red
-  rock** (Monument Valley from the USGS elevation model: Mitchell Mesa, Merrick Butte and the Mittens over the
-  valley floor, scanned rock, earth and brush). Only nature: nothing man-made, no people.
+  rock** (since 0.14, made again from nothing at the owner's word: Cathedral Rock over a pool of Oak Creek at Red
+  Rock Crossing, Sedona, from the USGS lidar at one metre, scanned rock and ground, the creek's cottonwoods,
+  sycamores and willows grown branch by branch, the rock mirrored in the pool; 0.11 to 0.13 had Monument Valley's
+  buttes over a flat plain). Only nature: nothing man-made, no people.
   What each is made of and where its data comes from: `tools/scenery/sources/`.
 - **Natural skylines, exact times.** A scenery is never cut open for the Sun (the owner's decision: "what I don't
   like is cutting mountains in order to have the sunrise and set on the ground"): a range runs unbroken, a forest
@@ -198,6 +201,16 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   their thin parts form and melt (`layer.frag`). Lightning lights a thunderhead from within, where its tower
   stands: a pale glow by day, the brightest thing in the sky at dusk and by night, and the land flashes with it
   (`uFlash`; until 0.13 the flash was worked out and never drawn).
+- **Distant thunderstorms (0.14).** The owner: "There should be distant thunderstorms with lightning. Sometimes you
+  see really cumulonimbus clouds, which are very beautiful." Three low sets made for it (`tools/scenery/sky_cb.py`,
+  beside photographs of real cumulonimbus): `lo_cb_far` (one great storm 60 to 120 km off in a fair sky: towers of
+  real cumulus volumes stacked, an anvil with a fibrous edge, a dark flat base, a veil of rain), `lo_cb_line` (a
+  line of storms at different ages along the horizon) and `lo_congestus` (swelling towers, no anvils). The
+  director brings them in a far storm's hours (`farStormHour`: from the afternoon for three to six hours, often into
+  the night, on most convective and stormy days and some others; never over the arctic) and their lightning
+  strikes at their towers (`THUNDER`, from each set's `sky.json`). Every low cloud is lit at the height it really
+  stands (from its distance and the angle it is seen at): after sunset a storm's head stays red and gold over its
+  grey base, as in the photographs.
 - **Lightning that lights the cloud (0.14).** 0.13's flash was a round white glow a quarter of the sky wide laid
   over the thunderhead: the cloud was gone under it. A stroke inside a cloud lights the cloud: a bright heart where
   it is, a glow through the body round it, the cloud's own folds answering (the bright ones more, so its forms
@@ -329,7 +342,14 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   the same or nearly). The renderer shows the two seasons the day lies between (`Seasons` in `RealSkyFrame.kt`,
   the same in the bench): each whole for a while round its fullest (late January, late April, late July, the start
   of November: the land follows the Sun by a month and more), the one passing into the other over some weeks.
-  Where the winter's pictures carry their own snow, the renderer lays none of its own.
+  Where the winter's pictures carry their own snow, the renderer lays none of its own. Sceneries with pictures of
+  their own seasons: the Red Rock (base summer; autumn's cottonwoods gold, unevenly; winter bare, the willows' red
+  stems, a dusting of snow on the ledges; spring's small fresh leaves) and the green hills (base spring; summer's
+  straw-gold grass and dusty blue-green oaks; autumn tawny, the blue and valley oaks gold to russet; winter's new
+  green, those oaks bare; the live oaks evergreen). The others change with the seasons as they did (snow), which is
+  true to them: the dunes, the sea and the arctic do not turn, and the Pacific Northwest's conifers keep their
+  needles. The season pictures are rendered by a colour pass with that season's materials (`bake.colour_render`;
+  `tools/scenery/README.md`).
 - **Weather** ("Showcase"): invented, never copied from a forecast, but always something the real atmosphere does.
   `SkyDirector` gives each day at each place a character, evolving hour by hour and arranged as a landscape
   photographer hopes to find it (cloud to catch the colour at sunrise and sunset with room left for the Sun, mostly
