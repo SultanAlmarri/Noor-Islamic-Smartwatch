@@ -125,6 +125,13 @@ fun AdhanScreen(
 
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
+    // 0.18: a voice Noor has no recording of takes the user's own, under the voice's name.
+    var addingVoice by rememberSaveable { mutableStateOf<String?>(null) }
+    val voicePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val name = addingVoice
+        if (uri != null && name != null) vm.importVoice(uri, name, null)
+        addingVoice = null
+    }
     val phone = a.enabled && a.device.includes(AlertDevice.PHONE)
     // (0.17: the alarms ring on this phone whatever the Adhan does, so what would stop them matters as well.)
     val alarmsOn = a.alarms.any { it.enabled && it.sound != com.noor.prayer.alerts.AlarmSound.NOTIFICATION }
@@ -186,11 +193,8 @@ fun AdhanScreen(
                 title = if (n != null) f.prayerName(n.planned.prayer, n.planned.date) + "  " + f.timeAt(n.planned.at, n.zone) else stringResource(R.string.adhan_master),
                 subtitle = status, subtitleColor = if (blocked) NoorTheme.colors.danger else null,
                 modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(30.dp)).toggleable(a.enabled, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = toggle),
+                // (0.18: the switch alone; the button under it that did the same was one thing too many.)
                 trailing = { com.noor.app.ui.settings.NoorSwitch(a.enabled, null) },
-                // 0.15: while off, the one thing to do, as a button: not only a switch in a corner.
-                below = if (!a.enabled && hasLocation) ({
-                    com.noor.app.ui.components.NoorButton(stringResource(R.string.adhan_turn_on_all), { toggle(true) }, Modifier.fillMaxWidth())
-                }) else null,
             )
         }
 
@@ -201,20 +205,18 @@ fun AdhanScreen(
             }
         }
 
-        // 0.17: the prayers in one group, as on the Al-Fajr clock: the voice for them all first, then each prayer with
-        // today's time and its switch. A line under a prayer only when it differs from the others (its own voice, its
-        // opening only, a notification, some days), so five identical lines no longer repeat "Adhan · Makkah".
-        // While the alerts are off the switches are off; turning one on turns the alerts on, for that prayer alone.
-        val shared = Prayer.entries.filter { it != Prayer.FAJR && it != Prayer.SHURUQ && a.alert(it).mode in VOICE_MODES }.map { a.alert(it).soundId }.distinct()
-        SettingsSection(stringResource(R.string.adhan_prayers), footer = stringResource(if (a.enabled) R.string.adhan_prayers_footer else R.string.adhan_prayers_footer_off)) {
-            SettingsItem(Icons.Rounded.RecordVoiceOver, stringResource(R.string.adhan_voice), null, onClick = onOpenVoice,
-                detail = if (shared.size == 1) voiceName(shared[0], vm, custom, ar) else if (shared.isEmpty()) null else stringResource(R.string.voice_mixed))
-            Prayer.entries.forEach { p ->
-                SettingsDivider()
+        // 0.18: the voice for every prayer, as tiles, with one volume for all (the owner: "Why can't I set a certain
+        // Adhan sound for all the prayers at once?"). Then each prayer with today's time and its switch, and a line
+        // under it only where it differs from the others (its own voice, the opening only, a sound, some days).
+        VoiceCard(a, vm, custom, f) { name -> addingVoice = name; voicePicker.launch(com.noor.alerts.CustomSounds.PICKER_TYPES) }
+        val shared = sharedVoice(a, vm, custom)
+        SettingsSection(stringResource(R.string.adhan_prayers)) {
+            Prayer.entries.forEachIndexed { i, p ->
+                if (i > 0) SettingsDivider()
                 val x = a.alert(p)
                 val line = when {
                     !a.enabled || !x.enabled -> null
-                    else -> differs(x, p, shared.singleOrNull(), vm, custom, ar, f)
+                    else -> differs(x, p, shared, vm, custom, ar, f)
                 }
                 PrayerAlertRow(p, f.prayerName(p), x, rings.today[p]?.let { f.timeAt(it, rings.zone) }, line, live = a.enabled,
                     onOpen = { onOpenPrayer(p) }, onToggle = { on ->
@@ -226,7 +228,7 @@ fun AdhanScreen(
             }
         }
 
-        SettingsSection("", footer = if (a.enabled) stringResource(R.string.adhan_test_footer) else null) {
+        SettingsSection("") {
             // 0.15: "will it really sound tonight?" answered where the question arises: a real alert in ten seconds,
             // through the whole path, with the next prayer's own sound (its result shows in the history).
             if (a.enabled) {
@@ -358,7 +360,7 @@ private fun PrayerAlertRow(p: Prayer, name: String, alert: PrayerAlert, time: St
     // (With the alerts off nothing alerts: the switch says so, and the row is quieter.)
     val on = live && alert.enabled
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onOpen).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = com.noor.app.ui.components.withTick(onOpen)).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val tint = if (on) c.gold else c.textMuted
@@ -375,6 +377,10 @@ private fun PrayerAlertRow(p: Prayer, name: String, alert: PrayerAlert, time: St
     }
 }
 
+/** Whether [id] is [shared]'s voice (a voice's Fajr recording counts as the voice). */
+private fun sameVoice(id: String?, shared: String?, vm: AdhanViewModel, custom: List<com.noor.alerts.CustomSound>): Boolean =
+    id == shared || (shared != null && voiceOf(id, vm, custom)?.soundId(vm, custom) == shared)
+
 /**
  * What sets [x] apart from the other prayers, in a few words, or null when nothing does: its own voice (Fajr's own
  * recording included), the opening only, a notification or silence, some days only.
@@ -383,8 +389,9 @@ private fun PrayerAlertRow(p: Prayer, name: String, alert: PrayerAlert, time: St
 private fun differs(x: PrayerAlert, p: Prayer, shared: String?, vm: AdhanViewModel, custom: List<com.noor.alerts.CustomSound>, ar: Boolean, fm: Formatter): String? {
     val parts = buildList {
         when (x.mode) {
-            AlertMode.ADHAN, AlertMode.CUSTOM -> if (x.soundId != shared) voiceName(x.soundId, vm, custom, ar)?.let { add("\u266A $it") }
-            AlertMode.ADHAN_SHORT -> { add(stringResource(R.string.adhan_mode_short)); if (x.soundId != shared) voiceName(x.soundId, vm, custom, ar)?.let { add("\u266A $it") } }
+            AlertMode.ADHAN, AlertMode.CUSTOM -> if (!sameVoice(x.soundId, shared, vm, custom)) voiceName(x.soundId, vm, custom, ar)?.let { add("\u266A $it") }
+            AlertMode.ADHAN_SHORT -> { add(stringResource(R.string.adhan_mode_short)); if (!sameVoice(x.soundId, shared, vm, custom)) voiceName(x.soundId, vm, custom, ar)?.let { add("\u266A $it") } }
+            AlertMode.SOUND -> add(listOfNotNull(stringResource(R.string.adhan_mode_sound), vm.library.byId(x.soundId)?.title(ar)).joinToString(" · "))
             else -> add(stringResource(modeLabel(x.mode)))
         }
         if (x.days != PrayerAlert.ALL_DAYS) add(daysLabel(x.days, fm))

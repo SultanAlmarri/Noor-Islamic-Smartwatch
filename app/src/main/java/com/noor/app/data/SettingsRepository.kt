@@ -23,6 +23,9 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 /** All user settings, persisted on the device with DataStore. */
 class SettingsRepository(private val context: Context) {
+    /** 0.18: whether Noor's library has a sound (old recordings were replaced by the owner's five voices and five effects). */
+    private val known: (String) -> Boolean = { id -> runCatching { com.noor.alerts.SoundLibrary.get(context).byId(id) != null }.getOrDefault(true) }
+
 
     private object K {
         val onboarding = booleanPreferencesKey("onboarding_done")
@@ -84,7 +87,7 @@ class SettingsRepository(private val context: Context) {
             timeFormat = p.enum(K.timeFormat, TimeFormat.H12),
             theme = p.enum(K.theme, ThemeMode.SUN),
             hijriAdjust = p[K.hijri] ?: 0,
-            alerts = phoneAlerts(AlertSettings.decode(p[K.alerts])),
+            alerts = phoneAlerts(AlertSettings.decode(p[K.alerts]), known),
             statusNotification = p[K.status] ?: false,
             elapsedAfterPrayer = p[K.elapsed] ?: true,
             scrubHintDone = p[K.scrubHint] ?: false,
@@ -126,7 +129,7 @@ class SettingsRepository(private val context: Context) {
 
     /** Read-modify-write in one transaction, so quick successive changes never overwrite each other. */
     suspend fun updateAlerts(change: (AlertSettings) -> AlertSettings) = context.dataStore.edit {
-        it[K.alerts] = change(phoneAlerts(AlertSettings.decode(it[K.alerts]))).encode()
+        it[K.alerts] = change(phoneAlerts(AlertSettings.decode(it[K.alerts]), known)).encode()
     }
 
     suspend fun saveLocation(l: KnownLocation) = context.dataStore.edit {
@@ -143,11 +146,28 @@ class SettingsRepository(private val context: Context) {
 }
 
 /**
- * 0.16: the phone has no alert sounds any more (the owner wants no music): a prayer set to one (AlertMode.SOUND) alerts
- * with the phone's own notification sound instead. 0.17: reminders before and after a prayer are alarms now
- * ([AlertSettings.remindersAsAlarms]).
+ * The phone's alert settings as read: 0.17, reminders before and after a prayer are alarms now
+ * ([AlertSettings.remindersAsAlarms]); 0.18, sounds no longer in the library become their kind's default (a prayer set
+ * to a sound, which 0.16 turned into a notification, plays the sound effects again).
  */
-internal fun phoneAlerts(a: AlertSettings): AlertSettings = com.noor.prayer.Prayer.entries.fold(a.remindersAsAlarms()) { s, p ->
-    val x = s.alert(p)
-    if (x.mode == com.noor.prayer.alerts.AlertMode.SOUND) s.with(p, x.copy(mode = com.noor.prayer.alerts.AlertMode.NOTIFICATION, soundId = null)) else s
+internal fun phoneAlerts(a: AlertSettings, known: (String) -> Boolean = { true }): AlertSettings {
+    val ids = com.noor.prayer.alerts.SoundIds
+    // 0.18: a sound no longer in the library (the recordings before 0.18, the tones before 0.16) becomes the default
+    // of its kind: the Adhan's default voice, Fajr's own when there is one, the birds for a sound.
+    fun keep(id: String?) = id == null || ids.isCustom(id) || id == ids.RANDOM || known(id)
+    val adhan = ids.DEFAULT_ADHAN
+    val fajr = ids.DEFAULT_FAJR_ADHAN.takeIf(known) ?: adhan
+    var s = com.noor.prayer.Prayer.entries.fold(a.remindersAsAlarms()) { acc, p ->
+        val x = acc.alert(p)
+        if (keep(x.soundId)) acc else acc.with(p, x.copy(soundId = when {
+            x.mode == com.noor.prayer.alerts.AlertMode.SOUND || p == com.noor.prayer.Prayer.SHURUQ -> ids.DEFAULT_SOUND
+            p == com.noor.prayer.Prayer.FAJR -> fajr
+            else -> adhan
+        }))
+    }
+    if (s.favourites.any { !known(it) }) s = s.copy(favourites = s.favourites.filter(known))
+    s.alarms.filter { it.sound == com.noor.prayer.alerts.AlarmSound.LIBRARY && !keep(it.customId) }.forEach { al ->
+        s = s.withAlarm(al.copy(sound = com.noor.prayer.alerts.AlarmSound.PHONE_ALARM, customId = null))
+    }
+    return s
 }

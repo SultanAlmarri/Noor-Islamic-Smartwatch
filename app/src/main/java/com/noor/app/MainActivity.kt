@@ -456,7 +456,7 @@ private fun RowScope.Tab(selected: Boolean, icon: Painter, label: String, onClic
     val lift by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 0.55f, stiffness = 420f), label = "tabLift")
     Column(
         Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(50))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab, onClick = onClick)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab, onClick = com.noor.app.ui.components.withTick(onClick))
             .semantics { this.selected = selected },
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {

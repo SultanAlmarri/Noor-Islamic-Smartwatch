@@ -193,12 +193,12 @@
     <string name="tab_adhan">الأذان</string>
     <string name="adhan_title">الأذان والتنبيهات</string>
     <string name="adhan_master">تنبيهات الصلاة</string>
-    <string name="adhan_master_off">متوقفة. فعّلها لتسمع الأذان أو يصلك إشعار عند كل صلاة.</string>
+    <string name="adhan_master_off">متوقف</string>
     <string name="adhan_master_off_short">تنبيهات الصلاة متوقفة؛ فعّلها من تبويب الأذان.</string>
     <string name="adhan_next">التنبيه التالي على الهاتف: %1$s · %2$s</string>
-    <string name="adhan_hero_next">التالي على هذا الهاتف</string>
-    <string name="adhan_next_none">لا توجد صلاة مضبوطة للتنبيه على هذا الهاتف.</string>
-    <string name="adhan_on_watch_only">التنبيهات تأتي من ساعتك، ويبقى الهاتف صامتًا.</string>
+    <string name="adhan_hero_next">الأذان التالي</string>
+    <string name="adhan_next_none">لا صلاة مفعّلة.</string>
+    <string name="adhan_on_watch_only">على ساعتك</string>
     <string name="adhan_no_location">حدّد الموقع أولًا: التنبيهات تحتاج إلى أوقات الصلاة.</string>
     <string name="adhan_warn_notifications">الإشعارات متوقفة لتطبيق نور، فلن يظهر أي تنبيه ولن يُسمع.</string>
     <string name="adhan_action_allow">السماح</string>
@@ -576,7 +576,7 @@
     <string name="cd_since">منذ دخول %s</string>
     <string name="cd_since_sunrise">منذ الشروق</string>
     <string name="adhan_prayers_footer_off">فعّل صلاة لتسمع أذانها.</string>
-    <string name="adhan_hero_blocked">لن يُسمع: أصلح ما هو مذكور أدناه.</string>
+    <string name="adhan_hero_blocked">لن يُسمع. انظر أدناه.</string>
     <string name="adhan_test_footer">اقفل الهاتف بعد الضغط، وتُحفظ النتيجة في السجل.</string>
     <string name="basis_official">أوقاتها المنشورة نفسها، لكل يوم.</string>
     <string name="basis_validated">طريقتها نفسها، بعد مقارنتها بجدولها المنشور.</string>
@@ -585,7 +585,7 @@
     <string name="basis_manual">الطريقة التي اخترتها.</string>
     <string name="adhan_hint_adhan">الأذان كاملًا</string>
     <string name="adhan_hint_short">مطلعه فقط</string>
-    <string name="adhan_hint_sound">نغمة قصيرة</string>
+    <string name="adhan_hint_sound">طيور، مطر…</string>
     <string name="adhan_hint_custom">ملف من عندك</string>
     <string name="adhan_hint_notification">صوت هاتفك المعتاد</string>
     <string name="adhan_hint_silent">إشعار فقط، بلا صوت</string>
@@ -612,7 +612,6 @@
     <string name="voice_madinah">المدينة</string>
     <string name="voice_alquds">القدس</string>
     <string name="voice_egypt">مصر</string>
-    <string name="voice_riyadh">الرياض</string>
     <string name="voice_random">متغير</string>
     <string name="voice_random_detail">صوت مختلف كل مرة</string>
     <string name="voice_yours">تسجيلك</string>
@@ -677,4 +676,16 @@
     <string name="alarms_none">لا منبهات بعد</string>
     <string name="alarm_next_in_hm">المنبه التالي بعد %1$s س و%2$s د</string>
     <string name="alarm_next_in_m">المنبه التالي بعد %1$s د</string>
+    <!-- 0.18: the five voices, one volume for every prayer, the alarm's sounds. -->
+    <string name="voice_dubai">دبي</string>
+    <string name="voice_all_title">صوت الأذان لكل الصلوات</string>
+    <string name="adhan_volume_all">مستوى الصوت لكل الصلوات</string>
+    <string name="adhan_sound_title">الصوت</string>
+    <string name="alarm_sound_ringtone">نغمة رنين الهاتف</string>
+    <string name="alarm_sounds_phone">الهاتف</string>
+    <string name="alarm_sounds_effects">أصوات</string>
+    <string name="alarm_sounds_adhan">الأذان</string>
+    <string name="alarm_length_full">كامل</string>
+    <string name="alarm_length_short">قصير</string>
+    <string name="alarm_adhan_before_warn">إذا سُمع قبل الصلاة فقد يُظنّ الأذان دخولًا لوقتها.</string>
 </resources>

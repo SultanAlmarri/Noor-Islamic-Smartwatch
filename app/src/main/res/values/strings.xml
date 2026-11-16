@@ -194,12 +194,12 @@
     <string name="tab_adhan">Adhan</string>
     <string name="adhan_title">Adhan &amp; alerts</string>
     <string name="adhan_master">Prayer alerts</string>
-    <string name="adhan_master_off">Off. Turn on to hear the Adhan or get a notification at each prayer time.</string>
+    <string name="adhan_master_off">Off</string>
     <string name="adhan_master_off_short">Prayer alerts are off; turn them on in the Adhan tab.</string>
     <string name="adhan_next">Next on this phone: %1$s · %2$s</string>
-    <string name="adhan_hero_next">Next on this phone</string>
-    <string name="adhan_next_none">No prayer is set to alert on this phone.</string>
-    <string name="adhan_on_watch_only">Alerts come from your watch; the phone stays quiet.</string>
+    <string name="adhan_hero_next">Next Adhan</string>
+    <string name="adhan_next_none">No prayer is on.</string>
+    <string name="adhan_on_watch_only">On your watch</string>
     <string name="adhan_no_location">Set a location first: alerts need prayer times.</string>
     <string name="adhan_warn_notifications">Notifications are off for Noor, so no alert can appear or sound.</string>
     <string name="adhan_action_allow">Allow</string>
@@ -571,7 +571,7 @@
     <string name="cd_since">since %s began</string>
     <string name="cd_since_sunrise">since sunrise</string>
     <string name="adhan_prayers_footer_off">Turn on a prayer to hear its Adhan.</string>
-    <string name="adhan_hero_blocked">Will not sound: fix what is listed below.</string>
+    <string name="adhan_hero_blocked">Will not sound. See below.</string>
     <string name="adhan_test_footer">Lock the phone after pressing it. The result goes into the history.</string>
     <string name="basis_official">Its own published times, for each day.</string>
     <string name="basis_validated">Its own method, checked against its published timetable.</string>
@@ -580,7 +580,7 @@
     <string name="basis_manual">The method you chose.</string>
     <string name="adhan_hint_adhan">The full call</string>
     <string name="adhan_hint_short">Its opening only</string>
-    <string name="adhan_hint_sound">A brief tone</string>
+    <string name="adhan_hint_sound">Birds, rain…</string>
     <string name="adhan_hint_custom">A file of yours</string>
     <string name="adhan_hint_notification">Phone\'s usual sound</string>
     <string name="adhan_hint_silent">Notice only, no sound</string>
@@ -607,7 +607,6 @@
     <string name="voice_madinah">Madinah</string>
     <string name="voice_alquds">Al-Quds</string>
     <string name="voice_egypt">Egypt</string>
-    <string name="voice_riyadh">Riyadh</string>
     <string name="voice_random">Random</string>
     <string name="voice_random_detail">A different voice each time</string>
     <string name="voice_yours">Your recording</string>
@@ -668,4 +667,16 @@
     <string name="alarms_none">No alarms yet</string>
     <string name="alarm_next_in_hm">Next alarm in %1$s h %2$s min</string>
     <string name="alarm_next_in_m">Next alarm in %1$s min</string>
+    <!-- 0.18: the five voices, one volume for every prayer, the alarm's sounds. -->
+    <string name="voice_dubai">Dubai</string>
+    <string name="voice_all_title">Adhan voice for every prayer</string>
+    <string name="adhan_volume_all">Volume for every prayer</string>
+    <string name="adhan_sound_title">Sound</string>
+    <string name="alarm_sound_ringtone">Phone\'s ringtone</string>
+    <string name="alarm_sounds_phone">Phone</string>
+    <string name="alarm_sounds_effects">Sounds</string>
+    <string name="alarm_sounds_adhan">Adhan</string>
+    <string name="alarm_length_full">Full</string>
+    <string name="alarm_length_short">Short</string>
+    <string name="alarm_adhan_before_warn">Heard before the prayer, the Adhan may be taken for its time.</string>
 </resources>

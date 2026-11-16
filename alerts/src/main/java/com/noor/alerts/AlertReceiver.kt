@@ -340,8 +340,17 @@ internal object AlarmDispatcher {
 
         val phone = phoneAlarmSound(context)
         val own = if (a.sound == AlarmSound.CUSTOM) a.customId?.let { cid -> CustomSounds(context).let { c -> c.get(cid)?.let { c.file(it) } } } else null
-        val source: SoundSource? = own?.let { SoundSource.LocalFile(it) } ?: phone
-        val fallback: SoundSource? = if (own != null) phone else SoundSource.System(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI.toString()).takeIf { it != source }
+        // 0.18: the phone's ringtone, or one of Noor's sounds (a voice or a sound effect), full or short.
+        val chosen: SoundSource? = when (a.sound) {
+            AlarmSound.CUSTOM -> own?.let { SoundSource.LocalFile(it) }
+            AlarmSound.RINGTONE -> runCatching { android.media.RingtoneManager.getActualDefaultRingtoneUri(context, android.media.RingtoneManager.TYPE_RINGTONE) }
+                .getOrNull()?.let { SoundSource.System(it.toString()) }
+            AlarmSound.LIBRARY -> SoundLibrary.get(context).byId(a.customId)?.let { e -> (if (a.short) e.shortFile ?: e.file else e.file ?: e.shortFile) }
+                ?.let { SoundSource.Asset(it) }
+            else -> null
+        }
+        val source: SoundSource? = chosen ?: phone
+        val fallback: SoundSource? = if (chosen != null) phone else SoundSource.System(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI.toString()).takeIf { it != source }
         if (source == null) {
             AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, text.string(R.string.noor_alarm_failed)); return
         }

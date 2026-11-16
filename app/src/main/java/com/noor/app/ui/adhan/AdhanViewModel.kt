@@ -241,7 +241,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
                 ?: if (p == Prayer.FAJR) SoundIds.DEFAULT_FAJR_ADHAN else SoundIds.DEFAULT_ADHAN
             AlertMode.ADHAN_SHORT -> a.soundId?.takeIf { it == SoundIds.RANDOM } ?: a.soundId?.let { library.byId(it) }?.takeIf { it in library.adhansFor(p) }?.id
                 ?: if (p == Prayer.FAJR) SoundIds.DEFAULT_FAJR_ADHAN else SoundIds.DEFAULT_ADHAN
-            AlertMode.SOUND -> a.soundId?.takeIf { it.startsWith("alt.") } ?: SoundIds.DEFAULT_SOUND
+            AlertMode.SOUND -> a.soundId?.takeIf { library.byId(it)?.let { e -> e in library.sounds } == true } ?: SoundIds.DEFAULT_SOUND
             AlertMode.CUSTOM -> a.soundId?.takeIf(SoundIds::isCustom) ?: _custom.value.firstOrNull()?.id
             AlertMode.NOTIFICATION, AlertMode.SILENT -> a.soundId
         }
@@ -267,6 +267,14 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun stopPreview() { player.stop(); _preview.value = null }
+
+    /** 0.18: the phone's alarm sound ([SYS_ALARM]) or ringtone ([SYS_RINGTONE]), as an alarm would play it. */
+    fun previewSystem(which: String) {
+        val ctx = getApplication<Application>()
+        val type = if (which == SYS_RINGTONE) android.media.RingtoneManager.TYPE_RINGTONE else android.media.RingtoneManager.TYPE_ALARM
+        val uri = runCatching { android.media.RingtoneManager.getActualDefaultRingtoneUri(ctx, type) }.getOrNull() ?: android.media.RingtoneManager.getDefaultUri(type) ?: return
+        play(PreviewKey(which, false), SoundSource.System(uri.toString()), 90)
+    }
 
     fun importSound(uri: Uri, replaceId: String? = null, forPrayer: Prayer? = null) = viewModelScope.launch {
         val ctx = getApplication<Application>()
@@ -297,26 +305,31 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun applyVoice(target: Prayer?, voice: String) = update { s0 ->
         var s = s0
-        if (voice == SoundIds.RANDOM && s.favourites.size < 2)
-            s = s.copy(favourites = (s.favourites + VOICE_LIBRARY_IDS).distinct())
-        val entry = library.byId(voice)
+        // ("Random": a different one of the voices each time, Fajr's own recordings at Fajr.)
+        if (voice == SoundIds.RANDOM) s = s.copy(favourites = library.adhans.map { it.id }.filter { id -> VOICE_LIBRARY_IDS.any { id == it || id == it + "_fajr" } })
         val custom = SoundIds.isCustom(voice)
         for (p in Prayer.entries) {
             if (p == Prayer.SHURUQ) continue
             if (target != null && p != target) continue
             val a = s.alert(p)
+            // (For every prayer: those that call the Adhan; a prayer set to a notification or a sound keeps it.)
             if (target == null && a.mode !in VOICE_MODES) continue
-            if (target == null && p == Prayer.FAJR && entry?.fajr != true && voice != SoundIds.RANDOM) continue
+            // 0.18: Fajr takes the voice's own Fajr recording ("As-salatu khayrun min an-nawm") when there is one.
+            val id = if (p == Prayer.FAJR && !custom) library.byId(voice + "_fajr")?.id ?: voice else voice
+            val entry = library.byId(id)
             val mode = when {
                 custom -> AlertMode.CUSTOM
                 a.mode == AlertMode.ADHAN_SHORT -> AlertMode.ADHAN_SHORT
                 entry != null && !entry.hasFullRecording -> AlertMode.ADHAN_SHORT
                 else -> AlertMode.ADHAN
             }
-            s = s.with(p, a.copy(enabled = true, mode = mode, soundId = voice))
+            s = s.with(p, a.copy(enabled = a.enabled || target != null, mode = mode, soundId = id))
         }
         s
     }
+
+    /** 0.18: the volume of every prayer's alert at once (each can still have its own, on its page). */
+    fun setVolumeAll(percent: Int) = update { s -> Prayer.entries.fold(s) { x, p -> x.with(p, x.alert(p).copy(volumePercent = percent)) } }
 
     /** An imported file as one of the voices ([name]: "Al-Quds", "Egypt", "Riyadh"…), then used as [applyVoice] would. */
     fun importVoice(uri: Uri, name: String, target: Prayer?) = viewModelScope.launch {
@@ -422,8 +435,13 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() { player.stop(notify = false) }
 }
 
+/** Preview keys of the phone's own sounds. */
+internal const val SYS_ALARM = "sys.alarm"
+internal const val SYS_RINGTONE = "sys.ringtone"
+
 /** The kinds of alert a voice applies to: the Adhan, its opening, the user's own sound. */
 internal val VOICE_MODES = setOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.CUSTOM)
 
 /** The library recordings behind the voices named as on the owner's clock (Makkah, Madinah). */
-internal val VOICE_LIBRARY_IDS = listOf("adhan.makkah_maghrib_2012", "adhan.madinah_prophets_mosque")
+/** 0.18: the owner's five voices, as the library names them (a voice the library lacks is the user's own recording). */
+internal val VOICE_LIBRARY_IDS = listOf("adhan.makkah", "adhan.madinah", "adhan.alquds", "adhan.egypt", "adhan.dubai")
