@@ -212,13 +212,13 @@ internal object SkyDirector {
         listOf("hi_wisps", "hi_sprays", "hi_veil", "hi_ripples", "hi_mixed"),
         listOf("mi_patches", "mi_bands", "mi_sheet", "mi_veil"),
         listOf("lo_few", "lo_scattered", "lo_towers", "lo_broken", "lo_front", "lo_storm", "lo_overcast_breaks", "lo_overcast",
-            // (0.14) A thunderstorm far off on the horizon in a fair sky (tools/scenery/sky_cb.py).
-            "lo_cb_far"),
+            // (0.14) A thunderstorm far off on the horizon in a fair sky, and a line of them (tools/scenery/sky_cb.py).
+            "lo_cb_far", "lo_cb_line"),
     )
 
     /** How far a set closes the sky over the land (sets not named leave it open). */
     private val CLOSES = mapOf(
-        "lo_overcast" to 1f, "lo_overcast_breaks" to 0.75f, "lo_storm" to 0.6f, "lo_broken" to 0.45f, "lo_front" to 0.25f, "lo_cb_far" to 0.06f,
+        "lo_overcast" to 1f, "lo_overcast_breaks" to 0.75f, "lo_storm" to 0.6f, "lo_broken" to 0.45f, "lo_front" to 0.25f, "lo_cb_far" to 0.06f, "lo_cb_line" to 0.06f,
         "mi_sheet" to 0.4f, "mi_veil" to 0.25f,
     )
 
@@ -268,7 +268,7 @@ internal object SkyDirector {
     private val MID_AMOUNT = mapOf("mi_patches" to 0.32f, "mi_bands" to 0.50f, "mi_veil" to 0.68f, "mi_sheet" to 0.86f)
 
     /** The low sets with a thunderhead in them, and where its towers stand: degrees right of the middle of the set. */
-    val THUNDER = mapOf("lo_storm" to floatArrayOf(14f), "lo_cb_far" to floatArrayOf(-9.7f))
+    val THUNDER = mapOf("lo_storm" to floatArrayOf(14f), "lo_cb_far" to floatArrayOf(-9.7f), "lo_cb_line" to floatArrayOf(-1.1f, 21.6f, -19.8f))
 
     /** How closed a low set's sky is, 0..5 (sets not named: open). */
     fun closedness(set: String?): Int = HOW_CLOSED[set?.removeSuffix(TURNED)] ?: 0
