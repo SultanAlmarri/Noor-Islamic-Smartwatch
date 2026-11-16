@@ -442,7 +442,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     // small pictures and a description. A picture is read and decoded on the loader's thread when it is first asked
     // for, and handed to this thread to become a texture; until then whoever asked goes without it.
 
-    private class Baked(val dir: String, val land: Boolean, val meta: org.json.JSONObject) {
+    private class Baked(val dir: String, val land: Boolean, val meta: org.json.JSONObject, /** [dir], or [dir] and a mark for the same set turned about (it has pictures of its own in memory). */ val key: String = dir) {
         val tex = HashMap<String, Tex>()
         val asked = HashSet<String>()
         val missing = HashSet<String>()
@@ -461,14 +461,15 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private val slots = Array(3) { Slot() }
     private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "NoorSkyPictures").apply { priority = Thread.NORM_PRIORITY - 2; isDaemon = true } }
 
-    private fun bakedSet(dir: String, land: Boolean): Baked? {
+    private fun bakedSet(dir: String, land: Boolean, turned: Boolean = false): Baked? {
+        val key = if (turned) "$dir#turned" else dir
         // (A folder that is not there is remembered as such: it is asked for at every frame.)
-        if (baked.containsKey(dir)) return baked[dir]
+        if (baked.containsKey(key)) return baked[key]
         val b = runCatching {
             val json = app.assets.open("sky2/$dir/" + (if (land) "land.json" else "sky.json")).bufferedReader().use { it.readText() }
-            Baked(dir, land, org.json.JSONObject(json))
+            Baked(dir, land, org.json.JSONObject(json), key)
         }.onFailure { Log.i(TAG, "No pictures for $dir") }.getOrNull()
-        baked[dir] = b
+        baked[key] = b
         return b
     }
 
@@ -512,7 +513,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private fun drain() {
         while (true) {
             val l = loaded.poll() ?: break
-            if (baked[l.set.dir] !== l.set) continue                      // of a context that is gone
+            if (baked[l.set.key] !== l.set) continue                      // of a context that is gone
             if (l.pixels == null) { l.set.missing += l.name; continue }
             val t = IntArray(1)
             GLES30.glGenTextures(1, t, 0)
@@ -581,9 +582,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     }
 
     private fun drawSet(b: Baked, slot: Slot, level: Int, leg: CloudLeg, offset: Float, flip: Boolean) {
+        // (uLay.w: 1 = the scene is mirrored, 2 = this set's picture is turned about, 3 = both.)
         use(progs.getValue("layer"), slot.outT, mapOf(
             "tA" to (b.tex["a"] ?: zero!!), "tF" to (b.tex["f"] ?: zero!!), "tK" to (b.tex["k"] ?: zero!!), "tG" to (b.tex["g"] ?: zero!!), "tLit" to (b.lit ?: zero!!),
-            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), leg.weight, if (flip) 1f else 0f),
+            "uLay" to floatArrayOf(b.num("rMax", 4.0), b.num("layer", (2 - level).toDouble()), leg.weight, (if (flip) 1f else 0f) + (if (leg.turned) 2f else 0f)),
             "uLayFrame" to floatArrayOf(b.num("azHalf", 29.4), b.num("elMin", -1.0), b.num("elMax", 40.0), offset),
         ))
         draw()
@@ -601,8 +603,9 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         for (leg in legs) {
             if (leg.weight < 0.004f) continue
             // (A set whose pictures cannot be read is as good as no set: nothing waits for it.)
-            val b = bakedSet("clouds/${leg.set}", false)?.takeIf { "a" !in it.missing } ?: continue
-            if (setReady(b, f.cloudLight, f.flip, now)) show += b to leg else waiting = true
+            val b = bakedSet("clouds/${leg.set}", false, leg.turned)?.takeIf { "a" !in it.missing } ?: continue
+            // (A set turned about is lit from the other side: its picture's left is the sky's right.)
+            if (setReady(b, if (leg.turned) f.cloudLight.mirrored() else f.cloudLight, f.flip, now)) show += b to leg else waiting = true
         }
         slot.live = show.map { it.first }
         if (show.isEmpty()) {
@@ -610,7 +613,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             u["uCloudF$i"] = floatArrayOf(1080f, 1056f, 1350f, 1080f)
             return !waiting
         }
-        for ((b, _) in show) { b.lastUsed = now; light(b, f.cloudLight, f.flip, now) }
+        for ((b, leg) in show) { b.lastUsed = now; light(b, if (leg.turned) f.cloudLight.mirrored() else f.cloudLight, f.flip, now) }
         val w = 1144 / tier.cloudSample; val h = 902 / tier.cloudSample
         if (slot.out == null || slot.out!!.w != w || slot.out!!.h != h) {
             delete(slot.outT); delete(slot.out)
@@ -623,7 +626,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         // The clouds move by less than a pixel a second: a level's window is drawn again five times a second, not at
         // every frame; and at once when something else has changed (the light, the sets on show, their amounts), and at
         // every frame while the Sun is dragged or a breath of wind runs through.
-        val key = show.joinToString("|") { (b, leg) -> "${b.dir} ${b.litKey} ${(leg.weight * 200).toInt()}" } + " $w ${f.flip}"
+        val key = show.joinToString("|") { (b, leg) -> "${b.key} ${b.litKey} ${(leg.weight * 200).toInt()}" } + " $w ${f.flip}"
         if (slot.drawnKey == key && !busyNow && now - slot.drawnAt < 200) return !waiting
         slot.drawnKey = key; slot.drawnAt = now
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, slot.outT!!.fbo)

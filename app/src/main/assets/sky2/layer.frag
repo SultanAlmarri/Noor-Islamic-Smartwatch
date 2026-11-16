@@ -10,7 +10,9 @@ uniform sampler2D tG;        // lit by white ground below
 uniform sampler2D tLit;      // lit by the Sun and by the glow of the moment (lit.frag)
 uniform sampler2D tSky;      // the clear sky (for the colour far clouds fade into)
 uniform sampler2D tNoise2D;  // the flat noise tile
-uniform vec4 uLay;           // brightest light stored, the set's level (0 low, 1 middle, 2 high), share of this set, 1 = mirrored
+uniform vec4 uLay;           // brightest light stored, the set's level (0 low, 1 middle, 2 high), share of this set, and
+                             // 1 = the scene is mirrored (right to left), 2 = this set's picture is turned about (0.14: a
+                             // set passes once as it was rendered and once the other way round), 3 = both
 uniform vec4 uLayFrame;      // the set's own window of the sky: degrees to either side of its middle, its lowest and
                              // highest degrees over the horizon; how far right of its middle the view's middle stands now
 out vec4 o;
@@ -24,8 +26,9 @@ void main() {
     // This pixel of the window, as a direction: degrees right of the view's middle and over the horizon. The set is a
     // wider window of its own, turned by its drift.
     float az = (uv.x - 0.5) * 2.0 * SKYWIN_AZ, el = SKYWIN_EL1 - uv.y * (SKYWIN_EL1 - SKYWIN_EL0);
-    float saz = (uLay.w > 0.5 ? -az : az) + uLayFrame.w;
-    vec2 tuv = vec2(0.5 + saz / (2.0 * uLayFrame.x), (uLayFrame.z - el) / (uLayFrame.z - uLayFrame.y));
+    bool rtl = mod(uLay.w, 2.0) > 0.5, turned = uLay.w > 1.5;
+    float saz = (rtl ? -az : az) + uLayFrame.w;
+    vec2 tuv = vec2(0.5 + (turned ? -saz : saz) / (2.0 * uLayFrame.x), (uLayFrame.z - el) / (uLayFrame.z - uLayFrame.y));
     if (tuv.x <= 0.0 || tuv.x >= 1.0 || tuv.y <= 0.0 || tuv.y >= 1.0) { o = vec4(0.0); return; }
     // (Where this set has given way to its neighbour altogether, there is nothing to work out: see below.)
     float gone = smoothstep(0.5 * SKY_PITCH - 14.0, 0.5 * SKY_PITCH + 14.0, abs(saz) + sign(saz) * 0.2 * (el - 18.0));
@@ -37,7 +40,7 @@ void main() {
     vec2 np = vec2(saz, el) * 0.033;
     vec2 swirl = (texture(tNoise2D, np * 1.3 + vec2(uTime * 0.0040, uTime * 0.0027)).rg - 0.5) * 1.5
                + (texture(tNoise2D, np * 3.7 - vec2(uTime * 0.0090, uTime * 0.0060)).rg - 0.5) * 0.20;
-    tuv += swirl / vec2(2.0 * uLayFrame.x, uLayFrame.z - uLayFrame.y);
+    tuv += swirl * vec2(turned ? -1.0 : 1.0, 1.0) / vec2(2.0 * uLayFrame.x, uLayFrame.z - uLayFrame.y);
     float a0 = texture(tA, tuv).r;
     if (a0 < 0.002) { o = vec4(0.0); return; }             // (open sky: most of most sets)
     float feed = texture(tNoise2D, np + vec2(uTime * 0.0021, uTime * 0.0013)).g * 0.62 + texture(tNoise2D, np * 2.9 - vec2(uTime * 0.0034, 0.0)).b * 0.38;
@@ -56,7 +59,7 @@ void main() {
         a *= smoothstep(-0.20, 0.16, patches - 1.4 * gone + 0.16);
     }
     if (a < 0.002) { o = vec4(0.0); return; }
-    vec2 lit = texture(tLit, vec2(uLay.w > 0.5 ? 1.0 - tuv.x : tuv.x, 1.0 - tuv.y)).rg;
+    vec2 lit = texture(tLit, vec2(rtl ? 1.0 - tuv.x : tuv.x, 1.0 - tuv.y)).rg;
     float sun = sq(lit.r) * uLay.x, glow = sq(lit.g) * uLay.x;
     float fromSky = sq(texture(tK, tuv).r) * uLay.x, fromGround = sq(texture(tG, tuv).r) * uLay.x;
 

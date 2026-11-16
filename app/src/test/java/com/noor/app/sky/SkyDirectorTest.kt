@@ -275,6 +275,84 @@ class SkyDirectorTest {
         assertEquals(0f, LightWeights.of(60.0, -1.0, false, 0f).w[4], 0f)
     }
 
+    /**
+     * The owner's complaint about 0.13: "the same cloud types just keep cycling over and over again... It's just
+     * overcast, and then it's overcast again... I want the entire day to have a lot of variety... sometimes it's
+     * overcast, sometimes it's broken, sometimes it's scattered, sometimes it's isolated clouds."
+     */
+    @Test fun theDayIsAWalkThroughDifferentSkies() {
+        for (biome in Biome.entries) {
+            val seenLow = HashSet<String>()
+            var closedLegs = 0; var dayLegs = 0; var fewKinds = 0; var days = 0
+            for (day in 0 until 240) {
+                val year = (day % 12) / 12f
+                val w = SkyDirector.weather(day * 15_485_863L + biome.ordinal * 31L + 9, biome, year)
+                val p = SkyDirector.programme(w, biome, year, 6.2f, 17.9f)
+                days++
+                for (level in 0..2) {
+                    val raw = p.sets[level]
+                    val sets = raw.map { it?.removeSuffix(SkyDirector.TURNED) }
+                    // No set passes twice in a row, either way round: the same clouds never follow themselves.
+                    for (i in 1 until sets.size) if (sets[i] != null) assertTrue("$biome day $day level $level leg $i: ${sets[i]} twice", sets[i] != sets[i - 1])
+                    for (x in sets) if (x != null) assertTrue(x, x in SkyDirector.SETS[level])
+                    // A set passes turned about every other time: the very same picture comes back only after its set
+                    // has been by the other way round.
+                    val lastWay = HashMap<String, Boolean>()
+                    for (i in raw.indices) {
+                        val name = sets[i] ?: continue
+                        val turned = raw[i]!!.endsWith(SkyDirector.TURNED)
+                        lastWay[name]?.let { assertTrue("$biome day $day level $level: $name the same way round twice", it != turned) }
+                        lastWay[name] = turned
+                    }
+                }
+                val low = p.sets[2].map { it?.removeSuffix(SkyDirector.TURNED) }
+                for (i in low.indices) assertTrue("$biome day $day: the low sky is never empty", low[i] != null)
+                for (i in 1 until low.size) {
+                    // A sky closes and opens by degrees.
+                    assertTrue("$biome day $day leg $i: ${low[i - 1]} beside ${low[i]}", abs(SkyDirector.closedness(low[i]) - SkyDirector.closedness(low[i - 1])) <= 2)
+                }
+                // A closed sky holds for three legs at most (an hour and three quarters), then it breaks.
+                var run = 0
+                for (x in low) { run = if (SkyDirector.closedness(x) >= 4) run + 1 else 0; assertTrue("$biome day $day: closed for $run legs", run <= 3) }
+                // The daylight (the legs whose middle lies between sunrise and sunset).
+                val kinds = HashSet<String>()
+                var closed = 0; var n = 0
+                for (i in low.indices) {
+                    val h = (SkyDirector.FIRST_LEG + i + 0.5f) * 0.55f
+                    if (h < 6.5f || h > 18.5f) continue
+                    n++; kinds += low[i]!!; seenLow += low[i]!!
+                    if (SkyDirector.closedness(low[i]) >= 4) closed++
+                }
+                // Even the most overcast day is open for more than half of its daylight, and every day shows at least
+                // three different low skies, nearly every day four or more.
+                assertTrue("$biome day $day: closed for $closed of $n legs of daylight", closed <= n * 0.45f)
+                assertTrue("$biome day $day: only ${kinds.size} kinds of low sky by day ($kinds)", kinds.size >= 3)
+                if (kinds.size < 4) fewKinds++
+                closedLegs += closed; dayLegs += n
+            }
+            // (The desert's sky is the most open: there one day in four may have three kinds.)
+            assertTrue("$biome: $fewKinds of $days days with fewer than four kinds of low sky", fewKinds <= days * (if (biome == Biome.DUNES) 0.25f else 0.12f))
+            // Over the year a closed sky is a small share of the daylight (least over the desert), and every kind of
+            // low sky has its hours (no thunderstorm over the arctic).
+            val share = closedLegs.toFloat() / dayLegs
+            assertTrue("$biome: closed for ${share * 100} % of the daylight", share <= (if (biome == Biome.DUNES) 0.04f else 0.13f))
+            assertEquals(biome.id, SkyDirector.SETS[2].toSet() - (if (biome == Biome.ARCTIC) setOf("lo_storm") else emptySet()), seenLow)
+        }
+        // The hours of colour keep room for the Sun under cloud that takes its colour, unless the day's closed spell
+        // falls on them: at sunset the low sky is open enough (never a full overcast) on nine days in ten, and there
+        // is middle or high cloud above it on nine days in ten.
+        var room = 0; var lit = 0; var all = 0
+        for (biome in Biome.entries) for (day in 0 until 120) {
+            val w = SkyDirector.weather(day * 104_729L + 5, biome, 0.3f)
+            val s = SkyDirector.at(biome, w, 17.9 / 24, 1.0, 0.3f, 0.2f, 6.2f, 17.9f)
+            all++
+            if (s.overcast < 0.5f) room++
+            if (s.clouds[0].any { it.weight * SkyDirector.share(it.offset) > 0.3f } || s.clouds[1].any { it.weight * SkyDirector.share(it.offset) > 0.3f }) lit++
+        }
+        assertTrue("room for the Sun at sunset on $room of $all days", room >= all * 0.9f)
+        assertTrue("cloud to take the colour at sunset on $lit of $all days", lit >= all * 0.9f)
+    }
+
     @Test fun theDirectorChoosesCloudSetsThatExist() {
         val seen = List(3) { HashSet<String>() }
         for (biome in Biome.entries) for (day in 0 until 150) {

@@ -87,6 +87,7 @@ const P = {
   trueStars: false,                              // the stars where they truly are (off: the finest night sky)
   birds: -1, birdsHeight: 0.14, meteor: 0,       // a flock (0..1 across the sky; -1 none), a shooting star (0..1; 0 none)
   skyHigh: null, skyMid: null, skyLow: null, slideHigh: 0, slideMid: 0, slideLow: 0,     // cloud sets (ids) and where each stands (degrees: how far right of the set's middle the view's middle is, -32..32)
+  turnHigh: false, turnMid: false, turnLow: false, turnHigh2: false, turnMid2: false, turnLow2: false,   // a set's picture turned about, left for right (0.14)
   skyHigh2: null, skyMid2: null, skyLow2: null, mixHigh: 0, mixMid: 0, mixLow: 0,         // the next set on the way (it stands 64 degrees along; seen once the first has passed far enough). mix*: unused
   sunPart: 1, halo: 0, shade: 0, overcast: 0,                                                                   // the low clouds stand apart round the Sun; a halo
   focal: 1.15, eye: 60.0, horizon: 911 / 2340, arcTop: 596 / 2340, ground: 1110 / 2340, textBottom: 554 / 2340, panelTop: 1126 / 2340,
@@ -492,18 +493,23 @@ function frame(amort = 16) {
   let cover = 0, any = 0;
   // (Each layer is drawn into a window of the sky round the view; a set is a wider window, turned by its drift.)
   if (!G.win) G.win = [0, 1, 2].map(() => { const t = hdr(1144, 902); return { t, f: fbo(t) }; });
-  [[P.skyHigh, P.slideHigh, P.skyHigh2, P.mixHigh], [P.skyMid, P.slideMid, P.skyMid2, P.mixMid], [P.skyLow, P.slideLow, P.skyLow2, P.mixLow]].forEach(([id, slide, id2, mix], i) => {
+  [[P.skyHigh, P.slideHigh, P.skyHigh2, P.turnHigh, P.turnHigh2], [P.skyMid, P.slideMid, P.skyMid2, P.turnMid, P.turnMid2], [P.skyLow, P.slideLow, P.skyLow2, P.turnLow, P.turnLow2]].forEach(([id, slide, id2, turn, turn2], i) => {
     // (The sets of a level pass side by side, 64 degrees from one middle to the next: the second is the next on the way.)
-    const sets = [[id, slide, 1], [id2, slide - 64, 1]].filter(e => e[0] && SKIES[e[0]] && Math.abs(e[1]) < 73);
+    const sets = [[id, slide, 1, turn], [id2, slide - 64, 1, turn2]].filter(e => e[0] && SKIES[e[0]] && Math.abs(e[1]) < 73);
     if (!sets.length) { T['tCloud' + i] = T.tZero; return; }
-    sets.forEach(([sid]) => lit(SKIES[sid], G.cloudLight, SKIES[sid].fLit));
+    // (A set turned about is lit from the other side: RealSkyEngine.layer. Each set is lit just before it is drawn,
+    // since the bench keeps one lit picture a set and the same set may be on show both ways round.)
+    const turnedLight = { ...G.cloudLight, names: G.cloudLight.names.map(swap), glow: [G.cloudLight.glow[1], G.cloudLight.glow[0]] };
     const W = G.win[i];
     gl.bindFramebuffer(gl.FRAMEBUFFER, W.f.f); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-    sets.forEach(([sid, sl, share]) => {
+    sets.forEach(([sid, sl, share, turned]) => {
       const S = SKIES[sid], m = S.meta;
+      gl.disable(gl.BLEND);
+      lit(S, turned ? turnedLight : G.cloudLight, S.fLit);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
       const level = typeof m.layer === 'number' ? m.layer : m.layer === 'high' ? 2 : m.layer === 'mid' ? 1 : 0;
-      use(p.layer, W.f, { tA: S.a, tF: S.f, tK: S.k, tG: S.g, tLit: S.lit, uLay: [m.rMax, level, share, P.rtl ? 1 : 0],
+      use(p.layer, W.f, { tA: S.a, tF: S.f, tK: S.k, tG: S.g, tLit: S.lit, uLay: [m.rMax, level, share, (P.rtl ? 1 : 0) + (turned ? 2 : 0)],
         uLayFrame: [m.azHalf || 29.4, m.elMin === undefined ? -1 : m.elMin, m.elMax || 40, sl] });
       draw();
       cover = 1 - (1 - cover) * (1 - (m.coverSeen === undefined ? m.cover : m.coverSeen) * share * Math.min(1, Math.max(0, (Math.min(26, 32 - sl) - Math.max(-26, -32 - sl)) / 52)));

@@ -59,7 +59,11 @@ internal class SkyState(
  * thinning: by night, after sunset); [speed]: how fast it passes, degrees a second (the renderer carries it on
  * between one minute's frame and the next, so that it glides).
  */
-internal class CloudLeg(val set: String, val offset: Float, val weight: Float, val speed: Float = 0f)
+internal class CloudLeg(
+    val set: String, val offset: Float, val weight: Float, val speed: Float = 0f,
+    /** (0.14) The set's picture is turned about (left for right): every set passes both ways round, so the same picture comes back half as often. */
+    val turned: Boolean = false,
+)
 
 /**
  * Which of the rendered Suns of a baked picture the light of a moment lies between, and how much of each (see
@@ -219,60 +223,259 @@ internal object SkyDirector {
         return CloudField.hash(seed, i, k) * (1 - u) + CloudField.hash(seed, i + 1, k) * u
     }
 
-    /**
-     * The set a level shows on leg [k] of the day: chosen from the weather in the middle of that leg, with a throw of
-     * the dice, so that the same weather does not always wear the same sky. Null: that level is empty for the leg.
-     */
-    fun setFor(w: Weather, level: Int, k: Int, biome: Biome): String? {
-        val own = setByWeather(w, level, k, biome)
-        if (level != 2 || own == null) return own
-        // A closed sky does not stand wall to wall beside an open one: the set next to an overcast is at least a
-        // broken sky, the one next to an overcast with breaks at least a bank, as a real sky closes and opens.
-        val near = max(HOW_CLOSED[setByWeather(w, level, k - 1, biome)] ?: 0, HOW_CLOSED[setByWeather(w, level, k + 1, biome)] ?: 0)
-        return if (near - (HOW_CLOSED[own] ?: 0) >= 3) BETWEEN[near - 2] else own
-    }
+    // ---- The day's programme (0.14) ---------------------------------------------------------------------------
+    //
+    // The owner, of 0.13: "the same cloud types just keep cycling over and over again, which is extremely boring...
+    // It's just overcast, and then it's overcast again... I want the entire day to have a lot of variety... sometimes
+    // it's overcast, sometimes it's broken, sometimes it's scattered, sometimes it's isolated clouds... That's not how
+    // real life works."
+    //
+    // Until 0.13 a leg's set was read off the weather in the middle of that leg, and the weather of a day has one
+    // character from midnight to midnight: an overcast day was forty-four overcasts in a row, each the same picture
+    // passing again. Now the day is a walk through skies. The weather still says where the day leans (how closed the
+    // sky wants to be at each hour: open with the odd swell on a clear day, building through a convective afternoon,
+    // closed for a spell of a few hours on an overcast or rainy day and open before and after it), and each leg takes
+    // the sky nearest to that which the rules allow:
+    //
+    // - never the set that has just passed, and rather not the one before it either;
+    // - a sky closes and opens by degrees: no overcast wall to wall beside an open sky;
+    // - a closed sky (overcast, or overcast with breaks) holds for three legs at most, then it breaks for a while,
+    //   and of any twelve hours it takes four and a half at most;
+    // - the hours of sunrise and sunset keep room for the Sun under clouds that take its colour, unless the day's
+    //   closed spell falls on them;
+    // - thunderstorms come in their hours (late on a convective day, now and then on a stormy one), towers with the
+    //   warmth of the day.
+    //
+    // SkyDirectorTest.theDayIsAWalkThroughDifferentSkies locks all of it.
 
-    /** The low sets by how closed their sky is, and the set that stands for each step. */
+    /** The low sets by how closed their sky is (0 open .. 5 a full overcast). */
     private val HOW_CLOSED = mapOf(
         "lo_few" to 0, "lo_scattered" to 1, "lo_towers" to 1, "lo_front" to 2, "lo_broken" to 3, "lo_storm" to 3, "lo_overcast_breaks" to 4, "lo_overcast" to 5,
     )
-    private val BETWEEN = listOf("lo_few", "lo_scattered", "lo_front", "lo_broken", "lo_overcast_breaks", "lo_overcast")
+    /** What a middle set amounts to, for choosing it by how much middle cloud the hour wants. */
+    private val MID_AMOUNT = mapOf("mi_patches" to 0.32f, "mi_bands" to 0.50f, "mi_veil" to 0.68f, "mi_sheet" to 0.86f)
 
-    private fun setByWeather(w: Weather, level: Int, k: Int, biome: Biome): String? {
-        val d = LEG_HOURS[level]
-        val mid = (((k + 0.5f) * d - CloudField.hash(w.seed, 40 + level, 0) * d) / 24f).coerceIn(0f, 1f)
-        val s = w.at(mid.toDouble())
-        val r = CloudField.hash(w.seed, 50 + level, k)
-        val cover = (s.cumulus * 0.60f + s.overcast * 0.55f).coerceIn(0f, 0.95f)
-        return when (level) {
-            2 -> when {
-                s.overcast > 0.78f -> "lo_overcast"
-                s.overcast > 0.5f -> "lo_overcast_breaks"
-                s.storm > 0.5f && biome != Biome.ARCTIC -> "lo_storm"
-                cover < 0.12f -> "lo_few"
-                cover < 0.28f -> if (s.size > 0.5f && r < 0.6f) "lo_towers" else if (r < 0.3f) "lo_few" else "lo_scattered"
-                cover < 0.45f -> if (r < 0.34f) "lo_scattered" else if (r < 0.67f) "lo_towers" else "lo_front"
-                else -> if (r < 0.6f) "lo_broken" else "lo_front"
-            }
-            1 -> when {
-                s.overcast > 0.6f -> if (r < 0.5f) "mi_veil" else null
-                s.layer < 0.10f -> if (r < 0.25f) "mi_patches" else null
-                s.layer < 0.40f -> if (r < 0.7f) "mi_patches" else "mi_bands"
-                s.layer < 0.65f -> if (r < 0.5f) "mi_bands" else if (r < 0.8f) "mi_patches" else "mi_sheet"
-                else -> if (r < 0.5f) "mi_sheet" else if (r < 0.8f) "mi_veil" else "mi_bands"
-            }
-            else -> when {
-                s.overcast > 0.8f -> null
-                CloudField.hash(w.seed, 7, 1) < 0.22f && r < 0.7f -> "hi_veil"
-                s.cirrus < 0.08f && r < 0.35f -> null
-                r < 0.28f -> "hi_wisps"
-                r < 0.52f -> "hi_sprays"
-                r < 0.72f -> "hi_ripples"
-                r < 0.90f -> "hi_mixed"
-                else -> "hi_veil"
-            }
+    /** How closed a low set's sky is, 0..5 (sets not named: open). */
+    fun closedness(set: String?): Int = HOW_CLOSED[set?.removeSuffix(TURNED)] ?: 0
+
+    /**
+     * A day's skies: for each level, the set of every leg (null: that level is empty then), from leg [FIRST_LEG] on.
+     * A name that ends in [TURNED] is that set with its picture turned about, left for right.
+     */
+    class Programme(val sets: Array<Array<String?>>)
+    const val TURNED = "~"
+
+    /**
+     * Which way round a set passes this time: the other way than the last time it passed, so that the very same
+     * picture comes back only after its set has been by the other way round (the first time: by a throw of the dice).
+     */
+    private class Turns(val seed: Int, val salt: Int) {
+        private val last = HashMap<String, Boolean>()
+        fun next(name: String): String {
+            val t = last[name]?.let { !it } ?: (CloudField.hash(seed, salt, name.hashCode() and 0xffff) < 0.5f)
+            last[name] = t
+            return if (t) name + TURNED else name
         }
     }
+    const val FIRST_LEG = -3
+    private fun legCount(level: Int) = (24f / LEG_HOURS[level]).toInt() + 8
+
+    private val programmes = object : LinkedHashMap<String, Programme>(32, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Programme>?) = size > 48
+    }
+
+    /** The programme of the day with weather [w] over [biome] at time of year [year], the Sun rising and setting at hours [rise] and [set]. */
+    fun programme(w: Weather, biome: Biome, year: Float = 0.5f, rise: Float = 6f, set: Float = 18f): Programme {
+        val key = "${w.seed} ${w.type} ${biome.ordinal} ${(year * 24).toInt()} ${(rise * 6).toInt()} ${(set * 6).toInt()}"
+        synchronized(programmes) { programmes[key]?.let { return it } }
+        val p = Programme(arrayOf(walkHigh(w, biome, year, rise, set), walkMid(w, biome, year, rise, set), walkLow(w, biome, year, rise, set)))
+        synchronized(programmes) { programmes[key] = p }
+        return p
+    }
+
+    /** The hour a leg of a level has its middle at. */
+    private fun midHour(w: Weather, level: Int, k: Int): Float = (k + 0.5f) * LEG_HOURS[level] - CloudField.hash(w.seed, 40 + level, 0) * LEG_HOURS[level]
+
+    /** 1 at hour [c] and for [flat] hours to either side of it, falling to 0 at [half] hours away. */
+    private fun spell(h: Float, c: Float, half: Float, flat: Float = half * 0.4f): Float {
+        var d = abs(h - c); if (d > 12f) d = 24f - d
+        return 1f - smooth(flat, half, d)
+    }
+
+    /**
+     * How closed the low sky wants to be at hour [h], 0..5: where the day leans. [inSpell] comes back as how far the
+     * hour lies in the day's closed spell, 0..1.
+     */
+    private fun lowLean(w: Weather, biome: Biome, year: Float, h: Float, rise: Float, set: Float): FloatArray {
+        val seed = w.seed
+        fun day(k: Int) = CloudField.hash(seed, 7, 100 + k)
+        val slow = hourNoise(seed, h, 3.7f, 81) - 0.5f
+        val quick = hourNoise(seed, h, 1.4f, 82) - 0.5f
+        val warm = smooth(9.5f, 14f, h) * (1f - smooth(18f, 21f, h))
+        // The day's closed spell, on the days that have one: early (low cloud that the morning burns off), in the
+        // afternoon and evening, or by night; two and a half to five hours of it.
+        val centre = when {
+            day(2) < 0.40f -> rise - 0.5f + 3.0f * day(3)
+            day(2) < 0.75f -> 13.5f + 6f * day(3)
+            else -> (21f + 6f * day(3)) % 24f
+        }
+        val half = 1.3f + 1.2f * day(4)
+        var inSpell = 0f
+        var c = when (w.type) {
+            Weather.CLEAR -> 0.5f + 1.5f * slow + 0.6f * warm * day(1)
+            Weather.FAIR -> 1.1f + 2.4f * slow + 0.7f * warm
+            Weather.CONVECTIVE -> 0.8f + 1.8f * slow + 1.9f * warm
+            Weather.STORMY -> 2.2f + 2.8f * slow + 0.8f * warm
+            Weather.LAYERED -> 1.0f + 2.2f * slow
+            Weather.OVERCAST -> { inSpell = spell(h, centre, half); 1.0f + 1.6f * slow + 3.9f * inSpell }
+            Weather.RAINY -> { inSpell = spell(h, centre, half + 0.8f); 1.4f + 1.6f * slow + 3.6f * inSpell + 1.8f * spell(h, (centre + 7f + 5f * day(5)) % 24f, 1.1f) }
+            else -> 1.9f + 4.4f * slow
+        } + 1.0f * quick
+        c = when (biome) {
+            // The desert's sky is open; a closed spell there is a rare day's event.
+            Biome.DUNES -> if (day(6) < 0.2f) c * 0.85f else min(c * 0.8f, 3.3f)
+            Biome.RAINFOREST -> c + 0.25f
+            Biome.CANYON -> c * 0.95f
+            Biome.ARCTIC -> c + 0.1f
+            else -> c
+        }
+        // The hours of colour keep room for the Sun, unless the day's closed spell falls on them.
+        val colour = max(spell(h, rise, 1.3f, 0.6f), spell(h, set, 1.3f, 0.6f)) * (1f - inSpell)
+        c += (min(c, 2.0f) - c) * colour
+        // Deep night is mostly clear, for the stars (a storm apart).
+        val night = max(1f - smooth(rise - 2.2f, rise - 0.8f, h), smooth(set + 1.0f, set + 2.4f, h))
+        if (w.type != Weather.STORMY) c *= 1f - 0.45f * night * (1f - inSpell)
+        return floatArrayOf(c.coerceIn(0f, 5f), inSpell, warm)
+    }
+
+    /** Whether a thunderstorm may stand in the sky at hour [h] of this day. */
+    private fun stormHour(w: Weather, biome: Biome, h: Float): Boolean {
+        if (biome == Biome.ARCTIC) return false
+        val seed = w.seed
+        val late = smooth(13.5f, 16f, h) * (1f - smooth(20f, 22.5f, h))
+        val ok = when (w.type) {
+            Weather.CONVECTIVE -> late * (0.55f + 0.45f * CloudField.hash(seed, 7, 110)) > 0.5f
+            Weather.STORMY -> hourNoise(seed, h, 2.6f, 83) > 0.5f
+            Weather.MIXED -> late * hourNoise(seed, h, 2.2f, 83) > 0.5f
+            Weather.RAINY -> hourNoise(seed, h, 2.4f, 83) > 0.72f
+            else -> false
+        }
+        // (Over the dunes only now and then: a desert thunderstorm is an event.)
+        return ok && (biome != Biome.DUNES || CloudField.hash(seed, 7, 111) < 0.5f)
+    }
+
+    private fun walkLow(w: Weather, biome: Biome, year: Float, rise: Float, set: Float): Array<String?> {
+        val n = legCount(2)
+        val out = arrayOfNulls<String>(n)
+        val names = SETS[2]
+        var prev: String? = null; var prev2: String? = null
+        var closedRun = 0; var mustOpen = 0; var sinceStorm = 9
+        val turns = Turns(w.seed, 362)
+        for (i in 0 until n) {
+            val k = FIRST_LEG + i
+            val h = ((midHour(w, 2, k) % 24f) + 24f) % 24f
+            val lean = lowLean(w, biome, year, h, rise, set)
+            val storm = stormHour(w, biome, h)
+            // (Of any twelve hours, the sky is closed for four and a half at most.)
+            var closedLately = 0
+            for (b in max(0, i - 21) until i) if (closedness(out[b]) >= 4) closedLately++
+            val towers = lean[2] > 0.25f && w.type != Weather.OVERCAST && w.type != Weather.RAINY && (w.type != Weather.CLEAR || CloudField.hash(w.seed, 7, 112) < 0.5f)
+            var best: String? = null; var bestScore = 1e9f
+            for ((j, name) in names.withIndex()) {
+                if (name == prev) continue
+                val c = closedness(name)
+                if (prev != null && abs(c - closedness(prev)) > 2) continue
+                if (name == "lo_storm" && (!storm || sinceStorm < 3)) continue
+                if (name == "lo_towers" && !towers) continue
+                if (c >= 4 && (mustOpen > 0 || closedLately >= 8)) continue
+                var score = abs(c - lean[0]) + 0.9f * CloudField.hash(w.seed, 300 + j, k)
+                if (name == prev2) score += 0.8f
+                if (name == "lo_storm") score -= 1.4f              // (in its hour a storm shows)
+                if (score < bestScore) { bestScore = score; best = name }
+            }
+            val pick = best ?: (if (prev == "lo_scattered") "lo_few" else "lo_scattered")
+            out[i] = turns.next(pick)
+            sinceStorm = if (pick == "lo_storm") 0 else sinceStorm + 1
+            if (closedness(pick) >= 4) { closedRun++; if (closedRun >= 3) { mustOpen = 2; closedRun = 0 } } else { closedRun = 0; if (mustOpen > 0) mustOpen-- }
+            prev2 = prev; prev = pick
+        }
+        return out
+    }
+
+    private fun walkMid(w: Weather, biome: Biome, year: Float, rise: Float, set: Float): Array<String?> {
+        val n = legCount(1)
+        val out = arrayOfNulls<String>(n)
+        var prev: String? = null; var prev2: String? = null
+        val turns = Turns(w.seed, 363)
+        for (i in 0 until n) {
+            val k = FIRST_LEG + i
+            val h = ((midHour(w, 1, k) % 24f) + 24f) % 24f
+            val nz = hourNoise(w.seed, h, 4.3f, 84)
+            var m = when (w.type) {
+                Weather.CLEAR -> 0.08f + 0.26f * nz
+                Weather.FAIR -> 0.16f + 0.40f * nz
+                Weather.CONVECTIVE -> 0.16f + 0.36f * nz
+                Weather.STORMY -> 0.30f + 0.45f * nz
+                Weather.LAYERED -> 0.50f + 0.50f * nz
+                Weather.OVERCAST -> 0.35f + 0.45f * nz
+                Weather.RAINY -> 0.40f + 0.40f * nz
+                else -> 0.22f + 0.70f * nz
+            }
+            val lean = lowLean(w, biome, year, h, rise, set)
+            // The hour of colour: something for the low Sun to light from beneath (not under the day's closed spell).
+            val colour = max(spell(h, rise, 1.2f, 0.5f), spell(h, set, 1.2f, 0.5f)) * (1f - lean[1])
+            m = max(m, colour * (0.36f + 0.30f * CloudField.hash(w.seed, 7, 120)))
+            val night = max(1f - smooth(rise - 2.2f, rise - 0.8f, h), smooth(set + 1.0f, set + 2.4f, h))
+            m *= 1f - 0.45f * night
+            if (m < 0.20f) { out[i] = null; prev2 = prev; prev = null; continue }
+            var best: String? = null; var bestScore = 1e9f
+            for ((j, name) in SETS[1].withIndex()) {
+                if (name == prev) continue
+                // (A sheet does not lie over the hour of colour: it would take the Sun.)
+                if (colour > 0.5f && (name == "mi_sheet" || name == "mi_veil")) continue
+                var score = abs(MID_AMOUNT.getValue(name) - m) + 0.36f * CloudField.hash(w.seed, 320 + j, k)
+                if (name == prev2) score += 0.22f
+                if (score < bestScore) { bestScore = score; best = name }
+            }
+            out[i] = best?.let { turns.next(it) }
+            prev2 = prev; prev = best
+        }
+        return out
+    }
+
+    private fun walkHigh(w: Weather, biome: Biome, year: Float, rise: Float, set: Float): Array<String?> {
+        val n = legCount(0)
+        val out = arrayOfNulls<String>(n)
+        var prev: String? = null; var prev2: String? = null
+        val veilDay = CloudField.hash(w.seed, 7, 1) < 0.22f
+        val turns = Turns(w.seed, 364)
+        for (i in 0 until n) {
+            val k = FIRST_LEG + i
+            val h = ((midHour(w, 0, k) % 24f) + 24f) % 24f
+            val lean = lowLean(w, biome, year, h, rise, set)
+            val colour = max(spell(h, rise, 1.6f, 0.8f), spell(h, set, 1.6f, 0.8f)) * (1f - lean[1])
+            var amount = 0.12f + 0.75f * hourNoise(w.seed, h, 6.0f, 85)
+            if (w.type == Weather.CLEAR) amount *= 0.8f
+            amount = max(amount, colour * 0.5f)
+            // (Nothing is seen of the high clouds through a closed low sky.)
+            if (amount < 0.26f || lean[0] > 4.4f) { out[i] = null; prev2 = prev; prev = null; continue }
+            var best: String? = null; var bestScore = 1e9f
+            for ((j, name) in SETS[0].withIndex()) {
+                if (name == prev) continue
+                var score = CloudField.hash(w.seed, 340 + j, k)
+                if (name == "hi_veil") score += if (veilDay) -0.35f else 0.45f
+                if (name == prev2) score += 0.3f
+                if (score < bestScore) { bestScore = score; best = name }
+            }
+            out[i] = best?.let { turns.next(it) }
+            prev2 = prev; prev = best
+        }
+        return out
+    }
+
+    /** The set a level shows on leg [k] of the day (null: that level is empty for the leg): see [programme]. */
+    fun setFor(w: Weather, level: Int, k: Int, biome: Biome, year: Float = 0.5f, rise: Float = 6f, set: Float = 18f): String? =
+        programme(w, biome, year, rise, set).sets[level].getOrNull(k - FIRST_LEG)
 
     /**
      * The sets a level shows at hour [h] of the day, and where each stands. The sets of a level follow one another
@@ -281,7 +484,7 @@ internal object SkyDirector {
      * other. Nothing fades in or out, nothing changes at a stroke, and nothing changes because the Sun has reached
      * some height or a prayer has begun. (0.12 let a set drift 41 degrees and then dissolved it into the next.)
      */
-    fun legs(w: Weather, level: Int, h: Float, biome: Biome): List<CloudLeg> {
+    fun legs(w: Weather, level: Int, h: Float, biome: Biome, year: Float = 0.5f, rise: Float = 6f, set: Float = 18f): List<CloudLeg> {
         val d = LEG_HOURS[level]
         val x = (h + CloudField.hash(w.seed, 40 + level, 0) * d) / d
         val k = kotlin.math.floor(x).toInt(); val p = x - k
@@ -292,7 +495,7 @@ internal object SkyDirector {
             // (Set k + j stands with its middle j + 0.5 sets along; the view's middle is p sets along.)
             val offset = dir * (p - 0.5f - j) * PITCH
             if (abs(offset) >= REACH) continue
-            setFor(w, level, k + j, biome)?.let { out += CloudLeg(it, offset, 1f, speed) }
+            setFor(w, level, k + j, biome, year, rise, set)?.let { out += CloudLeg(it.removeSuffix(TURNED), offset, 1f, speed, it.endsWith(TURNED)) }
         }
         return out
     }
@@ -303,7 +506,7 @@ internal object SkyDirector {
      * The sky at [fraction] of the day with the Sun at [sunEl] degrees: [w] is the day's weather, [year] the season
      * (see [yearPhase]), [mistBase] the dawn mist the sky already works out from the Sun's height.
      */
-    fun at(biome: Biome, w: Weather, fraction: Double, sunEl: Double, year: Float, mistBase: Float): SkyState {
+    fun at(biome: Biome, w: Weather, fraction: Double, sunEl: Double, year: Float, mistBase: Float, rise: Float = 6f, set: Float = 18f): SkyState {
         val s = w.at(fraction)
         val summer = summer(year)
         val winter = 1f - summer
@@ -397,12 +600,14 @@ internal object SkyDirector {
         val h = (fraction * 24.0).toFloat()
         val midnight = smooth(0f, 0.4f, min(h, 24f - h))
         val amounts = floatArrayOf(1f - 0.5f * calm, 1f - 0.6f * calm, (1f - 0.55f * calm) * (1f - 0.45f * after))
-        val clouds = List(3) { level -> legs(w, level, h, biome).map { CloudLeg(it.set, it.offset, it.weight * amounts[level] * midnight, it.speed) } }
+        val clouds = List(3) { level -> legs(w, level, h, biome, year, rise, set).map { CloudLeg(it.set, it.offset, it.weight * amounts[level] * midnight, it.speed, it.turned) } }
         // The Sun and the clouds. The Sun is drawn low in the picture, where far clouds crowd together, though it
         // stands high in the real sky, where gaps are wide: left to the picture it would nearly always be hidden. So
         // whether a cloud is in front of it is the weather's say: clouds pass over it now and then, the more often the
         // more of them there are, and otherwise stand apart round it; under an overcast it is gone.
-        val often = (0.10f + 0.85f * (s.cumulus * 0.55f + s.overcast * 0.9f)).coerceIn(0f, 1f)
+        // (0.14: by the sets that are on show, not by what the day's weather would have wanted.)
+        val lowSky = clouds[2].sumOf { (it.weight * share(it.offset) * closedness(it.set) / 5f).toDouble() }.toFloat().coerceIn(0f, 1f)
+        val often = (0.10f + 0.85f * lowSky).coerceIn(0f, 1f)
         val covered = smooth(1f - often - 0.2f, 1f - often + 0.2f, hourNoise(seed, h, 0.75f, 71))
         // (What the sets on show close of the sky: a closed sky hides the Sun whatever the hour's weather says, and
         // the land under it is in its even light, not in sunshine.)
@@ -410,7 +615,7 @@ internal object SkyDirector {
         val overcast = 1f - (1f - closed(2)) * (1f - closed(1))
         // (Nor does a thunderhead stand apart for the Sun: where it is in front of it, the Sun is behind it.)
         val full = clouds[2].sumOf { (it.weight * share(it.offset) * (if (it.set == "lo_overcast" || it.set == "lo_storm") 1f else 0f)).toDouble() }.toFloat().coerceIn(0f, 1f)
-        val sunPart = ((1f - covered) * (1f - smooth(0.5f, 0.75f, s.overcast)) * (1f - full)).coerceIn(0f, 1f)
+        val sunPart = ((1f - covered) * (1f - smooth(0.6f, 0.92f, overcast)) * (1f - full)).coerceIn(0f, 1f)
         val shade = max(overcast, 0.6f * (1f - sunPart))
         // (0.14) It rains only out of a sky that is closed, as far as it is closed: rain out of a sunny sky with a
         // few clouds in it was a grey veil over the distance that nothing in the picture accounted for.
@@ -530,7 +735,8 @@ internal class RealSkyFrame(
             val ph = t * 0.9f - k
             if (CloudField.hash(seed.toInt(), k, 91) < 0.30f) {
                 flash = if (ph < 0.07f) 1f else if (ph > 0.13f && ph < 0.19f) 0.7f else if (ph > 0.24f && ph < 0.27f) 0.35f else 0f
-                val az = 14f - thunder.offset + (CloudField.hash(seed.toInt(), k, 92) - 0.5f) * 14f
+                // (The tower stands 14 degrees right of its set's middle; left of it when the set passes turned about.)
+                val az = (if (thunder.turned) -14f else 14f) - thunder.offset + (CloudField.hash(seed.toInt(), k, 92) - 0.5f) * 14f
                 strike = dirAzEl(az * DEG, (6f + 9f * CloudField.hash(seed.toInt(), k, 93)) * DEG)
             }
         }
@@ -649,7 +855,17 @@ internal class RealSkyFrame(
             // (The weights are found for the screen as it is seen; the scene's own x runs the other way when mirrored.)
             var light = if (moonLight && !moonUp) floatArrayOf(0f, 1f, 0f) else lw.dir
             if (flip) { lw = lw.mirrored(); cw = cw.mirrored(); light = floatArrayOf(-light[0], light[1], light[2]) }
-            val state = SkyDirector.at(biome, weather, display, el, year, look.mist)
+            // (The hours the Sun rises and sets at, for the day's programme of skies: SkyDirector.programme.)
+            var rise = 6f; var set = 18f
+            val sm = scene.samples
+            for (i in 1 until sm.size) {
+                val a = sm[i - 1]; val b = sm[i]
+                if ((a.second < -0.83) != (b.second < -0.83)) {
+                    val at = (a.first + (b.first - a.first) * ((-0.83 - a.second) / (b.second - a.second))).toFloat() * 24f
+                    if (b.second > a.second) rise = at else set = at
+                }
+            }
+            val state = SkyDirector.at(biome, weather, display, el, year, look.mist, rise, set)
             // The stars are a real, unmirrored sky; the scene's own x runs the other way when it is mirrored.
             fun m(v: FloatArray) = if (flip) floatArrayOf(-v[0], v[1], v[2]) else v
             // Where the heavens stand: truly, for the place and the moment, if that is asked for in Settings; otherwise
