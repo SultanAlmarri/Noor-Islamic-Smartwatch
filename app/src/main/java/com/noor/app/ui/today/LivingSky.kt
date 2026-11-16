@@ -641,7 +641,7 @@ internal fun LivingSky(
                 // (0.18) The path is drawn behind the land: above the scenery's own skyline, a hair clear of it, so that
                 // it passes behind a mountain or a tree as the Sun does; else above the level horizon. Until 0.17 it
                 // was cut at the level horizon only, and over the higher sceneries it ran down the mountainside.
-                val above = SunLift.above(skyline, w, hy, rtl, density) ?: Path().apply { addRect(Rect(0f, 0f, w, hy)) }
+                val above = Path().apply { addRect(Rect(0f, 0f, w, hy)) }   // EXPERIMENT C
                 val stroke = 1.6.dp.toPx()
                 val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
                 val dashed = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash)
