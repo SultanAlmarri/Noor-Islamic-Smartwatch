@@ -76,7 +76,7 @@ import java.time.Instant
 import java.time.ZoneId
 
 @Composable
-fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(), onOpenAdhan: () -> Unit = {}) {
+fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(), onOpenAdhan: () -> Unit = {}, onBack: (() -> Unit)? = null) {
     val state by vm.state.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle(initialValue = null)
     val lastSent by vm.lastSent.collectAsStateWithLifecycle()
@@ -100,7 +100,7 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(),
             openGuide = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(INSTALL_GUIDE)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
             faceChoice = faceChoice, selectFace = vm::selectFace, sendFace = vm::sendFace, openAdhan = onOpenAdhan,
         ),
-        now = System.currentTimeMillis(),
+        now = System.currentTimeMillis(), onBack = onBack,
         preview = preview,
     )
 }
@@ -147,9 +147,11 @@ fun WatchContent(
     actions: WatchActions,
     now: Long,
     preview: WatchPreviewState? = null,
+    /** 0.15.2: the watch's page opens from Settings, with a way back. */
+    onBack: (() -> Unit)? = null,
 ) {
     val c = NoorTheme.colors
-    com.noor.app.ui.components.NoorPage(stringResource(R.string.watch_title), contentPadding, spacing = 20.dp) {
+    com.noor.app.ui.components.NoorPage(stringResource(R.string.watch_title), contentPadding, onBack = onBack, spacing = 20.dp) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             WatchPreview(preview, description = stringResource(R.string.watch_preview_desc))
         }

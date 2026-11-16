@@ -59,6 +59,9 @@ import com.noor.app.R
 import com.noor.app.ui.components.NoorPage
 import com.noor.app.ui.components.HeroCard
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.rounded.Tune
 import com.noor.app.ui.components.PrayerIcon
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.settings.ChoiceDialog
@@ -117,7 +120,24 @@ fun AdhanScreen(
     val phone = a.enabled && a.device.includes(AlertDevice.PHONE)
     val watch = a.enabled && a.device.includes(AlertDevice.WATCH)
 
-    NoorPage(stringResource(R.string.adhan_title), contentPadding) {
+    // 0.15.2: what is used often on the first page (the next Adhan and its switch, what needs fixing, the prayers,
+    // the test); what is set once and left (the reminder, phone or watch, how the sound behaves, the library, the
+    // history) one level down, on "Alert options" (the owner: "the more used features should get the priority").
+    var page by rememberSaveable { mutableStateOf(0) }
+    androidx.activity.compose.BackHandler(enabled = page != 0) { page = 0 }
+    val reselect = com.noor.app.LocalTabReselect.current
+    var seenReselect by rememberSaveable { mutableStateOf(0) }
+    LaunchedEffect(reselect) { if (reselect != 0 && reselect != seenReselect) page = 0; seenReselect = reselect }
+    androidx.compose.animation.AnimatedContent(
+        targetState = page, label = "adhanPage",
+        transitionSpec = {
+            val dir = if (targetState > initialState) androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start else androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End
+            (slideIntoContainer(dir, androidx.compose.animation.core.tween(com.noor.app.ui.components.NoorMotion.Standard, easing = com.noor.app.ui.components.NoorMotion.Ease)) { it / 5 } +
+                androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(com.noor.app.ui.components.NoorMotion.Standard))) togetherWith
+                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(com.noor.app.ui.components.NoorMotion.Quick))
+        },
+    ) { shown ->
+    if (shown == 0) NoorPage(stringResource(R.string.adhan_title), contentPadding) {
         // What needs attention, in a group of its own: there only when something does.
         // (Without a place there are no times to alert at: that comes first, with the way to set one. 0.14: the page
         // said so before, but offered no way there.)
@@ -182,7 +202,24 @@ fun AdhanScreen(
                     })
             }
         }
-        if (a.enabled) {
+
+        SettingsSection("", footer = if (a.enabled) stringResource(R.string.adhan_test_footer) else null) {
+            // 0.15: "will it really sound tonight?" answered where the question arises: a real alert in ten seconds,
+            // through the whole path, with the next prayer's own sound (its result shows in the history).
+            if (a.enabled) {
+                SettingsItem(Icons.Rounded.PlayCircle, stringResource(R.string.history_test, f.number(10)), null, onClick = {
+                    vm.testNext()
+                    android.widget.Toast.makeText(context, context.getString(R.string.adhan_test_sent), android.widget.Toast.LENGTH_SHORT).show()
+                })
+                SettingsDivider()
+            }
+            SettingsItem(Icons.Rounded.Tune, stringResource(R.string.adhan_alert_options),
+                listOf(stringResource(when (a.device) { AlertDevice.PHONE -> R.string.adhan_device_phone; AlertDevice.WATCH -> R.string.adhan_device_watch; AlertDevice.BOTH -> R.string.adhan_device_both }),
+                    reminderLabel(a.reminderMinutes, f)).joinToString(" · "),
+                onClick = { page = 1 })
+        }
+    } else NoorPage(stringResource(R.string.adhan_alert_options), contentPadding, onBack = { page = 0 }) {
+        run {
             // 0.9.9: a reminder a few minutes before every prayer that alerts.
             SettingsSection("") {
                 SettingsItem(Icons.Rounded.Schedule, stringResource(R.string.adhan_reminder), reminderLabel(a.reminderMinutes, f), onClick = { reminderDialog = true })
@@ -234,16 +271,9 @@ fun AdhanScreen(
         }
 
         // What really happened at each alert, and the one piece of advice that is not a fault of the set-up.
-        if (a.enabled || history.isNotEmpty()) SettingsSection("", footer = if (a.enabled) stringResource(R.string.adhan_test_footer) else null) {
+        SettingsSection("") {
             // 0.15: "will it really sound tonight?" answered where the question arises: a real alert in ten seconds,
             // through the whole path, with the next prayer's own sound (its result shows in the history below).
-            if (a.enabled) {
-                SettingsItem(Icons.Rounded.PlayCircle, stringResource(R.string.history_test, f.number(10)), null, onClick = {
-                    vm.testNext()
-                    android.widget.Toast.makeText(context, context.getString(R.string.adhan_test_sent), android.widget.Toast.LENGTH_SHORT).show()
-                })
-                SettingsDivider()
-            }
             val last = history.firstOrNull()
             SettingsItem(Icons.Rounded.History, stringResource(R.string.history_title),
                 last?.let { r -> (r.prayer?.let { f.prayerName(it) } ?: "") + " · " + outcomeText(r, f) } ?: stringResource(R.string.history_row_empty),
@@ -254,6 +284,7 @@ fun AdhanScreen(
                     { context.open(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }, icon = Icons.Rounded.BatterySaver)
             }
         }
+    }
     }
 
     if (gradualDialog) {

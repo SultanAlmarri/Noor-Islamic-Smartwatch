@@ -369,7 +369,7 @@
     <string name="adhan_public_domain">Public domain</string>
     <string name="settings_notification_bar">Notification bar</string>
     <string name="status_setting">Notification bar</string>
-    <string name="status_setting_desc">The next prayer with a live countdown, the Hijri date and your place, always one swipe away.</string>
+    <string name="status_setting_desc">The next prayer and a live countdown, one swipe away.</string>
     <string name="status_setting_note">Silent, and it uses almost no battery: Android itself runs the seconds, and Noor updates it only at each prayer and at midnight. On Android %1$s and later you can swipe it away; it comes back at the next prayer.</string>
     <string name="status_channel">Prayer times (always shown)</string>
     <string name="status_channel_desc">The next prayer and its countdown, kept in the notification shade. Silent.</string>
@@ -598,4 +598,6 @@
     <string name="adhan_action_volume">Open sound settings</string>
     <string name="cd_today_now">Today, now</string>
     <string name="history_fix_dnd">Let alarms through Do Not Disturb</string>
+    <string name="adhan_alert_options">Alert options</string>
+    <string name="settings_watch_note">Noor on your wrist: install, sync, the watch face</string>
 </resources>

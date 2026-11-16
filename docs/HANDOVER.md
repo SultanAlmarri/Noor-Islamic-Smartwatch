@@ -1167,3 +1167,13 @@ Made in a cloud session (Claude Opus, picking up from Claude Fable when its limi
   a few towering near; a column of flat cloudlets taken out of it as from `lo_cb_line`). GitHub's build of the work
   branch with the third round (run 43898096062, workflow_dispatch): every test, both APKs, the watch face's check.
   The green hills' seasons are still rendering and come in a later update.
+- 0.15.2 (versionCode 31), "priority by use" (DESIGN.md): four tabs (the Watch page opens from Settings; `Routes.tabs`
+  no longer holds WATCH, the route stays for the debug hook and the device scripts); the Adhan tab in two levels
+  (`AdhanScreen`, page 0 and "Alert options"; `LocalTabReselect` returns to the first); the home screen's place on
+  one line, no refresh button on the sky; Settings without the Adhan row. `ScreenshotTest` scrolls to and opens
+  "Alert options" (83 English, 84 Arabic) and waits there for "Gradual volume" and "Alert on". The green hills'
+  winter is rendered; its summer and autumn passes were started again by hand at 15:51 (a stale shell still held
+  the name the redo script waited on).
+- The green hills' winter is in 0.15.2 (`a_winter`, `k_winter`; new green grass, no flowers, the blue and valley oaks
+  bare, the live oaks evergreen), seen on the design bench beside spring.
+

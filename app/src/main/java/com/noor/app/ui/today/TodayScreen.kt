@@ -66,6 +66,7 @@ import com.noor.app.ui.opening.arrives
 import kotlinx.coroutines.flow.first
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.SwipeRight
+import androidx.compose.material.icons.rounded.NearMe
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -766,23 +767,16 @@ private fun PlaceRow(u: TodayUi, f: Formatter, onOpenLocation: () -> Unit, onRef
             val flag = Flags.emoji(place.countryCode)
             if (flag != null) Text(flag, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
             else Icon(if (place.fromGps) Icons.Rounded.MyLocation else Icons.Rounded.Place, null, tint = Sky.OnSky, modifier = Modifier.padding(end = 8.dp).size(16.dp))
-            Column(Modifier.weight(1f, fill = false)) {
-                Text(if (f.arabic) place.nameAr ?: place.nameEn else place.nameEn, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp, lineHeight = 18.sp),
-                    color = Sky.OnSky, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (!slim) Text(label, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.2.sp, fontWeight = FontWeight.Normal, lineHeight = 14.sp), color = Sky.OnSkyMuted, maxLines = 1)
-            }
+            // 0.15.2: the place alone, on one line (its second line, "Chosen by you" / "Current location", was noise
+            // on the sky): a small arrow says the place follows the phone; Settings says the rest.
+            Text(if (f.arabic) place.nameAr ?: place.nameEn else place.nameEn, style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp, lineHeight = 18.sp),
+                color = Sky.OnSky, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).semantics { contentDescription = (if (f.arabic) place.nameAr ?: place.nameEn else place.nameEn) + ", " + label })
+            if (place.fromGps && flag != null) Icon(Icons.Rounded.NearMe, null, tint = Sky.OnSkySecondary, modifier = Modifier.padding(start = 6.dp).size(13.dp))
             Spacer(Modifier.width(4.dp))
             Icon(Icons.Rounded.KeyboardArrowDown, null, tint = Sky.OnSkySecondary, modifier = Modifier.size(18.dp))
         }
-        if (place.fromGps) {
-            Box(Modifier.align(Alignment.CenterEnd).size(48.dp).clip(CircleShape).clickable(enabled = !u.refreshing, onClickLabel = stringResource(R.string.refresh_location), onClick = onRefresh),
-                contentAlignment = Alignment.Center) {
-                Box(Modifier.size(38.dp).clip(CircleShape).background(glass).border(0.5.dp, glassEdge, CircleShape), contentAlignment = Alignment.Center) {
-                    if (u.refreshing) CircularProgressIndicator(Modifier.size(16.dp), color = Sky.OnSky, strokeWidth = 1.8.dp)
-                    else Icon(Icons.Rounded.Refresh, stringResource(R.string.refresh_location), tint = Sky.OnSky, modifier = Modifier.size(19.dp))
-                }
-            }
-        }
+        // (0.15.2: no refresh button on the sky: the location follows by itself when Noor opens and when the time zone
+        // changes, and Settings keeps "Refresh location now" for the rare time it is wanted.)
     }
 }
 

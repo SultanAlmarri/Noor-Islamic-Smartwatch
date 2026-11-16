@@ -571,6 +571,24 @@ Weather, Google Clock, Muslim Pro, Athan, Pillars). What it found and what was d
   calibrate first when the compass is unsure; the welcome's second way is an outlined button; "Notification bar".
 - **Kept on purpose**: "Shuruq" and the countdown's sign (the owner's), the Watch tab (the owner's product).
 
+### Priority by use (0.15.2)
+
+The owner: "some features are used more than others... the more used features should get the priority... clean,
+simple, sleek... nothing complicated or overwhelming... I don't think the watch should be included on the bottom
+buttons... just put in the settings." And: of what was just built, "is this really needed? Does this make things
+more complicated?" So every page was sorted into what is used often and what is set once and left:
+
+- **Four tabs, in the order of use**: Today, Qibla, Adhan, Settings. The watch is set up once: its page opens from
+  Settings ("Galaxy Watch · Noor on your wrist"), and keeps the tab bar with Settings lit.
+- **Adhan, two levels**: the first page holds only what is used often (the next Adhan and its switch, what needs
+  fixing, the six prayers, the test) and one row, **Alert options**, says what is set there ("Phone · Off") and opens
+  it: the reminder, phone or watch or both, the gradual volume, silent mode, the library, my sounds, the history and
+  the battery advice. The first page went from eleven groups' worth to four.
+- **The home screen's place**: one line, the flag and the name (a small arrow when it follows the phone); its second
+  line and the refresh button on the sky are gone (the location follows by itself; Settings keeps "Refresh").
+- **Settings** no longer repeats the Adhan tab; the watch's row stands without a group title; the notification
+  bar's description is one line.
+
 ## The interface of 0.14: one system, and an opening
 
 The owner (15 November 2026): "totally revolutionize the user interface and keep the Apple aesthetic... make the

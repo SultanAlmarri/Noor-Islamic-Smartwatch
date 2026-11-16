@@ -98,6 +98,7 @@ private data class SettingRow(
 /** Groups with no title (a row whose name says it all), by number. */
 private const val UNTITLED_2 = -2
 private const val UNTITLED_3 = -3
+private const val UNTITLED_4 = -4
 
 /** The pages of Settings (0.15): the first, and two it opens. */
 private enum class SettingsPage { ROOT, TIMES, LANGUAGE }
@@ -220,8 +221,9 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         }
         add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Schedule, stringResource(R.string.settings_calculation), timesName,
             stringResource(R.string.kw_authority) + " " + stringResource(R.string.kw_adjust), { page = SettingsPage.TIMES }))
+        // (0.15.2: the Adhan has its own tab; here only for search.)
         add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN) },
-            detail = stringResource(if (s.alerts.enabled) R.string.settings_on else R.string.settings_off)))
+            detail = stringResource(if (s.alerts.enabled) R.string.settings_on else R.string.settings_off), listed = false))
         add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Notifications, stringResource(R.string.status_setting), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status), null,
             toggle = s.statusNotification to { on ->
                 val needs = on && Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
@@ -248,7 +250,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             listOf(languageLabel(s.language), stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24)).joinToString(" · "),
             stringResource(R.string.kw_language) + " " + stringResource(R.string.kw_numerals) + " " + stringResource(R.string.kw_time) + " " + stringResource(R.string.kw_hijri),
             { page = SettingsPage.LANGUAGE }))
-        add(SettingRow(R.string.settings_watch, Icons.Rounded.Watch, stringResource(R.string.watch_title), null, stringResource(R.string.kw_watch), { onOpenRoute(Routes.WATCH) }))
+        // 0.15.2: the watch's page lives here (set up once), no longer a tab.
+        add(SettingRow(UNTITLED_4, Icons.Rounded.Watch, stringResource(R.string.watch_title), stringResource(R.string.settings_watch_note), stringResource(R.string.kw_watch), { onOpenRoute(Routes.WATCH) }))
         add(SettingRow(R.string.settings_about, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), null, stringResource(R.string.kw_accuracy), onOpenAccuracy))
         add(SettingRow(R.string.settings_about, Icons.Rounded.Info, stringResource(R.string.about_version, BuildConfigInfo.versionName), null, "", null))
         // Testing only (0.14): to be removed before release, with com.noor.app.testing (the owner's word).

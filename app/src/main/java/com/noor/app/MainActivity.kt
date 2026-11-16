@@ -241,7 +241,9 @@ internal object Routes {
     const val ADHAN_SOUNDS = "adhan/sounds"
     const val ADHAN_HISTORY = "adhan/history"
     fun adhanPrayer(p: Prayer) = "adhan/prayer/${p.name}"
-    val tabs = listOf(PRAYERS, QIBLA, ADHAN, WATCH, SETTINGS)
+    // 0.15.2: four, in the order of use (the owner: the watch "should just be put in the settings"): the watch's page
+    // opens from Settings, set up once and left.
+    val tabs = listOf(PRAYERS, QIBLA, ADHAN, SETTINGS)
     /** Pages that are a task of their own, shown without the tab bar (0.15: every other page keeps it). */
     val withoutTabBar = setOf(ONBOARDING, CITIES)
 }
@@ -340,7 +342,7 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_HISTORY) { com.noor.app.ui.adhan.AlertHistoryScreen(content, onBack = { nav.popBackStack() }) }
-            composable(Routes.WATCH) { WatchScreen(content, onOpenAdhan = { openTab(Routes.ADHAN) }) }
+            composable(Routes.WATCH) { WatchScreen(content, onOpenAdhan = { openTab(Routes.ADHAN) }, onBack = { nav.popBackStack() }) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) },
                     onOpenRoute = { r ->
@@ -426,7 +428,6 @@ internal fun NoorTabBar(route: String?, onSelect: (String) -> Unit) {
                 Tab(route == Routes.PRAYERS, painterResource(R.drawable.ic_tab_today), stringResource(R.string.tab_today)) { go(Routes.PRAYERS) }
                 Tab(route == Routes.QIBLA, painterResource(R.drawable.ic_kaaba), stringResource(R.string.tab_qibla)) { go(Routes.QIBLA) }
                 Tab(route == Routes.ADHAN, rememberVectorPainter(Icons.Rounded.Mosque), stringResource(R.string.tab_adhan)) { go(Routes.ADHAN) }
-                Tab(route == Routes.WATCH, rememberVectorPainter(Icons.Rounded.Watch), stringResource(R.string.tab_watch)) { go(Routes.WATCH) }
                 Tab(route == Routes.SETTINGS, rememberVectorPainter(Icons.Rounded.Settings), stringResource(R.string.tab_settings)) { go(Routes.SETTINGS) }
             }
         }

@@ -7,7 +7,8 @@ The other documents in `docs/` describe each part in detail and are kept up to d
 
 An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galaxy Watch 5 Pro) and Android phones:
 
-- **Phone app** (`app`, package `com.noor.smartwatch`): Today (home), Qibla, Adhan, Watch and Settings screens.
+- **Phone app** (`app`, package `com.noor.smartwatch`): Today (home), Qibla, Adhan and Settings tabs (the Watch page
+  opens from Settings since 0.15.2).
   Until the app is released it also has the **tester's options** (Settings → Testing; `com.noor.app.testing`):
   for testing only, to be removed before release (the owner's word).
 - **Wear OS app** (`wear`, same package `com.noor.smartwatch`): works alone or synced with the phone; tiles,
@@ -16,8 +17,8 @@ An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galax
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.15.1** (versionCode 30), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
-0.9.13, 0.9.14 and 0.10.0 to 0.15.1 changed only the phone. Everything is on `main`. The merged work
+Current version: phone **0.15.2** (versionCode 31), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
+0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone. Everything is on `main`. The merged work
 branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
 branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
 Android 17 emulator experiments: that image does not run reliably on GitHub's machines) and `noor/0912` (a first

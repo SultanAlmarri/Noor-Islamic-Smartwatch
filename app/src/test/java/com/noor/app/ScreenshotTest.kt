@@ -31,6 +31,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.LayoutDirection
@@ -316,7 +317,11 @@ class ScreenshotTest {
         arabic = true; shot("82_adhan_fajr_alerts_off_ar", "تشغيل تنبيهات الصلاة"); arabic = false
         screen = Screen.ADHAN
         runBlocking { app.container.settings.updateAlerts { it.copy(enabled = true, device = com.noor.prayer.alerts.AlertDevice.BOTH) } }
-        shot("27_adhan_on_night_en", "Gradual volume")
+        shot("27_adhan_on_night_en", "Alert options")
+        // 0.15.2: what is set once (the reminder, phone or watch, the sound's behaviour) is on a page of its own.
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Alert options")).onFirst().performScrollTo().performClick()
+        shot("83_adhan_options_night_en", "Gradual volume")
+        screen = Screen.WATCH; rule.waitForIdle()
         screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Malmö")
         screen = Screen.ADHAN_SHURUQ; runBlocking {
             app.container.settings.updateAlerts { it.with(com.noor.prayer.Prayer.SHURUQ, it.alert(com.noor.prayer.Prayer.SHURUQ).copy(enabled = true, mode = com.noor.prayer.alerts.AlertMode.SOUND, soundId = "alt.morning_birds")) }
@@ -325,9 +330,11 @@ class ScreenshotTest {
         screen = Screen.ADHAN_LIBRARY; shot("30_adhan_library_night_en", "Casablanca")
         screen = Screen.ADHAN_SOUNDS; shot("31_adhan_my_sounds_night_en", "Import a sound")
         arabic = true; screen = Screen.ADHAN_LIBRARY; shot("54_adhan_library_night_ar", "الدار البيضاء"); arabic = false
-        screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "التنبيه على")
+        screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "خيارات التنبيه")
+        rule.onAllNodes(androidx.compose.ui.test.hasText("خيارات التنبيه")).onFirst().performScrollTo().performClick()
+        shot("84_adhan_options_night_ar", "التنبيه على")
         screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "مالمو")
-        arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Gradual volume")
+        arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Alert options")
         screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Malmö")
         theme = ThemeMode.DARK
         // Alert history (0.9): what really happened at each alert, with examples of each kind of outcome.
