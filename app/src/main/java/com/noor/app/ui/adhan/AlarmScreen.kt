@@ -120,7 +120,8 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
     var soundDialog by rememberSaveable { mutableStateOf(false) }
     var snoozeDialog by rememberSaveable { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) vm.importForAlarm(uri) { cid -> set { it.copy(sound = AlarmSound.CUSTOM, customId = cid) } }
+        // (Applied to the draft as it is when the file has been added, not as it was when the picker opened.)
+        if (uri != null) vm.importForAlarm(uri) { cid -> PrayerAlarm.decode(draftText)?.let { draftText = it.copy(sound = AlarmSound.CUSTOM, customId = cid).encode() } }
     }
     val leave = rememberUpdatedState(onBack)
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh(); leave.value() }

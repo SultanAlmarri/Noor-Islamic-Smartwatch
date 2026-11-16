@@ -617,6 +617,9 @@ alarm, let's say 10 minutes after Dhuhr Adhan, or set another alarm 25 minutes b
   (for a reminder), or a recording of the user's. The Adhan is never an alarm's sound: heard half asleep 25 minutes
   before Fajr it could be taken for Fajr having come, and a prayer prayed before its time. The editor says so in a
   line.
+- **Never over the Adhan.** An alarm due while the Adhan sounds comes as a notification; the Adhan due while an
+  alarm rings replaces it, and the alarm stays in the shade. Alarms ring on vibrate and silent like the Clock app's
+  (the Adhan's "quiet in silent mode" is the Adhan's alone); a call, or Do Not Disturb blocking alarms, quiets them.
 - **Ringing** like an alarm clock: full screen over the lock screen with an alarm clock (not the Adhan's sign), the
   sound over and over and a repeating vibration for up to ten minutes, a big Stop and a wide Snooze; Snooze and Stop
   in the notification too; a snoozed alarm's note says until when, with Dismiss.

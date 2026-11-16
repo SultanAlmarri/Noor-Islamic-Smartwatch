@@ -54,7 +54,8 @@ data class PrayerAlarm(
 
     fun normalized(): PrayerAlarm = copy(
         minutes = minutes.coerceIn(1, MAX_MINUTES), days = days.coerceIn(0, PrayerAlert.ALL_DAYS),
-        label = label.replace(Regex("[\\r\\n\\t]"), " ").trim().take(MAX_LABEL),
+        // (Not trimmed here: the editor keeps its draft in this form, and a space typed at the end must stay.)
+        label = label.replace(Regex("[\\r\\n\\t]"), " ").take(MAX_LABEL),
         customId = customId?.takeIf { SoundIds.isCustom(it) && SoundIds.isValid(it) },
         sound = if (sound == AlarmSound.CUSTOM && customId?.let { SoundIds.isCustom(it) && SoundIds.isValid(it) } != true) AlarmSound.PHONE_ALARM else sound,
         snoozeMinutes = snoozeMinutes.takeIf { it in SNOOZE_CHOICES } ?: 0,

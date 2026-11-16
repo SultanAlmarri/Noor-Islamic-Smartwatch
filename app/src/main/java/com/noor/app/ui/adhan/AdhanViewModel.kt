@@ -127,10 +127,13 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         return AlarmPlanner.next(c, alarm.normalized(), Instant.now())
     }
 
-    /** Saves [alarm] (new with id 0); turned off, a snooze of it is cancelled too. */
-    fun saveAlarm(alarm: PrayerAlarm) = viewModelScope.launch {
+    /**
+     * Saves [alarm] (new with id 0); a snooze of an alarm that was changed is cancelled (it would ring as it was). In
+     * the app's scope, not the screen's: the editor closes at once.
+     */
+    fun saveAlarm(alarm: PrayerAlarm) = container.scope.launch {
         repo.updateAlerts { it.withAlarm(alarm) }
-        if (!alarm.enabled && alarm.id != 0) AlertScheduler.cancelSnooze(getApplication(), alarm.id)
+        if (alarm.id != 0) AlertScheduler.cancelSnooze(getApplication(), alarm.id)
     }
 
     fun setAlarmOn(id: Int, on: Boolean) = viewModelScope.launch {
@@ -138,7 +141,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         if (!on) AlertScheduler.cancelSnooze(getApplication(), id)
     }
 
-    fun deleteAlarm(id: Int) = viewModelScope.launch {
+    fun deleteAlarm(id: Int) = container.scope.launch {
         repo.updateAlerts { it.withoutAlarm(id) }
         AlertScheduler.cancelSnooze(getApplication(), id)
     }

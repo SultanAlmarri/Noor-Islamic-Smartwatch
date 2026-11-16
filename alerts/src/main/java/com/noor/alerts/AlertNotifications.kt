@@ -184,7 +184,7 @@ object AlertNotifications {
 
     /** 0.17: an alarm's own notification (a notification-only alarm, or one that could not ring). */
     internal fun alarmId(id: Int) = ID_ALARM_BASE + id
-    /** 0.17: "Snoozed until 4:37 AM", while an alarm is snoozed. */
+    /** 0.17: "Snoozed until 4:37 AM", while an alarm is snoozed ([id] 0: a tried alarm). */
     internal fun snoozedId(id: Int) = ID_ALARM_BASE + 50 + id
     private const val ID_ALARM_BASE = 4400
 
@@ -205,7 +205,7 @@ object AlertNotifications {
     internal fun postSnoozed(context: Context, id: Int, title: String, text: String, until: Instant, dismissLabel: String) {
         ensureChannels(context)
         if (!canPost(context, CHANNEL_SILENT)) return
-        val dismiss = PendingIntent.getBroadcast(context, 7300 + id,
+        val dismiss = PendingIntent.getBroadcast(context, 7400 + id,
             Intent(context, AlertReceiver::class.java).setAction(AlertScheduler.ACTION_ALARM_DISMISS).putExtra(AlertScheduler.EXTRA_ALARM, id),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = base(context, CHANNEL_SILENT, title, text, until)

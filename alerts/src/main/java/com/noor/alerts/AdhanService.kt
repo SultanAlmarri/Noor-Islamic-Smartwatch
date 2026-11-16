@@ -113,7 +113,13 @@ class AdhanService : Service() {
                 val n = AlertNotifications.playing(this, req.title, req.body, Instant.ofEpochMilli(req.atMs), req.detail, req.stopLabel, snooze(req))
                 ServiceCompat.startForeground(this, AlertNotifications.ID_PLAYING, n,
                     if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0)
-                current?.let { finishNotification(it, null) }
+                current?.let { old ->
+                    finishNotification(old, null)
+                    // (0.17: an alarm cut short by the Adhan, or by another alarm, stays in the shade, so it is not lost.)
+                    if (old.alarmId != 0) AlertNotifications.post(this, old.notificationId, AlertNotifications.CHANNEL_SILENT, old.title, old.body, Instant.ofEpochMilli(old.atMs))
+                }
+                // (An alarm's vibration repeats until stopped: it never runs on into what replaces it.)
+                stopVibration(this)
                 current = req
                 playing.value = Playing(req.title, req.body, req.atMs, req.alarmId, snooze(req))
                 // (An alarm vibrates until it is stopped, as an alarm clock does.)
@@ -160,6 +166,9 @@ class AdhanService : Service() {
             log(req) { it.copy(outcome = if (usingFallback) AlertOutcome.PLAYED_FALLBACK else AlertOutcome.PLAYED,
                 playedMs = result.playedMs, stoppedByUser = result.stoppedByUser,
                 detail = listOfNotNull(it.detail, result.report).joinToString("; ").ifEmpty { null }) }
+            // (0.17: an alarm nobody stopped, silenced after its ten minutes, stays in the shade, as a missed alarm does.)
+            if (req.alarmId != 0 && !result.stoppedByUser) AlertNotifications.post(this, req.notificationId, AlertNotifications.CHANNEL_SILENT, req.title, req.body,
+                Instant.ofEpochMilli(req.atMs))
             done(req, note = if (usingFallback) req.fallbackNote else null)
             return
         }

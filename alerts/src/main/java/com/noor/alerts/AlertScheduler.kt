@@ -96,30 +96,32 @@ object AlertScheduler {
         return PendingIntent.getBroadcast(context, REQUEST_BASE + ALARM_OFFSET + id, intent, flag or PendingIntent.FLAG_IMMUTABLE)
     }
 
-    private fun snoozePending(context: Context, id: Int, flag: Int, extras: (Intent) -> Unit = {}): PendingIntent? {
-        val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_ALARM).putExtra(EXTRA_ALARM, id).putExtra(EXTRA_SNOOZE, true)
+    /** [slot]: the alarm's id, or 0 for a tried alarm (its snooze never replaces a real one's). */
+    private fun snoozePending(context: Context, slot: Int, flag: Int, extras: (Intent) -> Unit = {}): PendingIntent? {
+        val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_ALARM).putExtra(EXTRA_SNOOZE, true)
         extras(intent)
-        return PendingIntent.getBroadcast(context, REQUEST_BASE + SNOOZE_OFFSET + id, intent, flag or PendingIntent.FLAG_IMMUTABLE)
+        return PendingIntent.getBroadcast(context, REQUEST_BASE + SNOOZE_OFFSET + slot, intent, flag or PendingIntent.FLAG_IMMUTABLE)
     }
 
     /** 0.17: the alarm that was ringing ([req]) rings again in its snooze minutes; a note says until when. */
     internal fun snooze(context: Context, req: PlayRequest) {
         val am = context.getSystemService(AlarmManager::class.java) ?: return
         val at = System.currentTimeMillis() + req.snoozeMinutes * 60_000L
-        val pi = snoozePending(context, req.alarmId, PendingIntent.FLAG_UPDATE_CURRENT) { i ->
-            i.putExtra(EXTRA_DATE, req.alarmDate ?: LocalDate.now().toString()).putExtra(EXTRA_AT, at)
+        val slot = if (req.alarmText != null) 0 else req.alarmId
+        val pi = snoozePending(context, slot, PendingIntent.FLAG_UPDATE_CURRENT) { i ->
+            i.putExtra(EXTRA_ALARM, req.alarmId).putExtra(EXTRA_DATE, req.alarmDate ?: LocalDate.now().toString()).putExtra(EXTRA_AT, at)
             if (req.alarmText != null) i.putExtra(EXTRA_ALARM_TEXT, req.alarmText)
         } ?: return
         arm(context, am, at, pi, canScheduleExact(context))
         alertScope.launch {
             val config = runCatching { context.alertHost?.alertConfig() }.getOrNull() ?: return@launch
             val text = AlertText(context, config)
-            AlertNotifications.postSnoozed(context, req.alarmId, req.title, text.string(R.string.noor_alarm_snoozed, text.time(Instant.ofEpochMilli(at))),
+            AlertNotifications.postSnoozed(context, slot, req.title, text.string(R.string.noor_alarm_snoozed, text.time(Instant.ofEpochMilli(at))),
                 Instant.ofEpochMilli(at), text.string(R.string.noor_alarm_dismiss))
         }
     }
 
-    /** 0.17: a snoozed alarm will not ring again (its note's Dismiss, or the alarm turned off or deleted). */
+    /** 0.17: a snoozed alarm will not ring again (its note's Dismiss, or the alarm changed, turned off or deleted); 0: a tried one. */
     fun cancelSnooze(context: Context, id: Int) {
         snoozePending(context, id, PendingIntent.FLAG_NO_CREATE)?.let { pi -> context.getSystemService(AlarmManager::class.java)?.cancel(pi); pi.cancel() }
         AlertNotifications.cancel(context, AlertNotifications.snoozedId(id))

@@ -1242,5 +1242,18 @@ yourself in the place of the user. Is it too overwhelming?"
 **Tests**: core (all pass, 7 new); `ScreenshotTest` 87–93 (the alarms list in English and Arabic, a new alarm, an
 alarm being edited in Arabic and by day, ringing in English and Arabic). The whole suite and both APKs on GitHub.
 
+**Independent review** (a separate agent reading the code, before release) found, and 0.17.0 fixes:
+- An Adhan sounding is never cut short by an alarm; the alarm comes as a notification instead.
+- An alarm cut short by the Adhan or by another alarm stays in the shade, and its vibration stops.
+- A label could not take a space while typed: the label is trimmed only when stored.
+- The Adhan's "quiet in silent mode" no longer silences alarms; as the Clock app's, they ring on vibrate.
+- A tried alarm's snooze has its own slot (0), so it never replaces a real alarm's.
+- A snooze more than 10 minutes late does not ring.
+- Saving a changed alarm cancels its pending snooze.
+- Save and Delete run in the app's scope, so leaving the editor cannot interrupt them.
+- A recording added from the editor is applied to the current draft.
+- An alarm left to ring out stays in the shade.
+- The watch-only set-up keeps its reminders (they are not turned into phone alarms).
+
 **Not tested**: on a phone: an alarm ringing at a real prayer-relative time, Snooze, the phone's alarm sound,
 notification-only alarms.

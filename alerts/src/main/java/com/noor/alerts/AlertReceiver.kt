@@ -85,7 +85,12 @@ class AlertReceiver : BroadcastReceiver() {
         val text = intent.getStringExtra(AlertScheduler.EXTRA_ALARM_TEXT)
         val tried = text?.let { PrayerAlarm.decode(it) }
         val snoozed = intent.getBooleanExtra(AlertScheduler.EXTRA_SNOOZE, false)
-        if (snoozed) AlertNotifications.cancel(context, AlertNotifications.snoozedId(id))
+        if (snoozed) {
+            AlertNotifications.cancel(context, AlertNotifications.snoozedId(if (tried != null) 0 else id))
+            // (A snooze that comes long after its time, the phone having been off, wakes no one.)
+            val due = intent.getLongExtra(AlertScheduler.EXTRA_AT, firedAt)
+            if (firedAt - due > AlarmPlanner.MAX_LATENESS.toMillis()) return
+        }
         val planned = when {
             tried != null -> PlannedAlarm(tried, date, config.day(date).instant(tried.prayer) ?: now, now)
             // (Snoozed: it rings again unless it was turned off or deleted meanwhile.)
@@ -309,9 +314,14 @@ internal object AlarmDispatcher {
         val id = AlertNotifications.alarmId(a.id)
         if (a.sound == AlarmSound.NOTIFICATION) { AlertNotifications.postAlarmNote(context, a.id, title, body, p.at); return }
 
-        // The same rules as the Adhan: never during a call, never without a notification to stop it, and quiet in
-        // silent mode only if the user chose that.
-        when (val quiet = AlertDispatcher.quietReason(context, alerts)) {
+        // An Adhan sounding now is never cut short by an alarm: the alarm comes as a notification with the phone's sound.
+        if (AdhanService.nowPlaying.value?.let { it.alarmId == 0 } == true) {
+            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at); return
+        }
+        // The Adhan's rules, as an alarm clock has them: never during a call, never without a notification to stop it,
+        // not when Do Not Disturb blocks alarms; but the phone on vibrate or silent does not stop it (the Adhan's
+        // "quiet in silent mode" is the Adhan's own choice, not the alarms').
+        when (val quiet = AlertDispatcher.quietReason(context, alerts.copy(quietWhenSilent = false))) {
             null -> Unit
             AlertDispatcher.Quiet.NO_NOTIFICATIONS -> return
             else -> {

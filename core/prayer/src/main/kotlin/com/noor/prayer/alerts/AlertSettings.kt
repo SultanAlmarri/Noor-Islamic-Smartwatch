@@ -100,7 +100,7 @@ data class AlertSettings(
     /** [a] added (with the first free id when its id is 0) or put in place of the alarm with its id. */
     fun withAlarm(a: PrayerAlarm): AlertSettings {
         val id = if (a.id in 1..PrayerAlarm.MAX) a.id else nextAlarmId() ?: return this
-        val x = a.copy(id = id).normalized()
+        val x = a.copy(id = id, label = a.label.trim()).normalized()
         return copy(alarms = if (alarms.any { it.id == id }) alarms.map { if (it.id == id) x else it } else alarms + x)
     }
 
@@ -115,6 +115,9 @@ data class AlertSettings(
      * fields are cleared. Settings without any reminder come back unchanged.
      */
     fun remindersAsAlarms(): AlertSettings {
+        // (Alarms ring on the phone only: while the alerts are on the watch alone, its reminders stay as they are, for
+        // the watch; they become alarms once the phone alerts.)
+        if (device == AlertDevice.WATCH) return this
         if (reminderMinutes <= 0 && Prayer.entries.none { alert(it).beforeMinutes > 0 || alert(it).afterMinutes > 0 }) return this
         var s = this
         for (after in listOf(false, true)) for (p in Prayer.entries) {

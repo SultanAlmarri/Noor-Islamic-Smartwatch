@@ -46,6 +46,9 @@ class PrayerAlarmTest {
         assertEquals(PrayerAlert.ALL_DAYS, n.days)
         assertEquals(AlarmSound.PHONE_ALARM, n.sound)
         assertEquals(0, n.snoozeMinutes)
+        // A space typed at the end of a label stays while it is edited; stored, the label is trimmed.
+        assertEquals("Wake ", PrayerAlarm.decode(beforeFajr.copy(id = 1, label = "Wake ").encode())!!.label)
+        assertEquals("Wake up", AlertSettings().withAlarm(beforeFajr.copy(label = "  Wake up ")).alarms[0].label)
     }
 
     @Test fun idsAreReusedAndLimited() {
@@ -135,6 +138,9 @@ class PrayerAlarmTest {
         assertTrue(Prayer.entries.all { m2.alert(it).beforeMinutes == 0 && m2.alert(it).afterMinutes == 0 })
         // Alerts that were off: the alarms come over off too (they did not remind).
         assertTrue(v016.copy(enabled = false).remindersAsAlarms().alarms.none { it.enabled })
+        // Alerts on the watch alone: its reminders stay for the watch (the alarms ring on the phone only).
+        val watchOnly = v016.copy(device = com.noor.prayer.alerts.AlertDevice.WATCH)
+        assertEquals(watchOnly, watchOnly.remindersAsAlarms())
         // Nothing to bring over: the same settings.
         assertEquals(on, on.remindersAsAlarms())
         assertEquals(m2, m2.remindersAsAlarms())

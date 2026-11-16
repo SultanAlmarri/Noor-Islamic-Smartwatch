@@ -335,7 +335,7 @@ class ScreenshotTest {
             app.container.settings.updateAlerts { it.with(com.noor.prayer.Prayer.SHURUQ, it.alert(com.noor.prayer.Prayer.SHURUQ).copy(enabled = true,
                 mode = com.noor.prayer.alerts.AlertMode.NOTIFICATION, afterMinutes = 15, days = 0b0011111)) }
         }
-        shot("29_adhan_sunrise_night_en", "Tue")
+        shot("29_adhan_sunrise_night_en", "Mon–Fri")
         // 0.17: alarms before and after the prayers, in the Adhan tab's list and in their editor; and ringing.
         runBlocking { app.container.settings.updateAlerts { it.withAlarm(com.noor.prayer.alerts.PrayerAlarm(0, com.noor.prayer.Prayer.FAJR, 25, after = false))
             .withAlarm(com.noor.prayer.alerts.PrayerAlarm(0, com.noor.prayer.Prayer.DHUHR, 10, after = true, days = 0b0011111, snoozeMinutes = 5)) } }
