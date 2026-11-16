@@ -113,7 +113,9 @@ internal fun voiceName(id: String?, vm: AdhanViewModel, custom: List<CustomSound
 
 /** The voice every prayer that calls the Adhan shares (Fajr's own recording counted as its voice), or null if they differ. */
 internal fun sharedVoice(a: AlertSettings, vm: AdhanViewModel, custom: List<CustomSound>): String? {
-    val ids = Prayer.entries.filter { it != Prayer.SHURUQ && a.alert(it).mode in VOICE_MODES }.map { p ->
+    // (Fajr on a Fajr Adhan of another voice, kept because the shared voice has none, does not make the voices "mixed".)
+    val ids = Prayer.entries.filter { it != Prayer.SHURUQ && a.alert(it).mode in VOICE_MODES }
+        .filterNot { p -> p == Prayer.FAJR && vm.library.byId(a.alert(p).soundId)?.fajr == true }.map { p ->
         val id = a.alert(p).soundId
         voiceOf(id, vm, custom)?.soundId(vm, custom) ?: id
     }.distinct()

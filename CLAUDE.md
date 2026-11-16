@@ -1,11 +1,14 @@
-# Noor Islamic Smartwatch — instructions for Claude Code
+# Minhad (formerly Noor) — instructions for Claude Code
 
 Read this file, then `docs/HANDOVER.md` (history, decisions, current state, open work) before changing anything.
 The other documents in `docs/` describe each part in detail and are kept up to date with the code.
 
 ## What this is
 
-An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galaxy Watch 5 Pro) and Android phones:
+The app is called **Minhad** (منهاد) since 16 November 2026 (0.18; it was Noor): every name the user sees says
+Minhad, while package ids (`com.noor.smartwatch`), code packages (`com.noor.*`), the repository's name and the
+`Noor-*.apk` file names stay, so installed builds keep updating and the links keep working (the release also carries
+`Minhad-*.apk`). An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galaxy Watch 5 Pro) and Android phones:
 
 - **Phone app** (`app`, package `com.noor.smartwatch`): Today (home), Qibla, Adhan and Settings tabs (the Watch page
   opens from Settings since 0.15.2).

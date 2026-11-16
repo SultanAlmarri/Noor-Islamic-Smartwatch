@@ -317,8 +317,11 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             val a = s.alert(p)
             // (For every prayer: those that call the Adhan; a prayer set to a notification or a sound keeps it.)
             if (target == null && a.mode !in VOICE_MODES) continue
-            // 0.18: Fajr takes the voice's own Fajr recording ("As-salatu khayrun min an-nawm") when there is one.
-            val id = if (p == Prayer.FAJR) fajrOf(voice, this, _custom.value) else voice
+            // 0.18: Fajr takes the voice's own Fajr recording ("As-salatu khayrun min an-nawm") when there is one; for
+            // every prayer at once, a voice without one leaves Fajr on the Fajr Adhan it has (never a plain Adhan at Fajr).
+            val own = if (p == Prayer.FAJR) fajrOf(voice, this, _custom.value) else voice
+            if (p == Prayer.FAJR && target == null && own == voice && library.byId(a.soundId)?.fajr == true && voice != SoundIds.RANDOM) continue
+            val id = own
             val entry = library.byId(id)
             val mode = when {
                 custom -> AlertMode.CUSTOM

@@ -235,8 +235,11 @@ object SoundIds {
     // 0.18: the library is the owner's voices (Makkah, Madinah, Dubai; Al-Quds and Egypt are the user's own until
     // licensed recordings exist) and five sound effects.
     const val DEFAULT_ADHAN = "adhan.makkah"
-    /** The default for Fajr: Makkah (no licensed Makkah Fajr Adhan exists; a voice's own Fajr recording plays when chosen). */
-    const val DEFAULT_FAJR_ADHAN = "adhan.makkah"
+    /**
+     * The default for Fajr: a Fajr Adhan, with "As-salatu khayrun min an-nawm" (Makkah has no licensed one; Dubai's is
+     * the library's Fajr recording).
+     */
+    const val DEFAULT_FAJR_ADHAN = "adhan.dubai_fajr"
     const val DEFAULT_SOUND = "fx.birds"
     const val CUSTOM_PREFIX = "custom."
     /** Not a recording: "a different favourite each time" (see [RandomAdhan]). */
