@@ -156,7 +156,7 @@ class MainActivity : AppCompatActivity() {
             val s = settingsFlow.first()
             val home = s.onboardingDone && startRoute() == null
             // (0.18) The home screen's sky gets ready behind the launch screen.
-            if (false && home) com.noor.app.sky.RealSky.prewarm(applicationContext, s)   // EXPERIMENT A
+            if (home) com.noor.app.sky.RealSky.prewarm(applicationContext, s)
             opening.begin(Opening.modeAtStart(animationsOn(this@MainActivity), home = home))
             first = s
         }
