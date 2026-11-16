@@ -324,8 +324,11 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             composable(Routes.TESTING) {
                 val vm: com.noor.app.ui.settings.SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
                 val s = vm.settings.collectAsState().value
+                val app = androidx.compose.ui.platform.LocalContext.current
                 com.noor.app.testing.TestingScreen(
-                    content, scenery = s?.scenery ?: com.noor.app.data.Scenery.AUTO, setScenery = { vm.setScenery(it) },
+                    content, scenery = s?.scenery ?: com.noor.app.data.Scenery.AUTO,
+                    // (Through the app's own store, not this page's view model: the demo goes on after the page has gone.)
+                    setScenery = { sc -> com.noor.app.testing.Tester.launch { (app.applicationContext as NoorApplication).container.settings.setScenery(sc) } },
                     onBack = { nav.popBackStack() }, onShowHome = { openTab(Routes.PRAYERS) }, onOpenLocation = { nav.navigate(Routes.CITIES) },
                 )
             }

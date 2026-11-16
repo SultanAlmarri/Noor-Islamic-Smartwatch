@@ -69,6 +69,9 @@ object Tester {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** Runs [block] for as long as the app lives (the demo changes the scenery after the Testing page has gone). */
+    fun launch(block: suspend () -> Unit) { scope.launch { block() } }
     private var clock: Job? = null
     private var demo: Job? = null
 
