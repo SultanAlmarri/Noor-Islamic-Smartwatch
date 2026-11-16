@@ -61,13 +61,47 @@ void main() {
     float fromSky = sq(texture(tK, tuv).r) * uLay.x, fromGround = sq(texture(tG, tuv).r) * uLay.x;
 
     float moonW = smoothstep(-6.0, -10.0, uSunEl);
-    vec3 direct = (uLay.y < 0.5 ? mSunCloud() : uLay.y < 1.5 ? mSunMid() : mSunHigh()) * (1.0 - moonW) + mMoonLight() * moonW;
+    // (0.14) The Sun's light on this cloud, where this cloud is. The view looks towards where the Sun rises and
+    // sets, so a far cloud stands nearer the Sun's side of the Earth than we do: there the Sun is higher by a degree
+    // for every 111 km, and the cloud is high besides. That is the whole of an evening sky: when the Sun has set for
+    // us, the far clouds are still gold, nearer ones are orange and then red, the nearest have gone grey, and the
+    // high clouds burn longest. (Until 0.13 every cloud of a level had one light: all lit, then all grey.)
+    float far = texture(tF, tuv).r;
+    float km = -30.0 * log(max(1.0 - far, 1e-3));
+    float azs = (uCam.w > 0.5 ? -az : az) * DEG;                    // (the scene's own x runs the other way when mirrored)
+    float sunAz = atan(uSunDir.x, uSunDir.z);
+    float elThere = uSunEl + km * cos(azs - sunAz) / 111.2;
+    float high = uLay.y < 0.5 ? 2.5 : uLay.y < 1.5 ? 5.5 : 9.5;
+    vec3 direct = warm(transmittance(high, sin(elThere * DEG)) * mSunWhite()) * (1.0 - moonW) + mMoonLight() * moonW;
     vec3 ambTop = mAmbTop(), ambLow = mAmbLow();
     vec3 dome = mix(ambLow, ambTop, 0.6);
+    // (0.14) In the evening a cloud's shaded side is lit by the whole blue dome, not by the narrow orange band at
+    // the Sun's horizon: it is slate and blue-grey, and the Sun's colours burn against that. (Warm light and warm
+    // shade together made every evening cloud khaki.)
+    dome = mix(dome, luma(dome) * vec3(0.78, 0.95, 1.38), 0.65 * smoothstep(7.0, -2.0, uSunEl));
     // The ground under the clouds: a third of the light that falls on it comes back up.
     vec3 ground = 0.30 * (mSunGround() * max(uSunTrue.y, 0.0) + dome);
     // (Clouds are exposed a little up, as the land is held a little down: in a photograph they are the brightest things.)
-    vec3 c = (sun * direct + glow * mGlow()) * 1.15 + fromSky * dome * 0.9 + fromGround * ground * 0.8;
+    vec3 c = (sun * direct + glow * mGlow() * mix(1.0, 0.55, smoothstep(2.0, -3.0, uSunEl))) * 1.15 + fromSky * dome * 0.9 + fromGround * ground * 0.8;
+    // (0.14) What makes an evening sky, and what the pictures alone do not hold (rendered under a low Sun a cloud
+    // seen from the Sun's far side is nearly black: until 0.13 the evening's clouds were grey with pale rims).
+    // Light comes through a cloud where it is thin, and most of it goes on nearly the way it came: thin cloud near
+    // the Sun blazes, and every cloud on that side of the sky is rimmed and veined with the Sun's colour. (How thin
+    // a cloud is, the picture lit by the sky above knows: where light from above comes through to us below.)
+    vec3 vdir = vec3(cos(el * DEG) * sin(azs), sin(el * DEG), cos(el * DEG) * cos(azs));
+    float mu = dot(vdir, uSunDir);
+    float lowSun = smoothstep(26.0, 6.0, uSunEl);
+    float through = 0.7 * hg(mu, 0.80) + 0.3 * hg(mu, 0.45);
+    // (Heaped clouds are thick: little comes through them, and that at their edges.)
+    float thinKind = uLay.y < 0.5 ? 0.45 : 1.0;
+    c += direct * fromSky * through * 0.15 * thinKind * mix(0.06, 1.0, lowSun);
+    // And once the Sun stands lower than the cloud itself, its light runs along the cloud's underside and catches
+    // every fold of it from below: the undersides burn. (The picture lit by the ground knows what is seen from
+    // below.)
+    // (Which folds catch it, the picture rendered under the low Sun knows, though it holds them dark: a grazing light
+    // gives little to a level underside. Its relief is kept and its strength raised, so a sheet of cloud is not
+    // painted one flat colour.)
+    c += direct * (0.09 * fromGround + 2.6 * sun) * thinKind * smoothstep(3.5, -0.5, elThere);
 
     // Far clouds fade into the air in front of them, which has the colour of the sky behind them. The haze lies low:
     // the foot of a far tower dissolves in it while its head, seen through thin air high up, stays crisp and white.
@@ -75,10 +109,11 @@ void main() {
     float vx = 1.15 * ta;                                                     // across the view, 0 = its middle
     float row = min(uCam.y - te * sqrt(1.0 + ta * ta) * 1.15 * uView.x, uCam.y - 0.012 * uView.y);
     vec3 haze = texture(tSky, vec2(clamp(0.5 + vx, 0.02, 0.98), 1.0 - row / uView.y)).rgb;
-    float far = texture(tF, tuv).r;
-    float km = -30.0 * log(max(1.0 - far, 1e-3));
     float up = km * max(te, 0.0) / sqrt(1.0 + te * te);
     float fog = 1.0 - exp(-(0.55 * uHaze + 0.25) * km / 30.0 * (0.25 * thinning(up / 8.0) + 0.75 * thinning(up / 1.6)));
-    c = mix(c * a / max(texture(tA, tuv).r, 1e-3), haze * a, fog * 0.92);
+    // (0.14: the middle and high clouds keep more of their own light to the horizon. Faded all the way into the sky
+    // behind them, a veil of high cloud stopped short of the evening's horizon, and the bare sky under it showed as a
+    // band with an edge.)
+    c = mix(c * a / max(texture(tA, tuv).r, 1e-3), haze * a, fog * (uLay.y < 0.5 ? 0.92 : uLay.y < 1.5 ? 0.80 : 0.68));
     o = vec4(c, a) * uLay.z;
 }

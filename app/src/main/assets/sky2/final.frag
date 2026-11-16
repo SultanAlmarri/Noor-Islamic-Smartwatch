@@ -24,7 +24,13 @@ vec3 easeTo(vec3 c, float lim) {
 // though their pictures hold a light and shade of ten to one. So the day is exposed for its brightest things, as a
 // photographer exposes a sky: the blue deepens and the clouds keep their modelling. The hours of colour and the
 // night keep the exposure they had.
-float exposure() { return mix(1.0, 0.70, smoothstep(6.0, 28.0, uSunEl)); }
+// (0.14) And the hour of colour is exposed for the bright sky round the Sun, as every photograph of a sunset is:
+// held up for the land, the horizon was one flat band of the brightest orange the screen has, with a hard upper edge
+// where the sky came back into range. A little darker, the glow runs out of the Sun's place by degrees, the upper sky
+// is a deeper blue for the clouds to burn against, and the land stands darker against it.
+float exposure() {
+    return mix(1.0, 0.70, smoothstep(6.0, 28.0, uSunEl)) * mix(1.0, 0.74, hourOfColour());
+}
 
 // How bright the sky may be at a height of the view where text is written on it. The letters carry a soft dark
 // shadow of their own (TodayScreen, SkyText), so the sky behind them need not be as dark as bare white text would

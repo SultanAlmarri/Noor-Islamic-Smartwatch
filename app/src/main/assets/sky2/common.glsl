@@ -87,13 +87,21 @@ float hash13(vec3 p3) {
 }
 
 // The filmic curve of the 0.9.6 sky (Atmosphere.tone): linear light in, display values out.
+// The hour of colour: 1 while the Sun stands within a few degrees of the horizon, above it or below.
+float hourOfColour() { return smoothstep(10.0, 2.5, uSunEl) * smoothstep(-8.0, -2.5, uSunEl); }
+// How much of a beam a haze or a cloud sends on at an angle to it (mu: the cosine), for a forwardness g.
+float hg(float mu, float g) { float g2 = g * g; return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * mu, 1.5); }
 vec3 acesc(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 float aces1(float x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 vec3 toneLinear(vec3 c) {
     c = max(c, 0.0);
     float l = luma(c);
     float s = l > 1e-6 ? aces1(l) / l : 0.0;
-    vec3 o = min(c * s, 1.0) * 0.7 + acesc(c) * 0.3;
+    // (0.14) The brighter a coloured light, the more of it is taken channel by channel, as film takes it: a strong
+    // orange goes to yellow and then to white. Scaled as a whole (which keeps the hue), everything brighter than the
+    // screen can show came out as one flat orange: the evening horizon was a stripe, and the Sun was lost in it.
+    float hot = 0.3 + 0.55 * smoothstep(0.5, 2.5, l);
+    vec3 o = min(c * s, 1.0) * (1.0 - hot) + acesc(c) * hot;
     float y = luma(o);
     return clamp(vec3(y) + (o - y) * 1.22, 0.0, 1.0);
 }

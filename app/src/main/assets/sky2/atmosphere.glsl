@@ -14,7 +14,7 @@ const float HM = 1.2;
 const vec3 BR = vec3(5.802e-3, 13.558e-3, 33.1e-3);
 const float BMS = 3.996e-3;
 const float BME = 4.40e-3;
-const vec3 BO = vec3(0.650e-3, 1.881e-3, 0.085e-3) * 2.2;
+const vec3 BO = vec3(0.650e-3, 1.881e-3, 0.085e-3) * 1.5;
 const float EYE_KM = 0.25;
 const float MIE_G = 0.76;
 const float MSCAT = 0.06;
@@ -100,3 +100,9 @@ vec3 mSunHigh() { return texelFetch(tMeter, ivec2(5, 0), 0).rgb; }    // ... of 
 vec3 mSunDisc() { return texelFetch(tMeter, ivec2(6, 0), 0).rgb; }    // the Sun's own disc through the air
 vec3 mMoonLight() { return texelFetch(tMeter, ivec2(7, 0), 0).rgb; }  // moonlight on a white surface
 vec3 mGlow() { return texelFetch(tMeter, ivec2(8, 0), 0).rgb; }       // the glow round a low Sun, as light on things
+vec3 mSunWhite() { return texelFetch(tMeter, ivec2(9, 0), 0).rgb; }   // sunlight before the air colours it, exposed
+
+// The last sunlight is red, but never only red: what it falls on keeps a little of its own colour. (0.14: far less
+// than it was made to keep until 0.13, when every evening cloud came out the same pale salmon: a cloud in the last
+// light is orange, and then red.)
+vec3 warm(vec3 c) { return max(c, luma(c) * vec3(0.0, 0.50, 0.12)); }

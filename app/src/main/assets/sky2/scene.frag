@@ -34,7 +34,6 @@ out vec4 o;
 
 vec3 skyAt(vec2 vp) { return texture(tSky, vec2(vp.x / uView.x, 1.0 - vp.y / uView.y)).rgb; }
 
-float hg(float mu, float g) { float g2 = g * g; return (1.0 - g2) / pow(1.0 + g2 - 2.0 * g * mu, 1.5); }
 
 // ---- The night ----------------------------------------------------------------------------------------------------
 
@@ -167,7 +166,7 @@ vec3 sunLight(vec3 rd, float shows) {
     vec3 cg = c * max(1.0, 9.0 / max(luma(c), 0.5));
     cg = mix(c, cg, low);
     vec3 g = cg * (0.022 * exp(-th / 0.030) * shows
-                + 0.0085 * (1.0 + 1.6 * low) * exp(-th / 0.085) * (0.35 + 0.65 * shows)
+                + 0.0085 * (1.0 + 3.2 * low) * exp(-th / 0.085) * (0.35 + 0.65 * shows)
                 + 0.0018 * (1.0 + 1.2 * low) * exp(-th / 0.26));
     if (th < 0.30 && shows > 0.05) {
         vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), uSunDir));
@@ -407,6 +406,9 @@ vec4 landAt(vec2 luv, vec3 rd, vec3 hazeCol, out float t) {
     vec3 land = alb * (S * light * sh + G * mGlow()) + K * amb * mix(0.78, 1.0, max(uNight, smoothstep(10.0, 0.0, uSunEl)));
     // (Lightning lights the land too, for its instant: coldly, and from above.)
     land += K * uFlash.w * vec3(0.16, 0.18, 0.22);
+    // (0.14: the hour of colour is exposed down for its sky (final.frag, `exposure`); the land is given most of that
+    // back, so that the place is still seen under the evening and not only its outline.)
+    land *= mix(1.0, 1.30, hourOfColour());
 
     // The air between: far things fade into the colour of the air at the horizon (`hazeCol`).
     float tk = t * 0.001;

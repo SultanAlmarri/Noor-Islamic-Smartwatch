@@ -9,8 +9,8 @@ float refraction(float el) {
     return 1.02 / tan((h + 10.3 / (h + 5.11)) * DEG) / 60.0;
 }
 
-// The last sunlight is red, but never only red: what it falls on keeps a little of its own colour.
-vec3 warm(vec3 c) { return max(c, luma(c) * vec3(0.0, 0.9, 0.45)); }
+// The last sunlight is red, but never only red: what it falls on keeps a little of its own colour (`warm` is in
+// atmosphere.glsl: the clouds' pass colours its light by the same rule, cloud by cloud).
 
 void main() {
     int k = int(gl_FragCoord.x);
@@ -52,7 +52,9 @@ void main() {
         vec3 at = vec3(hz.x * cos(5.0 * DEG), sin(5.0 * DEG), hz.y * cos(5.0 * DEG));
         c = skyRadiance(at, uSunTrue, uSunDir) * ex * 0.45 * smoothstep(12.0, 2.0, uSunEl) + NIGHT_LOW * uNight * 0.2;
     }
-    else if (k == 9) c = vec3(0.0);
+    // (0.14) White sunlight before the air has coloured it, as bright as this moment is exposed: a cloud far off
+    // towards the Sun stands in an earlier hour of the evening than we do, and works out its own light from this.
+    else if (k == 9) c = wb * k0;
     else {
         // Moonlight: by how much of the moon is lit and how high it stands; it only matters once the Sun is well down.
         float up = smoothstep(-0.02, 0.12, uMoon.y);
