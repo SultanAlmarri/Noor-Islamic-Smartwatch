@@ -123,7 +123,7 @@ fun PrayerAlertScreen(
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); vm.consumeMessage() } }
     StopPreviewOnLeave(vm)
     val ready by vm.readiness.collectAsStateWithLifecycle()
-    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
+    val notifPermission = com.noor.app.ui.components.rememberNotificationRequest { vm.refresh() }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) vm.importSound(uri, forPrayer = prayer) }
 
     NoorPage(f.prayerName(prayer), contentPadding, onBack = onBack,
@@ -133,7 +133,7 @@ fun PrayerAlertScreen(
         if (!alerts.enabled) SettingsSection("") {
             WarningRow(stringResource(R.string.adhan_master_off_here), stringResource(R.string.adhan_turn_on), {
                 vm.setEnabled(true)
-                if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission()
             })
         }
         SettingsSection("") {
@@ -142,7 +142,7 @@ fun PrayerAlertScreen(
             SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_alert_for, f.prayerName(prayer)), null, alerts.enabled && a.enabled) { on ->
                 if (on && !alerts.enabled) {
                     vm.enableOnly(prayer)
-                    if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission()
                 } else vm.setPrayer(prayer) { it.copy(enabled = on) }
             }
         }

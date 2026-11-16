@@ -124,7 +124,7 @@ fun AdhanScreen(
     var gradualDialog by rememberSaveable { mutableStateOf(false) }
 
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
-    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
+    val notifPermission = com.noor.app.ui.components.rememberNotificationRequest { vm.refresh() }
     // 0.18: a voice Noor has no recording of takes the user's own, under the voice's name.
     var addingVoice by rememberSaveable { mutableStateOf<String?>(null) }
     val voicePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -165,7 +165,7 @@ fun AdhanScreen(
         // (Without a place there are no times to alert at: that comes first, with the way to set one. 0.14: the page
         // said so before, but offered no way there.)
         val noPlace = if (!hasLocation) listOf(Issue(stringResource(R.string.adhan_no_location), stringResource(R.string.set_location), onOpenLocation)) else emptyList()
-        val issues = noPlace + (if (phone || a.alarms.any { it.enabled }) phoneIssues(ready, a, context, alarmsOn) { notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS) } else emptyList()) +
+        val issues = noPlace + (if (phone || a.alarms.any { it.enabled }) phoneIssues(ready, a, context, alarmsOn) { notifPermission() } else emptyList()) +
             (if (watch) watches.mapNotNull { w -> watchIssue(w) { vm.openNoorOnWatch(w.node.id) } } else emptyList())
         // (0.15: what stops an alert altogether comes first, before what only makes it late.)
             .sortedByDescending { it.blocking }
@@ -185,7 +185,7 @@ fun AdhanScreen(
             val toggle: (Boolean) -> Unit = { on ->
                 vm.setEnabled(on)
                 // The phone needs the permission only when it alerts itself (the watch asks on the watch).
-                if (on && ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                if (on && ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission()
             }
             HeroCard(
                 icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.NotificationsActive),
@@ -222,7 +222,7 @@ fun AdhanScreen(
                     onOpen = { onOpenPrayer(p) }, onToggle = { on ->
                         if (on && !a.enabled) {
                             vm.enableOnly(p)
-                            if (ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission()
                         } else vm.setPrayer(p) { it.copy(enabled = on) }
                     })
             }

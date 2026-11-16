@@ -72,7 +72,7 @@ fun SettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
     val s = ui.state
     val setup = s.setup ?: LocalSetup()
     val list = rememberScalingLazyListState()
-    val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val notifLauncher = rememberNotificationRequest()
     ScreenScaffold(scrollState = list) { padding ->
         ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
             item { Header(stringResource(R.string.settings)) }
@@ -124,7 +124,7 @@ fun SettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
                 item {
                     SwitchButton(checked = setup.alertsOn, modifier = Modifier.fillMaxWidth(),
                         onCheckedChange = { on ->
-                            if (on && android.os.Build.VERSION.SDK_INT >= 33) notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (on && android.os.Build.VERSION.SDK_INT >= 33) notifLauncher()
                             a.onSetup { it.copy(alertsOn = on) }
                         },
                         icon = { Icon(painterResource(R.drawable.ic_bell), null) },

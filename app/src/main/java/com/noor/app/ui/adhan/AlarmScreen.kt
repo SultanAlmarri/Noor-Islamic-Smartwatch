@@ -125,7 +125,7 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
         if (uri != null) vm.importForAlarm(uri) { cid -> PrayerAlarm.decode(draftText)?.let { draftText = it.copy(sound = AlarmSound.CUSTOM, customId = cid).encode() } }
     }
     val leave = rememberUpdatedState(onBack)
-    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh(); leave.value() }
+    val notifPermission = com.noor.app.ui.components.rememberNotificationRequest { vm.refresh(); leave.value() }
     // (Hours and minutes as the wheels show them: 0 h 0 min is allowed on the wheels, not saved.)
     var hours by rememberSaveable { mutableStateOf(draft.minutes / 60) }
     var mins by rememberSaveable { mutableStateOf(draft.minutes % 60) }
@@ -134,7 +134,7 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
     val save = {
         vm.saveAlarm(draft.copy(id = if (isNew) 0 else id, enabled = true))
         // (An alarm can only ring with notifications allowed: asked here, where it is wanted.)
-        if (ready.canRequestNotifications) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS) else onBack()
+        if (ready.canRequestNotifications) notifPermission() else onBack()
     }
 
     // 0.18: the sound is a page of its own (the phone's sounds, Noor's sounds full or short, the Adhan, the user's own).

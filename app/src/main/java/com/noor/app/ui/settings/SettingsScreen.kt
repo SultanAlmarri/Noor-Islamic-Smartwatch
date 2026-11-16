@@ -131,13 +131,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         seenReselect = reselect
     }
 
-    val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        vm.setBackgroundUpdates(granted)
-    }
+    val background = com.noor.app.ui.components.rememberPermissionRequest(Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+        { com.noor.app.ui.components.appDetailsSettings(it) }) { granted -> vm.setBackgroundUpdates(granted) }
     // The persistent notification needs the notification permission (Android 13+); it turns on only once granted.
-    val statusPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) vm.setStatusNotification(true)
-    }
+    val statusPermission = com.noor.app.ui.components.rememberNotificationRequest { granted -> if (granted) vm.setStatusNotification(true) }
 
     val currentPlace = remember(s) { PrayerProvider.place(s.copy(profileId = null)) }
     val autoAuthority = currentPlace?.let { PrayerProvider.authority(s.copy(profileId = null), it) }
@@ -228,7 +225,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             toggle = s.statusNotification to { on ->
                 val needs = on && Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
                     Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
-                if (needs) statusPermission.launch(Manifest.permission.POST_NOTIFICATIONS) else vm.setStatusNotification(on)
+                if (needs) statusPermission() else vm.setStatusNotification(on)
             }))
         add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }, listed = false))
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Brightness6, stringResource(R.string.theme), null, stringResource(R.string.kw_theme), { dialog = Dialog.THEME },
@@ -424,7 +421,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                     dialog = Dialog.NONE
                     // (Before Android 10 the location permission already covers the background: there is nothing to ask.)
                     if (vm.hasBackgroundPermission() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) vm.setBackgroundUpdates(true)
-                    else background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    else background()
                 }) { Text(stringResource(R.string.bg_perm_continue), color = c.goldText) }
             },
             dismissButton = { TextButton(onClick = { dialog = Dialog.NONE }) { Text(stringResource(R.string.bg_perm_not_now), color = c.textSecondary) } },

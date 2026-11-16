@@ -59,7 +59,7 @@ fun AlertSection(c: WatchConfig, t: WearText) {
         Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
     val exact = remember(tick) { AlertScheduler.canScheduleExact(ctx) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refreshAll() }
+    val launcher = rememberNotificationRequest { refreshAll() }
 
     Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(stringResource(R.string.alerts_title), style = MaterialTheme.typography.titleSmall, color = Gold, textAlign = TextAlign.Center)
@@ -67,7 +67,7 @@ fun AlertSection(c: WatchConfig, t: WearText) {
             !notifGranted -> {
                 Text(stringResource(R.string.alerts_need_notifications), style = MaterialTheme.typography.bodySmall, color = Mist,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 4.dp))
-                Button(onClick = { launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }, modifier = Modifier.fillMaxWidth(),
+                Button(onClick = { launcher() }, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.filledTonalButtonColors()) { Text(stringResource(R.string.alerts_allow)) }
             }
             !exact && Build.VERSION.SDK_INT >= 31 -> {
