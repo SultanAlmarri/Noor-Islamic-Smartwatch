@@ -559,7 +559,7 @@ private fun MapPane(vm: LocationViewModel, start: GeoPoint?, startZoom: Double, 
         // Top: back and search.
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, null, onBack)
+                RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onBack)
                 Spacer(Modifier.width(8.dp))
                 Box(Modifier.weight(1f)) {
                     SearchField(query, stringResource(R.string.loc_map_search), raised = true, onChange = { query = it; searching = it.isNotBlank(); vm.setQuery(it, ar) })
@@ -710,11 +710,7 @@ internal fun zoneText(zoneId: String, ar: Boolean, f: Formatter, now: Instant = 
 
 @Composable
 private fun Header(title: String, onBack: () -> Unit) {
-    val c = NoorTheme.colors
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.textPrimary) }
-        Text(title, style = MaterialTheme.typography.titleLarge, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
+    com.noor.app.ui.components.NavBar(title, onBack)
 }
 
 @Composable
@@ -723,7 +719,7 @@ private fun SearchField(value: String, hint: String, raised: Boolean = false, on
     TextField(
         value = value, onValueChange = onChange, singleLine = true,
         leadingIcon = { Icon(Icons.Rounded.Search, null, tint = c.textMuted) },
-        trailingIcon = if (value.isNotEmpty()) ({ IconButton(onClick = { onChange("") }) { Icon(Icons.Rounded.Close, null, tint = c.textMuted) } }) else null,
+        trailingIcon = if (value.isNotEmpty()) ({ IconButton(onClick = { onChange("") }) { Icon(Icons.Rounded.Close, stringResource(R.string.settings_search_clear), tint = c.textMuted) } }) else null,
         placeholder = { Text(hint, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         shape = RoundedCornerShape(16.dp),
         colors = TextFieldDefaults.colors(

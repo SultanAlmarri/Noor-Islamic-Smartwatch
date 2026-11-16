@@ -63,44 +63,34 @@ fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
     val zone = ZoneId.systemDefault()
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
-        BackHeader(stringResource(R.string.history_title), onBack)
+    com.noor.app.ui.components.NoorPage(stringResource(R.string.history_title), contentPadding, onBack = onBack) {
         Footnote(stringResource(R.string.history_intro))
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { vm.testNext() }, modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = c.gold, contentColor = c.onGold)) {
-                Text(stringResource(R.string.history_test, f.number(10)))
-            }
-            Footnote(stringResource(R.string.history_test_hint))
-            OutlinedButton(onClick = {
-                val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_SUBJECT, "Noor alert report")
-                    .putExtra(Intent.EXTRA_TEXT, vm.report())
-                runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.history_share), color = c.goldText)
-            }
+        Column {
+            com.noor.app.ui.components.NoorButton(stringResource(R.string.history_test, f.number(10)), { vm.testNext() }, Modifier.fillMaxWidth())
+            com.noor.app.ui.settings.SectionFooter(stringResource(R.string.history_test_hint))
         }
 
         if (history.isEmpty()) {
-            GlassCard(Modifier.fillMaxWidth(), padding = 18.dp) {
+            GlassCard(Modifier.fillMaxWidth(), padding = 18.dp, corner = 20.dp) {
                 Text(stringResource(R.string.history_empty), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
             }
         } else {
             GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 20.dp) {
                 Column {
                     history.forEachIndexed { i, r ->
-                        if (i > 0) SettingsDivider()
+                        if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 40.dp), thickness = 0.5.dp, color = c.separator)
                         HistoryRow(r, f, zone)
                     }
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+        com.noor.app.ui.components.NoorButton(stringResource(R.string.history_share), {
+            val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_SUBJECT, "Noor alert report")
+                .putExtra(Intent.EXTRA_TEXT, vm.report())
+            runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }, Modifier.fillMaxWidth(), kind = com.noor.app.ui.components.ButtonKind.Tonal)
     }
 }
 
@@ -154,7 +144,7 @@ private fun HistoryRow(r: AlertRecord, f: Formatter, zone: ZoneId) {
                 if (!r.exactAlarms) add(stringResource(R.string.history_exact_off))
                 if (r.alarmVolumePercent == 0) add(stringResource(R.string.history_volume_zero))
             }
-            Text(extras.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = c.textMuted)
+            Text(extras.joinToString(" · "), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textMuted)
         }
     }
 }

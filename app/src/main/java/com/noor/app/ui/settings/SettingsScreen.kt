@@ -8,10 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,59 +17,86 @@ import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Brightness6
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.GpsFixed
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Landscape
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material.icons.rounded.GpsFixed
-import androidx.compose.material.icons.rounded.Numbers
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Numbers
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.Verified
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Watch
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.noor.app.BuildConfigInfo
 import com.noor.app.R
+import com.noor.app.Routes
 import com.noor.app.data.Language
 import com.noor.app.data.LocationMode
 import com.noor.app.data.Numerals
+import com.noor.app.data.PrayerProvider
+import com.noor.app.data.Scenery
 import com.noor.app.data.ThemeMode
 import com.noor.app.data.TimeFormat
+import com.noor.app.ui.components.ButtonKind
+import com.noor.app.ui.components.NoorButton
+import com.noor.app.ui.components.NoorPage
+import com.noor.app.ui.components.NoorSearchField
+import com.noor.app.ui.components.NoorSheet
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.theme.NoorTheme
 import com.noor.app.util.Formatter
 import com.noor.prayer.AsrSchool
 import com.noor.prayer.HighLatitudeRule
-import com.noor.prayer.Places
 import com.noor.prayer.Prayer
 import com.noor.prayer.Profiles
+import kotlinx.coroutines.launch
 
-private enum class Dialog { NONE, AUTHORITY, ASR, HIGH_LAT, OFFSETS, LANGUAGE, NUMERALS, TIME, THEME, HIJRI, BACKGROUND }
+private enum class Dialog { NONE, AUTHORITY, ASR, HIGH_LAT, OFFSETS, LANGUAGE, NUMERALS, TIME, THEME, BACKGROUND }
 
+/**
+ * One row of Settings: a link (a chevron), a choice (its value at the end of the row), a switch (the whole row
+ * toggles) or a row that holds a control. [keywords] are the words it can be found by, in the language of the screen.
+ */
+private class SettingRow(
+    val group: Int, val icon: ImageVector, val title: String, val value: String?, val keywords: String, val onClick: (() -> Unit)?,
+    val detail: String? = null, val toggle: Pair<Boolean, (Boolean) -> Unit>? = null, val trailing: (@Composable () -> Unit)? = null,
+)
+
+/**
+ * Settings (0.14): one page of grouped lists under a large title, in the order they are needed — where, how the times
+ * are worked out, alerts, the notification bar, how Noor looks, language, the calendar, the watch, about — with a
+ * footer under a group wherever its rows need a sentence. Search finds any row by its name, its value or the words
+ * people use for it. Choices open in a sheet from the bottom.
+ */
 @Composable
 fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOpenAccuracy: () -> Unit, vm: SettingsViewModel = viewModel(),
                    onOpenRoute: (String) -> Unit = {}) {
@@ -80,7 +104,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     val ar = isArabicUi()
     val f = Formatter(ar, s.numerals, s.timeFormat)
     val c = NoorTheme.colors
-    var dialog by remember { mutableStateOf(Dialog.NONE) }
+    // (Saved: a sheet that was open is open again after the system recreates the screen, e.g. on a theme change.)
+    var dialog by rememberSaveable { mutableStateOf(Dialog.NONE) }
 
     val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.setBackgroundUpdates(granted)
@@ -90,8 +115,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         if (granted) vm.setStatusNotification(true)
     }
 
-    val currentPlace = remember(s) { com.noor.app.data.PrayerProvider.place(s.copy(profileId = null)) }
-    val autoAuthority = currentPlace?.let { com.noor.app.data.PrayerProvider.authority(s.copy(profileId = null), it) }
+    val currentPlace = remember(s) { PrayerProvider.place(s.copy(profileId = null)) }
+    val autoAuthority = currentPlace?.let { PrayerProvider.authority(s.copy(profileId = null), it) }
     val autoName = stringResource(R.string.authority_auto) + (autoAuthority?.let { ": " + if (ar) it.nameAr else it.nameEn } ?: "")
     val context = androidx.compose.ui.platform.LocalContext.current
     val profileName = s.profileId?.let { Profiles.byId(it) }?.let { if (ar) it.nameAr else it.nameEn } ?: autoName
@@ -99,10 +124,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     // Where today's times come from (shown here since 0.9.2, when it left the home screen).
     val app = context.applicationContext as com.noor.app.NoorApplication
     val basis = remember(s) {
-        val place = com.noor.app.data.PrayerProvider.place(s) ?: return@remember null
-        val profile = com.noor.app.data.PrayerProvider.profile(s, place)
-        val auth = com.noor.app.data.PrayerProvider.authority(s, place)
-        val official = runCatching { com.noor.app.data.PrayerProvider.resolve(java.time.LocalDate.now(place.zone), place, profile, s, app.container.timetables).official }.getOrDefault(false)
+        val place = PrayerProvider.place(s) ?: return@remember null
+        val profile = PrayerProvider.profile(s, place)
+        val auth = PrayerProvider.authority(s, place)
+        val official = runCatching { PrayerProvider.resolve(java.time.LocalDate.now(place.zone), place, profile, s, app.container.timetables).official }.getOrDefault(false)
         Triple(auth, profile, official)
     }
     val basisText = basis?.let { (auth, profile, official) ->
@@ -116,13 +141,13 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         }
     }
 
-    // Every row once, in order, with its group and the words it can be found by (0.9.4: groups and search).
-    class Row(val group: Int, val icon: androidx.compose.ui.graphics.vector.ImageVector, val title: String, val value: String?,
-              val keywords: String, val onClick: (() -> Unit)?, val trailing: (@Composable () -> Unit)? = null)
-    val modeLabel = if (s.locationMode == LocationMode.AUTO) stringResource(R.string.location_auto)
-        else s.manualPlace?.let { if (ar) it.placeNameAr ?: it.placeName else it.placeName }
-            ?: s.manualCityId?.let { Places.byId(it) }?.let { if (ar) it.nameAr else it.nameEn } ?: stringResource(R.string.location_manual)
-    val bgOn = s.backgroundUpdates && vm.hasBackgroundPermission()
+    // Permissions can change while Noor is in the background (the user comes back from Android's settings): read again.
+    var resumed by remember { mutableIntStateOf(0) }
+    LifecycleResumeEffect(Unit) { resumed++; onPauseOrDispose { } }
+    val bgOn = remember(s, resumed) { s.backgroundUpdates && vm.hasBackgroundPermission() }
+    val precise = remember(s, resumed) { vm.hasPrecise() }
+
+    val placeTitle = currentPlace?.let { if (ar) it.nameAr ?: it.nameEn else it.nameEn } ?: stringResource(R.string.location_unknown)
     val asrLabel = when (s.asrSchool) {
         null -> stringResource(R.string.asr_profile_default)
         AsrSchool.STANDARD -> stringResource(R.string.asr_standard)
@@ -130,88 +155,94 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     }
     val adj = s.offsets.entries.joinToString("  ") { (p, m) -> "${f.prayerName(p)} ${f.digits(if (m > 0) "+$m" else "$m")}" }
     val hijriValue = f.digits(if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}")
+    val kwLocation = stringResource(R.string.kw_location)
+
+    // Every row once, in order, with its group (0.9.4: groups and search).
     val rows = buildList {
         // 0.9.7: one screen for every way of choosing the location (current location, search, map, coordinates, browse).
-        add(Row(R.string.settings_location, Icons.Rounded.LocationOn, stringResource(R.string.settings_location_mode), modeLabel, stringResource(R.string.kw_location), onOpenCities))
+        // 0.14: the row names the place itself, as the home screen does.
+        add(SettingRow(R.string.settings_location, Icons.Rounded.LocationOn, placeTitle,
+            stringResource(if (s.locationMode == LocationMode.AUTO) R.string.loc_label_auto else R.string.loc_label_manual),
+            kwLocation + " " + stringResource(R.string.change_location), onOpenCities))
         if (s.locationMode == LocationMode.AUTO) {
-            add(Row(R.string.settings_location, Icons.Rounded.Update, stringResource(R.string.background_updates),
-                stringResource(if (bgOn) R.string.background_updates_on else R.string.background_updates_off), stringResource(R.string.kw_location), null) {
-                NoorSwitch(bgOn) { on -> if (on) dialog = Dialog.BACKGROUND else vm.setBackgroundUpdates(false) }
-            })
-            val precise = vm.hasPrecise()
-            add(Row(R.string.settings_location, Icons.Rounded.GpsFixed, stringResource(R.string.location_precision),
-                stringResource(if (precise) R.string.location_precise else R.string.location_approximate), stringResource(R.string.kw_location), {
-                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        android.net.Uri.fromParts("package", context.packageName, null)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            add(SettingRow(R.string.settings_location, Icons.Rounded.Update, stringResource(R.string.background_updates),
+                stringResource(if (bgOn) R.string.background_updates_on else R.string.background_updates_off), kwLocation, null,
+                toggle = bgOn to { on -> if (on) dialog = Dialog.BACKGROUND else vm.setBackgroundUpdates(false) }))
+            add(SettingRow(R.string.settings_location, Icons.Rounded.GpsFixed, stringResource(R.string.location_precision),
+                stringResource(if (precise) R.string.location_precise else R.string.location_approximate), kwLocation, {
+                    runCatching {
+                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.fromParts("package", context.packageName, null)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
                 }))
-            add(Row(R.string.settings_location, Icons.Rounded.MyLocation, stringResource(R.string.refresh_location), null, stringResource(R.string.kw_location), { vm.refreshLocation() }))
+            add(SettingRow(R.string.settings_location, Icons.Rounded.MyLocation, stringResource(R.string.refresh_location), null, kwLocation, { vm.refreshLocation() }))
         }
-        add(Row(R.string.settings_calculation, Icons.Rounded.Public, stringResource(R.string.authority), profileName, stringResource(R.string.kw_authority), { dialog = Dialog.AUTHORITY }))
-        add(Row(R.string.settings_calculation, Icons.Rounded.Schedule, stringResource(R.string.asr_method), asrLabel, stringResource(R.string.kw_asr), { dialog = Dialog.ASR }))
-        add(Row(R.string.settings_calculation, Icons.Rounded.Explore, stringResource(R.string.high_latitude), highLatLabel(s.highLatitudeRule), stringResource(R.string.kw_high_latitude), { dialog = Dialog.HIGH_LAT }))
-        add(Row(R.string.settings_calculation, Icons.Rounded.Tune, stringResource(R.string.adjustments), adj.ifEmpty { stringResource(R.string.adjustments_body) }, stringResource(R.string.kw_adjust), { dialog = Dialog.OFFSETS }))
-        add(Row(R.string.settings_alerts, Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_title),
-            stringResource(if (s.alerts.enabled) R.string.settings_on else R.string.settings_off), stringResource(R.string.kw_alerts), { onOpenRoute(com.noor.app.Routes.ADHAN) }))
-        add(Row(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(com.noor.app.Routes.ADHAN_HISTORY) }))
-        add(Row(R.string.settings_notification_bar, Icons.Rounded.Notifications, stringResource(R.string.status_setting), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status), null) {
-            NoorSwitch(s.statusNotification) { on ->
-                val needs = on && android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
-                    android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
-                if (needs) statusPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) else vm.setStatusNotification(on)
-            }
-        })
+        add(SettingRow(R.string.settings_calculation, Icons.Rounded.Public, stringResource(R.string.authority), profileName, stringResource(R.string.kw_authority), { dialog = Dialog.AUTHORITY }))
+        add(SettingRow(R.string.settings_calculation, Icons.Rounded.Schedule, stringResource(R.string.asr_method), asrLabel, stringResource(R.string.kw_asr), { dialog = Dialog.ASR }))
+        add(SettingRow(R.string.settings_calculation, Icons.Rounded.Explore, stringResource(R.string.high_latitude), highLatLabel(s.highLatitudeRule), stringResource(R.string.kw_high_latitude), { dialog = Dialog.HIGH_LAT }))
+        add(SettingRow(R.string.settings_calculation, Icons.Rounded.Tune, stringResource(R.string.adjustments), adj.ifEmpty { stringResource(R.string.adjustments_body) }, stringResource(R.string.kw_adjust), { dialog = Dialog.OFFSETS }))
+        add(SettingRow(R.string.settings_alerts, Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN) },
+            detail = stringResource(if (s.alerts.enabled) R.string.settings_on else R.string.settings_off)))
+        add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }))
+        add(SettingRow(R.string.settings_notification_bar, Icons.Rounded.Notifications, stringResource(R.string.status_setting), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status), null,
+            toggle = s.statusNotification to { on ->
+                val needs = on && Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
+                    Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (needs) statusPermission.launch(Manifest.permission.POST_NOTIFICATIONS) else vm.setStatusNotification(on)
+            }))
         // 0.9.8: the "+" after each prayer (home screen and notification) can be turned off.
-        add(Row(R.string.settings_notification_bar, Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc), stringResource(R.string.kw_status), null) {
-            NoorSwitch(s.elapsedAfterPrayer) { on -> vm.setElapsedAfterPrayer(on) }
-        })
-        add(Row(R.string.settings_calendar, Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust), stringResource(R.string.hijri_adjust_value, hijriValue), stringResource(R.string.kw_hijri), null) {
-            Stepper(hijriValue, { vm.setHijriAdjust(s.hijriAdjust - 1) }, { vm.setHijriAdjust(s.hijriAdjust + 1) })
-        })
-        add(Row(R.string.settings_display, Icons.Rounded.Language, stringResource(R.string.language), languageLabel(s.language), stringResource(R.string.kw_language), { dialog = Dialog.LANGUAGE }))
-        add(Row(R.string.settings_display, Icons.Rounded.Numbers, stringResource(R.string.numerals),
-            stringResource(if (s.numerals == Numerals.WESTERN) R.string.numerals_western else R.string.numerals_arabic), stringResource(R.string.kw_numerals), { dialog = Dialog.NUMERALS }))
-        add(Row(R.string.settings_display, Icons.Rounded.AccessTime, stringResource(R.string.time_format),
-            stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24), stringResource(R.string.kw_time), { dialog = Dialog.TIME }))
-        add(Row(R.string.settings_display, Icons.Rounded.Brightness6, stringResource(R.string.theme), themeLabel(s.theme), stringResource(R.string.kw_theme), { dialog = Dialog.THEME }))
+        add(SettingRow(R.string.settings_notification_bar, Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc), stringResource(R.string.kw_status), null,
+            toggle = s.elapsedAfterPrayer to { on -> vm.setElapsedAfterPrayer(on) }))
+        add(SettingRow(R.string.settings_appearance, Icons.Rounded.Brightness6, stringResource(R.string.theme), null, stringResource(R.string.kw_theme), { dialog = Dialog.THEME }, detail = themeLabel(s.theme)))
         // 0.9.8: the landscape under the home screen's sky.
         run {
-            val place = com.noor.app.data.PrayerProvider.place(s)
+            val place = PrayerProvider.place(s)
             val t = com.noor.app.sky.Biome.of(s.scenery, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
             val name = stringResource(sceneryName(t))
-            add(Row(R.string.settings_display, Icons.Rounded.Landscape, stringResource(R.string.scenery_title),
-                if (s.scenery == com.noor.app.data.Scenery.AUTO) stringResource(R.string.scenery_auto_short, name) else name,
-                stringResource(R.string.kw_scenery), { onOpenRoute(com.noor.app.Routes.SCENERY) }))
+            add(SettingRow(R.string.settings_appearance, Icons.Rounded.Landscape, stringResource(R.string.scenery_title),
+                if (s.scenery == Scenery.AUTO) stringResource(R.string.scenery_auto_short, name) else name,
+                stringResource(R.string.kw_scenery), { onOpenRoute(Routes.SCENERY) }))
         }
-        add(Row(R.string.settings_watch, Icons.Rounded.Watch, stringResource(R.string.settings_watch_row), null, stringResource(R.string.kw_watch), { onOpenRoute(com.noor.app.Routes.WATCH) }))
-        add(Row(R.string.settings_about, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), null, stringResource(R.string.kw_accuracy), onOpenAccuracy))
-        add(Row(R.string.settings_about, Icons.Rounded.Info, stringResource(R.string.about_version, BuildConfigInfo.versionName), null, "", null))
+        add(SettingRow(R.string.settings_language, Icons.Rounded.Language, stringResource(R.string.language), null, stringResource(R.string.kw_language), { dialog = Dialog.LANGUAGE }, detail = languageLabel(s.language)))
+        add(SettingRow(R.string.settings_language, Icons.Rounded.Numbers, stringResource(R.string.numerals), null, stringResource(R.string.kw_numerals), { dialog = Dialog.NUMERALS },
+            detail = stringResource(if (s.numerals == Numerals.WESTERN) R.string.numerals_western else R.string.numerals_arabic)))
+        add(SettingRow(R.string.settings_language, Icons.Rounded.AccessTime, stringResource(R.string.time_format), null, stringResource(R.string.kw_time), { dialog = Dialog.TIME },
+            detail = stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24)))
+        add(SettingRow(R.string.settings_calendar, Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust), stringResource(R.string.hijri_adjust_value, hijriValue), stringResource(R.string.kw_hijri), null) {
+            Stepper(hijriValue, { vm.setHijriAdjust(s.hijriAdjust - 1) }, { vm.setHijriAdjust(s.hijriAdjust + 1) })
+        })
+        add(SettingRow(R.string.settings_watch, Icons.Rounded.Watch, stringResource(R.string.settings_watch_row), null, stringResource(R.string.kw_watch), { onOpenRoute(Routes.WATCH) }))
+        add(SettingRow(R.string.settings_about, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), null, stringResource(R.string.kw_accuracy), onOpenAccuracy))
+        add(SettingRow(R.string.settings_about, Icons.Rounded.Info, stringResource(R.string.about_version, BuildConfigInfo.versionName), null, "", null))
+        // (A group of its own for testing goes here, after About: rows with their own group title come out as a
+        // separate group at the end of the page, and are found by search like every other row.)
     }
     val footers = mapOf(
         R.string.settings_calculation to basisText,
         R.string.settings_notification_bar to stringResource(R.string.status_setting_note, f.number(14)),
         R.string.settings_calendar to stringResource(R.string.calendar_hijri_note),
     )
-    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        com.noor.app.ui.components.ScreenTitle(stringResource(R.string.tab_settings))
-        SettingsSearch(query) { query = it }
+    NoorPage(stringResource(R.string.tab_settings), contentPadding) {
+        NoorSearchField(query, { query = it }, stringResource(R.string.settings_search))
 
         @Composable
-        fun item(r: Row) = SettingsItem(r.icon, r.title, r.value, r.onClick, r.trailing)
+        fun item(r: SettingRow) {
+            val t = r.toggle
+            if (t != null) SettingsSwitch(r.icon, r.title, r.value, t.first, onChange = t.second)
+            else SettingsItem(r.icon, r.title, r.value, r.onClick, detail = r.detail, trailing = r.trailing)
+        }
         val q = query.trim()
         if (q.isNotEmpty()) {
             // Every word typed must appear in the row's title, value, group or keywords (in the current language).
             val words = q.lowercase().split(Regex("\\s+"))
             val found = rows.filter { r ->
-                val hay = listOf(r.title, r.value.orEmpty(), stringResource(r.group), r.keywords).joinToString(" ").lowercase()
+                val hay = listOf(r.title, r.value.orEmpty(), r.detail.orEmpty(), stringResource(r.group), r.keywords).joinToString(" ").lowercase()
                 words.all { it in hay }
             }
             if (found.isEmpty()) Text(stringResource(R.string.settings_no_results, q), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
-                modifier = Modifier.padding(horizontal = 12.dp))
+                modifier = Modifier.padding(horizontal = 16.dp))
             else SettingsSection(stringResource(R.string.settings_results)) {
                 found.forEachIndexed { i, r -> if (i > 0) SettingsDivider(); item(r) }
             }
@@ -222,7 +253,6 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
     }
 
     when (dialog) {
@@ -271,37 +301,48 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             stringResource(R.string.theme), ThemeMode.entries.map { it to themeLabel(it) }, s.theme,
             onSelect = { vm.setTheme(it) }, onDismiss = { dialog = Dialog.NONE },
         )
-        Dialog.HIJRI -> Unit
-        Dialog.OFFSETS -> AlertDialog(
-            onDismissRequest = { dialog = Dialog.NONE },
-            title = { Text(stringResource(R.string.adjustments)) },
-            text = {
-                Column {
-                    for (p in Prayer.entries) {
-                        val m = s.offsets[p] ?: 0
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(f.prayerName(p), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                            Stepper(f.digits(if (m > 0) "+$m" else "$m"), { vm.setOffset(p, m - 1) }, { vm.setOffset(p, m + 1) })
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { dialog = Dialog.NONE }) { Text(stringResource(R.string.done), color = c.gold) } },
-            dismissButton = { TextButton(onClick = { vm.resetOffsets() }) { Text(stringResource(R.string.reset), color = c.textSecondary) } },
-        )
+        Dialog.OFFSETS -> OffsetsSheet(s.offsets, f, onSet = { p, m -> vm.setOffset(p, m) }, onReset = { vm.resetOffsets() }, onDismiss = { dialog = Dialog.NONE })
         Dialog.BACKGROUND -> AlertDialog(
             onDismissRequest = { dialog = Dialog.NONE },
+            containerColor = c.surface, titleContentColor = c.textPrimary, textContentColor = c.textSecondary,
             title = { Text(stringResource(R.string.bg_perm_title)) },
             text = { Text(stringResource(R.string.bg_perm_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     dialog = Dialog.NONE
-                    if (vm.hasBackgroundPermission()) vm.setBackgroundUpdates(true)
-                    else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                }) { Text(stringResource(R.string.bg_perm_continue), color = c.gold) }
+                    // (Before Android 10 the location permission already covers the background: there is nothing to ask.)
+                    if (vm.hasBackgroundPermission() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) vm.setBackgroundUpdates(true)
+                    else background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                }) { Text(stringResource(R.string.bg_perm_continue), color = c.goldText) }
             },
             dismissButton = { TextButton(onClick = { dialog = Dialog.NONE }) { Text(stringResource(R.string.bg_perm_not_now), color = c.textSecondary) } },
         )
+    }
+}
+
+/** Personal adjustments (0.14: a sheet): minutes added to or taken from each time, and Reset. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OffsetsSheet(offsets: Map<Prayer, Int>, f: Formatter, onSet: (Prayer, Int) -> Unit, onReset: () -> Unit, onDismiss: () -> Unit) {
+    val c = NoorTheme.colors
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    NoorSheet(onDismiss, sheet) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 20.dp)) {
+            Text(stringResource(R.string.adjustments), style = MaterialTheme.typography.titleLarge, color = c.textPrimary, modifier = Modifier.padding(top = 6.dp))
+            Text(stringResource(R.string.adjustments_body), style = FootnoteStyle, color = c.textSecondary, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
+            for (p in Prayer.entries) {
+                val m = offsets[p] ?: 0
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(f.prayerName(p), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary, modifier = Modifier.weight(1f))
+                    Stepper(f.digits(if (m > 0) "+$m" else "$m"), { onSet(p, m - 1) }, { onSet(p, m + 1) })
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                NoorButton(stringResource(R.string.reset), onReset, Modifier.weight(1f), kind = ButtonKind.Tonal)
+                NoorButton(stringResource(R.string.done), { scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() } }, Modifier.weight(1f))
+            }
+        }
     }
 }
 
@@ -321,24 +362,3 @@ private fun highLatLabelStatic(r: HighLatitudeRule): Int = when (r) {
 @Composable private fun themeLabel(t: ThemeMode) = stringResource(
     when (t) { ThemeMode.SUN -> R.string.theme_sun; ThemeMode.SYSTEM -> R.string.theme_system; ThemeMode.DARK -> R.string.theme_dark; ThemeMode.LIGHT -> R.string.theme_light },
 )
-
-/** Search over every setting, in the language of the screen. */
-@Composable
-private fun SettingsSearch(query: String, onChange: (String) -> Unit) {
-    val c = NoorTheme.colors
-    androidx.compose.material3.OutlinedTextField(
-        value = query, onValueChange = onChange, singleLine = true,
-        placeholder = { Text(stringResource(R.string.settings_search), color = c.textMuted) },
-        leadingIcon = { Icon(Icons.Rounded.Search, null, tint = c.textMuted) },
-        trailingIcon = { if (query.isNotEmpty()) androidx.compose.material3.IconButton(onClick = { onChange("") }) {
-            Icon(Icons.Rounded.Close, stringResource(R.string.settings_search_clear), tint = c.textMuted) } },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = c.gold, unfocusedBorderColor = c.outline, cursorColor = c.gold,
-            focusedContainerColor = c.surface, unfocusedContainerColor = c.surface,
-            focusedTextColor = c.textPrimary, unfocusedTextColor = c.textPrimary,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
-

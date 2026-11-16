@@ -38,7 +38,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -71,11 +73,26 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 
     val settings: StateFlow<AppSettings?> = repo.settings.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    /** Computed from the same plan the scheduler arms, so what is shown is what will happen. */
-    val next: StateFlow<NextAlert?> = repo.settings.map { s ->
-        val c = WearSync.configFor(s, System.currentTimeMillis(), container.timetables) ?: return@map null
-        val a = c.alerts ?: return@map null
-        AlertPlanner.plan(c, a, AlertDevice.PHONE, Instant.now()).firstOrNull()?.let { NextAlert(it, c.zone) }
+    /** Counts the times the screen has come back, so what depends on the clock is worked out again. */
+    private val shownAgain = MutableStateFlow(0)
+
+    /**
+     * Computed from the same plan the scheduler arms, so what is shown is what will happen. Worked out again when the
+     * settings change, when the screen comes back, and once the alert it names has come (0.14: it used to stay on a
+     * prayer that had passed for as long as the page lived, which with the tabs' saved state can be hours).
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val next: StateFlow<NextAlert?> = combine(repo.settings, shownAgain) { s, _ -> s }.transformLatest { s ->
+        while (true) {
+            val n = run {
+                val c = WearSync.configFor(s, System.currentTimeMillis(), container.timetables) ?: return@run null
+                val a = c.alerts ?: return@run null
+                AlertPlanner.plan(c, a, AlertDevice.PHONE, Instant.now()).firstOrNull()?.let { NextAlert(it, c.zone) }
+            }
+            emit(n)
+            val at = n?.planned?.at ?: break
+            kotlinx.coroutines.delay((java.time.Duration.between(Instant.now(), at).toMillis() + 1_000).coerceAtLeast(1_000))
+        }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val hasLocation: StateFlow<Boolean> = repo.settings.map { WearSync.configFor(it, 0L, container.timetables) != null }
@@ -110,6 +127,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Re-reads permissions and device state (called when the screen is shown again). */
     fun refresh() {
+        shownAgain.value++
         val ctx = getApplication<Application>()
         AlertNotifications.ensureChannels(ctx)
         val granted = Build.VERSION.SDK_INT < 33 ||
