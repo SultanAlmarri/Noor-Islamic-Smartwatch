@@ -1,53 +1,11 @@
 {
- "_comment": "Adhan recordings Noor may bundle. Every entry is a Wikimedia Commons file whose licence permits redistribution in an app. fetch_commons.py re-checks the live licence against 'licence' and refuses the file if it differs. Do not add recordings whose provenance is doubtful (for example commercial releases re-uploaded as 'public domain').",
+ "_comment": "Every recording Noor may bundle (Adhans and sound effects; 0.17: the curated set the owner asked for on 16 November 2026). Each licence permits redistribution in a public repository and use in an app that may become commercial: public domain, CC0, CC BY or CC BY-SA, never NC or ND. fetch_commons.py fetches and checks each file. kind 'commons' (default): a Wikimedia Commons file; the live licence must equal 'licence' or the file is refused. kind 'url': a file from an archive with a stated licence (US National Park Service, Internet Archive / radio aporee), with page, artist, licence and the file's SHA-1 recorded by hand; the download must match the SHA-1. kind 'local': a recording supplied by the app's owner, kept in tools/sounds/owner/ ('path' relative to this folder), e.g. {\"id\": \"dubai\", \"kind\": \"local\", \"path\": \"owner/dubai.wav\", \"name\": \"Dubai Adhan (owner's recording)\", \"artist\": \"...\", \"licence\": \"...\", \"provenance\": \"who recorded it, where and when, who holds the rights and on what terms\"}. Do not add recordings whose provenance is doubtful (for example broadcast captures or commercial releases re-uploaded as 'public domain').",
  "files": [
-  {
-   "id": "makkah_2013",
-   "title": "File:Adhan, Great Mosque of Mecca - Jan 21, 2013.webm",
-   "licence": "CC BY 3.0",
-   "provenance": "Recorded at al-Masjid al-Haram and published on YouTube under CC BY by the recordist (Seyfula Islam); licence confirmed by a Commons reviewer on 19 July 2018."
-  },
   {
    "id": "makkah_maghrib_2012",
    "title": "File:Maghrib Adhan at the Masjid al Haram, Mecca - 25 Feb, 2012.webm",
    "licence": "CC BY 3.0",
    "provenance": "Recorded at al-Masjid al-Haram before Maghrib and published on YouTube under CC BY by the recordist (3omar Faruq); licence confirmed by YouTubeReviewBot on 14 February 2020."
-  },
-  {
-   "id": "malmo_fajr_2012",
-   "title": "File:Eid al-Fitr Fajr azan at Malmö Mosque - 19 August 2012.webm",
-   "licence": "CC BY 3.0",
-   "provenance": "Fajr adhan published on YouTube under CC BY by the mosque itself (Islamic Center Malmö); licence confirmed by YouTubeReviewBot on 12 February 2020."
-  },
-  {
-   "id": "istanbul_2025",
-   "title": "File:Adhan in Istanbul.webm",
-   "licence": "CC0",
-   "provenance": "Field recording in Istanbul, own work of the uploader (Viceskeeni2), dedicated to the public domain."
-  },
-  {
-   "id": "shalqar_2014",
-   "title": "File:Adhan in Shalqar mosque.webm",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "Field recording at the Matey Qoqanuly mosque, Shalqar, Kazakhstan; own work of the uploader (Esetok)."
-  },
-  {
-   "id": "casablanca_2019",
-   "title": "File:Llamada a oración Mezquita Hassan II.wav",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "Field recording beside the Hassan II Mosque, Casablanca; own work of the uploader (Fraguando)."
-  },
-  {
-   "id": "madinah_2018",
-   "title": "File:Oración Al-Azzan.ogg",
-   "licence": "Public domain",
-   "provenance": "Recording of an evening adhan in Madinah; own work of the uploader (B9.), who released it into the public domain worldwide."
-  },
-  {
-   "id": "call_to_worship_2017",
-   "title": "File:Islamic call to worship.oga",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "Own work of the uploader (Mahfoudou). Content must be checked after download: the description suggests it may be an explanation of the adhan rather than the adhan itself."
   },
   {
    "id": "madinah_prophets_mosque",
@@ -56,64 +14,64 @@
    "provenance": "Recording of the call to prayer from the Prophet's Mosque, Madinah, published on Freesound by its recordist (ejaz215) under CC BY 3.0."
   },
   {
-   "id": "sobhdel_iran",
-   "title": "File:اذان حسین صبحدل.webm",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "Adhan by Master Hussein Sobhdel (Iran); permission confirmed by Wikimedia's volunteer response team (VRTS)."
-  },
-  {
-   "id": "mahur_iran",
-   "title": "File:AzaanMaahur.ogg",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "Adhan in the Persian dastgah Mahur, sung and published by the reciter himself, Saeed Hatamzadeh-Varmazyar."
-  },
-  {
-   "id": "isfahan_2016",
-   "title": "File:Tour guide recite Adhan in the Shah mosque in Isfahan, Iran.webm",
-   "licence": "CC BY 3.0",
-   "provenance": "A guide recites the Adhan under the main dome of the Shah Mosque, Isfahan, 2016; published on YouTube under CC BY, licence reviewed on Commons."
-  },
-  {
-   "id": "marrakech_koutoubia",
-   "title": "File:Llamada a oracion desde Kutubiya.ogg",
+   "id": "birds_yellowstone_dawn",
+   "kind": "url",
+   "name": "Dawn Chorus (Yellowstone National Park sound library)",
+   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLDawnChorus.mp3",
+   "page": "https://www.nps.gov/yell/learn/photosmultimedia/sounds-dawnchorus.htm",
+   "sha1": "3f56724be7ac25f3287e293c90023c75aab4aa95",
+   "artist": "National Park Service (Yellowstone National Park)",
    "licence": "Public domain",
-   "provenance": "The call to prayer from the Koutoubia Mosque, Marrakech, recorded and released into the public domain by the uploader (own work)."
+   "licence_url": "https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm",
+   "provenance": "Early-morning birdsong recorded near Mammoth Hot Springs, Yellowstone National Park, by the US National Park Service. The park's sound library states: \"The files available here were recorded in the park and are in the public domain. They may be downloaded and used without limitation; however, please credit the National Park Service.\""
   },
   {
-   "id": "jaffa_2011",
-   "title": "File:Jaffa Muezzin P1020417.ogv",
-   "licence": "CC BY-SA 3.0",
-   "provenance": "The muezzin of the Mahmoudiya Mosque, Jaffa, recorded in 2011 by the uploader (own work, CC BY-SA 3.0)."
+   "id": "rooster_houx",
+   "kind": "url",
+   "name": "28130 Houx, France - Chicken and rooster (radio aporee)",
+   "url": "https://archive.org/download/aporee_34557_39722/houxcoqs261210h00.mp3",
+   "page": "https://archive.org/details/aporee_34557_39722",
+   "sha1": "d187a5221b15b05054f71e647a2b6bf6ca4fd64e",
+   "artist": "Vincent Duseigne",
+   "licence": "CC BY 3.0",
+   "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+   "provenance": "Field recording of a farm in the village of Houx, France (26 December 2016), published by the recordist on radio aporee ::: maps (aporee.org/maps/?loc=34557), archived on the Internet Archive with the licence CC BY 3.0."
   },
   {
-   "id": "ghana_ramadan_2026",
-   "title": "File:Athan during Ramadan 2.wav",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "Adhan during Ramadan in Ghana, recorded by the uploader (own work) for Wiki Loves Ramadan 2026."
+   "id": "waves_yilan",
+   "kind": "url",
+   "name": "Toucheng, Yilan County - Rocks and waves (radio aporee)",
+   "url": "https://archive.org/download/aporee_24350_28262/SoundMap2014072935.mp3",
+   "page": "https://archive.org/details/aporee_24350_28262",
+   "sha1": "33cf53509b7ab8946fa39551d870e5fad371cdf6",
+   "artist": "Wu Tsan-Cheng (吳燦政)",
+   "licence": "CC BY 3.0",
+   "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+   "provenance": "Waves on a rocky shore at Toucheng, Yilan County, Taiwan (29 July 2014; Zoom H6 and Rode NT4), published by the recordist on radio aporee ::: maps (aporee.org/maps/?loc=24350), archived on the Internet Archive with the licence CC BY 3.0."
   },
   {
-   "id": "ghana_ramadan_2026_b",
-   "title": "File:Athan in Ramadan.wav",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "Adhan in Ramadan in Ghana, recorded by the uploader (own work) for Wiki Loves Ramadan 2026."
+   "id": "rain_taitung",
+   "kind": "url",
+   "name": "Taitung County - Rain (radio aporee)",
+   "url": "https://archive.org/download/aporee_39377_45721/soundmap2018032842.mp3",
+   "page": "https://archive.org/details/aporee_39377_45721",
+   "sha1": "f115bab3a850235f8810e4ad8a64e1330154332b",
+   "artist": "Wu Tsan-Cheng (吳燦政)",
+   "licence": "CC BY 3.0",
+   "licence_url": "https://creativecommons.org/licenses/by/3.0/",
+   "provenance": "Steady rain at a village school in Taitung County, Taiwan (28 March 2018; Zoom H2n), published by the recordist on radio aporee ::: maps (aporee.org/maps/?loc=39377), archived on the Internet Archive with the licence CC BY 3.0."
   },
   {
-   "id": "nigeria_2026",
-   "title": "File:Call to prayer.ogg",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "Call to prayer in Nigeria, recorded by the uploader (own work) for Wiki Loves Africa 2026."
-  },
-  {
-   "id": "adhan_andrewler_2022",
-   "title": "File:Azan.ogg",
-   "licence": "CC BY-SA 4.0",
-   "provenance": "An Adhan recorded and published by the uploader (own work, CC BY-SA 4.0); place not stated."
-  },
-  {
-   "id": "adhan_beautiful_2022",
-   "title": "File:Beautiful adhan.ogg",
-   "licence": "CC0",
-   "provenance": "An Adhan recorded and dedicated to the public domain (CC0) by the uploader (own work); place not stated."
+   "id": "stream_rocky_mountain",
+   "kind": "url",
+   "name": "Stream Soundscape from the Black Canyon Trail (Rocky Mountain National Park sound library)",
+   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
+   "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm",
+   "sha1": "b0d097a96adba1cc03bd08a79ed0df4e8a565197",
+   "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
+   "licence": "Public domain",
+   "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
+   "provenance": "A mountain stream on the Black Canyon Trail, Rocky Mountain National Park, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings \"are in the public domain and may be downloaded and used without limitation; however, please credit the National Park Service.\""
   }
  ]
 }
