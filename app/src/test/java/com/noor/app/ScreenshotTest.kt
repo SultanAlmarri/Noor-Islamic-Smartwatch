@@ -328,7 +328,7 @@ class ScreenshotTest {
         rule.onAllNodes(androidx.compose.ui.test.hasText("More settings")).onFirst().performScrollTo().performClick()
         shot("83_adhan_options_night_en", "Gradual volume")
         screen = Screen.WATCH; rule.waitForIdle()
-        screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Makkah")
+        screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Dubai")
         screen = Screen.ADHAN_SHURUQ; runBlocking {
             // (0.16: no alert sounds any more: sunrise with a notification, a reminder after it and some days only. 0.17:
             // the reminder becomes an alarm, "15 min after Sunrise", which posts a notification as the reminder did.)
@@ -360,9 +360,9 @@ class ScreenshotTest {
         screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "إعدادات أخرى")
         rule.onAllNodes(androidx.compose.ui.test.hasText("إعدادات أخرى")).onFirst().performScrollTo().performClick()
         shot("84_adhan_options_night_ar", "التنبيه على")
-        screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "مكة")
+        screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "دبي")
         arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "More settings")
-        screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Makkah")
+        screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Dubai")
         theme = ThemeMode.DARK
         // Alert history (0.9): what really happened at each alert, with examples of each kind of outcome.
         run {
