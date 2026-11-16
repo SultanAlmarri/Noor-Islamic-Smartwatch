@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.BatterySaver
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Schedule
@@ -78,7 +79,8 @@ import com.noor.prayer.alerts.AlertSettings
 import com.noor.prayer.alerts.PrayerAlert
 
 /** Something that stands between the user's choices and an alert that sounds, and the one action that fixes it. */
-private class Issue(val text: String, val action: String?, val onAction: (() -> Unit)?, val icon: ImageVector = Icons.Rounded.WarningAmber)
+/** [blocking]: it stops the alert altogether (not just makes it late): said on the hero card too, in the danger colour. */
+private class Issue(val text: String, val action: String?, val onAction: (() -> Unit)?, val icon: ImageVector = Icons.Rounded.WarningAmber, val blocking: Boolean = false)
 
 /**
  * Adhan and alerts (0.14), top to bottom in the order of use: the one switch for all alerts and what will happen
@@ -116,11 +118,22 @@ fun AdhanScreen(
     val watch = a.enabled && a.device.includes(AlertDevice.WATCH)
 
     NoorPage(stringResource(R.string.adhan_title), contentPadding) {
-        // 0.15: the page opens on what happens next, in big type: the next Adhan and its sound, and the one switch.
+        // What needs attention, in a group of its own: there only when something does.
+        // (Without a place there are no times to alert at: that comes first, with the way to set one. 0.14: the page
+        // said so before, but offered no way there.)
+        val noPlace = if (!hasLocation) listOf(Issue(stringResource(R.string.adhan_no_location), stringResource(R.string.set_location), onOpenLocation)) else emptyList()
+        val issues = noPlace + (if (phone) phoneIssues(ready, a, context) { notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS) } else emptyList()) +
+            (if (watch) watches.mapNotNull { w -> watchIssue(w) { vm.openNoorOnWatch(w.node.id) } } else emptyList())
+        // (0.15: what stops an alert altogether comes first, before what only makes it late.)
+            .sortedByDescending { it.blocking }
+        // 0.15: the page opens on what happens next, in big type: the next Adhan and its sound, and the one switch;
+        // or, when something would stop it, that it will not sound.
         run {
             val n = next.takeIf { hasLocation && a.enabled && a.device != AlertDevice.WATCH }
+            val blocked = a.enabled && issues.any { it.blocking }
             val status = when {
                 !hasLocation -> stringResource(R.string.adhan_no_location)
+                blocked -> stringResource(R.string.adhan_hero_blocked)
                 !a.enabled -> stringResource(R.string.adhan_master_off)
                 a.device == AlertDevice.WATCH -> stringResource(R.string.adhan_on_watch_only)
                 n != null -> stringResource(R.string.adhan_hero_next) + " · " + summary(a.alert(n.planned.prayer), n.planned.prayer, vm.library, custom, ar)
@@ -135,33 +148,35 @@ fun AdhanScreen(
                 icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.NotificationsActive),
                 overline = if (n != null) stringResource(R.string.adhan_master) else null,
                 title = if (n != null) f.prayerName(n.planned.prayer, n.planned.date) + "  " + f.timeAt(n.planned.at, n.zone) else stringResource(R.string.adhan_master),
-                subtitle = status,
+                subtitle = status, subtitleColor = if (blocked) NoorTheme.colors.danger else null,
                 modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(30.dp)).toggleable(a.enabled, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = toggle),
                 trailing = { com.noor.app.ui.settings.NoorSwitch(a.enabled, null) },
             )
         }
 
-        // What needs attention, in a group of its own: there only when something does.
-        // (Without a place there are no times to alert at: that comes first, with the way to set one. 0.14: the page
-        // said so before, but offered no way there.)
-        val noPlace = if (!hasLocation) listOf(Issue(stringResource(R.string.adhan_no_location), stringResource(R.string.set_location), onOpenLocation)) else emptyList()
-        val issues = noPlace + (if (phone) phoneIssues(ready, a, context) { notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS) } else emptyList()) +
-            (if (watch) watches.mapNotNull { w -> watchIssue(w) { vm.openNoorOnWatch(w.node.id) } } else emptyList())
         if (issues.isNotEmpty()) SettingsSection(stringResource(R.string.adhan_attention)) {
             issues.forEachIndexed { i, issue ->
                 if (i > 0) SettingsDivider()
-                WarningRow(issue.text, issue.action, issue.onAction, issue.icon)
+                WarningRow(issue.text, issue.action, issue.onAction, issue.icon, danger = issue.blocking)
             }
         }
 
-        if (a.enabled) {
-            SettingsSection(stringResource(R.string.adhan_prayers), footer = stringResource(R.string.adhan_prayers_footer)) {
-                Prayer.entries.forEachIndexed { i, p ->
-                    if (i > 0) SettingsDivider()
-                    PrayerAlertRow(p, a.alert(p), summary(a.alert(p), p, vm.library, custom, ar), f,
-                        onOpen = { onOpenPrayer(p) }, onToggle = { on -> vm.setPrayer(p) { it.copy(enabled = on) } })
-                }
+        // 0.15: the prayers are always there, so what would happen can be seen and set before anything is on. While
+        // the alerts are off their rows are quiet and their switches off; turning one on turns the alerts on, for that
+        // prayer alone (it is what was asked for).
+        SettingsSection(stringResource(R.string.adhan_prayers), footer = stringResource(if (a.enabled) R.string.adhan_prayers_footer else R.string.adhan_prayers_footer_off)) {
+            Prayer.entries.forEachIndexed { i, p ->
+                if (i > 0) SettingsDivider()
+                PrayerAlertRow(p, a.alert(p), summary(a.alert(p), p, vm.library, custom, ar), f, live = a.enabled,
+                    onOpen = { onOpenPrayer(p) }, onToggle = { on ->
+                        if (on && !a.enabled) {
+                            vm.enableOnly(p)
+                            if (ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else vm.setPrayer(p) { it.copy(enabled = on) }
+                    })
             }
+        }
+        if (a.enabled) {
             // 0.9.9: a reminder a few minutes before every prayer that alerts.
             SettingsSection("") {
                 SettingsItem(Icons.Rounded.Schedule, stringResource(R.string.adhan_reminder), reminderLabel(a.reminderMinutes, f), onClick = { reminderDialog = true })
@@ -213,7 +228,16 @@ fun AdhanScreen(
         }
 
         // What really happened at each alert, and the one piece of advice that is not a fault of the set-up.
-        if (a.enabled || history.isNotEmpty()) SettingsSection("") {
+        if (a.enabled || history.isNotEmpty()) SettingsSection("", footer = if (a.enabled) stringResource(R.string.adhan_test_footer) else null) {
+            // 0.15: "will it really sound tonight?" answered where the question arises: a real alert in ten seconds,
+            // through the whole path, with the next prayer's own sound (its result shows in the history below).
+            if (a.enabled) {
+                SettingsItem(Icons.Rounded.PlayCircle, stringResource(R.string.history_test, f.number(10)), null, onClick = {
+                    vm.testNext()
+                    android.widget.Toast.makeText(context, context.getString(R.string.adhan_test_sent), android.widget.Toast.LENGTH_SHORT).show()
+                })
+                SettingsDivider()
+            }
             val last = history.firstOrNull()
             SettingsItem(Icons.Rounded.History, stringResource(R.string.history_title),
                 last?.let { r -> (r.prayer?.let { f.prayerName(it) } ?: "") + " · " + outcomeText(r, f) } ?: stringResource(R.string.history_row_empty),
@@ -249,12 +273,12 @@ private fun phoneIssues(ready: Readiness, a: AlertSettings, context: Context, on
     if (!ready.notificationsAllowed) {
         add(Issue(stringResource(R.string.adhan_warn_notifications), stringResource(R.string.adhan_action_allow), {
             if (ready.canRequestNotifications) onRequestNotifications() else context.open(appNotificationSettings(context))
-        }))
+        }, blocking = true))
     } else if (ready.adhanChannelBlocked && audible) {
         add(Issue(stringResource(R.string.adhan_warn_channel), stringResource(R.string.adhan_action_open), {
             context.open(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                 .putExtra(Settings.EXTRA_CHANNEL_ID, com.noor.alerts.AlertNotifications.CHANNEL_ADHAN))
-        }))
+        }, blocking = true))
     }
     if (!ready.exactAlarms && Build.VERSION.SDK_INT >= 31) {
         add(Issue(stringResource(R.string.adhan_warn_exact), stringResource(R.string.adhan_action_allow), {
@@ -263,7 +287,7 @@ private fun phoneIssues(ready: Readiness, a: AlertSettings, context: Context, on
     }
     if (audible && ready.alarmVolume <= 0f) {
         add(Issue(stringResource(R.string.adhan_warn_volume), stringResource(R.string.adhan_action_open), { context.open(Intent(Settings.ACTION_SOUND_SETTINGS)) },
-            icon = Icons.AutoMirrored.Rounded.VolumeUp))
+            icon = Icons.AutoMirrored.Rounded.VolumeUp, blocking = true))
     }
 }
 
@@ -272,7 +296,7 @@ private fun phoneIssues(ready: Readiness, a: AlertSettings, context: Context, on
 private fun watchIssue(w: WatchAlertState, onOpen: () -> Unit): Issue? {
     val r = w.report
     return when {
-        r?.notificationsAllowed == false -> Issue(stringResource(R.string.adhan_warn_watch_notifications, w.node.name), stringResource(R.string.adhan_action_open_watch), onOpen)
+        r?.notificationsAllowed == false -> Issue(stringResource(R.string.adhan_warn_watch_notifications, w.node.name), stringResource(R.string.adhan_action_open_watch), onOpen, blocking = true)
         r?.notificationsAllowed != null && r.exactAlarms == false -> Issue(stringResource(R.string.adhan_warn_watch_exact, w.node.name), stringResource(R.string.adhan_action_open_watch), onOpen)
         else -> null
     }
@@ -280,22 +304,24 @@ private fun watchIssue(w: WatchAlertState, onOpen: () -> Unit): Issue? {
 
 /** One prayer: the row opens its alert (type, sound, volume); the switch turns it on or off without leaving the page. */
 @Composable
-private fun PrayerAlertRow(p: Prayer, alert: PrayerAlert, summary: String, f: Formatter, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun PrayerAlertRow(p: Prayer, alert: PrayerAlert, summary: String, f: Formatter, live: Boolean = true, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
     val c = NoorTheme.colors
+    // (With the alerts off nothing alerts: the switch says so, and the row is quieter.)
+    val on = live && alert.enabled
     Row(
         Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(role = Role.Button, onClick = onOpen).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val tint = if (alert.enabled) c.gold else c.textMuted
+        val tint = if (on) c.gold else c.textMuted
         Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(tint.copy(alpha = if (c.isDark) 0.15f else 0.13f)),
             contentAlignment = Alignment.Center) { PrayerIcon(p, 19.dp, tint) }
         Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f).alpha(if (alert.enabled) 1f else 0.7f)) {
+        Column(Modifier.weight(1f).alpha(if (on) 1f else 0.7f)) {
             Text(f.prayerName(p), style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
             Text(summary, style = FootnoteStyle, color = c.textSecondary)
         }
         Spacer(Modifier.width(12.dp))
-        NoorSwitch(alert.enabled, onToggle)
+        NoorSwitch(on, onToggle)
     }
 }
 
@@ -309,7 +335,9 @@ internal fun summary(a: PrayerAlert, p: Prayer, lib: SoundLibrary, custom: List<
         AlertMode.CUSTOM -> custom.firstOrNull { it.id == a.soundId }?.name
         else -> null
     }
-    return if (sound != null) "$mode · $sound" else mode
+    // (A note before the recording's name: most are named for where they were recorded, and "Adhan · Malmö" read as
+    // if the times were Malmö's. 0.15.)
+    return if (sound != null) "$mode · \u266A $sound" else mode
 }
 
 internal fun modeLabel(m: AlertMode) = when (m) {

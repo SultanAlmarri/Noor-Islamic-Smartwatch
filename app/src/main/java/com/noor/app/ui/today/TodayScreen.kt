@@ -102,6 +102,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -151,10 +152,16 @@ import kotlin.math.roundToInt
 fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpenSource: () -> Unit, vm: TodayViewModel = viewModel(), onOpenPrayer: (Prayer) -> Unit = {}) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refreshIfStale(); vm.refreshTimetables() }
+    val notifications = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
     val u = ui ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = NoorTheme.colors.gold, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
     }
-    TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer, onScrubbed = vm::scrubLearned)
+    TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer, onScrubbed = vm::scrubLearned,
+        onToggleAlert = { p, on ->
+            // (The first alert turned on asks for Android's notification permission, at the moment its reason is plain.)
+            if (on && !u.settings.alerts.enabled && android.os.Build.VERSION.SDK_INT >= 33) notifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            vm.setAlert(p, on)
+        })
 }
 
 /**
@@ -189,7 +196,7 @@ private class HeroGeometry(top: Dp, height: Dp) {
     val titleSize: Float = when { sideBySide -> 22f; inner >= 300.dp -> 28f; else -> 25f }
     private val place: Dp = if (slimPlace) 40.dp else 48.dp
     /** First estimate of where the text ends; replaced by the measured bottom once laid out. */
-    val textBottom: Dp = top + 6.dp + place + 2.dp + if (sideBySide) 54.dp else (titleSize * 1.4f).dp + (countdownMax * 1.2f).dp
+    val textBottom: Dp = top + 6.dp + place + 2.dp + if (sideBySide) 54.dp else (titleSize * 1.4f).dp + (countdownMax * 1.2f).dp + 16.dp
     val landDepth: Dp = when { sideBySide -> 50.dp; inner >= 300.dp -> 82.dp; else -> 58.dp }
     val horizon: Dp = height - landDepth
     val ground: Dp = height - 6.dp
@@ -217,6 +224,8 @@ fun TodayContent(
     onOpenPrayer: (Prayer) -> Unit = {},
     /** The sky was drawn along for the first time (0.15): its hint is no longer needed. */
     onScrubbed: () -> Unit = {},
+    /** A prayer's bell was touched (0.15): its alert on or off. */
+    onToggleAlert: (Prayer, Boolean) -> Unit = { _, _ -> },
 ) {
     val ar = isArabicUi()
     // (Kept between the screen's once-a-second updates: a new formatter each second made every row of the day's
@@ -267,13 +276,16 @@ fun TodayContent(
     }
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         val todayDay = remember(today, u.settings, u.place, u.profile) { dayFor(today)?.day }
+        // (Whether the list shows today: the sky's hint keeps out of the way of "Today" while another day is shown.)
+        var viewingToday by remember { mutableStateOf(true) }
         SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup,
-            showScrubHint = !u.settings.scrubHintDone && previewScrub == null, onScrubbed = onScrubbed)
+            showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed)
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             val pager = rememberPagerState(initialPage = DateWindow.pageOf(initialDate ?: today)) { DateWindow.pageCount }
             val shown = DateWindow.dateOf(pager.currentPage)
+            androidx.compose.runtime.SideEffect { viewingToday = shown == today }
             val todayPage = DateWindow.pageOf(today)
 
             // Follow the calendar over midnight when the user was looking at "today".
@@ -305,7 +317,7 @@ fun TodayContent(
             HorizontalPager(state = pager, beyondViewportPageCount = 1, pageSpacing = 24.dp, verticalAlignment = Alignment.Top) { page ->
                 val date = DateWindow.dateOf(page)
                 val day = remember(date, u.settings, u.place, u.profile) { dayFor(date) }
-                if (day != null) Timeline(day.day, date, isToday = date == today, u, f, home, onOpenPrayer)
+                if (day != null) Timeline(day.day, date, isToday = date == today, u, f, home, onOpenPrayer, onToggleAlert)
             }
             // Where the times come from and the method now live in Settings (0.9.2); the home screen is the day itself.
             Spacer(Modifier.height(contentPadding.calculateBottomPadding() + 10.dp))
@@ -531,6 +543,18 @@ private fun SkyHeader(
                     } else {
                         Box(Modifier.arrives(2, Opening.HEADER_AT, lift = 12.dp)) { title(true) }
                         Box(Modifier.arrives(4, Opening.HEADER_AT, lift = 22.dp)) { Countdown(countdownText, hero.countdownMax) }
+                        // 0.15: what the number counts, in words ("until Maghrib", "since Asr began"): a sign alone
+                        // had to be learned, and "+15:21" read as a time of day.
+                        Text(
+                            when {
+                                !cd.elapsed -> stringResource(R.string.cd_until, f.prayerName(cd.event.prayer, cd.event.date))
+                                cd.event.prayer == com.noor.prayer.Prayer.SHURUQ -> stringResource(R.string.cd_since_sunrise)
+                                else -> stringResource(R.string.cd_since, f.prayerName(cd.event.prayer, cd.event.date))
+                            },
+                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, letterSpacing = 0.2.sp, shadow = SkyText.Shadow),
+                            color = Sky.OnSkySecondary, maxLines = 1,
+                            modifier = Modifier.offset(y = (-4).dp).arrives(5, Opening.HEADER_AT, lift = 22.dp).clearAndSetSemantics { },
+                        )
                     }
                 }
                 if (away > 0f) {
@@ -790,7 +814,10 @@ private fun DateBar(
                 Spacer(Modifier.width(2.dp))
                 Icon(Icons.Rounded.KeyboardArrowDown, null, tint = c.textMuted, modifier = Modifier.size(18.dp))
             }
-            Text(f.hijri(hijri), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, letterSpacing = 0.2.sp), color = c.goldText, maxLines = 1, textAlign = TextAlign.Center)
+            // (0.15: and the day's name when it is one of the year's great days: "1 Shawwal 1448 AH · Eid al-Fitr".)
+            val occasion = occasionOf(hijri)
+            Text(f.hijri(hijri) + (occasion?.let { " · " + if (f.arabic) it.ar else it.en } ?: ""), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, letterSpacing = 0.2.sp),
+                color = c.goldText, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         }
         DayArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.next_day), canNext, onNext)
     }
@@ -833,7 +860,8 @@ private fun DayArrow(icon: androidx.compose.ui.graphics.vector.ImageVector, labe
  * from the current moment towards the next. Past moments are quiet; the current one is lit.
  */
 @Composable
-private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter, home: HomeLayout, onOpenPrayer: (Prayer) -> Unit = {}) {
+private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter, home: HomeLayout, onOpenPrayer: (Prayer) -> Unit = {},
+                     onToggleAlert: (Prayer, Boolean) -> Unit = { _, _ -> }) {
     val c = NoorTheme.colors
     val st = u.state
     val current = if (isToday) st?.current?.takeIf { it.date == date }?.prayer else null
@@ -878,7 +906,7 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
                 bell = when { !alerting -> Icons.Rounded.NotificationsOff; alert.mode.playsAudio -> Icons.Rounded.NotificationsActive; else -> Icons.Rounded.NotificationsNone },
                 bellOn = alerting,
                 bellText = stringResource(R.string.today_row_alert, stringResource(if (alerting) com.noor.app.ui.adhan.modeLabel(alert.mode) else R.string.adhan_off)),
-                onClick = { onOpenPrayer(p) },
+                onClick = { onOpenPrayer(p) }, onBell = { on -> onToggleAlert(p, on) },
                 modifier = Modifier.arrives(i + 1, Opening.PANEL_AT),
             )
         }
@@ -898,7 +926,7 @@ private fun TimelineRow(
     lineAboveDone: Boolean, lineBelowDone: Boolean, fillAbove: Float, fillBelow: Float, f: Formatter,
     height: Dp = 54.dp, minor: Boolean = false,
     bell: androidx.compose.ui.graphics.vector.ImageVector? = null, bellOn: Boolean = false, bellText: String? = null,
-    onClick: (() -> Unit)? = null, modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null, onBell: ((Boolean) -> Unit)? = null, modifier: Modifier = Modifier,
 ) {
     val c = NoorTheme.colors
     val fg = if (passed) c.textMuted else c.textPrimary
@@ -946,8 +974,20 @@ private fun TimelineRow(
                 color = if (isNext) c.goldText else fg)
             if (time.second != null) Text(" " + time.second, style = MaterialTheme.typography.labelMedium, color = if (passed) c.textMuted else c.textSecondary, modifier = Modifier.padding(bottom = 3.dp))
         }
-        if (bell != null) Box(Modifier.width(34.dp), contentAlignment = Alignment.CenterEnd) {
-            Icon(bell, bellText, tint = if (bellOn) c.textSecondary.copy(alpha = if (passed) 0.6f else 0.9f) else c.textMuted.copy(alpha = 0.45f), modifier = Modifier.size(if (minor) 16.dp else 18.dp))
+        // 0.15: the bell is a switch of its own, as in other prayer apps: one touch turns this prayer's alert on or
+        // off (its kind and sound stay as chosen; the row opens them). Gold when it will alert: it can be acted on.
+        if (bell != null) {
+            val haptics = LocalHapticFeedback.current
+            Box(
+                Modifier.size(44.dp).clip(CircleShape)
+                    .then(if (onBell != null) Modifier.toggleable(bellOn, role = androidx.compose.ui.semantics.Role.Switch) { on ->
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onBell(on)
+                    } else Modifier)
+                    .semantics { if (bellText != null) contentDescription = bellText },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(bell, null, tint = if (bellOn) c.gold.copy(alpha = if (passed) 0.6f else 1f) else c.textMuted.copy(alpha = 0.55f), modifier = Modifier.size(if (minor) 17.dp else 19.dp))
+            }
         } else Spacer(Modifier.width(8.dp))
     }
 }

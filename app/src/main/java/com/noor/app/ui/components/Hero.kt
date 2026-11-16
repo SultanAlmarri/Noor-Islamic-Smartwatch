@@ -46,6 +46,7 @@ fun HeroCard(
     modifier: Modifier = Modifier,
     overline: String? = null,
     subtitle: String? = null,
+    subtitleColor: Color? = null,
     onClick: (() -> Unit)? = null,
     onClickLabel: String? = null,
     trailing: (@Composable () -> Unit)? = null,
@@ -72,7 +73,7 @@ fun HeroCard(
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, letterSpacing = 1.0.sp, fontWeight = FontWeight.SemiBold))
                 Text(title, color = c.textPrimary,
                     style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp))
-                if (subtitle != null) Text(subtitle, color = c.textSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))
+                if (subtitle != null) Text(subtitle, color = subtitleColor ?: c.textSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))
             }
             if (trailing != null) { Spacer(Modifier.width(12.dp)); trailing() }
         }

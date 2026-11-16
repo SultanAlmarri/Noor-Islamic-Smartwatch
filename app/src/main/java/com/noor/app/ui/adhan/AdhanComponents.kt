@@ -53,7 +53,7 @@ fun BackHeader(title: String, onBack: () -> Unit) = com.noor.app.ui.components.N
  * action, named in gold under the explanation, so nothing is squeezed beside a button), or a line of plain status.
  */
 @Composable
-fun WarningRow(text: String, action: String?, onAction: (() -> Unit)?, icon: ImageVector = Icons.Rounded.WarningAmber) {
+fun WarningRow(text: String, action: String?, onAction: (() -> Unit)?, icon: ImageVector = Icons.Rounded.WarningAmber, danger: Boolean = false) {
     val c = NoorTheme.colors
     val warn = icon == Icons.Rounded.WarningAmber
     Row(
@@ -62,10 +62,10 @@ fun WarningRow(text: String, action: String?, onAction: (() -> Unit)?, icon: Ima
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        com.noor.app.ui.settings.IconTile(icon, if (warn) c.warning else c.textSecondary)
+        com.noor.app.ui.settings.IconTile(icon, if (danger) c.danger else if (warn) c.warning else c.textSecondary)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(text, style = com.noor.app.ui.settings.FootnoteStyle.copy(fontSize = 14.sp, lineHeight = 20.sp), color = if (warn) c.textPrimary else c.textSecondary)
+            Text(text, style = com.noor.app.ui.settings.FootnoteStyle.copy(fontSize = 14.sp, lineHeight = 20.sp), color = if (warn || danger) c.textPrimary else c.textSecondary)
             if (action != null && onAction != null) Text(action, style = MaterialTheme.typography.labelLarge, color = c.goldText, modifier = Modifier.padding(top = 4.dp))
         }
     }

@@ -152,6 +152,8 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     private fun update(change: (AlertSettings) -> AlertSettings) = viewModelScope.launch { repo.updateAlerts(change) }
 
     fun setEnabled(on: Boolean) = update { it.copy(enabled = on) }
+    /** The alerts turned on from one prayer's switch (0.15): that prayer alone alerts. */
+    fun enableOnly(p: Prayer) = update { s -> Prayer.entries.fold(s.copy(enabled = true)) { x, q -> x.with(q, x.alert(q).copy(enabled = q == p)) } }
     fun setDevice(d: AlertDevice) = update { it.copy(device = d) }
     fun setGradual(seconds: Int) = update { it.copy(gradualSeconds = seconds) }
     fun setReminder(minutes: Int) = update { it.copy(reminderMinutes = minutes.takeIf { m -> m in AlertSettings.REMINDER_CHOICES } ?: 0) }

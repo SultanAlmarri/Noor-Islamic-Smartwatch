@@ -130,8 +130,13 @@ fun PrayerAlertScreen(
             })
         }
         SettingsSection("", footer = if (prayer == Prayer.SHURUQ) stringResource(R.string.adhan_sunrise_note) else null) {
-            SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_alert_for, f.prayerName(prayer)), null, a.enabled) { on ->
-                vm.setPrayer(prayer) { it.copy(enabled = on) }
+            // (0.15: the switch says what will happen: off while all alerts are off. Turned on then, it turns the
+            // alerts on for this prayer alone, as on the Adhan tab.)
+            SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_alert_for, f.prayerName(prayer)), null, alerts.enabled && a.enabled) { on ->
+                if (on && !alerts.enabled) {
+                    vm.enableOnly(prayer)
+                    if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else vm.setPrayer(prayer) { it.copy(enabled = on) }
             }
         }
 
@@ -144,7 +149,8 @@ fun PrayerAlertScreen(
                 when (a.mode) {
                     AlertMode.NOTIFICATION -> SectionFooter(stringResource(R.string.adhan_notification_desc))
                     AlertMode.SILENT -> SectionFooter(stringResource(R.string.adhan_silent_desc))
-                    else -> Unit
+                    // 0.15: what will play, named, whatever the list below shows first.
+                    else -> SectionFooter(stringResource(R.string.adhan_plays, summary(a, prayer, lib, custom, ar)))
                 }
             }
 
@@ -287,11 +293,24 @@ private fun ModeTiles(modes: List<AlertMode>, selected: AlertMode, onSelect: (Al
                         Text(stringResource(modeLabel(m)), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, letterSpacing = 0.sp, lineHeight = 18.sp,
                             fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium),
                             color = if (on) c.goldText else c.textPrimary, textAlign = TextAlign.Center, maxLines = 2)
+                        // 0.15: what each kind is, in three words, so "Sound", "Notification" and "Silent" need not be tried.
+                        Text(stringResource(modeHint(m)), style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp, letterSpacing = 0.sp, lineHeight = 14.sp),
+                            color = c.textSecondary, textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 2.dp))
                     }
                 }
             }
         }
     }
+}
+
+/** A kind of alert in three words (0.15). */
+internal fun modeHint(m: AlertMode): Int = when (m) {
+    AlertMode.ADHAN -> R.string.adhan_hint_adhan
+    AlertMode.ADHAN_SHORT -> R.string.adhan_hint_short
+    AlertMode.SOUND -> R.string.adhan_hint_sound
+    AlertMode.CUSTOM -> R.string.adhan_hint_custom
+    AlertMode.NOTIFICATION -> R.string.adhan_hint_notification
+    AlertMode.SILENT -> R.string.adhan_hint_silent
 }
 
 @Composable

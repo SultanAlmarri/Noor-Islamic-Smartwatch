@@ -156,6 +156,16 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         val official = runCatching { PrayerProvider.resolve(java.time.LocalDate.now(place.zone), place, profile, s, app.container.timetables).official }.getOrDefault(false)
         Triple(auth, profile, official)
     }
+    // The same, short, for the Prayer times page's card (its title already names the authority).
+    val basisShort = basis?.let { (auth, _, official) ->
+        stringResource(when {
+            official -> R.string.basis_official
+            auth == null -> R.string.basis_manual
+            auth.kind == com.noor.prayer.authority.SourceKind.VALIDATED_CALCULATION -> R.string.basis_validated
+            auth.kind == com.noor.prayer.authority.SourceKind.AUTHORITY_PARAMETERS -> R.string.basis_parameters
+            else -> R.string.basis_recognised
+        })
+    }
     val basisText = basis?.let { (auth, profile, official) ->
         val name = auth?.let { if (ar) it.nameAr else it.nameEn } ?: if (ar) profile.nameAr else profile.nameEn
         when {
@@ -174,10 +184,13 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     val precise = remember(s, resumed) { vm.hasPrecise() }
 
     val placeTitle = currentPlace?.let { if (ar) it.nameAr ?: it.nameEn else it.nameEn } ?: stringResource(R.string.location_unknown)
+    // 0.15: the school in use, named, also when it is the method's own ("Standard · the method's default"): "Method
+    // default" alone said nothing about which.
+    val methodAsr = basis?.second?.asrSchool ?: AsrSchool.STANDARD
+    val asrName: @Composable (AsrSchool) -> String = { a -> stringResource(if (a == AsrSchool.HANAFI) R.string.asr_hanafi else R.string.asr_standard) }
     val asrLabel = when (s.asrSchool) {
-        null -> stringResource(R.string.asr_profile_default)
-        AsrSchool.STANDARD -> stringResource(R.string.asr_standard)
-        AsrSchool.HANAFI -> stringResource(R.string.asr_hanafi)
+        null -> asrName(methodAsr) + " · " + stringResource(R.string.asr_profile_default)
+        else -> asrName(s.asrSchool!!)
     }
     val adj = s.offsets.entries.joinToString("  ") { (p, m) -> "${f.prayerName(p)} ${f.digits(if (m > 0) "+$m" else "$m")}" }
     val hijriValue = f.digits(if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}")
@@ -248,7 +261,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         add(SettingRow(0, Icons.Rounded.Public, stringResource(R.string.authority), profileName, stringResource(R.string.kw_authority), { dialog = Dialog.AUTHORITY }, page = times))
         add(SettingRow(0, Icons.Rounded.Schedule, stringResource(R.string.asr_method), asrLabel, stringResource(R.string.kw_asr), { dialog = Dialog.ASR }, page = times))
         add(SettingRow(0, Icons.Rounded.Tune, stringResource(R.string.adjustments), adj.ifEmpty { stringResource(R.string.adjustments_body) }, stringResource(R.string.kw_adjust), { dialog = Dialog.OFFSETS }, page = times))
-        add(SettingRow(UNTITLED_2, Icons.Rounded.Explore, stringResource(R.string.high_latitude), highLatLabel(s.highLatitudeRule), stringResource(R.string.kw_high_latitude), { dialog = Dialog.HIGH_LAT }, page = times))
+        // (Only where it can matter, 45° and beyond, or once it has been changed; search finds it anywhere.)
+        val farFromEquator = (currentPlace?.point?.latitude?.let { kotlin.math.abs(it) } ?: 0.0) >= 45.0
+        add(SettingRow(UNTITLED_2, Icons.Rounded.Explore, stringResource(R.string.high_latitude), highLatLabel(s.highLatitudeRule), stringResource(R.string.kw_high_latitude), { dialog = Dialog.HIGH_LAT }, page = times,
+            listed = farFromEquator || s.highLatitudeRule != HighLatitudeRule.ANGLE_BASED))
         add(SettingRow(UNTITLED_3, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), stringResource(R.string.times_accuracy_note), stringResource(R.string.kw_accuracy), onOpenAccuracy, page = times))
 
         // ---- Language and region: as on iOS, the language, how numbers and times are written, and the calendar.
@@ -258,7 +274,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             detail = stringResource(if (s.numerals == Numerals.WESTERN) R.string.numerals_western else R.string.numerals_arabic), page = lang))
         add(SettingRow(0, Icons.Rounded.AccessTime, stringResource(R.string.time_format), null, stringResource(R.string.kw_time), { dialog = Dialog.TIME },
             detail = stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24), page = lang))
-        add(SettingRow(R.string.settings_calendar, Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust), stringResource(R.string.hijri_adjust_value, hijriValue), stringResource(R.string.kw_hijri), null, page = lang) {
+        add(SettingRow(R.string.settings_calendar, Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust),
+            // (0.15: the date it gives today, which is what is being set; the stepper shows the days added.)
+            stringResource(R.string.hijri_today_is, f.hijri(com.noor.prayer.HijriDate.of(java.time.LocalDate.now(currentPlace?.zone ?: java.time.ZoneId.systemDefault()), s.hijriAdjust))),
+            stringResource(R.string.kw_hijri), null, page = lang) {
             Stepper(hijriValue, { vm.setHijriAdjust(s.hijriAdjust - 1) }, { vm.setHijriAdjust(s.hijriAdjust + 1) })
         })
     }
@@ -335,7 +354,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 // What the times follow now, and on what grounds (official timetable, checked calculation...).
                 com.noor.app.ui.components.HeroCard(
                     icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.Verified),
-                    overline = stringResource(R.string.times_follow), title = timesName, subtitle = basisText,
+                    overline = stringResource(R.string.times_follow), title = timesName, subtitle = basisShort,
                 )
                 groups(SettingsPage.TIMES)
             }
@@ -363,7 +382,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         )
         Dialog.ASR -> ChoiceDialog(
             stringResource(R.string.asr_method),
-            listOf<Pair<AsrSchool?, String>>(null to stringResource(R.string.asr_profile_default),
+            listOf<Pair<AsrSchool?, String>>(null to stringResource(R.string.asr_profile_default) + "\n" + asrName(methodAsr),
                 AsrSchool.STANDARD to stringResource(R.string.asr_standard), AsrSchool.HANAFI to stringResource(R.string.asr_hanafi)),
             s.asrSchool, onSelect = { vm.setAsr(it) }, onDismiss = { dialog = Dialog.NONE },
         )

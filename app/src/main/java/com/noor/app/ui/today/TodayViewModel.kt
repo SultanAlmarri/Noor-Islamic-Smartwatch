@@ -98,6 +98,19 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
         if (age > 30 * 60_000L) refresh()
     }
 
+    /**
+     * A prayer's alert on or off from its bell (0.15). With the alerts off altogether, turning one on turns them on
+     * for that prayer alone, as on the Adhan tab.
+     */
+    fun setAlert(p: com.noor.prayer.Prayer, on: Boolean) {
+        viewModelScope.launch {
+            container.settings.updateAlerts { s ->
+                if (on && !s.enabled) com.noor.prayer.Prayer.entries.fold(s.copy(enabled = true)) { x, q -> x.with(q, x.alert(q).copy(enabled = q == p)) }
+                else s.with(p, s.alert(p).copy(enabled = on))
+            }
+        }
+    }
+
     /** The sky has been drawn along: its hint has done its work (0.15). */
     fun scrubLearned() { viewModelScope.launch { container.settings.setScrubHintDone() } }
 

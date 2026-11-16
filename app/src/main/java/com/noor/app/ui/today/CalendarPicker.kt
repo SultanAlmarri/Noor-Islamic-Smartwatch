@@ -374,6 +374,9 @@ private fun DayCell(
         else -> c.textPrimary
     }
     val hijriLabel = if (hijri.day == 1) (if (f.arabic) hijri.monthNameAr else hijri.monthNameEn).split(' ', '-').first().take(5) else f.number(hijri.day)
+    // 0.15: the year's great days (Ramadan's first, the two Eids, Arafah, the new year, Ashura) carry a gold dot.
+    val occasion = occasionOf(hijri)
+    Box {
     Column(
         Modifier
             .size(44.dp)
@@ -383,7 +386,7 @@ private fun DayCell(
             .clickable(enabled = enabled, onClick = onClick)
             .semantics {
                 this.selected = isSelected
-                contentDescription = f.weekday(date) + " " + f.gregorianDate(date) + ", " + f.hijri(hijri)
+                contentDescription = f.weekday(date) + " " + f.gregorianDate(date) + ", " + f.hijri(hijri) + (occasion?.let { ", " + if (f.arabic) it.ar else it.en } ?: "")
             },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -395,7 +398,13 @@ private fun DayCell(
             color = when { isSelected -> c.onGold.copy(alpha = 0.75f); accent -> c.goldText; else -> c.textMuted },
             maxLines = 1)
     }
+    if (occasion != null) Box(Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 3.dp).size(6.dp).clip(CircleShape).background(if (isSelected) c.onGold else c.gold))
+    }
 }
+
+/** The great day of the Islamic year a Hijri date is, if it is one (the White Days, monthly, are left out). */
+internal fun occasionOf(h: HijriDate): com.noor.prayer.calendar.IslamicEvent? =
+    com.noor.prayer.calendar.IslamicEvent.entries.firstOrNull { !it.monthly && it.month == h.month && it.day == h.day }
 
 @Composable
 private fun <T> ChoiceGrid(

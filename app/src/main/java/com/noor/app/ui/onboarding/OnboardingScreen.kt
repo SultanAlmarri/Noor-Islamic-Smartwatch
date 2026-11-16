@@ -156,14 +156,16 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF14204A)),
                         modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
                     ) { Text(stringResource(when (s) { 0 -> R.string.perm_allow; 1 -> R.string.bg_perm_continue; else -> R.string.onb_adhan_on }), style = MaterialTheme.typography.titleMedium) }
-                    TextButton(onClick = {
+                    // (0.15: the other way is a button too, outlined: as text on the dawn it was easy to miss.)
+                    androidx.compose.material3.OutlinedButton(onClick = {
                         when (s) {
                             0 -> { thenCity = true; step = 2 }
                             1 -> step = 2
                             else -> finish()
                         }
-                    }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp)) {
-                        Text(stringResource(if (s == 0) R.string.perm_manual else R.string.bg_perm_not_now), color = Sky.OnSkySecondary, style = MaterialTheme.typography.titleSmall)
+                    }, shape = RoundedCornerShape(16.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Sky.OnSky.copy(alpha = 0.55f)),
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp).heightIn(min = 52.dp)) {
+                        Text(stringResource(if (s == 0) R.string.perm_manual else R.string.bg_perm_not_now), color = Sky.OnSky, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

@@ -205,7 +205,7 @@
     <string name="adhan_action_open">فتح</string>
     <string name="adhan_action_open_watch">فتح على الساعة</string>
     <string name="adhan_warn_channel">فئة إشعارات «الأذان» متوقفة في إعدادات النظام، فلا يمكن تشغيل الأذان.</string>
-    <string name="adhan_warn_exact">المنبّهات الدقيقة متوقفة: قد تتأخر التنبيهات بضع دقائق، وقد لا يسمح أندرويد إلا بأذان مختصر. اسمح بـ«المنبّهات والتذكيرات» لتطبيق نور ليُشغَّل الأذان كاملًا في وقته.</string>
+    <string name="adhan_warn_exact">قد تتأخر التنبيهات بضع دقائق، وقد لا يُشغَّل إلا أذان قصير. اسمح بـ«المنبّهات والتذكيرات» لنور.</string>
     <string name="adhan_warn_volume">مستوى صوت المنبّه صفر، فلن يُسمع الأذان.</string>
     <string name="adhan_warn_battery">بعض الهواتف تؤخّر المنبّهات لتوفير البطارية. إن تأخر تنبيه، اجعل استخدام البطارية لتطبيق نور «غير مقيّد».</string>
     <string name="adhan_warn_watch_notifications">الإشعارات متوقفة على %1$s. افتح نور على الساعة للسماح بها.</string>
@@ -374,7 +374,7 @@
     </plurals>
     <string name="adhan_public_domain">ملكية عامة</string>
     <string name="settings_notification_bar">شريط الإشعارات</string>
-    <string name="status_setting">أوقات الصلاة في شريط الإشعارات</string>
+    <string name="status_setting">شريط الإشعارات</string>
     <string name="status_setting_desc">الصلاة القادمة مع عدّ تنازلي مباشر، والتاريخ الهجري ومكانك، على بُعد سحبة دائمًا.</string>
     <string name="status_setting_note">صامت، ولا يكاد يستهلك البطارية: أندرويد نفسه يعدّ الثواني، ونور يحدّثه فقط عند كل صلاة وعند منتصف الليل. في أندرويد %1$s وما بعده يمكنك إزاحته، فيعود عند الصلاة التالية.</string>
     <string name="status_channel">أوقات الصلاة (ظاهرة دائمًا)</string>
@@ -572,4 +572,24 @@
     <string name="onb_adhan_title">استمع إلى الأذان عند كل صلاة</string>
     <string name="onb_adhan_body">يرفع نور الأذان عند دخول وقت كل صلاة، حتى والهاتف مقفل. ويمكنك اختيار أذان كل صلاة، أو صوتًا أهدأ، في أي وقت من تبويب الأذان.</string>
     <string name="onb_adhan_on">تشغيل الأذان</string>
+    <string name="cd_until">حتى %s</string>
+    <string name="cd_since">منذ دخول %s</string>
+    <string name="cd_since_sunrise">منذ الشروق</string>
+    <string name="adhan_prayers_footer_off">التنبيهات متوقفة. فعّل صلاة لتسمع أذانها، أو اضغط على الصلاة لتختار أذانها أو صوتها أولًا.</string>
+    <string name="adhan_hero_blocked">لن يُسمع حتى تُصلَح المشكلة أدناه.</string>
+    <string name="adhan_test_footer">اقفل الهاتف بعد الضغط: يجري الاختبار كما في وقت الصلاة تمامًا، وتُحفظ نتيجته في السجل.</string>
+    <string name="basis_official">أوقاتها المنشورة نفسها، لكل يوم.</string>
+    <string name="basis_validated">طريقتها نفسها، بعد مقارنتها بجدولها المنشور.</string>
+    <string name="basis_parameters">الطريقة الموثّق أنها تتبعها، ولم تُقارن بجدولها بعد.</string>
+    <string name="basis_recognised">طريقة شائعة الاستخدام، ولا يُقصد بها جدول رسمي هنا.</string>
+    <string name="basis_manual">الطريقة التي اخترتها.</string>
+    <string name="adhan_hint_adhan">الأذان كاملًا</string>
+    <string name="adhan_hint_short">مطلعه فقط</string>
+    <string name="adhan_hint_sound">نغمة قصيرة</string>
+    <string name="adhan_hint_custom">ملف من عندك</string>
+    <string name="adhan_hint_notification">صوت هاتفك</string>
+    <string name="adhan_hint_silent">دون صوت</string>
+    <string name="adhan_plays">يُشغَّل: %s</string>
+    <string name="hijri_today_is">اليوم: %s</string>
+    <string name="qibla_poor_hint">البوصلة غير متيقنة هنا: عايرها أولًا (أدناه).</string>
 </resources>

@@ -162,6 +162,11 @@ fun QiblaContent(
             if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(22.dp))
             Text(status, style = MaterialTheme.typography.titleMedium, color = statusColor, textAlign = TextAlign.Center)
         }
+        // 0.15: when the compass itself is unsure, the direction is not to be trusted yet: said here, where the eye
+        // is, and not only in the accuracy card below.
+        if (!noSensor && reading != null && reading.assessment.quality == CompassQuality.POOR && CompassIssue.NOT_FLAT !in reading.assessment.issues)
+            Text(stringResource(R.string.qibla_poor_hint), style = MaterialTheme.typography.bodyMedium, color = c.warning, textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
 
         // Readings, side by side: where the Qibla is, where the phone points, and the difference (two decimals each).
         GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
