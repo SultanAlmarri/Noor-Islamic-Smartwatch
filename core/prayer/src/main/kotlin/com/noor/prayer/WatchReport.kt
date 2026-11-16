@@ -39,6 +39,15 @@ data class WatchReport(
      * that once): the user chooses it on the watch (touch and hold the watch face).
      */
     val faceNeedsPick: Boolean? = null,
+    /**
+     * Minhad Studio (0.18): the watch can show the studio face (false on watches that launched with Wear OS 6, which
+     * run Watch Face Format faces only; null = an older watch app).
+     */
+    val studioSupported: Boolean? = null,
+    /** The studio face is the watch face in use. */
+    val studioActive: Boolean? = null,
+    /** The [com.noor.prayer.face.FaceDesign] the watch holds, by its stamp (the time the phone sent it). */
+    val studioStamp: Long? = null,
 ) {
     fun encode(): String = buildString {
         fun put(k: String, v: Any?) { if (v != null) append(k).append('=').append(v).append('\n') }
@@ -49,6 +58,7 @@ data class WatchReport(
         if (sounds.isNotEmpty()) put("sounds", sounds.sorted().joinToString(","))
         put("own", usingWatchSettings)
         put("faceVar", faceVariant); put("faceChosen", faceChosen); put("facePick", faceNeedsPick)
+        put("studio", studioSupported); put("studioOn", studioActive); put("studioAt", studioStamp)
     }
 
     companion object {
@@ -78,6 +88,9 @@ data class WatchReport(
                 faceVariant = m["faceVar"]?.takeIf { WatchFaces.parse(it) != null },
                 faceChosen = m["faceChosen"]?.takeIf { WatchFaces.parse(it) != null },
                 faceNeedsPick = m["facePick"]?.let { it == "true" },
+                studioSupported = m["studio"]?.let { it == "true" },
+                studioActive = m["studioOn"]?.let { it == "true" },
+                studioStamp = m["studioAt"]?.toLongOrNull(),
             )
         }.getOrNull()
     }
