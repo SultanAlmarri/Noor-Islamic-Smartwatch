@@ -140,9 +140,11 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
     NoorPage(stringResource(if (isNew) R.string.alarm_new else R.string.alarm_edit), contentPadding, onBack = onBack,
         floating = {
             // Cancel and Save, always in reach at the bottom, as in the Clock app.
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = contentPadding.calculateBottomPadding())) {
+            // (The bar's glass reaches the bottom edge, so nothing scrolls by under or below it.)
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
                 SnackbarHost(snackbar)
-                Row(Modifier.fillMaxWidth().background(com.noor.app.ui.theme.LocalBackdrop.current.top.copy(alpha = 0.94f))
+                Row(Modifier.fillMaxWidth().background(com.noor.app.ui.theme.LocalBackdrop.current.top.copy(alpha = 0.96f))
+                    .padding(bottom = contentPadding.calculateBottomPadding())
                     .padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NoorButton(stringResource(R.string.alarm_cancel), onBack, Modifier.weight(1f), kind = ButtonKind.Tonal)
                     NoorButton(stringResource(R.string.alarm_save), save, Modifier.weight(1f), enabled = total > 0)
