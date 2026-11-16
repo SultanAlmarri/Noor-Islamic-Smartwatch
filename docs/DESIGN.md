@@ -151,8 +151,9 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   **Pacific Northwest** (a still lake, dark conifers, Mount Rainier from the USGS elevation model, scanned stones and
   logs on the shore), **Arctic** (Reinefjorden in Lofoten as Norway's elevation model gives it: an unbroken wall of
   snow peaks over the fjord; the aurora), **Ocean** (a beach of golden sand, scanned from real beaches, its shore
-  running away into the distance, the open sea coming in on it, and the mountains of Musandam far across the water,
-  from the Copernicus elevation model), **Green hills** (the Diablo Range above a reservoir in spring, from the USGS
+  running away into the distance, the open sea coming in on it to an open horizon: the far mountains of 0.11 to
+  0.13 were taken out in 0.14 at the owner's word, "I want it to be like open ocean", by
+  `tools/scenery/open_horizon.py`), **Green hills** (the Diablo Range above a reservoir in spring, from the USGS
   elevation model, oaks, a meadow of scanned grass and flowers; it took the savanna's place in 0.11) and **Red
   rock** (Monument Valley from the USGS elevation model: Mitchell Mesa, Merrick Butte and the Mittens over the
   valley floor, scanned rock, earth and brush). Only nature: nothing man-made, no people.
@@ -197,16 +198,47 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   their thin parts form and melt (`layer.frag`). Lightning lights a thunderhead from within, where its tower
   stands: a pale glow by day, the brightest thing in the sky at dusk and by night, and the land flashes with it
   (`uFlash`; until 0.13 the flash was worked out and never drawn).
-- **Rain and snow (0.13).** What is far off stands behind more rain: the land fades into a grey veil with its
-  distance (a wood across a lake is a shape, a far ridge is gone), as rain is in a photograph. In front of it,
-  drops near the eye: short fine streaks of five sizes, leaning with the wind. Snow: flakes large and soft near
-  the eye, small far off, swaying down.
+- **Rain and snow (0.13, 0.14).** What is far off stands behind more rain: the land fades into a grey veil with
+  its distance, as rain is in a photograph. In front of it, drops near the eye: short fine streaks of five sizes,
+  leaning with the wind. Snow: flakes large and soft near the eye, small far off, swaying down. Since 0.14 a far
+  ridge fades to a shape and does not go (a light rain leaves it nearly whole, the heaviest a third of it), and it
+  rains only out of a sky that is closed, as far as it is closed (`SkyDirector.at`, `falling`).
+- **Far land stays in sight (0.14).** The owner, of 0.13: "distant terrain just turns invisible during midday".
+  Two causes, both in `landAt` (`scene.frag`). Mist was spread through the whole depth of the air (one scale height
+  for haze and mist alike), so the least mist, and the forest lake always has some, took a far mountain away: mist
+  now lies on the ground, some tens of metres deep (`HM`), where a far shore stands in it and a mountain's flank
+  does not. And the air in front of far land was given the colour of the sky right behind that land, which paints
+  a hazy mountain in exactly the colour it stands against: it now has the colour of the air near the horizon, taken
+  at two fixed heights (bluer than the horizon's own: a few miles of air are not all the air there is).
 - **The day's exposure (0.13).** With the Sun high everything is bright, and the filmic curve's shoulder pressed
   sunlit cloud, its shaded side and the blue of the sky into one pale range: 0.12's clouds were flat at midday,
   though their pictures hold a light and shade of ten to one (measured: `bench.meter()`). So the day is exposed for
   its brightest things (`exposure` in `final.frag`: 0.7 once the Sun is 28 degrees up, eased in from 6): the blue
-  deepens, the clouds keep their modelling, and the land is given some of the light back (`landAt`). The hours of
-  colour and the night keep the exposure they had.
+  deepens, the clouds keep their modelling, and the land is given some of the light back (`landAt`). The night
+  keeps the exposure it had.
+- **Sunrise and sunset (0.14).** The owner: "make the sunset and sunrise really beautiful... When you see a really
+  beautiful sunset, in real life... it reflects its colors on the clouds." Put beside photographs (Wikimedia
+  Commons: lakes at sunrise, a river at sunset, altocumulus just after sunset), 0.13's evening was grey clouds with
+  pale pink rims in a violet sky over one flat orange stripe. What was changed, and why:
+  - *Each cloud has the Sun of the place where it stands* (`layer.frag`, `elThere`). The view looks towards where
+    the Sun rises and sets, so a far cloud is nearer the Sun's side of the Earth: there the Sun stands a degree
+    higher for every 111 km, and the cloud is high besides. When the Sun has set for us the far clouds are still
+    gold, nearer ones orange and red, the nearest grey, and the high clouds burn longest. Until 0.13 a whole level
+    of cloud had one light: all lit, then all grey.
+  - *Light through thin cloud, and light under cloud.* Rendered under a low Sun, a cloud seen from the Sun's far
+    side is nearly black (the pictures are right: measured, a hundredth of the Sun's light). What a camera sees in
+    it is light coming through where the cloud is thin, most of it nearly straight on (`through`: thin cloud near
+    the Sun blazes; how thin, the picture lit by the sky above knows), and, once the Sun is lower than the cloud,
+    light running along its underside and catching its folds (the low Sun's own picture, its relief kept and its
+    strength raised, with a little of the picture lit from the ground).
+  - *The colour of the light.* `warm` (atmosphere.glsl) kept the last sunlight from being "only red" by lifting
+    its green and blue so far that every evening cloud was the same pale salmon: it now keeps much less. The sky
+    model had 2.2 times the real ozone (to keep twilight blue), which made sunlight pink and the upper sky violet:
+    now 1.5 times. Shade in the evening is slate (the whole blue dome lights it), not khaki.
+  - *The exposure and the tone.* The hour of colour is exposed for the bright sky round the Sun (`exposure` in
+    `final.frag`, `hourOfColour`), the land given most of that back; and the brighter a coloured light, the more of
+    it is toned channel by channel (`toneLinear`: orange goes to yellow and to white, as on film), so the glow runs
+    out of the Sun's place by degrees and the Sun is not lost in it. A fuller glare round a low Sun.
 - **The Sun and the clouds (0.12).** The Sun is drawn low in the picture, where far clouds crowd together, though
   it stands high in the real sky, where gaps are wide: left to the picture it was nearly always hidden. So whether
   a cloud is in front of the Sun is the weather's say (`SkyState.sunPart`): clouds pass over it now and then, the
@@ -250,8 +282,15 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
 - **Life.** Grass and leaves stir (and bend to a touch's breath of wind), a flock of distant birds crosses the day
   sky every few minutes, water moves, clouds drift, stars twinkle, the aurora plays over the Arctic.
 - **Seasons, if asked for.** Settings → Home scenery → Seasons (off by default, the owner's decision): on, the
-  scenery follows the real season of the user's place (snow where it lies in winter); off, every scenery keeps the
-  time of year it looks best in (`Biome.signatureYear`).
+  scenery follows the real season of the user's place; off, every scenery keeps the time of year it looks best in
+  (`Biome.signatureYear`). Until 0.13 a season was snow or no snow, and the owner said so: "it's just snow and
+  that's it. The trees don't change color... I want it to be like actual seasons." Since 0.14 a scenery may hold
+  its land's colours again for its other seasons (`a_<season>.webp`, `k_<season>.webp` beside the base pictures,
+  named in `land.json`: `season`, `seasons`, `winterBaked`; the light pictures are shared, so the land's forms stay
+  the same or nearly). The renderer shows the two seasons the day lies between (`Seasons` in `RealSkyFrame.kt`,
+  the same in the bench): each whole for a while round its fullest (late January, late April, late July, the start
+  of November: the land follows the Sun by a month and more), the one passing into the other over some weeks.
+  Where the winter's pictures carry their own snow, the renderer lays none of its own.
 - **Weather** ("Showcase"): invented, never copied from a forecast, but always something the real atmosphere does.
   `SkyDirector` gives each day at each place a character, evolving hour by hour and arranged as a landscape
   photographer hopes to find it (cloud to catch the colour at sunrise and sunset with room left for the Sun, mostly
