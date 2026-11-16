@@ -495,7 +495,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
      * (0.18) Pictures are read by two or three threads at once (they were read one after another: a start that needed
      * thirty pictures waited for each in turn, and the opening ran on the waiting sky).
      */
-    private val decoders = 1   // EXPERIMENT B
+    private val decoders = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 3)
     private val loader = java.util.concurrent.ThreadPoolExecutor(decoders, decoders, 20L, java.util.concurrent.TimeUnit.SECONDS, queue) { r ->
         Thread(r, "NoorSkyPictures").apply { priority = Thread.NORM_PRIORITY - 2; isDaemon = true }
     }.apply { allowCoreThreadTimeOut(true) }
