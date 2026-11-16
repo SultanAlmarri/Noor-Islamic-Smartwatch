@@ -104,5 +104,8 @@
   0.10305958132045089,
   0.1111111111111111
  ],
- "season": "summer"
+ "season": "summer",
+ "seasons": [
+  "autumn"
+ ]
 }

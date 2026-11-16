@@ -15,6 +15,19 @@ folder), as the Poly Haven API serves them; the elevation tile in .../assets/usg
 
 NOOR_STAGE (environment) builds less for quick looks: 'land' the ground alone, 'trees' the ground and the oaks.
 NOOR_SAMPLES sets the samples of a preview.
+
+Seasons (0.14; the owner: "the trees don't change color... I want it to be like actual seasons"). The pictures that
+were baked are spring's; NOOR_SEASON=summer, autumn or winter builds the scene in that season for a colour pass:
+
+    NOOR_SEASON=summer blender -b --factory-startup -t 3 -P tools/scenery/meadow.py -- colour <out dir>
+    NOOR_SEASON=summer blender -b --factory-startup -t 3 -P tools/scenery/meadow.py -- colourpack <out dir>
+
+with <out dir>/land a copy of the shipped set: they add a_<season>.webp and k_<season>.webp to it. What changes is
+what California's hills do: the grass is green from the winter rains to April and has dried to straw-gold by
+June, tawny through the autumn until the first rains green it again; the blue and valley oaks (half of the oaks)
+come into fresh leaf in spring, are a dusty blue-green in summer, turn gold, amber and russet unevenly in autumn and
+stand bare in winter; the coast live oaks keep their leaves; the wildflowers are spring's. Snow is not baked: the
+renderer lays it on the rare winter days that have it.
 """
 import math
 import os
@@ -31,6 +44,7 @@ import meadow_terrain as mt       # noqa: E402
 
 EYE = 1.7                         # metres above the grass we stand on
 STAGE = os.environ.get('NOOR_STAGE', 'all')
+SEASON = os.environ.get('NOOR_SEASON', 'spring')   # the baked pictures are spring's
 MODE = bake.args()[0]
 OUT = bake.args()[1]
 LAND = mt.land(OUT)
@@ -290,9 +304,14 @@ def grass_material(out):
     med = g.noise(xy, 1.0 / 23.0, 4.0, 0.6)
     small = g.noise(xy, 1.0 / 2.6, 3.0, 0.6)
     # (A flat surface has none of the shade that lies between real blades: these are grass as a whole sward shows.)
-    lush = (0.026, 0.086, 0.011)
-    fresh = (0.056, 0.150, 0.018)
-    pale = (0.110, 0.180, 0.034)
+    lush, fresh, pale = {
+        'spring': ((0.026, 0.086, 0.011), (0.056, 0.150, 0.018), (0.110, 0.180, 0.034)),
+        # Wild oats and brome dried on the slopes: straw and tawny gold; still a dull green down the wettest hollows.
+        'summer': ((0.090, 0.085, 0.030), (0.300, 0.205, 0.075), (0.420, 0.300, 0.120)),
+        'autumn': ((0.070, 0.085, 0.030), (0.230, 0.160, 0.065), (0.300, 0.215, 0.100)),
+        # After the first rains: short new green through the old thatch, browner on the crests.
+        'winter': ((0.030, 0.070, 0.015), (0.070, 0.110, 0.028), (0.160, 0.140, 0.060)),
+    }[SEASON]
     c = g.mix(g.ramp(big, 0.38, 0.62), lush, fresh)
     dry = g.math('ADD', g.ramp(crest, 1.0, 9.0), g.math('MULTIPLY', g.ramp(med, 0.45, 0.75), 0.35), clamp=True)
     c = g.mix(g.math('MULTIPLY', dry, 0.34), c, pale)
@@ -321,9 +340,10 @@ def grass_material(out):
     g.link(pos, dsep.inputs[0])
     away = g.ramp(dsep.outputs['Value'], 25.0, 140.0)
     speck = g.ramp(g.noise(xy, 1.0 / 1.3, 2.0, 0.7), 0.42, 0.62)
-    c = g.mix(g.math('MULTIPLY', g.math('MULTIPLY', fsep.outputs[0], speck), g.math('MULTIPLY', away, 0.80)), c, (0.46, 0.34, 0.02))
+    bloom = 1.0 if SEASON == 'spring' else 0.0                 # (the flowers are spring's)
+    c = g.mix(g.math('MULTIPLY', g.math('MULTIPLY', fsep.outputs[0], speck), g.math('MULTIPLY', away, 0.80 * bloom)), c, (0.46, 0.34, 0.02))
     speck2 = g.ramp(g.noise(xy, 1.0 / 1.7, 2.0, 0.7), 0.45, 0.65)
-    c = g.mix(g.math('MULTIPLY', g.math('MULTIPLY', fsep.outputs[1], speck2), g.math('MULTIPLY', away, 0.55)), c, (0.10, 0.06, 0.26))
+    c = g.mix(g.math('MULTIPLY', g.math('MULTIPLY', fsep.outputs[1], speck2), g.math('MULTIPLY', away, 0.55 * bloom)), c, (0.10, 0.06, 0.26))
     # The far grassland takes its mottling from an aerial scan of real grass and stones (laid out twice at
     # different sizes, so no patch repeats); its hue stays the spring green above.
     def aerial(size, turn):
@@ -467,7 +487,7 @@ def oak_density(x, y, d):
     return rho
 
 
-def scatter_oaks(bark, leaf):
+def scatter_oaks(bark, leaf, leaf_d=None):
     """The oaks of the hills, out to where the near ground ends (six kilometres)."""
     rng = np.random.default_rng(21)
     n = 420000
@@ -495,14 +515,19 @@ def scatter_oaks(bark, leaf):
     for k, spec in enumerate(OAKS):
         tree = broadleaf.grow(**spec)
         sel = kind == k
-        child = broadleaf.to_object(tree, 'Oak%d' % k, bark, leaf)
+        dec = leaf_d is not None and k in DECIDUOUS
+        if dec and SEASON == 'winter':
+            tree = bare(tree, spec['seed'])
+        child = broadleaf.to_object(tree, 'Oak%d' % k, bark, leaf_d if dec else leaf)
         stand('Oaks%d' % k, child, x[sel], y[sel], z[sel] - 0.12, size[sel], yaw[sel])
     print('oaks standing:', len(x), flush=True)
 
 
-def single_oak(name, spec, x, y, bark, leaf, yaw=0.0):
+def single_oak(name, spec, x, y, bark, leaf, yaw=0.0, deciduous=False):
     """One oak of its own at a chosen place."""
     tree = broadleaf.grow(**spec)
+    if deciduous and SEASON == 'winter':
+        tree = bare(tree, spec['seed'])
     z = float(land_height(np.array([x]), np.array([y]))[0]) - 0.12
     c, sn = math.cos(yaw), math.sin(yaw)
     for key in ('wood_co', 'leaf_co'):
@@ -549,16 +574,74 @@ def thorns():
     print('small trees:', len(x), flush=True)
 
 
+# Which oaks lose their leaves: the blue and valley oaks (the odd kinds of OAKS, and the oak on the brow); the
+# coast live oaks keep theirs (the even kinds, and the one beside us).
+DECIDUOUS = (0, 2, 4)
+
+
+def season_leaves(leaf):
+    """The season in an oak's leaves (the blue and valley oaks'): fresh yellow-green in spring, a dusty blue-green in
+    summer, in autumn gold, amber, russet and brown, no two trees at the same stage and some still green."""
+    nt = leaf.node_tree
+    bsdf = nt.nodes['Principled BSDF']
+    src = bsdf.inputs['Base Color'].links[0].from_socket
+    users = [lk.to_socket for lk in nt.links if lk.from_socket == src]
+    info = nt.nodes.new('ShaderNodeObjectInfo')
+    mix = nt.nodes.new('ShaderNodeMix')
+    mix.data_type = 'RGBA'
+    a = [q for q in mix.inputs if q.name == 'A' and q.type == 'RGBA'][0]
+    b = [q for q in mix.inputs if q.name == 'B' and q.type == 'RGBA'][0]
+    nt.links.new(src, a)
+    if SEASON == 'autumn':
+        mix.blend_type = 'MIX'
+        ramp = nt.nodes.new('ShaderNodeValToRGB')
+        el = ramp.color_ramp.elements
+        stops = [(0.0, (0.060, 0.075, 0.022)), (0.18, (0.200, 0.150, 0.025)), (0.40, (0.300, 0.190, 0.030)),
+                 (0.62, (0.280, 0.110, 0.020)), (0.82, (0.160, 0.050, 0.016)), (1.0, (0.110, 0.070, 0.030))]
+        el[0].position, el[0].color = stops[0][0], (*stops[0][1], 1.0)
+        el[1].position, el[1].color = stops[-1][0], (*stops[-1][1], 1.0)
+        for p, c in stops[1:-1]:
+            e = el.new(p)
+            e.color = (*c, 1.0)
+        nt.links.new(info.outputs['Random'], ramp.inputs['Fac'])
+        nt.links.new(ramp.outputs['Color'], b)
+        mix.inputs['Factor'].default_value = 0.88
+    else:
+        mix.blend_type = 'MULTIPLY'
+        mix.inputs['Factor'].default_value = 1.0
+        b.default_value = {'spring': (1.12, 1.22, 0.62, 1.0), 'summer': (0.82, 0.92, 1.04, 1.0), 'winter': (1.0, 1.0, 1.0, 1.0)}[SEASON]
+    out = [q for q in mix.outputs if q.type == 'RGBA'][0]
+    for u in users:
+        nt.links.new(out, u)
+
+
+def bare(tree, seed):
+    """A tree without its leaves (winter): its finest twigs where the leaves were, as the Red Rock's trees have them."""
+    import canyon_plants
+    rng = np.random.default_rng(seed * 7 + 3)
+    tw_co, tw_f = canyon_plants.twig_sprays(rng, tree, 9000, 0.8)
+    tree['wood_faces'] = np.concatenate([tree['wood_faces'], tw_f + len(tree['wood_co'])])
+    tree['wood_co'] = np.concatenate([tree['wood_co'], tw_co])
+    for key in ('leaf_co', 'leaf_faces', 'leaf_col', 'leaf_tip'):
+        if key in tree:
+            tree[key] = tree[key][:0]
+    return tree
+
+
 def oaks():
     bark, leaf = broadleaf.materials()
+    _, leaf_d = broadleaf.materials()
+    leaf_d.name = 'LeavesDeciduous'
+    season_leaves(leaf_d)
     oak_bark(bark)
     bake.add_mask(bark, wind=0.0, snow=0.15)
     bake.add_mask(leaf, wind=1.0, snow=0.3)
-    scatter_oaks(bark, leaf)
-    # An oak on the brow of our rise, right of the lake: the picture's nearer ground.
+    bake.add_mask(leaf_d, wind=1.0, snow=0.3)
+    scatter_oaks(bark, leaf, leaf_d)
+    # An oak on the brow of our rise, right of the lake: the picture's nearer ground (a valley oak).
     single_oak('BrowOak', dict(seed=41, height=12.5, radius=8.5, trunk=2.5, girth=0.65, points=6200, leaves_per_twig=44, leaf=0.15),
-               30.0, 150.0, bark, leaf, yaw=1.1)
-    # And one beside us, its trunk out of the picture to the right, its boughs reaching into the edge.
+               30.0, 150.0, bark, leaf_d, yaw=1.1, deciduous=True)
+    # And one beside us, its trunk out of the picture to the right, its boughs reaching into the edge (a live oak).
     single_oak('NearOak', dict(seed=42, height=14.0, radius=9.0, trunk=3.0, girth=0.8, points=9000, step=0.30, kill=0.5,
                                leaves_per_twig=70, leaf=0.10, droop=0.5),
                21.0, 31.0, bark, leaf, yaw=2.4)
@@ -593,7 +676,12 @@ def wedge(rng, n, d0, d1, half=25.6):
     return d * np.sin(b), d * np.cos(b), d
 
 
-GREENS = np.array([[0.040, 0.120, 0.018], [0.085, 0.200, 0.032], [0.150, 0.240, 0.048], [0.340, 0.290, 0.130]])
+GREENS = np.array({
+    'spring': [[0.040, 0.120, 0.018], [0.085, 0.200, 0.032], [0.150, 0.240, 0.048], [0.340, 0.290, 0.130]],
+    'summer': [[0.230, 0.170, 0.065], [0.380, 0.280, 0.110], [0.450, 0.350, 0.160], [0.300, 0.230, 0.100]],
+    'autumn': [[0.180, 0.135, 0.055], [0.300, 0.220, 0.090], [0.360, 0.270, 0.120], [0.060, 0.120, 0.025]],
+    'winter': [[0.040, 0.095, 0.018], [0.070, 0.130, 0.030], [0.200, 0.170, 0.080], [0.150, 0.120, 0.060]],
+}[SEASON])
 ROOT = np.array([0.13, 0.15, 0.055])
 STRAW = np.array([0.40, 0.33, 0.17])
 
@@ -683,7 +771,8 @@ def sward():
                          and any(k in n for k in ('tall_', 'mid_', 'large_a', 'large_b', 'small_a')))
     kinds += scan_objects('grass_medium_02', lambda n: n in ('grass_medium_02_c', 'grass_medium_02_d', 'grass_medium_02_e'))
     for ob in kinds:
-        dress(ob, 1.0, 0.6, hue=(0.582, 1.6, 0.80))
+        dress(ob, 1.0, 0.6, hue={'spring': (0.582, 1.6, 0.80), 'summer': (0.50, 0.95, 1.05), 'autumn': (0.49, 0.85, 0.95),
+                                  'winter': (0.55, 1.15, 0.80)}[SEASON])
     weight = np.array([3.0 if 'tall' in ob.name else 1.6 if 'mid' in ob.name or '02_' in ob.name else 1.0 for ob in kinds])
     xs, ys, ss = [], [], []
     #        from  to     per m2  size
@@ -785,7 +874,8 @@ def build():
     if STAGE == 'all':
         sward()
         stalks(plant_material())
-        flowers()
+        if SEASON == 'spring':
+            flowers()
         rocks()
     if MODE in ('preview', 'look'):
         lake_water()
@@ -806,6 +896,21 @@ def _bake_pack(src, dst, suns, eye, aovs=(), quality=80, frame='0001', water=Non
 
 
 bake.bake_render, bake.bake_pack = _bake_render, _bake_pack
+_crender, _cpack = bake.colour_render, bake.colour_pack
 
+
+def _colour_render(out, yaw=0.0, samples=256):
+    return _crender(out, yaw=yaw, samples=int(os.environ.get('NOOR_COLOUR_SAMPLES', 128)))
+
+
+def _colour_pack(src, dst, season, quality=80, frame='0001', extra=None):
+    return _cpack(src, dst, season, quality=int(os.environ.get('NOOR_BAKE_QUALITY', 38)), frame=frame, extra=extra)
+
+
+bake.colour_render, bake.colour_pack = _colour_render, _colour_pack
+
+if MODE in ('bake', 'bakefast', 'bakepart', 'pack', 'packparts') and SEASON != 'spring':
+    raise SystemExit('the base set is baked in spring: unset NOOR_SEASON (other seasons are made with `colour`)')
 bake.run(build, (0.0, 0.0, EYE), aovs=('mask',), exposure=-2.3,
-         water_level=None if MODE in ('preview', 'look') else float(LAND['water']))
+         water_level=None if MODE in ('preview', 'look') else float(LAND['water']), season=SEASON,
+         extra={'season': 'spring'} if MODE in ('bake', 'bakefast', 'pack', 'packparts') else None)
