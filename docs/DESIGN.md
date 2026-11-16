@@ -198,6 +198,45 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
   their thin parts form and melt (`layer.frag`). Lightning lights a thunderhead from within, where its tower
   stands: a pale glow by day, the brightest thing in the sky at dusk and by night, and the land flashes with it
   (`uFlash`; until 0.13 the flash was worked out and never drawn).
+- **Lightning that lights the cloud (0.14).** 0.13's flash was a round white glow a quarter of the sky wide laid
+  over the thunderhead: the cloud was gone under it. A stroke inside a cloud lights the cloud: a bright heart where
+  it is, a glow through the body round it, the cloud's own folds answering (the bright ones more, so its forms
+  stand out in the flash), veins of light that differ with every stroke. Two strokes in five reach the ground: a
+  thin crooked line of light under the cloud's base, with a branch (`uBolt`, `bolt()` in `scene.frag`). Every set
+  named in `SkyDirector.THUNDER` flashes, at each of its towers, and while one is in the view the picture is
+  redrawn at every frame (a stroke lasts a few of them).
+- **The day is a walk through different skies (0.14).** The owner, of 0.13: "the same cloud types just keep
+  cycling over and over again, which is extremely boring... It's just overcast, and then it's overcast again... I
+  want the entire day to have a lot of variety... sometimes it's overcast, sometimes it's broken, sometimes it's
+  scattered, sometimes it's isolated clouds... That's not how real life works." Until then a leg's set was read off
+  the day's weather, and a day's weather has one character from midnight to midnight: an overcast day was
+  forty-four overcasts in a row, each the same picture passing again. Now the weather only says where the day
+  leans (how closed the low sky wants to be, hour by hour: open with a swell on a clear day, building through a
+  convective afternoon, closed for a spell of two and a half to five hours on an overcast or rainy day and open
+  before and after it), and each leg takes the sky nearest to that which the rules allow
+  (`SkyDirector.programme`, `walkLow`, `walkMid`, `walkHigh`):
+  - never the set that has just passed, and rather not the one before it;
+  - a sky closes and opens by degrees (no overcast wall to wall beside an open sky);
+  - a closed sky holds for three legs at most (an hour and three quarters), then breaks for a while, and of any
+    twelve hours it takes four and a half at most;
+  - the hours of sunrise and sunset (the place's own) keep room for the Sun under cloud that takes its colour,
+    unless the day's closed spell falls on them; deep night is mostly clear;
+  - thunderstorms in their hours, towers with the warmth of the day;
+  - every set also passes turned about, left for right, every other time (`CloudLeg.turned`; `uLay.w` in
+    `layer.frag`; lit from the other side; its own pictures in memory): the very same picture comes back half as
+    often.
+  How often a cloud stands over the Sun follows the sets on show. Measured over 240 days a scenery: the low sky is
+  closed for 1 % of the daylight over the dunes, 7 % over the forest lake, 2 to 5 % elsewhere; nearly every day
+  shows four or more kinds of low sky.
+- **Morning fog (0.14).** The owner: "early in the morning, you might have fog." On the mornings that have it
+  (most often over the forest lake and in the green hills' valley, in the cold half of the year; now and then over
+  the sea, the fjord, the red rock and, as on the Gulf's winter mornings, the dunes; never on a stormy day) a
+  shallow fog gathers in the last hours of the night, is deepest about sunrise and is burnt off an hour or two
+  after it (`SkyState.fog`, `uFog`). It lies on the water where the scenery has water, else on the ground at the
+  eye's foot, some tens of metres deep, deeper where it is looked down on from a hill (a white sea in the green
+  hills' valley): along the ground the sight runs out in a few hundred metres, tree tops and mountains stand out of
+  it, the upper sky is clear over it, water mirrors it, and towards the low Sun it glows with the Sun's colour. It
+  lies in banks that drift.
 - **Rain and snow (0.13, 0.14).** What is far off stands behind more rain: the land fades into a grey veil with
   its distance, as rain is in a photograph. In front of it, drops near the eye: short fine streaks of five sizes,
   leaning with the wind. Snow: flakes large and soft near the eye, small far off, swaying down. Since 0.14 a far
