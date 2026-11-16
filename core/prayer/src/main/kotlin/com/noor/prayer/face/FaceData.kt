@@ -89,24 +89,27 @@ data class FaceData(
             val t = FaceText(arabic, arabicDigits, h24)
             val local = now.atZone(zone)
             val today = local.toLocalDate()
+            // Prayer times are written in the place's zone, as everywhere in the app (a city chosen elsewhere keeps its own).
+            val pz = config?.zone ?: zone
+            val placeToday = now.atZone(pz).toLocalDate()
             val nextMinute = local.withSecond(0).withNano(0).plusMinutes(1).toInstant()
 
             val st = config?.let { c -> runCatching { c.state(now) }.getOrNull() }
             val next = st?.let {
                 val left = Duration.between(now, it.next.at)
-                Next(it.next.prayer, t.name(it.next.prayer), t.clock(it.next.at.atZone(zone)), t.countdown(left), t.countdownShort(left),
+                Next(it.next.prayer, t.name(it.next.prayer), t.clock(it.next.at.atZone(pz)), t.countdown(left), t.countdownShort(left),
                     it.progress.coerceIn(0f, 1f), it.current?.prayer?.let(t::name))
             }
             val prayers = st?.let { s ->
                 Prayer.entries.mapNotNull { p ->
                     s.today.instant(p)?.let { at ->
-                        Line(p, t.name(p), t.clock(at.atZone(zone)), isNext = s.next.prayer == p && s.next.date == today,
-                            isCurrent = s.current?.prayer == p && s.current.date == today)
+                        Line(p, t.name(p), t.clock(at.atZone(pz)), isNext = s.next.prayer == p && s.next.date == placeToday,
+                            isCurrent = s.current?.prayer == p && s.current.date == placeToday)
                     }
                 }
             }.orEmpty()
             val sun = st?.let { s ->
-                val dayStart = today.atStartOfDay(zone).toInstant()
+                val dayStart = placeToday.atStartOfDay(pz).toInstant()
                 fun frac(i: Instant) = (Duration.between(dayStart, i).seconds / 86_400f).coerceIn(0f, 1f)
                 val rise = s.today.instant(Prayer.SHURUQ); val set = s.today.instant(Prayer.MAGHRIB)
                 val isDay = rise != null && set != null && !now.isBefore(rise) && now.isBefore(set)
@@ -117,7 +120,7 @@ data class FaceData(
                     (Duration.between(from, now).seconds.toFloat() / Duration.between(from, to).seconds.coerceAtLeast(1)).coerceIn(0f, 1f)
                 } else null
                 Sun(dayF?.coerceIn(0f, 1f), nightF, Prayer.entries.mapNotNull { p -> s.today.instant(p)?.let { p to frac(it) } }, frac(now), s.next.prayer,
-                    rise?.let { t.clock(it.atZone(zone)) }, set?.let { t.clock(it.atZone(zone)) })
+                    rise?.let { t.clock(it.atZone(pz)) }, set?.let { t.clock(it.atZone(pz)) })
             }
             val qibla = config?.let { Qibla.from(it.point) }?.takeIf { !it.veryClose }
             val validUntil = st?.next?.at?.takeIf { it.isBefore(nextMinute) } ?: nextMinute
