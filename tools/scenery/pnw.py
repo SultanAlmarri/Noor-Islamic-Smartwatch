@@ -1,15 +1,21 @@
-"""The Pacific Northwest scenery: still water under dark conifers, a snow-covered volcano beyond.
+"""The Pacific Northwest scenery: still water under dark conifers, a chain of snow mountains beyond.
 
 We stand on the stony shore of a lake. Wooded points reach into it to the left and the right, a rock with a few
 trees stands off the left one; across the water runs the far shore, forest to the water's edge, unbroken; behind
-it wooded ridges, one behind another; and over them the mountain: the real shape of Mount Rainier (USGS 3DEP
-elevation), seen from the north-west. The skyline is the place's own: the Sun rises over the trees and sets
-behind them.
+it wooded ridges, one behind another; and over them a chain of mountains: the Stuart Range of the Washington
+Cascades as the USGS 3DEP elevation model gives it, seen from the south across the Teanaway (0.14: the owner
+asked for "a chain of mountains" instead of 0.13's single cone of Mount Rainier). Mount Stuart stands a little left
+of the middle and the Enchantments' granite peaks run away to the right, 16 to 30 km off. The skyline is the
+place's own: the Sun rises over the trees and sets behind them.
+
+The chain's elevation is cut out of its tiles once with `python3 tools/scenery/pnw_dem.py` (the curl lines are in
+its docstring).
 
     blender -b --factory-startup -P tools/scenery/pnw.py -- preview <out dir> [azimuth elevation]
 
 What is scanned from life and what is made by formula, and every source and licence: tools/scenery/sources/pnw.md.
 """
+import json
 import math
 import os
 import sys
@@ -21,8 +27,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bake                      # noqa: E402
 
 TOOLS = os.environ.get('NOOR_TOOLS', os.path.join(os.path.expanduser('~'), 'ProjectMinhad', 'NoorTools'))
-DEM_TIF = os.path.join(TOOLS, 'assets', 'usgs', 'USGS_1_n47w122.tif')
-DEM_NPY = os.path.join(TOOLS, 'work', 'pnw', 'n47w122.npy')
+CHAIN_NPY = os.path.join(TOOLS, 'work', 'pnw', 'stuart.npy')       # pnw_dem.py
+CHAIN_JSON = os.path.join(TOOLS, 'work', 'pnw', 'stuart.json')
 SCANS = os.path.join(TOOLS, 'assets', 'polyhaven')        # Poly Haven's scans (CC0), fetched with its get.py
 FIR = os.path.join(SCANS, 'fir_tree_01', 'fir_tree_01_1k.blend')
 ONLY = os.environ.get('NOOR_PNW_ONLY', '')      # for trying parts alone: any of mountain,hills,island,points,trees,shore
@@ -32,16 +38,17 @@ GROUND = 0.8                      # the shore under our feet, above the water
 EYE = (0.0, 0.0, GROUND + 1.7)
 SHORE = 6.0                       # metres ahead of us to the water's edge
 
-# ---- The mountain ---------------------------------------------------------------------------------------------
-SUMMIT = (535, 868)               # row, column of Columbia Crest in the tile (row 0 = its north edge)
-DX, DY = 30.87 * math.cos(math.radians(46.85)), 30.87      # metres per column and per row
-FROM = float(os.environ.get('NOOR_PNW_FROM', 315.0))       # where we stand, as a bearing from the summit (degrees
-                                                           # east of north): to its north-west
-DATUM = float(os.environ.get('NOOR_PNW_DATUM', 1650.0))    # the real height that lies at the water's level
-TALL = float(os.environ.get('NOOR_PNW_TALL', 1.15))        # heights are drawn this many times taller
-STANDS = float(os.environ.get('NOOR_PNW_STANDS', 9.6))     # degrees over the horizon the summit is to stand
-AIM = float(os.environ.get('NOOR_PNW_AIM', 3.5))           # ... and to the right of the view's middle
-FAR = (4392.0 - DATUM) * TALL / math.tan(math.radians(STANDS)) * 0.985      # so far from us is the summit, then
+# ---- The chain of mountains ----------------------------------------------------------------------------------
+# Where we stand in the real land (so that its true skyline is the one seen), which way we look, and how it is laid
+# under our lake. The view was found by searching the elevation model of the North Cascades for low ground from
+# which the skyline across the view holds a chain: several snow peaks of different heights over most of its width,
+# the highest off the middle, none too high where the Sun crosses the sky at midday (sources/pnw.md).
+CHAIN_AT = (47.340, -120.820)                              # latitude, longitude: the Teanaway, south of the range
+CHAIN_LOOK = float(os.environ.get('NOOR_PNW_LOOK', 346.0))  # the view's middle, degrees east of north
+DATUM = float(os.environ.get('NOOR_PNW_DATUM', 902.0))     # the real height that lies at the water's level
+TALL = float(os.environ.get('NOOR_PNW_TALL', 1.3))         # heights are drawn this many times taller
+CHAIN_NEAR = 12000.0                                       # metres: the real land begins here (the lake's own
+CHAIN_FULL = 15500.0                                       # ridges stand in front of it), at its full height here
 
 # The points that reach into the lake, left and right (middle x, y, half-length, half-width, metres), the rock off
 # the left one, and how far off the far shore lies.
@@ -81,16 +88,13 @@ def smooth(a, b, x):
     return t * t * (3 - 2 * t)
 
 
-def load_dem():
-    if not os.path.exists(DEM_NPY):
-        img = bpy.data.images.load(DEM_TIF)
-        img.colorspace_settings.name = 'Non-Color'
-        w, h = img.size
-        px = np.empty(w * h * img.channels, np.float32)
-        img.pixels.foreach_get(px)
-        np.save(DEM_NPY, px.reshape(h, w, img.channels)[::-1, :, 0].copy())
-        bpy.data.images.remove(img)
-    return np.load(DEM_NPY)
+def load_chain():
+    """The elevation model's piece (pnw_dem.py): heights, and the longitude and latitude of each column and row."""
+    z = np.load(CHAIN_NPY)
+    meta = json.load(open(CHAIN_JSON))
+    lons = meta['lon'] + np.arange(z.shape[1]) * meta['step']
+    lats = meta['lat'] - np.arange(z.shape[0]) * meta['step']
+    return z, lats, lons
 
 
 def surface_mesh(name, X, Y, Z, colors=None):
@@ -271,16 +275,36 @@ def scanned_ground(mat, aid, size, relief, fade=(40.0, 160.0)):
 
 # ---- Far land: the mountain, the ridges before it ---------------------------------------------------------------
 
+def chain_part(z, lats, lons, near, far, step):
+    """The real land between [near] and [far] metres of us, in the view and its reflection (36 degrees either side
+    of its middle), every [step] pixels of the model: its grid in the scene (x right, y ahead, z up) and its heights."""
+    m = 111320.0
+    cl = np.cos(np.radians(lats))[:, None]
+    E = (lons[None, :] - CHAIN_AT[1]) * m * cl
+    N_ = np.broadcast_to(((lats - CHAIN_AT[0]) * m)[:, None], z.shape)
+    b = math.radians(CHAIN_LOOK)
+    X = E * math.cos(b) - N_ * math.sin(b)
+    Y = E * math.sin(b) + N_ * math.cos(b)
+    d = np.hypot(X, Y)
+    inside = (d > near - 600) & (d < far + 600) & (np.abs(np.degrees(np.arctan2(X, Y))) < 36.0) & (Y > 0)
+    rows = np.nonzero(inside.any(1))[0]; cols = np.nonzero(inside.any(0))[0]
+    sl = (slice(rows[0], rows[-1] + 1, step), slice(cols[0], cols[-1] + 1, step))
+    return X[sl], Y[sl], z[sl].astype(np.float32), d[sl], inside[sl]
+
+
 def mountain():
-    dem = load_dem()
-    r0, c0 = SUMMIT
-    rows = slice(0, 1500)
-    cols = slice(0, 2200)
-    z = dem[rows, cols][::-1].astype(np.float32)             # row 0 = south now: east x north = up
-    ny, nx = z.shape
-    east = (np.arange(cols.start, cols.stop) - c0) * DX
-    north = ((rows.stop - 1 - np.arange(ny)) - r0) * -DY
-    E, N = np.meshgrid(east, north)
+    """The chain: the real land 12 to 60 km out, finely near and coarser far, each part its own mesh."""
+    z, lats, lons = load_chain()
+    obs = []
+    for name, near, far, step in (('Mountain', CHAIN_NEAR, 31000.0, 1), ('MountainFar', 29500.0, 60000.0, 3)):
+        X, Y, zz, dist, inside = chain_part(z, lats, lons, near, far, step)
+        obs.append(chain_mesh(name, X, Y, zz, dist, inside, step))
+    return obs[0]
+
+
+def chain_mesh(name, X, Y, z, dist, inside, step):
+    DY = 30.87 * step                                        # metres between rows of the grid (one arc-second of
+    DX = DY * math.cos(math.radians(CHAIN_AT[0]))            # latitude), and between its columns
     # What lies where, from the real heights: forest to the tree line, meadow and bare rock above it, snow and ice
     # on the high mountain: more of it in the hollows, none on the walls too steep to hold it or on the sharp ribs.
     gy, gx = np.gradient(z, DY, DX)
@@ -288,32 +312,29 @@ def mountain():
     hollow = blur(z, 5.0) - z                                 # positive in gullies and cirques, negative on ribs
     n1 = fbm(z.shape, 2.0, 3)
     n2 = fbm(z.shape, 1.2, 4)
-    snowline = 2300.0 + 240.0 * n1 - 7.0 * np.clip(hollow, -40, 60) + 18.0 * np.clip(slope - 30.0, 0, 40)
+    # (The scenery's own time of year is early summer, when the Stuart Range still lies under snow from about two
+    # thousand metres; the high ground of the far ranges beyond it too.)
+    snowline = 1980.0 + 200.0 * n1 - 7.0 * np.clip(hollow, -40, 60) + 18.0 * np.clip(slope - 30.0, 0, 40)
     snow = smooth(-120.0, 160.0, z - snowline + 90.0 * n2)
     bare = np.maximum(smooth(41.0, 50.0, slope + 4.0 * n2), smooth(10.0, 26.0, -hollow + 5.0 * n2) * smooth(24.0, 34.0, slope))
     snow = snow * (1.0 - 0.92 * bare)
     forest = smooth(1950.0, 1700.0, z + 110.0 * n1 + 50.0 * n2) * smooth(44.0, 34.0, slope)
     meadow = smooth(2250.0, 1850.0, z + 130.0 * n2) * smooth(40.0, 28.0, slope) * (1.0 - forest)
-    # To the scene: we stand FAR from the summit on the bearing FROM, looking at it; the datum lies at the water.
-    b = math.radians(FROM)
-    cam = np.array([math.sin(b), math.cos(b)]) * FAR
-    aim = math.radians(FROM + 180.0 - AIM)
-    fwd = np.array([math.sin(aim), math.cos(aim)])
-    right = np.array([fwd[1], -fwd[0]])
-    px, py = E - cam[0], N - cam[1]
-    X = px * right[0] + py * right[1]
-    Y = px * fwd[0] + py * fwd[1]
-    dist = np.hypot(X, Y)
-    Z = (z - DATUM) * TALL - dist * dist / (2 * 6371000.0) * 0.87      # the Earth curves away under it
+    # To the scene: the land's heights over the water, drawn TALL times taller; its near edge sinks under the
+    # lake's own ridges (which stand in front of it) so that no wall is seen where it begins; the Earth curves away.
+    rise = smooth(CHAIN_NEAR, CHAIN_FULL, dist)
+    Z = (z - DATUM) * TALL * rise - dist * dist / (2 * 6371000.0) * 0.87
+    Z = np.where(inside, Z, -60.0).astype(np.float32)
     cls = np.stack([snow, forest * (1.0 - snow), meadow * (1.0 - snow) * (1.0 - forest)], -1)
-    top = int(np.argmax(Z))
-    print('mountain: %.0f m away, its summit %.1f degrees over the horizon at bearing %.1f' %
-          (FAR, float(np.degrees(np.arctan2(Z.flat[top] - EYE[2], dist.flat[top]))),
-           float(np.degrees(np.arctan2(X.flat[top], Y.flat[top])))), flush=True)
-    Z = np.maximum(Z, -40.0)
-    ob = surface_mesh('Mountain', X, Y, Z, {'cls': cls})
+    ang = np.degrees(np.arctan2(Z - EYE[2], dist))
+    top = int(np.argmax(ang))
+    print('%s: %d x %d, its highest %.1f degrees over the horizon at bearing %.1f, %.0f m away' %
+          (name, X.shape[1], X.shape[0], float(ang.flat[top]), float(np.degrees(np.arctan2(X.flat[top], Y.flat[top]))),
+           float(dist.flat[top])), flush=True)
+    Z = np.maximum(Z, -60.0)
+    ob = surface_mesh(name, X, Y, Z, {'cls': cls})
 
-    mat = bpy.data.materials.new('Mountain')
+    mat = bpy.data.materials.new(name)
     nt, N_, L, bsdf = nodes(mat)
     att = N_.new('ShaderNodeAttribute')
     att.attribute_name = 'cls'
@@ -321,8 +342,9 @@ def mountain():
     L.new(att.outputs['Color'], sep.inputs[0])
     geo = N_.new('ShaderNodeNewGeometry')
     P = geo.outputs['Position']
-    # Rock: dark andesite, streaked. Forest: nearly black green from afar, mottled by stands of different age.
-    rock = mix(N_, L, noise(N_, L, P, 0.004, 6.0, 0.65), (0.060, 0.043, 0.045), (0.170, 0.118, 0.108))
+    # Rock: the Mount Stuart batholith's granodiorite, pale grey with a warm cast, streaked. Forest: nearly black
+    # green from afar, mottled by stands of different age.
+    rock = mix(N_, L, noise(N_, L, P, 0.004, 6.0, 0.65), (0.130, 0.118, 0.105), (0.300, 0.272, 0.240))
     woods = mix(N_, L, noise(N_, L, P, 0.012, 5.0), (0.010, 0.020, 0.014), (0.024, 0.042, 0.022))
     grass = mix(N_, L, noise(N_, L, P, 0.006, 5.0), (0.060, 0.075, 0.032), (0.120, 0.110, 0.055))
     c = mix(N_, L, sep.outputs['Blue'], rock, grass)
@@ -339,7 +361,9 @@ def mountain():
 
 
 def hills():
-    """Wooded ridges behind the far shore, one behind another, right across the view: the mountain's foothills."""
+    """Wooded ridges behind the far shore, one behind another, right across the view: the mountains' foothills.
+    (0.14: as they were under Rainier: the chain was rendered alone and laid behind the pictures of 0.13, see
+    pnw_chain.py, so nothing nearer than the chain may change.)"""
     cell = 15.0
     xs = np.arange(-9000.0, 9000.0 + cell, cell)
     ys = np.arange(2150.0, 11500.0 + cell, cell)

@@ -3,6 +3,8 @@ asset with its textures folder, into <NoorTools>/assets/polyhaven/<id>/. Nothing
 
     python3 tools/scenery/polyhaven_get.py <resolution, e.g. 2k> <id> [<id> ...]
     python3 tools/scenery/polyhaven_get.py 2k @canyon          the scans the Red Rock scenery uses (canyon.py)
+    python3 tools/scenery/polyhaven_get.py 2k @pnw             ... the Pacific Northwest's (pnw.py)
+    python3 tools/scenery/polyhaven_get.py 2k @meadow          ... the green hills' (meadow.py)
 
 Uses curl with the User-Agent the project fetches with (scenery-tools/1.0).
 """
@@ -21,6 +23,17 @@ SETS = {
                ('sandstone_cracks', None), ('dry_riverbed_rock', None), ('river_small_rocks', None),
                ('namaqualand_boulder_02', '1k'), ('namaqualand_boulder_05', '1k'), ('namaqualand_boulders_01', '1k'),
                ('grass_medium_01', '1k'), ('dead_tree_trunk_02', '1k')],
+    # The Pacific Northwest scenery (pnw.py; sources/pnw.md): 2k as on the PC, the fir's twigs at 1k.
+    'pnw': [('dry_river_pebbles', None), ('aerial_rocks_02', None), ('forrest_ground_03', None), ('rock_moss_set_01', None),
+            ('rock_moss_set_02', None), ('rock_07', None), ('rock_09', None), ('dead_tree_trunk', None),
+            ('dead_tree_trunk_02', '1k'), ('root_cluster_01', None), ('grass_medium_01', '1k'), ('fern_02', None),
+            ('fir_tree_01', '1k')],
+    # (A scan's folder holds one resolution: the two the Red Rock also uses are fetched at its 1k for both.)
+    # The green hills (meadow.py; sources/meadow.md).
+    'meadow': [('grass_medium_01', '1k'), ('grass_medium_02', None), ('celandine_01', None), ('flower_ursinia', None),
+               ('periwinkle_plant', None), ('flower_heliophila', None), ('island_tree_02', None), ('rock_moss_set_01', None),
+               ('rock_moss_set_02', None), ('boulder_01', None), ('grass_ground', None), ('aerial_grass_rock', None),
+               ('jolcham_oak_bark_01', None)],
 }
 
 
