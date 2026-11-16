@@ -1283,9 +1283,13 @@ of the world chosen by GPS, the app renamed **Minhad (منهاد)**, and evidenc
   `adhan.dubai` and `adhan.dubai_fajr` (the owner's files, who states he holds the rights; their tags name YouTube
   uploads, written down in SOUNDS.md), each with its opening; `fx.birds`, `fx.rooster`, `fx.waves`, `fx.rain`,
   `fx.stream` (US National Park Service, public domain; radio aporee, CC BY 3.0), whole and short, raised to about
-  −18 LUFS. Al-Quds and Egypt: no recording with a usable licence was found; they take the user's own. The Dubai
-  Mall recording on YouTube was not downloaded (YouTube's terms; rule 7). Fajr's default is Makkah (no licensed Makkah
-  Fajr Adhan exists); a voice's Fajr recording plays at Fajr (Dubai's, or the user's "<voice> Fajr").
+  −18 LUFS. `adhan.egypt`: a rooftop at Khan el-Khalili, Cairo (Freesound 511003, CC0; fetched by the Fetch
+  workflow on GitHub, because Freesound refuses the cloud session; licence checked in Openverse's index), the only one
+  of six Egyptian candidates with a whole, clear Adhan (checked with band energy and faster-whisper; cut 90.0–295.3 s,
+  opening 90.0–112.6 s). Al-Quds: the one candidate (Holy Sepulchre) holds no phrase the recogniser could hear; it
+  takes the user's own. The Dubai Mall recording on YouTube was not downloaded (YouTube's terms; rule 7). Fajr's
+  default is Dubai's Fajr Adhan; a voice's Fajr recording plays at Fajr (Dubai's, or the user's "<voice> Fajr").
+  `build_library.py` does not yet hold the Dubai entries (added by hand): add them before running it again.
 - Adhan tab: `VoiceCard` (six tiles, the voice for every prayer, its opening heard on touch) and one volume for all
   (`setVolumeAll`); prayers list without the voice row; no "turn on" button, fewer footers; a prayer can be set to a
   Sound (the effects); the library is a plain list with credits (no favourites or filters).
