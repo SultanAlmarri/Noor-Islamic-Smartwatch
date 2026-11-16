@@ -253,7 +253,15 @@ internal object SkyDirector {
     /** The low sets by how closed their sky is (0 open .. 5 a full overcast). */
     private val HOW_CLOSED = mapOf(
         "lo_few" to 0, "lo_scattered" to 1, "lo_towers" to 1, "lo_front" to 2, "lo_broken" to 3, "lo_storm" to 3, "lo_overcast_breaks" to 4, "lo_overcast" to 5,
+        "lo_cb_far" to 1, "lo_cb_line" to 2, "lo_congestus" to 2,
     )
+    /** Low sets of heaped cloud that only the warmth of the day builds. */
+    private val TOWERS = setOf("lo_towers", "lo_congestus")
+    /**
+     * Low sets with a thunderstorm far off in an otherwise open sky (a cumulonimbus on the horizon, a line of them):
+     * they come in the far storm's hours ([farStormHour]), which run on into the night, when their lightning shows.
+     */
+    private val FAR_STORMS = setOf("lo_cb_far", "lo_cb_line")
     /** What a middle set amounts to, for choosing it by how much middle cloud the hour wants. */
     private val MID_AMOUNT = mapOf("mi_patches" to 0.32f, "mi_bands" to 0.50f, "mi_veil" to 0.68f, "mi_sheet" to 0.86f)
 
@@ -369,6 +377,28 @@ internal object SkyDirector {
         return ok && (biome != Biome.DUNES || CloudField.hash(seed, 7, 111) < 0.5f)
     }
 
+    /**
+     * Whether a thunderstorm may stand far off on the horizon at hour [h] of this day: on most convective and stormy
+     * days, on some fair and mixed ones, now and then on any; from the afternoon on, for three to six hours, often
+     * into the night. (Not over the arctic.)
+     */
+    private fun farStormHour(w: Weather, biome: Biome, h: Float): Boolean {
+        if (biome == Biome.ARCTIC) return false
+        val seed = w.seed
+        val chance = when (w.type) {
+            Weather.CONVECTIVE, Weather.STORMY -> 0.80f
+            Weather.MIXED -> 0.50f
+            Weather.FAIR -> 0.35f
+            Weather.RAINY -> 0.30f
+            else -> 0.16f
+        } * (if (biome == Biome.DUNES) 0.6f else 1f)
+        if (CloudField.hash(seed, 7, 113) >= chance) return false
+        val from = 13.5f + 6.5f * CloudField.hash(seed, 7, 114)
+        val hours = 3f + 3f * CloudField.hash(seed, 7, 115)
+        val into = ((h - from) % 24f + 24f) % 24f
+        return into < hours
+    }
+
     private fun walkLow(w: Weather, biome: Biome, year: Float, rise: Float, set: Float): Array<String?> {
         val n = legCount(2)
         val out = arrayOfNulls<String>(n)
@@ -381,6 +411,7 @@ internal object SkyDirector {
             val h = ((midHour(w, 2, k) % 24f) + 24f) % 24f
             val lean = lowLean(w, biome, year, h, rise, set)
             val storm = stormHour(w, biome, h)
+            val farStorm = farStormHour(w, biome, h)
             // (Of any twelve hours, the sky is closed for four and a half at most.)
             var closedLately = 0
             for (b in max(0, i - 21) until i) if (closedness(out[b]) >= 4) closedLately++
@@ -391,16 +422,18 @@ internal object SkyDirector {
                 val c = closedness(name)
                 if (prev != null && abs(c - closedness(prev)) > 2) continue
                 if (name == "lo_storm" && (!storm || sinceStorm < 3)) continue
-                if (name == "lo_towers" && !towers) continue
+                if (name in FAR_STORMS && (!farStorm || sinceStorm < 3)) continue
+                if (name in TOWERS && !towers) continue
                 if (c >= 4 && (mustOpen > 0 || closedLately >= 8)) continue
                 var score = abs(c - lean[0]) + 0.9f * CloudField.hash(w.seed, 300 + j, k)
                 if (name == prev2) score += 0.8f
                 if (name == "lo_storm") score -= 1.4f              // (in its hour a storm shows)
+                if (name in FAR_STORMS) score -= 1.1f
                 if (score < bestScore) { bestScore = score; best = name }
             }
             val pick = best ?: (if (prev == "lo_scattered") "lo_few" else "lo_scattered")
             out[i] = turns.next(pick)
-            sinceStorm = if (pick == "lo_storm") 0 else sinceStorm + 1
+            sinceStorm = if (pick in THUNDER) 0 else sinceStorm + 1
             if (closedness(pick) >= 4) { closedRun++; if (closedRun >= 3) { mustOpen = 2; closedRun = 0 } } else { closedRun = 0; if (mustOpen > 0) mustOpen-- }
             prev2 = prev; prev = pick
         }
@@ -605,7 +638,10 @@ internal object SkyDirector {
         val h = (fraction * 24.0).toFloat()
         val midnight = smooth(0f, 0.4f, min(h, 24f - h))
         val amounts = floatArrayOf(1f - 0.5f * calm, 1f - 0.6f * calm, (1f - 0.55f * calm) * (1f - 0.45f * after))
-        val clouds = List(3) { level -> legs(w, level, h, biome, year, rise, set).map { CloudLeg(it.set, it.offset, it.weight * amounts[level] * midnight, it.speed, it.turned) } }
+        // (A thunderhead does not thin with the night as fair-weather cloud does: half of one is a ghost.)
+        val clouds = List(3) { level -> legs(w, level, h, biome, year, rise, set).map {
+            CloudLeg(it.set, it.offset, it.weight * (if (it.set in THUNDER) 1f else amounts[level]) * midnight, it.speed, it.turned)
+        } }
         // The Sun and the clouds. The Sun is drawn low in the picture, where far clouds crowd together, though it
         // stands high in the real sky, where gaps are wide: left to the picture it would nearly always be hidden. So
         // whether a cloud is in front of it is the weather's say: clouds pass over it now and then, the more often the
