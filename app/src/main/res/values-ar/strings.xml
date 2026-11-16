@@ -553,4 +553,6 @@
     <string name="today_row_open">إعدادات التنبيه</string>
     <string name="opening_skip">تخطٍّ</string>
     <string name="size_megabytes">%1$s م.ب</string>
+    <string name="adhan_master_off_here">تنبيهات الصلاة متوقفة، لذلك لن يُنبَّه لهذه الصلاة.</string>
+    <string name="adhan_turn_on">تشغيل تنبيهات الصلاة</string>
 </resources>

@@ -279,10 +279,10 @@ class ScreenshotTest {
         screen = Screen.CITIES; shot("53_cities_night_ar", "التصفح حسب الدولة")
         // 0.14: the scenery page in Arabic (the language check had not seen it), Settings by day, and Settings with
         // large text, where a row's choice moves under its title instead of being squeezed beside it.
-        screen = Screen.SCENERY; shot("59_scenery_night_ar", "الفصول")
+        screen = Screen.SCENERY; shot("77_scenery_night_ar", "الفصول")
         arabic = false
-        theme = ThemeMode.LIGHT; screen = Screen.SETTINGS; shot("60_settings_day_en", "Numerals")
-        theme = ThemeMode.DARK; fontScale = 1.3f; shot("61_settings_large_text_en", "Numerals"); fontScale = 1f
+        theme = ThemeMode.LIGHT; screen = Screen.SETTINGS; shot("78_settings_day_en", "Numerals")
+        theme = ThemeMode.DARK; fontScale = 1.3f; shot("79_settings_large_text_en", "Numerals"); fontScale = 1f
         // The sky through the day (Dubai, 4 November 2026): dawn, morning, sunset glow, night with the moon.
         theme = ThemeMode.DARK; arabic = false; screen = Screen.TODAY
         fun at(h: Int, m: Int) = ZonedDateTime.of(2026, 11, 4, h, m, 0, 0, ZoneId.of("Asia/Dubai")).toInstant()
@@ -295,6 +295,10 @@ class ScreenshotTest {
         theme = ThemeMode.DARK; clock = now
         // Adhan & alerts: off (first run), then on for phone and watch, the Fajr editor, sunrise, library and imports.
         screen = Screen.ADHAN; shot("26_adhan_off_night_en", "Turn on to hear the Adhan")
+        // 0.14: a prayer's page (reached from the home screen's rows too) says that all alerts are off, and turns them on.
+        screen = Screen.ADHAN_FAJR; shot("81_adhan_fajr_alerts_off_en", "Turn on prayer alerts")
+        arabic = true; shot("82_adhan_fajr_alerts_off_ar", "تشغيل تنبيهات الصلاة"); arabic = false
+        screen = Screen.ADHAN
         runBlocking { app.container.settings.updateAlerts { it.copy(enabled = true, device = com.noor.prayer.alerts.AlertDevice.BOTH) } }
         shot("27_adhan_on_night_en", "Gradual volume")
         screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Malmö")

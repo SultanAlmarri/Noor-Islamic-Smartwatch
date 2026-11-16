@@ -63,8 +63,9 @@ One system for every page instead of a look per screen (`ui/components/Page.kt`,
 | **Qibla** | Design unchanged (pixel-compared with 0.13: only the accuracy card's chevron differs). Fixes only: that chevron now mirrors in Arabic; the place prompt and the card are buttons for TalkBack; "Qibla needs a location" opens the location page directly | The owner likes it as it is |
 
 Strings added (English and Arabic): `back`, `decrease`, `increase`, `settings_appearance`, `settings_language`,
-`adhan_attention`, `adhan_prayers_footer`, `today_row_alert`, `today_row_open`, `opening_skip`, `size_megabytes`.
-No string was removed.
+`adhan_attention`, `adhan_prayers_footer`, `adhan_master_off_here`, `adhan_turn_on`, `today_row_alert`,
+`today_row_open`, `opening_skip`, `size_megabytes`. No string was removed (`adhan_master_off_short` and
+`settings_location_mode` are no longer shown).
 
 ## 3. The opening: first light
 
@@ -143,7 +144,9 @@ read from about one second in.
     buttons could be cut off on a short screen or with large text (it did not scroll).
 13. **"Today" pushed the day's times down** when another date was shown; on a short phone Isha left the screen.
 14. **Dead ends**: "Set a location first" on the Adhan page had no way to the location page; "Mark at least two
-    Adhans as favourites" had no way to the library. Both rows now lead there.
+    Adhans as favourites" had no way to the library; a prayer's alert page said "turn them on in the Adhan tab" when
+    all alerts were off. The first two rows now lead there, and the third has the switch on the page itself (and asks
+    for the notification permission, as the Adhan tab does).
 15. **State lost when the activity is rebuilt**: the open sheet in Settings, the two choice sheets on the Adhan
     page, the open recording in the library, the "replace" target in My sounds.
 16. **Status bar icons** were dark on the dark launch-to-app hand-over for a frame on a phone in light mode; the bars
@@ -169,8 +172,9 @@ Everything below is Robolectric on this machine (software renders and the app's 
 **Nothing was run on a phone or an emulator.** Motion, smoothness, haptics, the hand-over from Android's launch
 screen and the real sky during the opening have not been seen at all.
 
-- `ScreenshotTest` (60 pictures now, 57 before: the scenery page in Arabic, Settings by day, Settings with large
-  text) with its language check on every picture, unchanged in strictness.
+- `ScreenshotTest` (62 pictures now, 57 before: the scenery page in Arabic, Settings by day, Settings with large
+  text, a prayer's alert page with all alerts off in both languages) with its language check on every picture,
+  unchanged in strictness.
 - `TodayOpeningDesignTest`: frames through the opening as the app frames it (veil, home screen, tab bar): 0, 250,
   450, 650, 850, 1050, 1300, 1700 ms and the end; asserts that the prayer, its time and the countdown are in the
   page at the first frame, that the veil has gone by 1.3 s, that the opening is over within its time, that all six

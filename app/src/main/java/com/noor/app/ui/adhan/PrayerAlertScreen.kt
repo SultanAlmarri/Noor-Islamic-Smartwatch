@@ -115,13 +115,24 @@ fun PrayerAlertScreen(
 
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); vm.consumeMessage() } }
     StopPreviewOnLeave(vm)
+    val ready by vm.readiness.collectAsStateWithLifecycle()
+    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) vm.importSound(uri, forPrayer = prayer) }
 
     NoorPage(f.prayerName(prayer), contentPadding, onBack = onBack,
         floating = { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
+        // All alerts are off: said here, with the switch for it here (0.14: the page sent one to the Adhan tab to find
+        // it, which from the home screen's rows is a long way round).
+        if (!alerts.enabled) SettingsSection("") {
+            WarningRow(stringResource(R.string.adhan_master_off_here), stringResource(R.string.adhan_turn_on), {
+                vm.setEnabled(true)
+                if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            })
+        }
         SettingsSection("", footer = if (prayer == Prayer.SHURUQ) stringResource(R.string.adhan_sunrise_note) else null) {
-            SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_alert_for, f.prayerName(prayer)),
-                if (!alerts.enabled) stringResource(R.string.adhan_master_off_short) else null, a.enabled) { on -> vm.setPrayer(prayer) { it.copy(enabled = on) } }
+            SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_alert_for, f.prayerName(prayer)), null, a.enabled) { on ->
+                vm.setPrayer(prayer) { it.copy(enabled = on) }
+            }
         }
 
         if (a.enabled) {

@@ -547,4 +547,6 @@
     <string name="today_row_open">Alert settings</string>
     <string name="opening_skip">Skip</string>
     <string name="size_megabytes">%1$s MB</string>
+    <string name="adhan_master_off_here">Prayer alerts are off, so this prayer will not alert.</string>
+    <string name="adhan_turn_on">Turn on prayer alerts</string>
 </resources>
