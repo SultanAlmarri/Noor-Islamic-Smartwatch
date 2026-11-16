@@ -1096,7 +1096,8 @@ Made in a cloud session (Claude Opus, picking up from Claude Fable when its limi
   USGS 3DEP one-arc-second elevation, the chain baked alone through the same camera and Suns and laid behind the
   0.13 pictures by distance (the whole scene is too heavy for this machine).
 - **Red Rock's seasons**: autumn (the cottonwoods gold, unevenly) and winter (bare trees, red willow stems, snow on
-  the ledges; `winterBaked`); spring follows if its render finishes (see below).
+  the ledges; `winterBaked`) and spring (small fresh leaves; it is the scenery's own season when the seasons are not
+  followed, so its Settings picture is spring's).
 - **A line of thunderstorms on the horizon** (`lo_cb_line`, sky_cb.py): three storms 72 to 90 km off at different
   stages, lightning from each (`SkyDirector.THUNDER`). Five near cumulus that had lined up on one bearing and read
   as a column of flat cloudlets were taken out of its pictures (tools/scenery/erase_clouds.py).
@@ -1142,7 +1143,10 @@ Made in a cloud session (Claude Opus, picking up from Claude Fable when its limi
 **Open after 0.15.0**
 
 - The container restarted at about 13:49 UTC and killed the running renders (Red Rock's spring, the towering
-  cumulus `lo_congestus`); they were started again (`/opt/noortools/work/queue_after_restart.sh`). The green hills'
-  summer, autumn and winter follow them in the same queue (hours on this machine). Each is added when it is done.
+  cumulus `lo_congestus`); they were started again (`/opt/noortools/work/queue_after_restart.sh`); Red Rock's spring
+  is in. The green hills' summer and autumn colour passes were killed once more for lack of memory while the release
+  APKs were built (a Gradle daemon holds 3 GB; the meadow's colour pass needs about 6): never build while a meadow
+  pass runs. They run again after its winter (`meadow_redo.sh`). `lo_congestus` and the green hills' seasons are
+  added when they are done (0.15.1).
 - The Testing page is still English only, and goes before release with `com.noor.app.testing`.
 

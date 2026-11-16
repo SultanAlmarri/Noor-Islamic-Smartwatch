@@ -107,7 +107,8 @@
  "season": "summer",
  "seasons": [
   "autumn",
-  "winter"
+  "winter",
+  "spring"
  ],
  "winterBaked": true
 }
