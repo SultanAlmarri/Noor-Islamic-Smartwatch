@@ -679,7 +679,7 @@ internal fun LivingSky(
                     // off"); the dashes of the hours to come leave the Sun the same room. And a soft shade under the
                     // line, stronger by day, so that it reads on a bright hazy sky as on a dark one.
                     val reach = disc * 3.2f
-                    fun meet(c: Color): Brush = androidx.compose.ui.graphics.SolidColor(c)   // EXPERIMENT L
+                    fun meet(c: Color) = Brush.radialGradient(0f to Color.Transparent, 0.24f to Color.Transparent, 0.62f to c, 1f to c, center = sun, radius = reach)
                     val shade = Color.Black.copy(alpha = (0.04f + 0.08f * light.day) * pathAlpha)
                     clipPath(above) {
                         drawPath(path, meet(shade), style = dashShade)
