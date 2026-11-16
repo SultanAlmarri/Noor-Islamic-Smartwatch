@@ -72,8 +72,22 @@ class WearSync(private val context: Context, private val settings: SettingsRepos
             val profile = PrayerProvider.profile(s, place)
             // When the authority's own times are available, the watch gets the next eight weeks of them as published.
             val today = java.time.LocalDate.now(place.zone)
-            val official = PrayerProvider.authority(s, place)?.takeIf { it.profile.id == profile.id && PrayerEngine.referencePointFor(profile, place.point) != null }
+            val published = PrayerProvider.authority(s, place)?.takeIf { it.profile.id == profile.id && PrayerEngine.referencePointFor(profile, place.point) != null }
                 ?.timetableId?.let { tables?.get(it) }?.window(today.minusDays(1), today.plusDays(56))?.takeIf { it.size > 0 }
+            // 0.18: otherwise the phone's own calculated minutes for the same weeks, so a watch on an older version (which
+            // may not know a new authority, or knows an older form of one: it would fall back to another method)
+            // shows exactly the phone's times. The user's minute offsets are left out: the watch adds them, as to a
+            // published table. Days the engine cannot give in full (polar) are left to the watch's own calculation.
+            val official = published ?: runCatching {
+                val plain = s.copy(offsets = emptyMap())
+                val days = (-1L..56L).mapNotNull { k ->
+                    val d = today.plusDays(k)
+                    val m = PrayerProvider.resolve(d, place, profile, plain, tables).day.minutes
+                    val all = com.noor.prayer.Prayer.entries.map { m[it] }
+                    if (all.any { it == null }) null else d to all.map { it!! }.toIntArray()
+                }.toMap()
+                com.noor.prayer.authority.Timetable("calc_" + profile.id, days).takeIf { it.size > 0 }
+            }.getOrNull()
             return WatchConfig(
                 point = place.point,
                 zoneId = place.zone.id,

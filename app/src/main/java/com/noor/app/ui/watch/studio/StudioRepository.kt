@@ -33,7 +33,9 @@ class StudioRepository(context: Context) {
         val id = d.id.takeIf { it.startsWith("my_") } ?: ("my_" + System.currentTimeMillis().toString(36))
         val out = d.copy(id = id, name = name.take(40))
         val ids = listOf(id) + prefs.getString(KEY_IDS, "").orEmpty().split(',').filter { it.isNotBlank() && it != id }
-        prefs.edit().putString("d.$id", out.encode()).putString(KEY_IDS, ids.take(MAX_SAVED).joinToString(",")).apply()
+        // (Designs beyond the most kept are removed with their entry, not left behind in storage.)
+        prefs.edit().putString("d.$id", out.encode()).putString(KEY_IDS, ids.take(MAX_SAVED).joinToString(","))
+            .apply { ids.drop(MAX_SAVED).forEach { remove("d.$it") } }.apply()
         return out
     }
 

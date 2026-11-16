@@ -204,8 +204,10 @@ private fun HomePane(
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
         if (r.values.any { it }) vm.useAutomatic(onAutomatic)
         else context.findActivity()?.let { a ->
-            if (!androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(a, android.Manifest.permission.ACCESS_COARSE_LOCATION))
+            val perm = android.Manifest.permission.ACCESS_COARSE_LOCATION
+            if (!androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(a, perm) && com.noor.app.ui.components.refusedBefore(context, perm))
                 runCatching { context.startActivity(com.noor.app.ui.components.appDetailsSettings(context).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            com.noor.app.ui.components.markRefused(context, perm)
         }
     }
     val current = s?.let { com.noor.app.data.PrayerProvider.place(it) }

@@ -29,7 +29,11 @@ internal fun rememberNotificationRequest(onResult: (Boolean) -> Unit = {}): () -
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted && Build.VERSION.SDK_INT >= 33) {
             val a = context.activity()
-            if (a != null && !ActivityCompat.shouldShowRequestPermissionRationale(a, Manifest.permission.POST_NOTIFICATIONS)) runCatching {
+            val prefs = context.getSharedPreferences("minhad_permissions", android.content.Context.MODE_PRIVATE)
+            val before = prefs.getBoolean(Manifest.permission.POST_NOTIFICATIONS, false)
+            prefs.edit().putBoolean(Manifest.permission.POST_NOTIFICATIONS, true).apply()
+            // (Not when the dialog was only closed the first time: Android gives "no rationale" then as well.)
+            if (a != null && before && !ActivityCompat.shouldShowRequestPermissionRationale(a, Manifest.permission.POST_NOTIFICATIONS)) runCatching {
                 context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }

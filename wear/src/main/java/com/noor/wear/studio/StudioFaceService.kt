@@ -104,7 +104,8 @@ private class StudioRenderer(
             (context.applicationContext as NoorWearApp).config.config.collectLatest { c -> config = c; dirty = true; invalidate() }
         }
         // The face has just been chosen (or the watch restarted with it): tell the phone, whose editor says so.
-        scope.launch { kotlinx.coroutines.delay(3_000); com.noor.wear.data.StatusPublisher.publish(context) }
+        // (Off the face's drawing thread: the report plans the alerts and reads files.)
+        scope.launch(kotlinx.coroutines.Dispatchers.Default) { kotlinx.coroutines.delay(3_000); com.noor.wear.data.StatusPublisher.publish(context) }
     }
 
     override suspend fun createSharedAssets() = Assets()

@@ -171,6 +171,9 @@ object RealSky {
         }
     }
 
+    /** 0.18: Android is short of memory: the sky lets go of what it keeps for the next pictures. */
+    fun trimMemory() { engine?.trimMemory() }
+
     internal fun engine(context: Context): RealSkyEngine = engine ?: synchronized(this) {
         engine ?: RealSkyEngine(context.applicationContext).also { engine = it }
     }

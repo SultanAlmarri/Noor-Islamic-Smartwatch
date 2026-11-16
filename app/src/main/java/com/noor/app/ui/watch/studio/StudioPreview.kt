@@ -63,7 +63,8 @@ fun FaceCanvas(
     val renderer = remember { FaceRenderer(context, StudioRepository.fonts(context)) }
     val frame = remember { FaceFrame() }
     val bounds = remember { Rect() }
-    val zone = config?.zone ?: ZoneId.systemDefault()
+    // (The clock is the device's, as on the watch; the place's zone is for the prayer times only.)
+    val zone = ZoneId.systemDefault()
     val live by produceState(clock ?: ZonedDateTime.now(zone), clock, zone) {
         if (clock != null) { value = clock; return@produceState }
         while (true) { value = ZonedDateTime.now(zone); delay(1000 - System.currentTimeMillis() % 1000) }

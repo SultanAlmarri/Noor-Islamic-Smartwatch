@@ -107,7 +107,10 @@ class LocationRepository(
         // The country chooses the prayer-time authority (Authorities.forPlace), so it must be right wherever the user
         // travels, also offline: the geocoder; else the offline time-zone map, whose zones follow each country's
         // border (ZoneCountries); else the nearest town of the gazetteer; else a bundled city within 150 km.
-        val country = en?.countryCode ?: offlineCountry(point) ?: gaz?.countryCode
+        // (0.18 review: a gazetteer town within 5 km comes before the map, whose simplified borders can put the other
+        // half of a twin border town, Al Ain and Al Buraimi say, in the wrong country.)
+        val gazClose = gaz?.takeIf { Gazetteer.distanceKm(it.point, point) <= 5.0 }
+        val country = en?.countryCode ?: gazClose?.countryCode ?: offlineCountry(point) ?: gaz?.countryCode
             ?: near.countryCode.takeIf { Places.distanceKm(near.point, point) < 150 }
         val region = regionCode(en) ?: gaz?.region ?: near.region.takeIf { Places.distanceKm(near.point, point) < 40 }
         return KnownLocation(

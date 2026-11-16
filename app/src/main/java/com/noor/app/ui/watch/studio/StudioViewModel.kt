@@ -44,7 +44,8 @@ enum class StudioStatus { NONE, SENT, SHOWING, PICK, UNSUPPORTED, UPDATE, FAILED
 fun studioStatus(s: StudioState, watches: WatchSetupState?): StudioStatus {
     if (s.sendFailed) return StudioStatus.FAILED
     val reports: Collection<WatchReport> = watches?.reports?.values.orEmpty()
-    if (reports.any { it.studioSupported == false }) return StudioStatus.UNSUPPORTED
+    // (Unsupported only when no watch can show it: one older or Wear OS 6-native watch does not speak for the rest.)
+    if (reports.isNotEmpty() && reports.all { it.studioSupported == false }) return StudioStatus.UNSUPPORTED
     val at = s.sentAt ?: return if (reports.any { it.studioActive == true }) StudioStatus.SHOWING else StudioStatus.NONE
     val got = reports.filter { it.studioStamp == at }
     return when {
