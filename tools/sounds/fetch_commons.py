@@ -7,7 +7,11 @@ Three kinds of source:
                            deletion on Commons is noticed, never silently ignored), and its SHA-1 is checked.
   "url"                    a file published by an archive with a stated licence (archive.org, the US National Park
                            Service). The manifest records the page, licence, author and the file's SHA-1, checked by
-                           hand when the entry was added; the download must have exactly that SHA-1.
+                           hand when the entry was added; the download must have exactly that SHA-1. A candidate
+                           that could not be downloaded where it was found (Freesound refuses the cloud sessions the
+                           project is developed in) may be listed with "sha1": null: it is fetched, its SHA-1 is
+                           printed and written to sources.json as not yet pinned, for review; pin it in the manifest
+                           before the file is used in the app.
   "local"                  a recording supplied by the app's owner, kept in the repository under tools/sounds/owner/
                            ("path" is relative to the manifest's folder). The manifest records who made it, who holds
                            the rights and on what terms; the SHA-1 is checked when given.
@@ -77,14 +81,18 @@ def sha1_of(path):
 
 
 def download(url, raw, sha1):
-    if os.path.exists(raw) and sha1_of(raw) == sha1:
-        return
+    """Downloads url to raw and checks its SHA-1; sha1=None (a candidate not yet reviewed) only records it."""
+    if sha1 and os.path.exists(raw) and sha1_of(raw) == sha1:
+        return sha1
     time.sleep(PAUSE_S)
     data = get(url, binary=True)
     got = hashlib.sha1(data).hexdigest()
-    if got != sha1:
+    if sha1 is None:
+        print(f"  SHA-1 not yet pinned in the manifest: {got} (review the file, then pin it)", flush=True)
+    elif got != sha1:
         raise RuntimeError(f"SHA-1 mismatch: got {got}, expected {sha1}")
     open(raw, "wb").write(data)
+    return got
 
 
 def commons(entry, out):
@@ -106,9 +114,12 @@ def commons(entry, out):
 def by_url(entry, out):
     ext = os.path.splitext(urllib.parse.urlparse(entry["url"]).path)[1].lower()
     raw = os.path.join(out, f"{entry['id']}.orig{ext}")
-    download(entry["url"], raw, entry["sha1"])
-    return raw, {"page": entry["page"], "file_url": entry["url"], "sha1": entry["sha1"], "bytes": os.path.getsize(raw),
-                 "licence": entry["licence"], "licence_url": entry.get("licence_url"), "artist": entry["artist"]}
+    sha1 = download(entry["url"], raw, entry["sha1"])
+    meta = {"page": entry["page"], "file_url": entry["url"], "sha1": sha1, "bytes": os.path.getsize(raw),
+            "licence": entry["licence"], "licence_url": entry.get("licence_url"), "artist": entry["artist"]}
+    if entry["sha1"] is None:
+        meta["sha1_pinned"] = False
+    return raw, meta
 
 
 def local(entry, out, manifest_dir):
