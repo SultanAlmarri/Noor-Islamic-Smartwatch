@@ -154,7 +154,10 @@ class MainActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             val s = settingsFlow.first()
-            opening.begin(Opening.modeAtStart(animationsOn(this@MainActivity), home = s.onboardingDone && startRoute() == null))
+            val home = s.onboardingDone && startRoute() == null
+            // (0.18) The home screen's sky gets ready behind the launch screen.
+            if (home) com.noor.app.sky.RealSky.prewarm(applicationContext, s)
+            opening.begin(Opening.modeAtStart(animationsOn(this@MainActivity), home = home))
             first = s
         }
 
@@ -242,6 +245,8 @@ internal object Routes {
     const val ONBOARDING = "onboarding"
     const val PRAYERS = "prayers"
     const val WATCH = "watch"
+    /** 0.18: Minhad Studio, the watch-face editor (from the Watch page). */
+    const val WATCH_STUDIO = "watch/studio"
     const val QIBLA = "qibla"
     const val SETTINGS = "settings"
     const val CITIES = "cities"
@@ -265,7 +270,7 @@ internal object Routes {
     // opens from Settings, set up once and left.
     val tabs = listOf(PRAYERS, QIBLA, ADHAN, SETTINGS)
     /** Pages that are a task of their own, shown without the tab bar (0.15: every other page keeps it). */
-    val withoutTabBar = setOf(ONBOARDING, CITIES)
+    val withoutTabBar = setOf(ONBOARDING, CITIES, WATCH_STUDIO)
 }
 
 // Tabs cross-fade (they are siblings). A page pushed from a tab comes in from the side one reads towards, and leaves
@@ -370,7 +375,10 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_HISTORY) { com.noor.app.ui.adhan.AlertHistoryScreen(content, onBack = { nav.popBackStack() }) }
-            composable(Routes.WATCH) { WatchScreen(content, onOpenAdhan = { openTab(Routes.ADHAN) }, onBack = { nav.popBackStack() }) }
+            composable(Routes.WATCH) {
+                WatchScreen(content, onOpenAdhan = { openTab(Routes.ADHAN) }, onBack = { nav.popBackStack() }, onOpenStudio = { nav.navigate(Routes.WATCH_STUDIO) })
+            }
+            composable(Routes.WATCH_STUDIO) { com.noor.app.ui.watch.studio.StudioScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) },
                     onOpenRoute = { r ->

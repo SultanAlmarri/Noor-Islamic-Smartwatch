@@ -57,7 +57,8 @@ class WorldAuthoritiesTest {
         check("JO", Authorities.JORDAN); check("PT", Authorities.PORTUGAL); check("RU", Authorities.RUSSIA); check("BN", Authorities.BRUNEI)
         check("GB", Authorities.MOONSIGHTING); check("FR", Authorities.UOIF)
         check("NG", Authorities.EGYPT_REGION); check("SY", Authorities.EGYPT_REGION); check("SN", Authorities.EGYPT_REGION)
-        check("OM", Authorities.UMM_AL_QURA_REGION); check("BH", Authorities.UMM_AL_QURA_REGION); check("YE", Authorities.UMM_AL_QURA_REGION)
+        // (0.18 review: Bahrain, Oman and Yemen keep the Muslim World League until their own tables are checked.)
+        check("OM", Authorities.MWL); check("BH", Authorities.MWL); check("YE", Authorities.MWL)
         check("DE", Authorities.MWL); check("UZ", Authorities.MWL); check("JP", Authorities.MWL)
         // round 2: conventions inferred from the authorities' own tables
         check("KZ", Authorities.DUMK); check("BA", Authorities.IZ_BIH)

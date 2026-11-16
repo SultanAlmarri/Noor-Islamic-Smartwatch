@@ -542,6 +542,25 @@ internal object SkyDirector {
         return out
     }
 
+    /**
+     * (0.18) The sets of a level that are next on their way at hour [h] but not yet in the view (the one about to come
+     * in on one side, and the one that has just gone out on the other): the renderer reads their pictures ahead, so
+     * that a set comes in with its pictures at hand and is never seen to appear.
+     */
+    fun ahead(w: Weather, level: Int, h: Float, biome: Biome, year: Float = 0.5f, rise: Float = 6f, set: Float = 18f): List<CloudLeg> {
+        val d = LEG_HOURS[level]
+        val x = (h + CloudField.hash(w.seed, 40 + level, 0) * d) / d
+        val k = kotlin.math.floor(x).toInt(); val p = x - k
+        val dir = if (CloudField.hash(w.seed, 60, 0) < 0.5f) 1f else -1f
+        val out = ArrayList<CloudLeg>(2)
+        for (j in -2..2) {
+            val offset = dir * (p - 0.5f - j) * PITCH
+            if (abs(offset) < REACH || abs(offset) >= REACH + PITCH) continue
+            setFor(w, level, k + j, biome, year, rise, set)?.let { out += CloudLeg(it.removeSuffix(TURNED), offset, 1f, 0f, it.endsWith(TURNED)) }
+        }
+        return out
+    }
+
     private fun smooth(a: Float, b: Float, x: Float): Float { val t = ((x - a) / (b - a)).coerceIn(0f, 1f); return t * t * (3 - 2 * t) }
 
     /**
@@ -758,10 +777,14 @@ internal class RealSkyFrame(
     val lapse: Float,
     /** The moment shown, as the clock has it (ms): the renderer carries the clouds on from there while it is now. */
     val shownAtMs: Long = 0L,
+    /** (0.18) The minute the home screen last told (ms): the clouds are carried on from it only while the moment shown is that one. */
+    val nowMs: Long = 0L,
     /** The time of year the land is shown in (0 = midwinter .. 0.5 = midsummer): see [Seasons]. */
     val year: Float = 0.5f,
     /** Testing only (Tester): the fog to show whatever the morning; null: the director's. */
     val fogShown: Float? = null,
+    /** (0.18) For each level, the sets next on their way, not yet in the view: their pictures are read ahead. */
+    val soon: List<List<CloudLeg>> = listOf(emptyList(), emptyList(), emptyList()),
 ) {
     val haze: Float get() = state.haze
 
@@ -952,7 +975,8 @@ internal class RealSkyFrame(
                 look.night, Array(5) { m(cel[it]) },
                 hour = (display * 24).toFloat(), seed = (weather.seedX + weather.seedY * 0.37f),
                 textBottom = textBottom, panelTop = panelTop, panelRadius = panelRadius, lightGlass = lightGlass, tint = tint,
-                fade = fade, busy = busy, still = still, lapse = lapse, shownAtMs = shownAt.toEpochMilli(), year = year, fogShown = fogShown,
+                fade = fade, busy = busy, still = still, lapse = lapse, shownAtMs = shownAt.toEpochMilli(), nowMs = scene.now.toEpochMilli(), year = year, fogShown = fogShown,
+                soon = List(3) { level -> SkyDirector.ahead(weather, level, (display * 24).toFloat(), biome, year, rise, set) },
             )
         }
     }

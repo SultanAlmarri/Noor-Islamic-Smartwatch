@@ -35,9 +35,12 @@ fun rememberPermissionRequest(permission: String, settings: (Context) -> Intent,
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) {
             val activity = context.findActivity()
-            if (activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
+            // (0.18 review: Android also gives "no rationale" when the dialog was only closed the first time; the
+            // settings page opens only once the user has said no before.)
+            if (activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission) && refusedBefore(context, permission)) {
                 runCatching { context.startActivity(settings(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
+            markRefused(context, permission)
         }
         result(granted)
     }
@@ -59,3 +62,10 @@ fun notificationSettings(context: Context): Intent =
 /** Android's page for this app (permissions, battery…). */
 fun appDetailsSettings(context: Context): Intent =
     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+
+private fun prefs(context: Context) = context.getSharedPreferences("minhad_permissions", Context.MODE_PRIVATE)
+
+/** Whether [permission] was refused (or its dialog closed) before. */
+fun refusedBefore(context: Context, permission: String): Boolean = prefs(context).getBoolean(permission, false)
+
+fun markRefused(context: Context, permission: String) { prefs(context).edit().putBoolean(permission, true).apply() }

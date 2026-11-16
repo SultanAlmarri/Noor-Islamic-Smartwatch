@@ -63,6 +63,37 @@
    }
   },
   {
+   "id": "adhan.egypt",
+   "kind": "adhan",
+   "title_en": "Egypt",
+   "title_ar": "مصر",
+   "place_en": "Khan el-Khalili, Cairo",
+   "place_ar": "خان الخليلي، القاهرة",
+   "categories": [
+    "renowned",
+    "traditional"
+   ],
+   "fajr": false,
+   "region": "africa",
+   "country_en": "Egypt",
+   "country_ar": "مصر",
+   "file": "sounds/adhan_egypt.ogg",
+   "seconds": 205.3,
+   "short": {
+    "file": "sounds/adhan_egypt_short.ogg",
+    "seconds": 22.6
+   },
+   "credit": {
+    "author": "3bagbrew",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "https://freesound.org/people/3bagbrew/sounds/511003/",
+    "changes": "Audio only; full version: 90.0–295.3 s of the original (the Adhan alone, without the announcements before it and the salawat after it); opening (“Allahu Akbar, Allahu Akbar”, the takbir before the first shahada): 90.0–112.6 s; fade in/out, 70 Hz high-pass, loudness normalised to -16 LUFS (less where the peak limit requires), mono Ogg Vorbis."
+   },
+   "note_en": "Recorded on a rooftop in old Cairo, so the city can be heard around the voice.",
+   "note_ar": "سُجّل على سطح في القاهرة القديمة، لذا تُسمع المدينة حول الصوت."
+  },
+  {
    "id": "adhan.dubai",
    "kind": "adhan",
    "title_en": "Dubai",

@@ -237,9 +237,14 @@ object Authorities {
         sourceNoteEn = "Fajr 19.5°, Isha 17.5°: the method praytimes.org lists for Africa, Syria and Lebanon. No official local timetable is implied.",
     )
 
-    /** Umm al-Qura where it is the recognised method of the Arabian Peninsula (praytimes.org), outside Saudi Arabia. */
+    /**
+     * Umm al-Qura as the recognised method of the Arabian Peninsula (praytimes.org). 0.18 review: not given to any country
+     * automatically: Bahrain's and Oman's ministries publish their own times, which were not compared, and Umm al-Qura's
+     * fixed Isha differs from them by many minutes; until a table is checked, they keep the Muslim World League's method
+     * (as before 0.18).
+     */
     val UMM_AL_QURA_REGION = Authority(
-        "uqu_region", "Umm al-Qura (Arabian Peninsula)", "أم القرى (شبه الجزيرة العربية)", setOf("BH", "OM", "YE"), null,
+        "uqu_region", "Umm al-Qura (Arabian Peninsula)", "أم القرى (شبه الجزيرة العربية)", emptySet(), null,
         Profiles.UMM_AL_QURA, SourceKind.RECOGNISED_METHOD,
         sourceUrl = PRAYTIMES,
         sourceNoteEn = "Fajr 18.5°, Isha 90 minutes after Maghrib (120 in Ramadan): the method praytimes.org lists for the Arabian Peninsula. No official local timetable is implied.",

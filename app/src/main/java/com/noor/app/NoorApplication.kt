@@ -71,6 +71,12 @@ class NoorApplication : Application(), AlertHost {
         }
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // (0.18: the sky's pooled picture buffers; the pictures on the GPU stay.)
+        if (level >= TRIM_MEMORY_UI_HIDDEN) com.noor.app.sky.RealSky.trimMemory()
+    }
+
     @OptIn(FlowPreview::class)
     override fun onCreate() {
         super.onCreate()

@@ -1283,9 +1283,13 @@ of the world chosen by GPS, the app renamed **Minhad (منهاد)**, and evidenc
   `adhan.dubai` and `adhan.dubai_fajr` (the owner's files, who states he holds the rights; their tags name YouTube
   uploads, written down in SOUNDS.md), each with its opening; `fx.birds`, `fx.rooster`, `fx.waves`, `fx.rain`,
   `fx.stream` (US National Park Service, public domain; radio aporee, CC BY 3.0), whole and short, raised to about
-  −18 LUFS. Al-Quds and Egypt: no recording with a usable licence was found; they take the user's own. The Dubai
-  Mall recording on YouTube was not downloaded (YouTube's terms; rule 7). Fajr's default is Makkah (no licensed Makkah
-  Fajr Adhan exists); a voice's Fajr recording plays at Fajr (Dubai's, or the user's "<voice> Fajr").
+  −18 LUFS. `adhan.egypt`: a rooftop at Khan el-Khalili, Cairo (Freesound 511003, CC0; fetched by the Fetch
+  workflow on GitHub, because Freesound refuses the cloud session; licence checked in Openverse's index), the only one
+  of six Egyptian candidates with a whole, clear Adhan (checked with band energy and faster-whisper; cut 90.0–295.3 s,
+  opening 90.0–112.6 s). Al-Quds: the one candidate (Holy Sepulchre) holds no phrase the recogniser could hear; it
+  takes the user's own. The Dubai Mall recording on YouTube was not downloaded (YouTube's terms; rule 7). Fajr's
+  default is Dubai's Fajr Adhan; a voice's Fajr recording plays at Fajr (Dubai's, or the user's "<voice> Fajr").
+  `build_library.py` does not yet hold the Dubai entries (added by hand): add them before running it again.
 - Adhan tab: `VoiceCard` (six tiles, the voice for every prayer, its opening heard on touch) and one volume for all
   (`setVolumeAll`); prayers list without the voice row; no "turn on" button, fewer footers; a prayer can be set to a
   Sound (the effects); the library is a plain list with credits (no favourites or filters).
@@ -1303,4 +1307,24 @@ of the world chosen by GPS, the app renamed **Minhad (منهاد)**, and evidenc
   may not show over the lock screen, the watch's Jumu'ah and 24-hour times, the watch's official times refreshed daily,
   and more).
 
-**Tests**: see the release report; unit tests and software renders only. **Not tested**: on a phone or watch.
+- Accuracy (a helper agent): IACAD's tables cannot be reproduced exactly by any single rule (Dhuhr's official-minus-
+  calculated spread is 65 s, over a minute; simpler ephemerides do no better); C1 stays (527/588). Awqaf refitted from
+  the official UAE Hijri Calendar for Abu Dhabi (2,038/2,118, 96.2%, held-out months 95.8% and 95.3%; Awqaf's own
+  website 12/12). Routes to exact times: IACAD needs its permission (its feed refuses servers); Awqaf has an official
+  API that needs a key the owner must register for. `accuracy/results/EVIDENCE.md`, `OfficialAgreementTest`.
+- Authorities round 2: Karachi with the Hanafi Asr by default in Pakistan, India, Bangladesh and Afghanistan; JAKIM,
+  Kemenag refitted from their own 2026 years (58–67% and 93–94% exact); Kazakhstan (DUMK, 90–94%) and Bosnia (Takvim,
+  56%, an approximation) added. `accuracy/results/authorities_measurements.md`, `AuthorityTablesTest`.
+- Home sky (a helper agent; `docs/sky-018/CHANGES.md`): the path behind the land above each scenery's skyline
+  (`land.json` "skyline", `tools/scenery/skyline.py`), the horizon lowered where a skyline would hide the Sun at rise
+  and set (`HeroGeometry.horizonFor`), the progress line fading into the Sun, cloud sets kept while their shading
+  loads and read ahead (`SkyDirector.ahead`), the drift easing in near now, `RealSky.prewarm` behind the launch screen,
+  pictures decoded on worker threads into reused buffers, a baseline profile; treeline specks in fog mended.
+- The green hills' autumn pictures (the colour pass of 16 November).
+- Minhad Studio (a helper agent; docs/WATCH.md): `FaceDesign` (core), the `face` module's renderer, the watch's
+  `StudioFaceService` (androidx.wear.watchface; not on watches that launched with Wear OS 6, where the app says so),
+  the phone's editor (route `watch/studio`), the watch's settings in one page with details; the future route to every
+  watch (FaceDesign → WFF on the device → Watch Face Push) and a tested prototype generator `FaceWff`.
+
+**Tests**: see the release report; unit tests, software renders and the emulator only. **Not tested**: on a phone or
+watch.

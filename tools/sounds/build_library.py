@@ -48,23 +48,35 @@ ADHANS = [
          place_en="The Prophet's Mosque", place_ar="المسجد النبوي",
          region="haramain", country_en="Saudi Arabia", country_ar="السعودية", year=None,
          full=(0.6, 186.4), short=(0.6, 19.8), note_en=None, note_ar=None),
+    # 0.18 (16 November 2026). This entry and the Dubai voice (the owner's recordings) were put in the library by hand
+    # with render() below and the same edits; the Dubai entries (and the effects' -18 LUFS) must be added here before
+    # this script is run again, or it would remove them.
+    dict(id="egypt", src="egypt_khan_khalili", fajr=False,
+         title_en="Egypt", title_ar="مصر",
+         place_en="Khan el-Khalili, Cairo", place_ar="خان الخليلي، القاهرة",
+         region="africa", country_en="Egypt", country_ar="مصر", year=None,
+         full=(90.0, 295.3), short=(90.0, 112.6),
+         note_en="Recorded on a rooftop in old Cairo, so the city can be heard around the voice.",
+         note_ar="سُجّل على سطح في القاهرة القديمة، لذا تُسمع المدينة حول الصوت."),
 ]
 
 # Places the owner asked for that have no recording here yet, and why (shown in docs/SOUNDS.md). The app offers
 # them as "add your own recording". The Dubai voice comes from the owner's own recordings, added separately.
 MISSING = [
     ("Al-Quds", "القدس",
-     "No freely licensed recording of the Adhan of al-Masjid al-Aqsa or of another mosque in Jerusalem was found. "
-     "Wikimedia Commons holds only a 15-second clip heard from a distance at the Garden Tomb. On the Internet Archive, "
-     "two radio aporee field recordings from Jerusalem were examined: one (Golden Gate, 2014) holds the end of a "
-     "prayer over a loudspeaker, not the Adhan; the other (Pisgat Ze'ev, 2016) holds distant calls mixed with "
-     "gunfire. Other uploads there are broadcast or YouTube copies whose uploader does not hold the rights."),
-    ("Egypt", "مصر",
-     "No freely licensed recording of a single, clear Egyptian Adhan was found. The only ones with a usable licence "
-     "are two radio aporee field recordings from Maadi, Cairo (CC BY 3.0, 2012): both capture the dawn call of many "
-     "distant mosques at once, with no phrase clear enough to cut. The Cambridge \"Voices and Faces of the Adhan: "
-     "Cairo\" collection is CC BY-NC-ND (no commercial use, no edits), and the Internet Archive's \"Adhan from Egypt, "
-     "Abdulnasser Harak\" is a radio recording re-uploaded by someone who does not hold its rights."),
+     "No freely licensed recording of the Adhan of al-Masjid al-Aqsa was found, and no Jerusalem recording could "
+     "be downloaded and checked here. The one candidate, the Adhan heard at the Church of the Holy Sepulchre "
+     "in the Old City (Freesound 191866, Zabuhailo, CC BY 4.0, 109 s), was fetched on GitHub and examined on 16 "
+     "November 2026: a speech recogniser heard no phrase of the Adhan in it, so it is not used. Examined and not usable (16 "
+     "November 2026): on Wikimedia Commons, a 15-second clip heard from a distance at the Garden Tomb and a "
+     "60-second travel video from the Haram (Neollene Films, 2017: too short to hold a whole Adhan); radio "
+     "aporee field recordings on the Internet Archive from the Golden Gate (2014: the end of a prayer over a "
+     "loudspeaker), Pisgat Ze'ev (2016: distant calls with gunfire), the Lion's Gate (2015: street sound, no "
+     "Adhan), the Notre Dame rooftop at sunset (2013: several distant mosques, 67 s), Bethlehem (2023: distant, "
+     "behind voices, 64 s) and Ramallah (2019, CC BY 3.0, Maghrib and Fajr from a window: far away, many mosques "
+     "at once, and not Jerusalem; a speech recogniser heard no words in either). Freesound's \"Palestine muezzin\" "
+     "(nicotep) is CC BY-NC; other uploads on the Internet Archive are broadcast or YouTube copies whose "
+     "uploader does not hold the rights."),
 ]
 
 # Five recordings of nature (the owner: real recordings, high quality and clear, from a known source; no music,

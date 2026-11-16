@@ -364,6 +364,15 @@ vec3 heavens(vec3 rd, vec2 vp, float soft, float sunShows) {
 
 // ---- The land -----------------------------------------------------------------------------------------------------
 
+// (0.14, 0.18) How much morning fog lies along a line of sight [seen] metres long, for the eye [ya] km over the fog's
+// floor and a fog [HF] km deep. It lies in banks, thicker here and thinner there, and they drift ([banks]).
+float fogDepth(vec3 rd, float seen, float ya, float HF, out float banks) {
+    float yb = max(ya + rd.y * seen * 0.001, 0.0);
+    float lay = abs(yb - ya) > 1e-4 ? HF / (yb - ya) * (exp(-ya / HF) - exp(-yb / HF)) : exp(-ya / HF);
+    banks = 0.65 + 0.7 * texture(tNoise2D, vec2(atan(rd.x, rd.z) * 0.8 + uTime * 0.0016, 0.31 + log2(max(seen, 10.0)) * 0.13)).r;
+    return 3.4 * uFog.x * banks * seen * 0.001 * lay;
+}
+
 float landDist(vec2 luv) {
     vec3 g = texture(tLandG, luv).rgb;
     return exp2((g.r * 255.0 * 256.0 + g.g * 255.0) / 65535.0 * 18.0);
@@ -841,16 +850,19 @@ void main() {
     // white sea in the valley. Towards the low Sun it glows with the Sun's colour.
     if (uFog.x > 0.003) {
         // (How far the thing seen is: the land, or the water's surface in front of its bed.)
-        float seen = t;
+        // (0.18: the distance read smoothly between the texels of the land's distance picture, which has half the
+        // picture's sharpness: read texel by texel, the fog's edge round a near tree went in steps.)
+        float seen = t < 1.9e5 ? landDistSmooth(vec2(luv.x, min(luv.y, 0.9995))) : t;
         if (water > 0.03 && rd.y < -0.0005) seen = min(seen, mix(t, uLandInfo.y / -rd.y, smoothstep(0.80, 0.98, water)));
         float ya = (uLandInfo.y > 0.001 ? uLandInfo.y : uCam.z) * 0.001;          // the eye over the fog's floor, km
-        float yb = max(ya + rd.y * seen * 0.001, 0.0);
         // (Deeper where it is looked down on from high above: a valley's fog, not a meadow's.)
         float HF = clamp(ya * 0.35, 0.022, 0.07);
-        float lay = abs(yb - ya) > 1e-4 ? HF / (yb - ya) * (exp(-ya / HF) - exp(-yb / HF)) : exp(-ya / HF);
-        // (It lies in banks, thicker here and thinner there, and they drift.)
-        float banks = 0.65 + 0.7 * texture(tNoise2D, vec2(atan(rd.x, rd.z) * 0.8 + uTime * 0.0016, 0.31 + log2(max(seen, 10.0)) * 0.13)).r;
-        float depth = 3.4 * uFog.x * banks * seen * 0.001 * lay;
+        float banks = 0.0;
+        float depth = fogDepth(rd, seen, ya, HF, banks);
+        // (0.18) A pixel the land's outline only partly covers (a tree's edge, a far crest) is that much sky, and the
+        // sky's share of it has the fog of the sky: with the fog of the land alone, the edges of trees stood in a
+        // fog as dark specks.
+        if (land.a < 0.999 && t < 1.9e5) { float bs; depth = mix(fogDepth(rd, 2.0e5, ya, HF, bs), depth, land.a); }
         // (Water mirrors the fog that lies on it: what a ripple far off reflects left it nearly level, through the
         // whole length of the fog; near the eye it mirrors the clear sky overhead. Without this the lake lay dark
         // and sharp under a bright fog, with a line between them.)
@@ -862,6 +874,14 @@ void main() {
         vec3 fogCol = ambF * 1.25 + mSunGround() * (0.30 + 1.1 * towards) * (1.0 - moonF) * smoothstep(-3.0, 2.0, uSunEl)
                     + mGlow() * (0.2 + 0.7 * towards) + mMoonLight() * moonF * 0.5;
         col = mix(col, fogCol, min(thick, 0.985));
+        // (0.18) The Sun shows through a morning fog as a pale disc, as photographs of a fog at sunrise show it: over
+        // the sea, where the line of sight to a rising Sun runs kilometres through the fog, the disc was put out
+        // entirely, and the Sun was gone from the sky at Shuruq. (Where land stands in front of it, it stays hidden.)
+        if (land.a < 0.5 && uSunEl > -1.1) {
+            float sd = acos(clamp(dot(rd, uSunDir), -1.0, 1.0)) / 0.0135;
+            if (sd < 1.0) col += mSunDisc() * smoothstep(1.0, 0.86, sd) * smoothstep(-1.10, -0.80, uSunEl) * sunShows
+                * max(exp(-0.3 * depth) - (1.0 - min(thick, 0.985)), 0.0) * (1.0 - land.a);
+        }
     }
 
     // Rain here. What is far off stands behind more of it: the land fades into a grey veil with its distance (a wood

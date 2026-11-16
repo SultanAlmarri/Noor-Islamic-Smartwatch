@@ -80,7 +80,7 @@ class BundledDataTest {
         fun exists(path: String) = runCatching { app.assets.open(path).close(); true }.getOrDefault(false)
         val allowed = setOf("CC0", "Public domain", "CC BY 3.0", "CC BY 4.0", "CC BY-SA 3.0", "CC BY-SA 4.0", "Owner's rights")
         // (0.18: the owner's set, exactly what must be there, rather than a count.)
-        org.junit.Assert.assertTrue(entries.map { it.id }.toString(), entries.map { it.id }.containsAll(listOf("adhan.makkah", "adhan.madinah", "adhan.dubai",
+        org.junit.Assert.assertTrue(entries.map { it.id }.toString(), entries.map { it.id }.containsAll(listOf("adhan.makkah", "adhan.madinah", "adhan.egypt", "adhan.dubai",
             "adhan.dubai_fajr", "fx.birds", "fx.rooster", "fx.waves", "fx.rain", "fx.stream")))
         for (e in entries) {
             e.file?.let { org.junit.Assert.assertTrue("missing ${e.id} full", exists(it)) }
@@ -91,9 +91,11 @@ class BundledDataTest {
             org.junit.Assert.assertTrue("licence ${credit!!.licence}", credit.licence in allowed)
             if (e.kind == com.noor.alerts.SoundKind.ADHAN) {
                 org.junit.Assert.assertTrue(credit.author.isNotBlank())
-                // (Commons, or 0.18 the owner's own recording, kept in the repository.)
+                // (Commons; 0.18 the owner's own recording, kept in the repository; or a field recording published on
+                // Freesound by its recordist under CC0 or CC BY, its SHA-1 pinned in tools/sounds/adhan_sources.json.)
                 org.junit.Assert.assertTrue(credit.sourceUrl!!.startsWith("https://commons.wikimedia.org/") ||
-                    (credit.licence == "Owner's rights" && credit.sourceUrl!!.startsWith("owner:")))
+                    (credit.licence == "Owner's rights" && credit.sourceUrl!!.startsWith("owner:")) ||
+                    (credit.licence in setOf("CC0", "CC BY 4.0") && credit.sourceUrl!!.startsWith("https://freesound.org/")))
                 org.junit.Assert.assertTrue(e.titleAr.isNotBlank() && e.placeAr != null)
                 org.junit.Assert.assertNotNull(e.shortFile)
             }

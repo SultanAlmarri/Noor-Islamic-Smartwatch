@@ -157,6 +157,23 @@ object RealSky {
         return unusable.intValue == 0
     }
 
+    /**
+     * (0.18) The app is starting on the home screen: the renderer gets ready behind the launch screen (its shaders,
+     * the scenery's pictures). Nothing happens where the real sky is not used.
+     */
+    fun prewarm(context: Context, settings: com.noor.app.data.AppSettings) {
+        if (forceOff) return
+        runCatching {
+            if (!usable(context, settings.skyGraphics)) return
+            val place = com.noor.app.data.PrayerProvider.place(settings)
+            val biome = place?.let { Biome.of(settings.scenery, it.countryCode, it.point.elevationM, it.point.latitude) }
+            engine(context).prewarm(biome)
+        }
+    }
+
+    /** 0.18: Android is short of memory: the sky lets go of what it keeps for the next pictures. */
+    fun trimMemory() { engine?.trimMemory() }
+
     internal fun engine(context: Context): RealSkyEngine = engine ?: synchronized(this) {
         engine ?: RealSkyEngine(context.applicationContext).also { engine = it }
     }
@@ -186,6 +203,24 @@ object RealSky {
     }
 
     private val lifts = HashMap<String, FloatArray>()
+    private val skylines = HashMap<String, FloatArray>()
+
+    /**
+     * (0.18) The scenery's whole skyline: for equal strips across its picture, the tangent of the angle over the
+     * horizon of the highest point of land in each (tools/scenery/skyline.py writes it into land.json as `skyline`).
+     * The Sun's path is drawn behind it, so it passes behind a mountain or a tree as the Sun does, and never runs down
+     * over the land to the level horizon (until 0.17 it was cut at the level horizon only, and lay over the mountains
+     * and trees of the higher sceneries). Null when the scenery has none: the path is then cut at the level horizon.
+     */
+    fun skyline(context: Context, biome: Biome): FloatArray? = synchronized(skylines) {
+        skylines.getOrPut(biome.id) {
+            runCatching {
+                val meta = org.json.JSONObject(context.assets.open("sky2/land/${biome.id}/land.json").bufferedReader().use { it.readText() })
+                val a = meta.optJSONArray("skyline") ?: return@runCatching FloatArray(0)
+                FloatArray(a.length()) { a.optDouble(it, 0.0).toFloat() }
+            }.getOrElse { FloatArray(0) }
+        }.takeIf { it.isNotEmpty() }
+    }
 
     /**
      * How high a scenery's skyline stands where the Sun rises and where it sets: tangents of the angle over the
