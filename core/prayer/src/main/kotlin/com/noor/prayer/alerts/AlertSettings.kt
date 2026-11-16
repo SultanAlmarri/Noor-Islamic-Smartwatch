@@ -37,12 +37,33 @@ data class PrayerAlert(
     val vibrate: Boolean = true,
     /** Stop after this many seconds (with a short fade). 0 = play to the end. */
     val maxSeconds: Int = 0,
+    /**
+     * 0.16: the days of the week it alerts on, one bit a day, Monday the lowest ([ALL_DAYS] = every day). Off on a day
+     * means no alert and no reminders for that prayer that day.
+     */
+    val days: Int = ALL_DAYS,
+    /** 0.16: minutes before the prayer for a reminder notification ("Asr in 15 minutes"), 0 = none. One of [BEFORE_CHOICES]. */
+    val beforeMinutes: Int = 0,
+    /** 0.16: minutes after the prayer for a reminder ("Asr began 20 minutes ago": the iqamah), 0 = none. One of [AFTER_CHOICES]. */
+    val afterMinutes: Int = 0,
 ) {
+    /** Whether it alerts on [day]. */
+    fun on(day: java.time.DayOfWeek): Boolean = days and (1 shl (day.value - 1)) != 0
     fun normalized(p: Prayer): PrayerAlert {
         // Sunrise is not a prayer: the Adhan is never called for it.
         val m = if (p == Prayer.SHURUQ && (mode == AlertMode.ADHAN || mode == AlertMode.ADHAN_SHORT)) AlertMode.SOUND else mode
         return copy(mode = m, volumePercent = volumePercent.coerceIn(5, 100), maxSeconds = maxSeconds.coerceIn(0, 600),
-            soundId = soundId?.takeIf { SoundIds.isValid(it) })
+            soundId = soundId?.takeIf { SoundIds.isValid(it) }, days = days.coerceIn(0, ALL_DAYS),
+            beforeMinutes = beforeMinutes.takeIf { it in BEFORE_CHOICES } ?: 0, afterMinutes = afterMinutes.takeIf { it in AFTER_CHOICES } ?: 0)
+    }
+
+    companion object {
+        /** Every day of the week. */
+        const val ALL_DAYS = 0b1111111
+        /** The lead times offered before a prayer, in minutes (0 = off). */
+        val BEFORE_CHOICES = listOf(0, 5, 10, 15, 20, 30)
+        /** The times offered after a prayer (the iqamah), in minutes (0 = off). */
+        val AFTER_CHOICES = listOf(0, 5, 10, 15, 20, 25, 30)
     }
 }
 
@@ -76,6 +97,23 @@ data class AlertSettings(
     /** True when [p] should produce any alert on [onDevice]. */
     fun alertsOn(p: Prayer, onDevice: AlertDevice): Boolean = enabled && device.includes(onDevice) && alert(p).enabled
 
+    /**
+     * The minutes before [p] for its reminder (0.16): its own, or else the one lead set for every prayer before 0.16.
+     */
+    fun beforeOf(p: Prayer): Int = alert(p).beforeMinutes.takeIf { it > 0 } ?: reminderMinutes
+
+    /** [p]'s reminder lead set to [minutes] (0 = none); the old single lead, if any, becomes each prayer's own first. */
+    fun withBefore(p: Prayer, minutes: Int): AlertSettings = materialized().let { s -> s.with(p, s.alert(p).copy(beforeMinutes = minutes)) }
+
+    /** The same reminder lead for every prayer at once (0.16: "for all prayers"). */
+    fun withBeforeForAll(minutes: Int): AlertSettings = Prayer.entries.fold(copy(reminderMinutes = 0)) { s, p -> s.with(p, s.alert(p).copy(beforeMinutes = minutes)) }
+
+    private fun materialized(): AlertSettings = if (reminderMinutes <= 0) this
+        else Prayer.entries.fold(copy(reminderMinutes = 0)) { s, p -> s.with(p, s.alert(p).copy(beforeMinutes = beforeOf(p))) }
+
+    /** True when [p] should alert on [onDevice] on [date] (its days of the week, 0.16). */
+    fun alertsOn(p: Prayer, onDevice: AlertDevice, date: java.time.LocalDate): Boolean = alertsOn(p, onDevice) && alert(p).on(date.dayOfWeek)
+
     fun with(p: Prayer, a: PrayerAlert) = copy(perPrayer = perPrayer + (p to a.normalized(p)))
 
     /** Compact single-line form, used in DataStore and inside the watch config. */
@@ -85,10 +123,16 @@ data class AlertSettings(
         add("grad=$gradualSeconds"); add("dnd=${if (quietWhenSilent) 0 else 1}"); add("quiet=${if (quietWhenSilent) 1 else 0}")
         if (favourites.isNotEmpty()) add("fav=" + favourites.joinToString(","))
         // Written only when set, so settings without a reminder encode exactly as before (watches up to 0.9.8 ignore it).
-        if (reminderMinutes > 0) add("pre=$reminderMinutes")
+        // 0.16: reminders are per prayer; when only those are set, "pre" carries the lead they share, for watches up to
+        // 0.9.12 (none if they differ).
+        val shared = if (reminderMinutes > 0) reminderMinutes
+            else Prayer.entries.filter { alert(it).enabled }.map { alert(it).beforeMinutes }.distinct().singleOrNull() ?: 0
+        if (shared > 0) add("pre=$shared")
         Prayer.entries.forEach { p ->
             val a = alert(p)
-            add("${p.name}=${if (a.enabled) 1 else 0},${a.mode.name},${a.soundId ?: ""},${a.volumePercent},${if (a.vibrate) 1 else 0},${a.maxSeconds}")
+            // (Days and the reminders before and after are new fields at the end: older readers stop before them.)
+            val extra = if (a.days != PrayerAlert.ALL_DAYS || a.beforeMinutes > 0 || a.afterMinutes > 0) ",${a.days},${a.beforeMinutes},${a.afterMinutes}" else ""
+            add("${p.name}=${if (a.enabled) 1 else 0},${a.mode.name},${a.soundId ?: ""},${a.volumePercent},${if (a.vibrate) 1 else 0},${a.maxSeconds}$extra")
         }
     }.joinToString(";")
 
@@ -110,6 +154,8 @@ data class AlertSettings(
         fun decode(text: String?): AlertSettings {
             if (text.isNullOrBlank()) return AlertSettings()
             val m = text.split(';').mapNotNull { f -> f.indexOf('=').takeIf { it > 0 }?.let { f.substring(0, it) to f.substring(it + 1) } }.toMap()
+            // (Before 0.16 one reminder lead served every prayer: it becomes each prayer's own.)
+            val pre = m["pre"]?.toIntOrNull()?.takeIf { it in REMINDER_CHOICES } ?: 0
             val per = Prayer.entries.associateWith { p ->
                 val d = DEFAULTS.getValue(p)
                 val f = m[p.name]?.split(',') ?: return@associateWith d
@@ -120,6 +166,9 @@ data class AlertSettings(
                     volumePercent = f.getOrNull(3)?.toIntOrNull() ?: d.volumePercent,
                     vibrate = f.getOrNull(4)?.let { it == "1" } ?: d.vibrate,
                     maxSeconds = f.getOrNull(5)?.toIntOrNull() ?: d.maxSeconds,
+                    days = f.getOrNull(6)?.toIntOrNull() ?: PrayerAlert.ALL_DAYS,
+                    beforeMinutes = f.getOrNull(7)?.toIntOrNull() ?: 0,
+                    afterMinutes = f.getOrNull(8)?.toIntOrNull() ?: 0,
                 ).normalized(p)
             }
             return AlertSettings(
@@ -131,7 +180,9 @@ data class AlertSettings(
                 // the main reason Adhans did not sound, so it is not carried over. Only an explicit "quiet" choice is kept.
                 quietWhenSilent = m["quiet"] == "1",
                 favourites = m["fav"]?.split(',')?.filter { SoundIds.isValid(it) && !SoundIds.isCustom(it) }?.distinct().orEmpty(),
-                reminderMinutes = m["pre"]?.toIntOrNull()?.takeIf { it in REMINDER_CHOICES } ?: 0,
+                // ("pre" alone, as before 0.16: the lead for every prayer. Written beside per-prayer leads only for old
+                // watches: then the prayers' own leads are what counts.)
+                reminderMinutes = if (Prayer.entries.any { (m[it.name]?.split(',')?.size ?: 0) > 6 }) 0 else pre,
             )
         }
     }

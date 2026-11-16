@@ -187,4 +187,71 @@ class AlertPlannerTest {
         assertEquals(null, fire(r.remindAt, s.copy(enabled = false)))
         assertEquals(null, fire(r.remindAt, s.with(Prayer.ASR, s.alert(Prayer.ASR).copy(enabled = false))))
     }
+
+    // ---- 0.16: days of the week, a reminder before and after each prayer, all prayers at once ----
+
+    @Test fun aPrayerAlertsOnlyOnItsDaysOfTheWeek() {
+        // 4 November 2026 is a Wednesday. Dhuhr on Fridays only (for instance, not on the others, or the reverse).
+        val friday = 1 shl (java.time.DayOfWeek.FRIDAY.value - 1)
+        val s = on.with(Prayer.DHUHR, on.alert(Prayer.DHUHR).copy(days = friday))
+        val now = at(2026, 11, 4, 3, 0)
+        val dhuhr = AlertPlanner.plan(dubai, s, AlertDevice.PHONE, now).first { it.prayer == Prayer.DHUHR }
+        assertEquals(LocalDate.of(2026, 11, 6), dhuhr.date, "the next Friday, two days on")
+        // The other prayers are unchanged.
+        assertEquals(AlertPlanner.plan(dubai, on, AlertDevice.PHONE, now).filter { it.prayer != Prayer.DHUHR },
+            AlertPlanner.plan(dubai, s, AlertDevice.PHONE, now).filter { it.prayer != Prayer.DHUHR })
+        // A firing alarm on a day that is off does nothing (the days were changed after it was set).
+        assertEquals(FireDecision.Skip, AlertPlanner.onFire(dubai, s, AlertDevice.PHONE, Prayer.DHUHR, LocalDate.of(2026, 11, 4),
+            dubai.day(LocalDate.of(2026, 11, 4)).instant(Prayer.DHUHR)!!))
+        // Every day off: nothing planned for it at all, within the week ahead.
+        val never = on.with(Prayer.ASR, on.alert(Prayer.ASR).copy(days = 0))
+        assertFalse(AlertPlanner.plan(dubai, never, AlertDevice.PHONE, now).any { it.prayer == Prayer.ASR })
+    }
+
+    @Test fun eachPrayerHasItsOwnReminderAndOldSettingsKeepTheirs() {
+        val now = at(2026, 11, 4, 3, 0)
+        // Before 0.16 one lead served every prayer: it still does.
+        val old = AlertSettings.decode(on.copy(reminderMinutes = 15).encode())
+        assertTrue(Prayer.entries.filter { old.alert(it).enabled }.all { old.beforeOf(it) == 15 })
+        // One prayer's own lead, the old one cleared: only that prayer has a reminder.
+        val one = on.withBefore(Prayer.ASR, 20)
+        val rem = AlertPlanner.reminders(dubai, one, AlertDevice.PHONE, now)
+        assertEquals(listOf(Prayer.ASR), rem.map { it.prayer })
+        assertEquals(Duration.ofMinutes(20), Duration.between(rem[0].remindAt, rem[0].at))
+        // Turning one prayer's reminder off while the old lead is set leaves the others theirs.
+        val mixed = on.copy(reminderMinutes = 15).withBefore(Prayer.MAGHRIB, 0)
+        assertEquals(0, mixed.reminderMinutes)
+        assertFalse(AlertPlanner.reminders(dubai, mixed, AlertDevice.PHONE, now).any { it.prayer == Prayer.MAGHRIB })
+        assertTrue(AlertPlanner.reminders(dubai, mixed, AlertDevice.PHONE, now).any { it.prayer == Prayer.ISHA })
+        // For all prayers at once.
+        val all = on.withBeforeForAll(10)
+        assertTrue(Prayer.entries.all { all.alert(it).beforeMinutes == 10 })
+        // Round trips, and an old watch still reads the shared lead.
+        assertEquals(mixed, AlertSettings.decode(mixed.encode()))
+        assertEquals(all, AlertSettings.decode(all.encode()))
+        assertTrue(all.encode().contains("pre=10"))
+        assertFalse(mixed.encode().contains("pre="), "leads that differ: no single lead for old watches")
+        // Settings without the new fields encode exactly as before.
+        assertFalse(on.encode().split(';').any { f -> f.startsWith("FAJR=") && f.split(',').size > 6 })
+    }
+
+    @Test fun aReminderAfterThePrayerForTheIqamah() {
+        val now = at(2026, 11, 4, 3, 0)
+        val s = on.with(Prayer.ASR, on.alert(Prayer.ASR).copy(afterMinutes = 20))
+        val after = AlertPlanner.afterReminders(dubai, s, AlertDevice.PHONE, now)
+        assertEquals(listOf(Prayer.ASR), after.map { it.prayer })
+        assertTrue(after[0].after)
+        assertEquals(Duration.ofMinutes(20), Duration.between(after[0].at, after[0].remindAt))
+        assertEquals(s, AlertSettings.decode(s.encode()))
+        // Fired on time it says how long since the prayer began; far too early or long after, nothing.
+        fun fire(t: java.time.Instant) = AlertPlanner.onAfter(dubai, s, AlertDevice.PHONE, Prayer.ASR, after[0].date, t)
+        assertEquals(20, fire(after[0].remindAt)!!.minutesLeft)
+        assertEquals(null, fire(after[0].remindAt.minus(Duration.ofMinutes(5))))
+        assertEquals(null, fire(after[0].remindAt.plus(Duration.ofMinutes(45))))
+        // Off on that day, or alerts off: none.
+        assertTrue(AlertPlanner.afterReminders(dubai, s.copy(enabled = false), AlertDevice.PHONE, now).isEmpty())
+        // Once its moment has passed, the next is the next day's.
+        val next = AlertPlanner.afterReminders(dubai, s, AlertDevice.PHONE, after[0].remindAt.plusSeconds(60)).first()
+        assertEquals(after[0].date.plusDays(1), next.date)
+    }
 }
