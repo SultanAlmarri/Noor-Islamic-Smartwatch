@@ -29,6 +29,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.LayoutDirection
@@ -270,24 +272,33 @@ class ScreenshotTest {
         // Singapore: MUIS's own published times for the date (official timetable), not a calculation.
         singapore = true; screen = Screen.TODAY; shot("25_today_singapore_official_en", "Singapore")
         singapore = false
-        screen = Screen.SETTINGS; shot("08_settings_night_en", "Numerals")
-        // Settings search (0.9.4): typing finds the setting, here the calculation method by a word it is known by.
+        screen = Screen.SETTINGS; shot("08_settings_night_en", "Language and region")
+        // Settings search (0.9.4): typing finds the setting, here the calculation method by a word it is known by
+        // (0.15: it lives on the Prayer times page; the result says so, and works from here).
         rule.onAllNodes(androidx.compose.ui.test.hasSetTextAction())[0].performTextInput("dulook")
-        shot("58_settings_search_en", "Authority")
+        shot("58_settings_search_en", "Calculation method")
         rule.onAllNodes(androidx.compose.ui.test.hasSetTextAction())[0].performTextClearance()
+        // 0.15: the two pages Settings opens: how the times are worked out, and language and region.
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Prayer times")).onFirst().performClick()
+        shot("80_settings_times_en", "Calculation method")
+        screen = Screen.WATCH; rule.waitForIdle(); screen = Screen.SETTINGS
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Language and region")).onFirst().performClick()
+        shot("81_settings_language_en", "Numerals")
         screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
         // Arabic versions of the text-heavy pages, so the language check covers them (0.9).
         arabic = true
         screen = Screen.SETTINGS; shot("51_settings_night_ar", "الإعدادات")
+        rule.onAllNodes(androidx.compose.ui.test.hasText("أوقات الصلاة")).onFirst().performClick()
+        shot("82_settings_times_ar", "طريقة الحساب")
         screen = Screen.ACCURACY; shot("52_accuracy_night_ar", "دبي")
         screen = Screen.CITIES; shot("53_cities_night_ar", "التصفح حسب الدولة")
         // 0.14: the scenery page in Arabic (the language check had not seen it), Settings by day, and Settings with
         // large text, where a row's choice moves under its title instead of being squeezed beside it.
         screen = Screen.SCENERY; shot("77_scenery_night_ar", "الفصول")
         arabic = false
-        theme = ThemeMode.LIGHT; screen = Screen.SETTINGS; shot("78_settings_day_en", "Numerals")
-        theme = ThemeMode.DARK; fontScale = 1.3f; shot("79_settings_large_text_en", "Numerals"); fontScale = 1f
+        theme = ThemeMode.LIGHT; screen = Screen.SETTINGS; shot("78_settings_day_en", "Language and region")
+        theme = ThemeMode.DARK; fontScale = 1.3f; shot("79_settings_large_text_en", "Language and region"); fontScale = 1f
         // The sky through the day (Dubai, 4 November 2026): dawn, morning, sunset glow, night with the moon.
         theme = ThemeMode.DARK; arabic = false; screen = Screen.TODAY
         fun at(h: Int, m: Int) = ZonedDateTime.of(2026, 11, 4, h, m, 0, 0, ZoneId.of("Asia/Dubai")).toInstant()

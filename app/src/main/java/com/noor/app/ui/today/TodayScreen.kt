@@ -65,6 +65,7 @@ import com.noor.app.ui.opening.Opening
 import com.noor.app.ui.opening.arrives
 import kotlinx.coroutines.flow.first
 import androidx.compose.material.icons.rounded.Verified
+import androidx.compose.material.icons.rounded.SwipeRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -153,7 +154,7 @@ fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpe
     val u = ui ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = NoorTheme.colors.gold, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
     }
-    TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer)
+    TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer, onScrubbed = vm::scrubLearned)
 }
 
 /**
@@ -214,6 +215,8 @@ fun TodayContent(
     previewSkyTime: Float? = null,
     /** A prayer's row was touched (0.14): its alert opens. */
     onOpenPrayer: (Prayer) -> Unit = {},
+    /** The sky was drawn along for the first time (0.15): its hint is no longer needed. */
+    onScrubbed: () -> Unit = {},
 ) {
     val ar = isArabicUi()
     // (Kept between the screen's once-a-second updates: a new formatter each second made every row of the day's
@@ -264,7 +267,8 @@ fun TodayContent(
     }
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         val todayDay = remember(today, u.settings, u.place, u.profile) { dayFor(today)?.day }
-        SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup)
+        SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup,
+            showScrubHint = !u.settings.scrubHintDone && previewScrub == null, onScrubbed = onScrubbed)
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -335,6 +339,7 @@ private fun SkyHeader(
     u: TodayUi, f: Formatter, todayDay: PrayerDay?, top: Dp, heroHeight: Dp, scroll: ScrollState,
     onOpenLocation: () -> Unit, onRefresh: () -> Unit, previewScrub: Double?, previewSkyTime: Float?,
     real: RealSkySetup? = null,
+    showScrubHint: Boolean = false, onScrubbed: () -> Unit = {},
 ) {
     val st = u.state ?: return
     val place = u.place ?: return
@@ -467,6 +472,7 @@ private fun SkyHeader(
         Modifier.fillMaxWidth().height(height).onSizeChanged { headerWidth = it.width }.pointerInput(rtl) {
             detectHorizontalDragGestures(
                 onDragStart = { o ->
+                    if (showScrubHint) onScrubbed()
                     scrubbing = true
                     if (opening.value < 1f) scope.launch { opening.animateTo(1f, tween(220)) }
                     scrubTo(o.x, size.width.toFloat())
@@ -536,6 +542,20 @@ private fun SkyHeader(
                     )
                 }
             }
+        }
+        // 0.15: the sky's gesture said once, where it is done, until it has been used (help in context, not a tour):
+        // a capsule of glass low on the sky. It goes at the first drag and does not come back.
+        val hintShown = showScrubHint && !scrubbing && opening.value >= 1f
+        val hintAlpha by animateFloatAsState(if (hintShown) 1f else 0f, tween(if (hintShown) 900 else 250), label = "scrubHint")
+        if (hintAlpha > 0.01f) Row(
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp, start = 24.dp, end = 24.dp).graphicsLayer { alpha = hintAlpha }
+                .clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.28f)).border(0.75.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
+                .padding(horizontal = 14.dp, vertical = 7.dp).clearAndSetSemantics { },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.SwipeRight, null, tint = Sky.OnSky, modifier = Modifier.size(16.dp).graphicsLayer { if (rtl) scaleX = -1f })
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.sky_scrub_hint_short), style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, letterSpacing = 0.sp), color = Sky.OnSky, maxLines = 1)
         }
     }
 }

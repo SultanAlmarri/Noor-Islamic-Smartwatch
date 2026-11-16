@@ -36,7 +36,7 @@
     <string name="background_updates_off">متوقف: يتحدّث عند فتح التطبيق أو تغيّر المنطقة الزمنية</string>
     <string name="refresh_location">تحديث الموقع الآن</string>
     <string name="settings_calculation">أوقات الصلاة</string>
-    <string name="authority">الجهة / الطريقة</string>
+    <string name="authority">طريقة الحساب</string>
     <string name="authority_auto">تلقائي حسب موقعي</string>
     <string name="asr_method">العصر</string>
     <string name="asr_standard">الجمهور (الشافعي والمالكي والحنبلي)</string>
@@ -60,7 +60,7 @@
     <string name="time_format">صيغة الوقت</string>
     <string name="time_12">12 ساعة</string>
     <string name="time_24">24 ساعة</string>
-    <string name="theme">المظهر</string>
+    <string name="theme">السمة</string>
     <string name="theme_system">حسب النظام</string>
     <string name="theme_dark">ليلي</string>
     <string name="theme_light">نهاري</string>
@@ -489,7 +489,7 @@
     <string name="loc_region_sub">أكبرها: %1$s · %2$s مكانًا</string>
     <string name="loc_villages">القرى والأماكن الصغيرة (%1$s)</string>
     <string name="loc_find_in">ابحث عن مكان في %1$s</string>
-    <string name="scenery_title">مشهد الشاشة الرئيسية</string>
+    <string name="scenery_title">الشاشة الرئيسية</string>
     <string name="scenery_intro">المشهد الطبيعي تحت السماء في الشاشة الرئيسية. الشمس والقمر يتبعان مواقيت صلاتك، وكل ما عدا ذلك مرتّب ليظهر كل مكان في أجمل صوره.</string>
     <string name="scenery_auto">تلقائي</string>
     <string name="scenery_auto_now">%1$s، لـ%2$s. يتغير عند السفر: كثبان الصحراء، أو شمال غرب المحيط الهادئ، أو القطب الشمالي، أو المحيط، أو التلال الخضراء، أو الصخور الحمراء.</string>
@@ -551,7 +551,7 @@
     <string name="decrease">إنقاص</string>
     <string name="increase">زيادة</string>
     <string name="settings_appearance">المظهر</string>
-    <string name="settings_language">اللغة والأرقام</string>
+    <string name="settings_language">اللغة والمنطقة</string>
     <string name="adhan_attention">يحتاج إلى انتباهك</string>
     <string name="adhan_prayers_footer">اضغط على صلاة لاختيار أذانها أو صوتها. المفتاح يشغّل تنبيه تلك الصلاة أو يوقفه.</string>
     <string name="today_row_alert">التنبيه: %1$s</string>
@@ -560,4 +560,13 @@
     <string name="size_megabytes">%1$s م.ب</string>
     <string name="adhan_master_off_here">تنبيهات الصلاة متوقفة، لذلك لن يُنبَّه لهذه الصلاة.</string>
     <string name="adhan_turn_on">تشغيل تنبيهات الصلاة</string>
+    <!-- 0.15: Settings reorganised (prayer times and language each on a page of their own). -->
+    <string name="settings_group_prayer">الصلاة</string>
+    <string name="high_latitude_note">للأماكن البعيدة شمالًا أو جنوبًا فقط، حيث لا تُظلم السماء تمامًا في ليالي الصيف. ولا تغيّر شيئًا في غيرها.</string>
+    <string name="countdown_group">العدّ</string>
+    <string name="times_follow">الأوقات وفق</string>
+    <string name="times_accuracy_note">كيف يقارن نور أوقاته بالجداول الرسمية لكل جهة، والمصادر التي يعتمد عليها.</string>
+    <string name="settings_found_in">في %s</string>
+    <string name="sky_scrub_hint_short">اسحب السماء لتتبّع الشمس</string>
+    <string name="theme_sun_short">مع الشمس</string>
 </resources>

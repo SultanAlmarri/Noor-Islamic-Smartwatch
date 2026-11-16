@@ -502,6 +502,38 @@ the look of every page at once, through the parts they share:
   from one corner by Noor's gold with a gold medallion: Adhan, the next Adhan, its sound and the one switch;
   Settings, the place the times are for and the authority they follow (the card opens the location page).
 
+### How Noor is organised (0.15)
+
+The owner (16 November 2026): "see how professionals in user interface design... understand the human mind... Apply
+that to my app, like organizing all the features and settings and options... intuitive. Like a person will know how
+to use my app with their instinct." The whole app was inventoried (every page, row, option, entry point, duplicate
+and test that depends on it), then reorganised by these rules, from Apple's Human Interface Guidelines (settings,
+tab bars), Android's settings design guidelines (source.android.com/docs/core/settings/settings-guidelines), Nielsen
+Norman Group's ten usability heuristics, progressive disclosure and mobile navigation articles, and the laws of
+interaction design (Hick, Fitts, Jakob, Miller):
+
+- **A setting lives where people look for it, in their words.** Prayer times, then the Adhan, then how Noor looks,
+  then the watch, then about: the order of need. Names say what a thing is, the most important word first, no
+  slashes and no jargon: "Calculation method" (was "Authority / method"; every prayer app calls it so), "Theme"
+  (the row was "Appearance" inside a group called Appearance), "Home screen" (the scenery, the sky and now the
+  countdown's way after a prayer, which is seen there), "Language and region" (as on iOS: language, numerals, time
+  format and the Hijri calendar).
+- **Few choices on the first page** (Hick; Android: ten to fifteen at most, the most used first). Settings' first
+  page has nine rows under the place's hero card (twenty before). What most people set once and never again is one
+  level down, on a page named for what it holds: **Prayer times** (opens on what the times follow and on what
+  grounds; then the method, Asr, personal adjustments; the high-latitude rule apart, with a footer saying it only
+  matters far north or south; the accuracy page, where the question "can I trust these?" arises) and **Language
+  and region**. Two levels, never three (NN/g: more than two "typically have low usability").
+- **One home for each thing.** Alert history lives on the Adhan tab (Settings had a second copy); the location's
+  rows sit under the place's card they belong to. Search still finds every setting on every page, says which page
+  it is on ("In Prayer times"), and works it from the results.
+- **The way out is always in view** (user control and freedom; recognition rather than recall). The tab bar stays
+  on every page of a tab, with the tab one is in lit, as on iOS; only the welcome page and the location chooser,
+  tasks with a keyboard or a map, hide it. Tapping the lit tab returns to its first page.
+- **Links, not directions.** "Choose Watch or Both in the Adhan tab" on the Watch tab is now a link to it.
+- **Help in context, once.** The home screen's hidden gesture (drag the sky to follow the Sun) is said once, on
+  the sky, in a small capsule, until the first drag; it never returns (`AppSettings.scrubHintDone`).
+
 ## The interface of 0.14: one system, and an opening
 
 The owner (15 November 2026): "totally revolutionize the user interface and keep the Apple aesthetic... make the

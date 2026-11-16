@@ -76,7 +76,7 @@ import java.time.Instant
 import java.time.ZoneId
 
 @Composable
-fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel()) {
+fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(), onOpenAdhan: () -> Unit = {}) {
     val state by vm.state.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle(initialValue = null)
     val lastSent by vm.lastSent.collectAsStateWithLifecycle()
@@ -98,7 +98,7 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel())
         WatchActions(
             install = vm::installOnWatch, useFace = vm::useNoorFace, open = vm::openOnWatch, sync = vm::syncNow,
             openGuide = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(INSTALL_GUIDE)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
-            faceChoice = faceChoice, selectFace = vm::selectFace, sendFace = vm::sendFace,
+            faceChoice = faceChoice, selectFace = vm::selectFace, sendFace = vm::sendFace, openAdhan = onOpenAdhan,
         ),
         now = System.currentTimeMillis(),
         preview = preview,
@@ -127,6 +127,8 @@ class WatchActions(
     val faceChoice: WatchFaces.Choice = WatchFaces.DEFAULT,
     val selectFace: (WatchFaces.Choice) -> Unit = {},
     val sendFace: (String, WatchReport?) -> Unit = { _, _ -> },
+    /** 0.15: the watch's alerts are chosen on the Adhan tab: its row here opens it. */
+    val openAdhan: () -> Unit = {},
 )
 
 /** Stateless Watch tab, so every state (no watch, installing, ready…) can be rendered and tested. */
@@ -178,7 +180,7 @@ fun WatchContent(
             SettingsDivider()
             SettingsItem(Icons.Rounded.Widgets, stringResource(R.string.watch_feature_complication), stringResource(R.string.watch_feature_complication_desc), null)
             SettingsDivider()
-            SettingsItem(Icons.Rounded.NotificationsActive, stringResource(R.string.watch_feature_alerts), stringResource(R.string.watch_feature_alerts_desc), null)
+            SettingsItem(Icons.Rounded.NotificationsActive, stringResource(R.string.watch_feature_alerts), stringResource(R.string.watch_feature_alerts_desc), actions.openAdhan)
             SettingsDivider()
             SettingsItem(Icons.Rounded.CloudOff, stringResource(R.string.watch_feature_standalone), stringResource(R.string.watch_feature_standalone_desc), null)
             SettingsDivider()

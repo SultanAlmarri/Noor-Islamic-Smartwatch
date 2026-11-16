@@ -36,7 +36,7 @@
     <string name="background_updates_off">Off: updates when you open the app or the time zone changes</string>
     <string name="refresh_location">Refresh location now</string>
     <string name="settings_calculation">Prayer times</string>
-    <string name="authority">Authority / method</string>
+    <string name="authority">Calculation method</string>
     <string name="authority_auto">Automatic for my location</string>
     <string name="asr_method">Asr</string>
     <string name="asr_standard">Standard (Shafi\'i, Maliki, Hanbali)</string>
@@ -60,7 +60,7 @@
     <string name="time_format">Time format</string>
     <string name="time_12">12-hour</string>
     <string name="time_24">24-hour</string>
-    <string name="theme">Appearance</string>
+    <string name="theme">Theme</string>
     <string name="theme_system">System</string>
     <string name="theme_dark">Night</string>
     <string name="theme_light">Day</string>
@@ -483,7 +483,7 @@
     <string name="loc_region_sub">Largest: %1$s · %2$s places</string>
     <string name="loc_villages">Villages and small places (%1$s)</string>
     <string name="loc_find_in">Find a place in %1$s</string>
-    <string name="scenery_title">Home scenery</string>
+    <string name="scenery_title">Home screen</string>
     <string name="scenery_intro">The landscape under the sky on the home screen. The Sun and the Moon follow your prayer times; everything else is arranged to show each place at its most beautiful.</string>
     <string name="scenery_auto">Automatic</string>
     <string name="scenery_auto_now">%1$s, for %2$s. Changes when you travel: desert dunes, the Pacific Northwest, the Arctic, the ocean, green hills or red rock.</string>
@@ -546,7 +546,7 @@
     <string name="decrease">Decrease</string>
     <string name="increase">Increase</string>
     <string name="settings_appearance">Appearance</string>
-    <string name="settings_language">Language and numbers</string>
+    <string name="settings_language">Language and region</string>
     <string name="adhan_attention">Needs your attention</string>
     <string name="adhan_prayers_footer">Tap a prayer to choose its Adhan or sound. The switch turns that prayer’s alert on or off.</string>
     <string name="today_row_alert">Alert: %1$s</string>
@@ -555,4 +555,13 @@
     <string name="size_megabytes">%1$s MB</string>
     <string name="adhan_master_off_here">Prayer alerts are off, so this prayer will not alert.</string>
     <string name="adhan_turn_on">Turn on prayer alerts</string>
+    <!-- 0.15: Settings reorganised (prayer times and language each on a page of their own). -->
+    <string name="settings_group_prayer">Prayer</string>
+    <string name="high_latitude_note">Only for places far north or far south, where the sky does not grow fully dark on summer nights. Elsewhere it changes nothing.</string>
+    <string name="countdown_group">Countdown</string>
+    <string name="times_follow">Times follow</string>
+    <string name="times_accuracy_note">How Noor checks its times against each authority\'s own timetable, and the sources it uses.</string>
+    <string name="settings_found_in">In %s</string>
+    <string name="sky_scrub_hint_short">Drag the sky to follow the Sun</string>
+    <string name="theme_sun_short">Follow the sun</string>
 </resources>

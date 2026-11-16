@@ -50,6 +50,7 @@ class SettingsRepository(private val context: Context) {
         val alerts = stringPreferencesKey("alerts_v1")
         val status = booleanPreferencesKey("status_notification")
         val elapsed = booleanPreferencesKey("elapsed_after_prayer")
+        val scrubHint = booleanPreferencesKey("hint_scrub_done")
         val scenery = stringPreferencesKey("scenery")
         val skyGraphics = stringPreferencesKey("sky_graphics")
         val seasons = booleanPreferencesKey("scenery_seasons")
@@ -86,6 +87,7 @@ class SettingsRepository(private val context: Context) {
             alerts = AlertSettings.decode(p[K.alerts]),
             statusNotification = p[K.status] ?: false,
             elapsedAfterPrayer = p[K.elapsed] ?: true,
+            scrubHintDone = p[K.scrubHint] ?: false,
             scenery = p.enum(K.scenery, Scenery.AUTO),
             skyGraphics = p.enum(K.skyGraphics, SkyGraphics.AUTO),
             seasons = p[K.seasons] ?: false,
@@ -115,6 +117,7 @@ class SettingsRepository(private val context: Context) {
     suspend fun setTheme(t: ThemeMode) = context.dataStore.edit { it[K.theme] = t.name }
     suspend fun setStatusNotification(on: Boolean) = context.dataStore.edit { it[K.status] = on }
     suspend fun setElapsedAfterPrayer(on: Boolean) = context.dataStore.edit { it[K.elapsed] = on }
+    suspend fun setScrubHintDone() = context.dataStore.edit { it[K.scrubHint] = true }
     suspend fun setScenery(v: Scenery) = context.dataStore.edit { it[K.scenery] = v.name }
     suspend fun setSkyGraphics(v: SkyGraphics) = context.dataStore.edit { it[K.skyGraphics] = v.name }
     suspend fun setSeasons(on: Boolean) = context.dataStore.edit { it[K.seasons] = on }

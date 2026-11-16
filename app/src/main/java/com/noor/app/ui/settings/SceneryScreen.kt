@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Park
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -124,6 +125,13 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
             SettingsSwitch(Icons.Rounded.Park, stringResource(R.string.scenery_seasons_title), stringResource(R.string.scenery_seasons_note), s.seasons) { on -> vm.setSeasons(on) }
             SettingsDivider()
             SettingsSwitch(Icons.Rounded.AutoAwesome, stringResource(R.string.scenery_stars_title), stringResource(R.string.scenery_stars_note), s.trueStars) { on -> vm.setTrueStars(on) }
+        }
+        Spacer(Modifier.height(24.dp))
+
+        // 0.15: the countdown's way after a prayer begins lives here, with the home screen it is seen on (the
+        // notification bar follows it too).
+        SettingsSection(stringResource(R.string.countdown_group)) {
+            SettingsSwitch(Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc), s.elapsedAfterPrayer) { on -> vm.setElapsedAfterPrayer(on) }
         }
         Spacer(Modifier.height(24.dp))
 

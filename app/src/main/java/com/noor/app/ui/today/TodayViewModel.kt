@@ -98,6 +98,9 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
         if (age > 30 * 60_000L) refresh()
     }
 
+    /** The sky has been drawn along: its hint has done its work (0.15). */
+    fun scrubLearned() { viewModelScope.launch { container.settings.setScrubHintDone() } }
+
     fun refresh() = viewModelScope.launch {
         if (refreshing.value) return@launch
         refreshing.value = true

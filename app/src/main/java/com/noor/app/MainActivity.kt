@@ -242,6 +242,8 @@ internal object Routes {
     const val ADHAN_HISTORY = "adhan/history"
     fun adhanPrayer(p: Prayer) = "adhan/prayer/${p.name}"
     val tabs = listOf(PRAYERS, QIBLA, ADHAN, WATCH, SETTINGS)
+    /** Pages that are a task of their own, shown without the tab bar (0.15: every other page keeps it). */
+    val withoutTabBar = setOf(ONBOARDING, CITIES)
 }
 
 // Tabs cross-fade (they are siblings). A page pushed from a tab comes in from the side one reads towards, and leaves
@@ -267,7 +269,13 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
     // would rebuild the whole navigation on the home screen, and "Choose a city instead" would never reach the list.)
     val start = remember { if (s.onboardingDone) Routes.PRAYERS else Routes.ONBOARDING }
     val route = entry?.destination?.route ?: start
-    val topLevel = route in Routes.tabs
+    // 0.15: the tab bar stays on every page of a tab, as on iOS (a page opened from a tab is still in that tab: the
+    // way back to the others is always in view), except the welcome page and the location chooser, which are tasks of
+    // their own (a keyboard, a map). The tab lit is the tab the page was opened from: the nearest in the back stack.
+    val stack by nav.currentBackStack.collectAsState()
+    val inTab = remember(stack, route) { stack.lastOrNull { it.destination.route in Routes.tabs }?.destination?.route ?: Routes.PRAYERS }
+    val topLevel = route !in Routes.withoutTabBar
+    val reselect = remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val dark = NoorTheme.colors.isDark
     SideEffect { opening.onHome = route == Routes.PRAYERS }
 
@@ -286,14 +294,20 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
 
     LaunchedEffect(Unit) { debugRoute?.let { r -> runCatching { nav.navigate(r) } } }
 
-    fun openTab(r: String) = nav.navigate(r) {
-        popUpTo(Routes.PRAYERS) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
+    fun openTab(r: String) {
+        // The tab one is in, tapped again: back to its first page (as on iOS), not a new copy of it.
+        if (r == inTab && route != r) { nav.popBackStack(r, inclusive = false); return }
+        if (r == inTab) { reselect.intValue++; return }
+        nav.navigate(r) {
+            popUpTo(Routes.PRAYERS) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
 
     // 0.15: the tab bar floats over the page (a capsule of glass, as on iOS 26), and the pages run on under it: their
     // last line can still be scrolled clear of it.
+    CompositionLocalProvider(LocalTabReselect provides reselect.intValue) {
     Box(Modifier.fillMaxSize()) {
         val bars = WindowInsets.systemBars.asPaddingValues()
         val content = PaddingValues(top = bars.calculateTopPadding(), bottom = bars.calculateBottomPadding() + if (topLevel) TabBarSpace else 0.dp)
@@ -326,7 +340,7 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.ADHAN_HISTORY) { com.noor.app.ui.adhan.AlertHistoryScreen(content, onBack = { nav.popBackStack() }) }
-            composable(Routes.WATCH) { WatchScreen(content) }
+            composable(Routes.WATCH) { WatchScreen(content, onOpenAdhan = { openTab(Routes.ADHAN) }) }
             composable(Routes.SETTINGS) {
                 SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) },
                     onOpenRoute = { r ->
@@ -358,10 +372,17 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
             // (Testing only, 0.14: says so on every page while the tester's options change what the sky shows.)
             com.noor.app.testing.TesterBanner()
-            if (topLevel) NoorTabBar(route, ::openTab) else Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBars))
+            if (topLevel) NoorTabBar(inTab, ::openTab) else Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBars))
         }
     }
+    }
 }
+
+/**
+ * Counts the taps on the tab one is already on, at its first page (0.15): a page that keeps pages of its own (Settings)
+ * goes back to its first on a new count, as a tab does on iOS. 0 until the first such tap.
+ */
+val LocalTabReselect = androidx.compose.runtime.compositionLocalOf { 0 }
 
 /** How much of the foot of a tab's page the floating tab bar takes (over the navigation bar). */
 internal val TabBarSpace = 64.dp + 10.dp + 8.dp

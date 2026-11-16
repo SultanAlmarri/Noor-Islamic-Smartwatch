@@ -78,6 +78,8 @@ data class AppSettings(
     val statusNotification: Boolean = false,
     /** After a prayer's time: "+" time since it for a while (default), or straight to the next prayer's "−" (0.9.8). */
     val elapsedAfterPrayer: Boolean = true,
+    /** The home screen's sky has been drawn along once: its hint ("Drag the sky...") is not shown again (0.15). */
+    val scrubHintDone: Boolean = false,
     val scenery: Scenery = Scenery.AUTO,
     val skyGraphics: SkyGraphics = SkyGraphics.AUTO,
     /** The scenery follows the real season of the place (snow in winter...). Off: its best look all year (0.11). */
