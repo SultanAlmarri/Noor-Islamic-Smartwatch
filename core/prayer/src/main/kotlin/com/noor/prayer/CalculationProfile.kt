@@ -31,6 +31,12 @@ data class CalculationProfile(
     /** Fixed precaution minutes per event, applied after rounding. */
     val offsets: Map<Prayer, Int> = emptyMap(),
     /**
+     * Precaution minutes that replace [offsets] at or above this latitude (north or south), for authorities whose
+     * temkin grows with latitude (Kazakhstan's DUMK: 3 minutes in the south, 5 in the north); null = never.
+     */
+    val offsetsFromLatitude: Double? = null,
+    val offsetsAtHighLatitude: Map<Prayer, Int> = emptyMap(),
+    /**
      * Official reference point: users within [referenceRadiusKm] of it get the authority's city times (as the authority
      * publishes one timetable for the city); users farther away are calculated at their own position.
      */
@@ -41,4 +47,8 @@ data class CalculationProfile(
     val validationAr: String = "محسوبة وفق المعايير المنشورة للطريقة.",
 ) {
     fun offset(p: Prayer): Int = offsets[p] ?: 0
+
+    /** The precaution minutes for [p] at [latitude]. */
+    fun offset(p: Prayer, latitude: Double): Int =
+        if (offsetsFromLatitude != null && kotlin.math.abs(latitude) >= offsetsFromLatitude) offsetsAtHighLatitude[p] ?: 0 else offset(p)
 }

@@ -80,13 +80,13 @@ class AuthorityMeasure {
             "K3 up +2 -3 +3 +2 +3 +2" to prof(20.0, 18.0, up, mapOf(Prayer.FAJR to 2, Prayer.SHURUQ to -3, Prayer.DHUHR to 3, Prayer.ASR to 2, Prayer.MAGHRIB to 3, Prayer.ISHA to 2)),
         )
         val bosnia = prof(18.0, 16.0, nr, mapOf(Prayer.SHURUQ to -6, Prayer.DHUHR to 1, Prayer.MAGHRIB to 6))
-        for (c in CASES.filter { it.file.startsWith("iz_bih") }) println("B1 18/16 -6 +1 0 +6 | " + line(c.copy(profile = bosnia)))
+        for (c in CASES.filter { it.file.startsWith("iz_bih") }.take(1)) println("B1 18/16 -6 +1 0 +6 | " + line(c.copy(profile = bosnia)))
         for (t in listOf(3, 5)) {
             val dumk = prof(15.0, 15.0, nr, mapOf(Prayer.SHURUQ to -t, Prayer.DHUHR to t, Prayer.ASR to t, Prayer.MAGHRIB to t)).copy(asrSchool = com.noor.prayer.AsrSchool.HANAFI)
             for (c in DUMK_CASES) println("D temkin $t | " + line(c.copy(profile = dumk)))
         }
-        for ((label, p) in jakim) for (c in CASES.filter { it.file.startsWith("jakim") }) println("$label | " + line(c.copy(profile = p)))
-        for ((label, p) in kemenag) for (c in CASES.filter { it.file.startsWith("kemenag") }) println("$label | " + line(c.copy(profile = p)))
+        for ((label, p) in jakim) for (c in MALAYSIA) println("$label | " + line(c.copy(profile = p)))
+        for ((label, p) in kemenag) for (c in INDONESIA) println("$label | " + line(c.copy(profile = p)))
     }
 
     companion object {
@@ -98,16 +98,22 @@ class AuthorityMeasure {
             kz("karaganda", 49.806406, 73.085485), kz("aktobe", 50.300377, 57.154555), kz("astana", 51.133333, 71.433333),
             kz("pavlodar", 52.315556, 76.956389),
         )
-        val CASES = listOf(
-            Case("diyanet_istanbul", "Diyanet, Istanbul 2026", GeoPoint(41.0082, 28.9784), "Europe/Istanbul", Profiles.TURKIYE),
-            Case("jakim_wly01", "JAKIM e-Solat WLY01 (Kuala Lumpur) 2026", GeoPoint(3.139, 101.6869), "Asia/Kuala_Lumpur", Profiles.MALAYSIA),
-            Case("jakim_jhr02", "JAKIM e-Solat JHR02 (Johor Bahru) 2026", GeoPoint(1.4927, 103.7414), "Asia/Kuala_Lumpur", Profiles.MALAYSIA),
-            Case("jakim_png01", "JAKIM e-Solat PNG01 (Penang) 2026", GeoPoint(5.4141, 100.3288), "Asia/Kuala_Lumpur", Profiles.MALAYSIA),
-            Case("jakim_ktn01", "JAKIM e-Solat KTN01 (Kota Bharu) 2026", GeoPoint(6.1254, 102.2381), "Asia/Kuala_Lumpur", Profiles.MALAYSIA),
-            Case("kemenag_jakarta", "Kemenag, Jakarta 2026 (via api.myquran.com)", GeoPoint(-6.2088, 106.8456), "Asia/Jakarta", Profiles.INDONESIA),
-            Case("dumk_almaty", "DUMK, Almaty 2026", GeoPoint(43.238293, 76.945465), "+05:00", Profiles.MWL),
-            Case("dumk_astana", "DUMK, Astana 2026", GeoPoint(51.133333, 71.433333), "+05:00", Profiles.MWL),
-            Case("iz_bih_sarajevo", "Islamic Community of BiH (Takvim), Sarajevo 2026", GeoPoint(43.8563, 18.4131), "Europe/Sarajevo", Profiles.MWL),
-        )
+        /** The profiles as they were before round 2, for the before/after rows. */
+        private val JAKIM_BEFORE = CalculationProfile("jakim (before)", "", "", 18.0, 18.0, offsets = mapOf(Prayer.DHUHR to 1, Prayer.MAGHRIB to 2))
+        private val KEMENAG_BEFORE = CalculationProfile("kemenag (before)", "", "", 20.0, 18.0, offsets = mapOf(Prayer.DHUHR to 1))
+        private fun my(z: String, city: String, lat: Double, lon: Double) =
+            Case("jakim_$z", "JAKIM e-Solat ${z.uppercase()} ($city) 2026", GeoPoint(lat, lon), "Asia/Kuala_Lumpur", Profiles.MALAYSIA)
+        private fun id(c: String, lat: Double, lon: Double, zone: String) =
+            Case("kemenag_$c", "Kemenag, ${c.replaceFirstChar { it.uppercase() }} 2026 (via api.myquran.com)", GeoPoint(lat, lon), zone, Profiles.INDONESIA)
+        val MALAYSIA = listOf(my("wly01", "Kuala Lumpur", 3.139, 101.6869), my("jhr02", "Johor Bahru", 1.4927, 103.7414),
+            my("png01", "Penang", 5.4141, 100.3288), my("ktn01", "Kota Bharu", 6.1254, 102.2381))
+        val INDONESIA = listOf(id("jakarta", -6.2088, 106.8456, "Asia/Jakarta"), id("makassar", -5.1477, 119.4327, "Asia/Makassar"),
+            id("medan", 3.5952, 98.6722, "Asia/Jakarta"))
+        val CASES = listOf(Case("diyanet_istanbul", "Diyanet, Istanbul 2026", GeoPoint(41.0082, 28.9784), "Europe/Istanbul", Profiles.TURKIYE)) +
+            MALAYSIA.map { it.copy(profile = JAKIM_BEFORE) } + MALAYSIA +
+            INDONESIA.map { it.copy(profile = KEMENAG_BEFORE) } + INDONESIA +
+            DUMK_CASES.take(1).map { it.copy(profile = Profiles.MWL) } + DUMK_CASES.map { it.copy(profile = Profiles.KAZAKHSTAN) } +
+            listOf(Case("iz_bih_sarajevo", "Islamic Community of BiH (Takvim), Sarajevo 2026", GeoPoint(43.8563, 18.4131), "Europe/Sarajevo", Profiles.MWL)) +
+            listOf(Case("iz_bih_sarajevo", "Islamic Community of BiH (Takvim), Sarajevo 2026", GeoPoint(43.8563, 18.4131), "Europe/Sarajevo", Profiles.BOSNIA))
     }
 }

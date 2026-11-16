@@ -58,7 +58,11 @@ class WorldAuthoritiesTest {
         check("GB", Authorities.MOONSIGHTING); check("FR", Authorities.UOIF)
         check("NG", Authorities.EGYPT_REGION); check("SY", Authorities.EGYPT_REGION); check("SN", Authorities.EGYPT_REGION)
         check("OM", Authorities.UMM_AL_QURA_REGION); check("BH", Authorities.UMM_AL_QURA_REGION); check("YE", Authorities.UMM_AL_QURA_REGION)
-        check("DE", Authorities.MWL); check("KZ", Authorities.MWL); check("BA", Authorities.MWL); check("JP", Authorities.MWL)
+        check("DE", Authorities.MWL); check("UZ", Authorities.MWL); check("JP", Authorities.MWL)
+        // round 2: conventions inferred from the authorities' own tables
+        check("KZ", Authorities.DUMK); check("BA", Authorities.IZ_BIH)
+        // South Asia: the Karachi angles with the Hanafi Asr by default; the user's own choice of Asr still wins.
+        for (cc in listOf("PK", "IN", "BD", "AF")) assertEquals(AsrSchool.HANAFI, Authorities.forPlace(cc, null).profile.asrSchool, cc)
         // Rule 9: Israel is shown as Palestine; both codes give the same times.
         assertSame(Authorities.forPlace("PS", null), Authorities.forPlace("IL", null))
         // A region of the same profile is labelled as a recognised method, the country's own authority is not.
@@ -70,6 +74,8 @@ class WorldAuthoritiesTest {
         for (p in Profiles.ALL) Authorities.forProfile(p.id)?.let { assertEquals(p.id, it.profile.id) }
         assertSame(Authorities.EGYPT, Authorities.forProfile(Profiles.EGYPT.id))
         assertSame(Authorities.UMM_AL_QURA, Authorities.forProfile(Profiles.UMM_AL_QURA.id))
+        assertSame(Authorities.KARACHI_STANDARD, Authorities.forProfile(Profiles.KARACHI.id))
+        assertSame(Authorities.KARACHI, Authorities.forProfile(Profiles.KARACHI_HANAFI.id))
         for (p in listOf(Profiles.MOONSIGHTING, Profiles.JAFARI, Profiles.MOROCCO, Profiles.ALGERIA, Profiles.TUNISIA, Profiles.JORDAN,
             Profiles.RUSSIA, Profiles.FRANCE_UOIF, Profiles.PORTUGAL, Profiles.BRUNEI)) assertNotNull(Authorities.forProfile(p.id), p.id)
     }
@@ -152,6 +158,26 @@ class WorldAuthoritiesTest {
         assertEquals(120, muscatR.minutes[ISHA]!! - muscatR.minutes[MAGHRIB]!!)
     }
 
+    @Test fun southAsiaKeepsTheHanafiAsrUnlessTheUserChoosesOtherwise() {
+        val date = LocalDate.of(2026, 11, 16)
+        val profile = Authorities.forPlace("PK", null).profile
+        val hanafi = day(profile, 24.8607, 67.0011, "Asia/Karachi", date)
+        val standard = day(profile, 24.8607, 67.0011, "Asia/Karachi", date, UserAdjustments(asrSchool = AsrSchool.STANDARD))
+        val asr = Prayer.ASR
+        assertTrue(hanafi.minutes[asr]!! - standard.minutes[asr]!! in 40..70, "${hanafi.minutes[asr]} vs ${standard.minutes[asr]}")
+        assertEquals(standard.minutes, day(Profiles.KARACHI, 24.8607, 67.0011, "Asia/Karachi", date).minutes)
+        for (p in Prayer.entries) if (p != asr) assertEquals(standard.minutes[p], hanafi.minutes[p], "$p")
+    }
+
+    @Test fun kazakhstanTemkinGrowsInTheNorth() {
+        val date = LocalDate.of(2026, 3, 1)
+        val south = day(Profiles.KAZAKHSTAN, 43.238293, 76.945465, "+05:00", date)
+        val north = day(Profiles.KAZAKHSTAN, 51.133333, 71.433333, "+05:00", date)
+        assertEquals(3, south.minutes[DHUHR]!! - kotlin.math.round(south.seconds[DHUHR]!! / 60).toInt())
+        assertEquals(5, north.minutes[DHUHR]!! - kotlin.math.round(north.seconds[DHUHR]!! / 60).toInt())
+        assertEquals(Profiles.KAZAKHSTAN.offset(SHURUQ, 48.69), -3); assertEquals(Profiles.KAZAKHSTAN.offset(SHURUQ, 48.7), -5)
+    }
+
     // ---- Moonsighting Committee: the seasonal rule ----
 
     @Test fun moonsightingSeasonalLimitsAsPublished() {
@@ -216,9 +242,9 @@ class WorldAuthoritiesTest {
         )
         val diffs = compare(ref) { d -> day(Profiles.MALAYSIA, 3.139, 101.6869, "Asia/Kuala_Lumpur", d) }
         report("JAKIM WLY01", diffs)
-        // 5 of 42 exact: Fajr, Dhuhr, Asr and Isha come 1-3 minutes earlier than JAKIM's zone table, which is consistent
-        // with JAKIM adding precautionary minutes and computing each zone at a point of its own (neither is modelled; not tuned).
-        assertEquals(5, diffs.count { it == 0 }); assertTrue(diffs.all { abs(it) <= 3 }, "$diffs")
+        // Before round 2 (no precautionary minutes): 5 of 42 exact, up to 3 minutes early. With the minutes inferred from
+        // JAKIM's 2026 tables of 4 zones (not from this week alone): 33 of 42 exact, all within 2 minutes.
+        assertEquals(33, diffs.count { it == 0 }); assertTrue(diffs.all { abs(it) <= 2 }, "$diffs")
     }
 
     /** Computed minus published, in minutes, for every event of every day. */
