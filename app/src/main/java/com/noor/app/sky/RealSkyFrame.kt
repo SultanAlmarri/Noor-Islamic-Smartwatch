@@ -412,15 +412,18 @@ internal object SkyDirector {
         val full = clouds[2].sumOf { (it.weight * share(it.offset) * (if (it.set == "lo_overcast" || it.set == "lo_storm") 1f else 0f)).toDouble() }.toFloat().coerceIn(0f, 1f)
         val sunPart = ((1f - covered) * (1f - smooth(0.5f, 0.75f, s.overcast)) * (1f - full)).coerceIn(0f, 1f)
         val shade = max(overcast, 0.6f * (1f - sunPart))
+        // (0.14) It rains only out of a sky that is closed, as far as it is closed: rain out of a sunny sky with a
+        // few clouds in it was a grey veil over the distance that nothing in the picture accounted for.
+        val falling = rain * smooth(0.12f, 0.45f, overcast)
         val halo = clouds[0].sumOf { (it.weight * share(it.offset) * (if (it.set == "hi_veil") 1f else if (it.set == "hi_mixed") 0.4f else 0f)).toDouble() }.toFloat().coerceIn(0f, 1f)
         return SkyState(
             clouds = clouds, sunPart = sunPart, halo = halo, overcast = overcast, shade = shade,
             cover = cover, kind = kind, base = 1.25f + 0.5f * day(11), cluster = s.cluster,
             mid = mid, midForm = midForm,
-            cirrus = cirrus, veil = veilNow, storm = storm, showers = showers, rain = rain,
+            cirrus = cirrus, veil = veilNow, storm = storm, showers = showers, rain = falling,
             haze = haze, mist = mist, dust = dust, wind = windy, season = season, snow = snow,
             // (Where snow lies, what falls is snow: the ground is not wet.)
-            wet = smooth(0.15f, 0.5f, rain) * (1f - smooth(0.4f, 0.6f, snow)),
+            wet = smooth(0.15f, 0.5f, falling) * (1f - smooth(0.4f, 0.6f, snow)),
             aurora = aurora, waterRough = rough,
         )
     }
