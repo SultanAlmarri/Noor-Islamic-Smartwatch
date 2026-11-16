@@ -115,7 +115,7 @@ object Profiles {
         fajrAngle = 18.0, ishaAngle = 18.0, seasonalTwilight = Shafaq.GENERAL,
         offsets = mapOf(DHUHR to 5, MAGHRIB to 3),
         validationEn = "The committee's published method (18° with its seasonal limits, made for high latitudes). Reproduces the Adhan library's reference times for London; a recognised method, not an official timetable.",
-        validationAr = "طريقة اللجنة المنشورة (18° مع حدودها الموسمية المصممة للعروض العليا). تطابق الأوقات المرجعية لمكتبة Adhan في لندن؛ طريقة معتمدة شائعة وليست جدولاً رسمياً.",
+        validationAr = "طريقة اللجنة المنشورة (18° مع حدودها الموسمية المصممة للعروض العليا). تطابق الأوقات المرجعية لمكتبة «أذان» البرمجية في لندن؛ طريقة معتمدة شائعة وليست جدولاً رسمياً.",
     )
 
     /** Shia Ithna Ashari, Leva Institute, Qum: Fajr 16, Isha 14, Maghrib when the Sun is 4 deg down (praytimes.org). */

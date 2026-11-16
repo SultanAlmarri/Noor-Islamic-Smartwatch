@@ -101,8 +101,8 @@ class BundledDataTest {
         }
         org.junit.Assert.assertTrue(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_FAJR_ADHAN)!!.fajr)
         org.junit.Assert.assertTrue(lib.adhansFor(com.noor.prayer.Prayer.ASR).none { it.fajr })
-        // 0.16: no alert sounds on the phone (no music, nothing that sounds like it): Adhan recordings only.
-        org.junit.Assert.assertTrue(lib.sounds.isEmpty())
+        // 0.16: no generated tones (no music, nothing that sounds like it); 0.18: real recordings of nature only.
+        org.junit.Assert.assertTrue(lib.sounds.isNotEmpty() && lib.sounds.all { it.id.startsWith("fx.") })
         org.junit.Assert.assertNull(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_SOUND))
     }
 }
