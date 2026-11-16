@@ -213,12 +213,14 @@ internal object SkyDirector {
         listOf("mi_patches", "mi_bands", "mi_sheet", "mi_veil"),
         listOf("lo_few", "lo_scattered", "lo_towers", "lo_broken", "lo_front", "lo_storm", "lo_overcast_breaks", "lo_overcast",
             // (0.14) A thunderstorm far off on the horizon in a fair sky, and a line of them (tools/scenery/sky_cb.py).
-            "lo_cb_far", "lo_cb_line"),
+            "lo_cb_far", "lo_cb_line",
+            // (0.15) Swelling cumulus, a few towering near: a hot afternoon before (or without) a storm.
+            "lo_congestus"),
     )
 
     /** How far a set closes the sky over the land (sets not named leave it open). */
     private val CLOSES = mapOf(
-        "lo_overcast" to 1f, "lo_overcast_breaks" to 0.75f, "lo_storm" to 0.6f, "lo_broken" to 0.45f, "lo_front" to 0.25f, "lo_cb_far" to 0.06f, "lo_cb_line" to 0.06f,
+        "lo_overcast" to 1f, "lo_overcast_breaks" to 0.75f, "lo_storm" to 0.6f, "lo_broken" to 0.45f, "lo_front" to 0.25f, "lo_cb_far" to 0.06f, "lo_cb_line" to 0.06f, "lo_congestus" to 0.15f,
         "mi_sheet" to 0.4f, "mi_veil" to 0.25f,
     )
 

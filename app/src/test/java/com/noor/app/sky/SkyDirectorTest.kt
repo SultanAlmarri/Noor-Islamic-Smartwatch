@@ -421,8 +421,10 @@ class SkyDirectorTest {
             val json = java.io.File("src/main/assets/sky2/clouds/$set/sky.json")
             assertTrue("$set has its pictures", json.exists() && java.io.File("src/main/assets/sky2/clouds/$set/a.webp").exists())
             val towers = Regex("\"towers\"\\s*:\\s*\\[([^]]*)]").find(json.readText())?.groupValues?.get(1)
-                ?.split(',')?.map { it.trim().toFloat() }
-            if (towers != null) assertEquals(set, towers, SkyDirector.THUNDER.getValue(set).toList())
+                ?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.map { it.toFloat() }
+            // (An empty list: a set of heaped cloud with no thunderhead in it, lo_congestus: never one with lightning.)
+            if (towers != null && towers.isEmpty()) assertTrue("$set has no thunderhead", set !in SkyDirector.THUNDER)
+            else if (towers != null) assertEquals(set, towers, SkyDirector.THUNDER.getValue(set).toList())
         }
         // The shaders know how far apart the sets of a level stand (layer.frag ends a set by it).
         assertTrue(java.io.File("src/main/assets/sky2/common.glsl").readText().contains("#define SKY_PITCH ${SkyDirector.PITCH.toInt()}.0"))
