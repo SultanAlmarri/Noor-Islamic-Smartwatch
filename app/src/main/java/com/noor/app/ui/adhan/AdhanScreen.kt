@@ -56,6 +56,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.noor.alerts.SoundLibrary
 import com.noor.app.R
 import com.noor.app.ui.components.NoorPage
+import com.noor.app.ui.components.HeroCard
+import androidx.compose.foundation.selection.toggleable
 import com.noor.app.ui.components.PrayerIcon
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.settings.ChoiceDialog
@@ -114,19 +116,29 @@ fun AdhanScreen(
     val watch = a.enabled && a.device.includes(AlertDevice.WATCH)
 
     NoorPage(stringResource(R.string.adhan_title), contentPadding) {
-        SettingsSection("") {
+        // 0.15: the page opens on what happens next, in big type: the next Adhan and its sound, and the one switch.
+        run {
+            val n = next.takeIf { hasLocation && a.enabled && a.device != AlertDevice.WATCH }
             val status = when {
                 !hasLocation -> stringResource(R.string.adhan_no_location)
                 !a.enabled -> stringResource(R.string.adhan_master_off)
                 a.device == AlertDevice.WATCH -> stringResource(R.string.adhan_on_watch_only)
-                next != null -> next!!.let { n -> stringResource(R.string.adhan_next, f.prayerName(n.planned.prayer, n.planned.date), f.timeAt(n.planned.at, n.zone)) }
+                n != null -> stringResource(R.string.adhan_hero_next) + " · " + summary(a.alert(n.planned.prayer), n.planned.prayer, vm.library, custom, ar)
                 else -> stringResource(R.string.adhan_next_none)
             }
-            SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_master), status, a.enabled) { on ->
+            val toggle: (Boolean) -> Unit = { on ->
                 vm.setEnabled(on)
                 // The phone needs the permission only when it alerts itself (the watch asks on the watch).
                 if (on && ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+            HeroCard(
+                icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.NotificationsActive),
+                overline = if (n != null) stringResource(R.string.adhan_master) else null,
+                title = if (n != null) f.prayerName(n.planned.prayer, n.planned.date) + "  " + f.timeAt(n.planned.at, n.zone) else stringResource(R.string.adhan_master),
+                subtitle = status,
+                modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(30.dp)).toggleable(a.enabled, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = toggle),
+                trailing = { com.noor.app.ui.settings.NoorSwitch(a.enabled, null) },
+            )
         }
 
         // What needs attention, in a group of its own: there only when something does.

@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
@@ -117,8 +118,9 @@ fun NoorPage(
                 Spacer(Modifier.height(8.dp))
             }
         }
-        // The bar: the page's colour (almost opaque: what scrolls under it stays a hint) and a hairline.
-        Box(Modifier.fillMaxWidth().height(top + Page.BarHeight).graphicsLayer { alpha = bar() }.background(c.background.copy(alpha = 0.97f))) {
+        // The bar: the sky at the top of the page, almost opaque (what scrolls under it stays a hint), and a hairline.
+        val sky = com.noor.app.ui.theme.LocalBackdrop.current.top
+        Box(Modifier.fillMaxWidth().height(top + Page.BarHeight).graphicsLayer { alpha = bar() }.background(sky.copy(alpha = 0.94f))) {
             Hairline(Modifier.align(Alignment.BottomCenter))
         }
         Box(Modifier.fillMaxWidth().padding(top = top).height(Page.BarHeight), contentAlignment = Alignment.Center) {
@@ -140,8 +142,8 @@ fun LargeTitle(title: String, modifier: Modifier = Modifier) {
     val arabic = title.any { it in '؀'..'ۿ' }
     Text(
         title, color = NoorTheme.colors.textPrimary,
-        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 34.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold, letterSpacing = if (arabic) 0.sp else (-0.5).sp),
-        modifier = modifier.padding(start = 4.dp, top = 12.dp).semantics { heading() },
+        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold, letterSpacing = if (arabic) 0.sp else (-0.8).sp),
+        modifier = modifier.padding(start = 4.dp, top = 16.dp).semantics { heading() },
     )
 }
 
@@ -199,7 +201,7 @@ fun <T> ChoiceChips(options: List<Pair<T, String>>, selected: T, onSelect: (T) -
                 Text(
                     label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, letterSpacing = 0.sp), maxLines = 1,
                     color = if (on) c.onGold else c.textSecondary,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) c.gold else if (c.isDark) c.surfaceRaised else c.surface)
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) c.gold else c.glassRaised)
                         .heightIn(min = 36.dp).padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -218,7 +220,7 @@ fun NoorSearchField(value: String, onChange: (String) -> Unit, hint: String, mod
         modifier = modifier.fillMaxWidth(),
         decorationBox = { inner ->
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).background(c.surface).padding(start = 12.dp, end = 2.dp),
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(50)).background(c.glass).glassEdge(RoundedCornerShape(50), c.glassEdge, c.glassEdgeLow).padding(start = 14.dp, end = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Rounded.Search, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
@@ -249,7 +251,7 @@ fun NoorButton(
     icon: ImageVector? = null, enabled: Boolean = true, danger: Boolean = false,
 ) {
     val c = NoorTheme.colors
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(50)
     val bg = when (kind) {
         ButtonKind.Filled -> c.gold
         ButtonKind.Tonal -> c.gold.copy(alpha = if (c.isDark) 0.16f else 0.14f)
@@ -273,8 +275,10 @@ fun NoorButton(
 fun NoorSheet(onDismiss: () -> Unit, state: SheetState, content: @Composable ColumnScope.() -> Unit) {
     val c = NoorTheme.colors
     ModalBottomSheet(
-        onDismissRequest = onDismiss, sheetState = state, containerColor = c.surface, contentColor = c.textPrimary,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        onDismissRequest = onDismiss, sheetState = state, contentColor = c.textPrimary,
+        // (Solid: a sheet rises over everything. Its colour is the glass over the page's sky, so it belongs to it.)
+        containerColor = c.glassRaised.compositeOver(com.noor.app.ui.theme.LocalBackdrop.current.at(0.3f)),
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         dragHandle = { Box(Modifier.padding(top = 10.dp, bottom = 6.dp).size(width = 36.dp, height = 5.dp).clip(CircleShape).background(c.textMuted.copy(alpha = 0.35f))) },
         content = content,
     )

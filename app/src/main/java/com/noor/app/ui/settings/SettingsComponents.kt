@@ -72,7 +72,7 @@ fun SettingsSection(title: String, footer: String? = null, content: @Composable 
     val c = NoorTheme.colors
     Column {
         if (title.isNotEmpty()) SectionHeader(title)
-        GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 20.dp) { content() }
+        GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 24.dp) { content() }
         if (footer != null) SectionFooter(footer)
     }
 }

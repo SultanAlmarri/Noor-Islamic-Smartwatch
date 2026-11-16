@@ -22,6 +22,18 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import com.noor.app.ui.components.glassEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -151,7 +163,7 @@ class MainActivity : AppCompatActivity() {
             val settings = live ?: first
             val s = settings ?: AppSettings()
             val daylight = rememberDaylight(s, container.timetables)
-            NoorTheme(s.theme, daylight) {
+            NoorTheme(s.theme, daylight, rememberSun(s)) {
                 CompositionLocalProvider(LocalAmbientMotion provides systemAllowsAmbientMotion(), LocalOpening provides opening) {
                     NoorBackground {
                         if (settings != null) NoorRoot(s, opening, startRoute())
@@ -192,6 +204,22 @@ fun rememberDaylight(s: AppSettings, tables: OfficialTimetables?): Boolean? {
             val day = PrayerProvider.resolve(now.atZone(place.zone).toLocalDate(), place, PrayerProvider.profile(s, place), s, tables).day
             val rise = day.instant(Prayer.SHURUQ); val set = day.instant(Prayer.MAGHRIB)
             if (rise == null || set == null) SunPath.elevation(now, place.point) > -0.833 else !now.isBefore(rise) && now.isBefore(set)
+        }.getOrNull()
+    }
+}
+
+/** The Sun's height where the user is (degrees) and whether it is after noon, re-evaluated every minute: the pages' sky. */
+@Composable
+fun rememberSun(s: AppSettings): Pair<Double, Boolean>? {
+    val place = remember(s) { PrayerProvider.place(s) } ?: return null
+    val minute by produceState(System.currentTimeMillis() / 60_000) {
+        while (true) { delay(60_000 - System.currentTimeMillis() % 60_000); value = System.currentTimeMillis() / 60_000 }
+    }
+    return remember(place, minute) {
+        runCatching {
+            val now = Instant.now()
+            val e = SunPath.elevation(now, place.point)
+            e to (SunPath.elevation(now.plusSeconds(600), place.point) < e)
         }.getOrNull()
     }
 }
@@ -264,17 +292,11 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
         restoreState = true
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        bottomBar = {
-            Column {
-                // (Testing only, 0.14: says so on every page while the tester's options change what the sky shows.)
-                com.noor.app.testing.TesterBanner()
-                if (topLevel) NoorTabBar(route, ::openTab)
-            }
-        },
-    ) { padding ->
-        val content = PaddingValues(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())
+    // 0.15: the tab bar floats over the page (a capsule of glass, as on iOS 26), and the pages run on under it: their
+    // last line can still be scrolled clear of it.
+    Box(Modifier.fillMaxSize()) {
+        val bars = WindowInsets.systemBars.asPaddingValues()
+        val content = PaddingValues(top = bars.calculateTopPadding(), bottom = bars.calculateBottomPadding() + if (topLevel) TabBarSpace else 0.dp)
         NavHost(
             navController = nav, startDestination = start,
             enterTransition = tabEnter, exitTransition = tabExit, popEnterTransition = popEnter, popExitTransition = popExit,
@@ -333,13 +355,21 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
                 )
             }
         }
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+            // (Testing only, 0.14: says so on every page while the tester's options change what the sky shows.)
+            com.noor.app.testing.TesterBanner()
+            if (topLevel) NoorTabBar(route, ::openTab) else Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBars))
+        }
     }
 }
 
+/** How much of the foot of a tab's page the floating tab bar takes (over the navigation bar). */
+internal val TabBarSpace = 64.dp + 10.dp + 8.dp
+
 /**
- * Five destinations (0.14, as a tab bar on iOS): the icon and its name, gold for the one on show and quiet for the
- * rest; nothing else is drawn round them. The chosen icon settles with a small spring, and a light tick confirms the
- * change. On a wide screen the five keep together in the middle. During the opening the bar rises into place.
+ * Five destinations (0.15: a capsule of glass floating over the page, as the tab bar of iOS 26). The icon and its name;
+ * the one on show sits in a lens of light that slides to the tab chosen, the others are quiet. A light tick confirms
+ * the change. On a wide screen the capsule keeps to the middle. During the opening it rises into place.
  */
 @Composable
 internal fun NoorTabBar(route: String?, onSelect: (String) -> Unit) {
@@ -350,25 +380,34 @@ internal fun NoorTabBar(route: String?, onSelect: (String) -> Unit) {
         if (r != route) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         onSelect(r)
     }
-    Column(
+    val index = Routes.tabs.indexOf(route).coerceAtLeast(0)
+    val lens by animateFloatAsState(index.toFloat(), spring(dampingRatio = 0.72f, stiffness = 380f), label = "tabLens")
+    val shape = RoundedCornerShape(50)
+    Box(
         Modifier.fillMaxWidth()
             .then(if (opening.arriving && opening.veil) Modifier.graphicsLayer {
                 val p = opening.part(Opening.TAB_AT, Opening.RISE_MS)
                 translationY = (1f - p) * size.height; alpha = p
             } else Modifier)
-            .background(c.surface),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .windowInsetsPadding(WindowInsets.navigationBars).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 10.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Hairline()
-        Row(
-            Modifier.windowInsetsPadding(WindowInsets.navigationBars).widthIn(max = Page.MaxWidth).fillMaxWidth().heightIn(min = 58.dp).padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
+        BoxWithConstraints(
+            Modifier.widthIn(max = 460.dp).fillMaxWidth().height(64.dp)
+                .shadow(18.dp, shape, ambientColor = Color.Black.copy(alpha = 0.5f), spotColor = Color.Black.copy(alpha = 0.5f))
+                .clip(shape).background(c.chrome).glassEdge(shape, c.glassEdge, c.glassEdgeLow).padding(5.dp),
         ) {
-            Tab(route == Routes.PRAYERS, painterResource(R.drawable.ic_tab_today), stringResource(R.string.tab_today)) { go(Routes.PRAYERS) }
-            Tab(route == Routes.QIBLA, painterResource(R.drawable.ic_kaaba), stringResource(R.string.tab_qibla)) { go(Routes.QIBLA) }
-            Tab(route == Routes.ADHAN, rememberVectorPainter(Icons.Rounded.Mosque), stringResource(R.string.tab_adhan)) { go(Routes.ADHAN) }
-            Tab(route == Routes.WATCH, rememberVectorPainter(Icons.Rounded.Watch), stringResource(R.string.tab_watch)) { go(Routes.WATCH) }
-            Tab(route == Routes.SETTINGS, rememberVectorPainter(Icons.Rounded.Settings), stringResource(R.string.tab_settings)) { go(Routes.SETTINGS) }
+            val w = maxWidth / Routes.tabs.size
+            // The lens: a softer pane of light behind the tab on show.
+            Box(Modifier.offset { androidx.compose.ui.unit.IntOffset((w * lens).roundToPx(), 0) }.width(w).fillMaxHeight()
+                .clip(shape).background(c.gold.copy(alpha = if (c.isDark) 0.16f else 0.15f)))
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Tab(route == Routes.PRAYERS, painterResource(R.drawable.ic_tab_today), stringResource(R.string.tab_today)) { go(Routes.PRAYERS) }
+                Tab(route == Routes.QIBLA, painterResource(R.drawable.ic_kaaba), stringResource(R.string.tab_qibla)) { go(Routes.QIBLA) }
+                Tab(route == Routes.ADHAN, rememberVectorPainter(Icons.Rounded.Mosque), stringResource(R.string.tab_adhan)) { go(Routes.ADHAN) }
+                Tab(route == Routes.WATCH, rememberVectorPainter(Icons.Rounded.Watch), stringResource(R.string.tab_watch)) { go(Routes.WATCH) }
+                Tab(route == Routes.SETTINGS, rememberVectorPainter(Icons.Rounded.Settings), stringResource(R.string.tab_settings)) { go(Routes.SETTINGS) }
+            }
         }
     }
 }
@@ -376,19 +415,18 @@ internal fun NoorTabBar(route: String?, onSelect: (String) -> Unit) {
 @Composable
 private fun RowScope.Tab(selected: Boolean, icon: Painter, label: String, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    val tint by animateColorAsState(if (selected) c.gold else c.textMuted, tween(NoorMotion.Quick), label = "tabTint")
-    val text by animateColorAsState(if (selected) c.goldText else c.textMuted, tween(NoorMotion.Quick), label = "tabText")
+    val tint by animateColorAsState(if (selected) c.gold else c.textSecondary, tween(NoorMotion.Quick), label = "tabTint")
+    val text by animateColorAsState(if (selected) c.goldText else c.textSecondary, tween(NoorMotion.Quick), label = "tabText")
     val lift by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 0.55f, stiffness = 420f), label = "tabLift")
     Column(
-        Modifier.weight(1f)
+        Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(50))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab, onClick = onClick)
-            .semantics { this.selected = selected }
-            .padding(top = 7.dp, bottom = 5.dp),
+            .semantics { this.selected = selected },
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(25.dp).graphicsLayer { val k = 1f + 0.08f * lift; scaleX = k; scaleY = k })
-        Spacer(Modifier.height(3.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, letterSpacing = 0.1.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
+        Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp).graphicsLayer { val k = 1f + 0.08f * lift; scaleX = k; scaleY = k })
+        Spacer(Modifier.height(2.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, letterSpacing = 0.1.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
             color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

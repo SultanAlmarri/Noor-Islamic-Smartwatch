@@ -32,19 +32,26 @@ import kotlin.math.sin
 
 /** Design tokens shared by every screen: one corner radius family, one spacing scale. */
 object Noor {
-    val CardRadius = 22.dp
+    val CardRadius = 26.dp
     val RowRadius = 14.dp
     val ScreenPadding = 20.dp
     val Gap = 14.dp
 }
 
-/** Plain, calm screen background. Decoration lives in a few deliberate places, not behind everything. */
+/** The app's background (0.15): the sky of the moment at the user's place ([com.noor.app.ui.theme.SkyBackdrop]). */
 @Composable
 fun NoorBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    Box(modifier.fillMaxSize().background(NoorTheme.colors.background), content = content)
+    com.noor.app.ui.theme.SkyBackdrop(modifier, content = content)
 }
 
-/** Solid card. In the dark theme a hairline edge separates it from the background. */
+/** The lit edge of a pane of glass: bright along its top, fading towards its foot. */
+fun Modifier.glassEdge(shape: androidx.compose.ui.graphics.Shape, top: Color, low: Color, width: Dp = 0.75.dp): Modifier =
+    border(width, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(top, low)), shape)
+
+/**
+ * A card (0.15): a pane of glass over the page's sky, with a lit upper edge. [highlighted] is a lighter glass, for
+ * what is chosen or comes first.
+ */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
@@ -58,8 +65,8 @@ fun GlassCard(
     Column(
         modifier
             .clip(shape)
-            .background(if (highlighted) c.surfaceRaised else c.surface)
-            .then(if (c.isDark) Modifier.border(0.5.dp, c.separator, shape) else Modifier)
+            .background(if (highlighted) c.glassRaised else c.glass)
+            .glassEdge(shape, c.glassEdge, c.glassEdgeLow)
             .padding(padding),
         content = content,
     )

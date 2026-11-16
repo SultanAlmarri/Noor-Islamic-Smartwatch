@@ -152,7 +152,12 @@ class ScreenshotTest {
                 val tables = app.container.timetables
                 val u = todayUi(s, tables, clock)
                 val cache = DayCache(tables)
-                NoorTheme(theme) {
+                // (0.15: the pages stand on the sky of the moment at the place, as in the app.)
+                val sun = PrayerProvider.place(s)?.let { p ->
+                    val e = com.noor.prayer.astro.SunPath.elevation(clock, p.point)
+                    e to (com.noor.prayer.astro.SunPath.elevation(clock.plusSeconds(600), p.point) < e)
+                }
+                NoorTheme(theme, sun = sun) {
                     NoorBackground {
                         val pad = PaddingValues(top = 28.dp, bottom = 16.dp)
                         when (screen) {

@@ -23,6 +23,39 @@ class ThemeContrastTest {
         assertTrue("$name onGold on gold", Sky.contrast(c.onGold, c.gold) >= 4.5)
     }
 
+    /**
+     * 0.15: the pages stand on the sky of the moment, their lists on glass over it. Every text colour must stay
+     * readable on the glass wherever it lies on the page, at every height of the Sun, morning and evening, in both
+     * themes; and the tab bar's names on its glass at the foot of the page.
+     */
+    @Test fun textOnTheGlassOverThePagesSkyIsAlwaysReadable() {
+        val worst = mutableMapOf<String, Double>()
+        val where = mutableMapOf<String, String>()
+        for ((name, c) in listOf("night" to NightColors, "day" to DayColors)) {
+            val text = mapOf("textPrimary" to c.textPrimary, "textSecondary" to c.textSecondary, "textMuted" to c.textMuted,
+                "goldText" to c.goldText, "success" to c.success, "danger" to c.danger)
+            for (e in -90..90) for (evening in listOf(false, true)) {
+                val b = com.noor.app.ui.theme.Backdrop.of(e.toDouble(), evening, c.isDark)
+                for (k in 0..10) for (glass in listOf(c.glass, c.glassRaised)) {
+                    val bg = glass.compositeOver(b.at(k / 10f))
+                    for ((tn, fg) in text) {
+                        val r = Sky.contrast(fg.compositeOver(bg), bg)
+                        val key = "$name $tn"
+                        if (r < (worst[key] ?: 99.0)) { worst[key] = r; where[key] = "e=$e evening=$evening at=${k / 10f} raised=${glass == c.glassRaised}" }
+                    }
+                }
+                val bar = c.chrome.compositeOver(b.at(1f))
+                for ((tn, fg) in mapOf("textSecondary" to c.textSecondary, "goldText" to c.goldText)) {
+                    val r = Sky.contrast(fg.compositeOver(bar), bar)
+                    val key = "$name tab bar $tn"
+                    if (r < (worst[key] ?: 99.0)) worst[key] = r
+                }
+            }
+        }
+        val failing = worst.filter { it.value < 4.5 }
+        assertTrue("below 4.5:1 somewhere in the day: $failing (where: ${where.filterKeys { it in failing }}; all: $worst)", failing.isEmpty())
+    }
+
     @Test fun night() = check("night", NightColors)
     @Test fun day() = check("day", DayColors)
 

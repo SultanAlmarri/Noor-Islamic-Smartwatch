@@ -196,6 +196,7 @@
     <string name="adhan_master_off">متوقفة. فعّلها لتسمع الأذان أو يصلك إشعار عند كل صلاة.</string>
     <string name="adhan_master_off_short">تنبيهات الصلاة متوقفة؛ فعّلها من تبويب الأذان.</string>
     <string name="adhan_next">التنبيه التالي على الهاتف: %1$s · %2$s</string>
+    <string name="adhan_hero_next">التالي على هذا الهاتف</string>
     <string name="adhan_next_none">لا توجد صلاة مضبوطة للتنبيه على هذا الهاتف.</string>
     <string name="adhan_on_watch_only">التنبيهات تأتي من ساعتك، ويبقى الهاتف صامتًا.</string>
     <string name="adhan_no_location">حدّد الموقع أولًا: التنبيهات تحتاج إلى أوقات الصلاة.</string>

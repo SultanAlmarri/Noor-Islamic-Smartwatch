@@ -23,6 +23,8 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Landscape
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -248,7 +250,16 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 found.forEachIndexed { i, r -> if (i > 0) SettingsDivider(); item(r) }
             }
         } else {
-            rows.groupBy { it.group }.forEach { (group, list) ->
+            // 0.15: the page opens on the place the times are for, in big type, with the authority they follow; the
+            // card opens the location page (the row it replaces is still found by search).
+            com.noor.app.ui.components.HeroCard(
+                icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.LocationOn),
+                overline = stringResource(R.string.loc_now_for), title = placeTitle,
+                subtitle = stringResource(if (s.locationMode == LocationMode.AUTO) R.string.loc_label_auto else R.string.loc_label_manual) + " · " + profileName,
+                onClick = onOpenCities, onClickLabel = stringResource(R.string.change_location),
+                trailing = { androidx.compose.material3.Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.size(24.dp)) },
+            )
+            rows.drop(1).groupBy { it.group }.forEach { (group, list) ->
                 SettingsSection(stringResource(group), footer = footers[group]) {
                     list.forEachIndexed { i, r -> if (i > 0) SettingsDivider(); item(r) }
                 }

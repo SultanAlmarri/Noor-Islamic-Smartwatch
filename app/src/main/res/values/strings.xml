@@ -197,6 +197,7 @@
     <string name="adhan_master_off">Off. Turn on to hear the Adhan or get a notification at each prayer time.</string>
     <string name="adhan_master_off_short">Prayer alerts are off; turn them on in the Adhan tab.</string>
     <string name="adhan_next">Next on this phone: %1$s · %2$s</string>
+    <string name="adhan_hero_next">Next on this phone</string>
     <string name="adhan_next_none">No prayer is set to alert on this phone.</string>
     <string name="adhan_on_watch_only">Alerts come from your watch; the phone stays quiet.</string>
     <string name="adhan_no_location">Set a location first: alerts need prayer times.</string>
