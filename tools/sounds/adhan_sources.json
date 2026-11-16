@@ -161,15 +161,14 @@
   {
    "id": "egypt_khan_khalili",
    "kind": "url",
-   "status": "candidate",
    "name": "Call to prayer (Khan El Khalili rooftop) (Freesound 511003)",
    "url": "https://cdn.freesound.org/previews/511/511003_571436-hq.mp3",
    "page": "https://freesound.org/people/3bagbrew/sounds/511003/",
-   "sha1": null,
+   "sha1": "7e41370ff0f3f821a0d17a808c7f3b175073feb1",
    "artist": "3bagbrew",
    "licence": "CC0",
    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-   "provenance": "The call to prayer heard from a rooftop at Khan el-Khalili, Islamic Cairo (beside the al-Hussein and al-Azhar mosques), uploaded by 3bagbrew; 336 s, WAV original. A rooftop in Islamic Cairo usually hears several mosques at once. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
+   "provenance": "The call to prayer heard from a rooftop at Khan el-Khalili, Islamic Cairo (beside the al-Hussein and al-Azhar mosques), uploaded by 3bagbrew; 336 s, WAV original. A rooftop in Islamic Cairo usually hears several mosques at once. Chosen on 16 November 2026 as the Egypt voice: the only candidate holding a whole, clear Adhan (from \"Allahu Akbar\" at 90 s to \"La ilaha illa Allah\" ending at 294 s, checked with a speech recogniser); licence confirmed in Openverse's index of Freesound (cc0 1.0). The file is Freesound's high-quality preview (MP3 128 kbit/s); its SHA-1 is pinned."
   },
   {
    "id": "egypt_alexandria_nervousneal",

@@ -48,6 +48,16 @@ ADHANS = [
          place_en="The Prophet's Mosque", place_ar="المسجد النبوي",
          region="haramain", country_en="Saudi Arabia", country_ar="السعودية", year=None,
          full=(0.6, 186.4), short=(0.6, 19.8), note_en=None, note_ar=None),
+    # 0.18 (16 November 2026). This entry and the Dubai voice (the owner's recordings) were put in the library by hand
+    # with render() below and the same edits; the Dubai entries (and the effects' -18 LUFS) must be added here before
+    # this script is run again, or it would remove them.
+    dict(id="egypt", src="egypt_khan_khalili", fajr=False,
+         title_en="Egypt", title_ar="مصر",
+         place_en="Khan el-Khalili, Cairo", place_ar="خان الخليلي، القاهرة",
+         region="africa", country_en="Egypt", country_ar="مصر", year=None,
+         full=(90.0, 295.3), short=(90.0, 112.6),
+         note_en="Recorded on a rooftop in old Cairo, so the city can be heard around the voice.",
+         note_ar="سُجّل على سطح في القاهرة القديمة، لذا تُسمع المدينة حول الصوت."),
 ]
 
 # Places the owner asked for that have no recording here yet, and why (shown in docs/SOUNDS.md). The app offers
@@ -55,10 +65,9 @@ ADHANS = [
 MISSING = [
     ("Al-Quds", "القدس",
      "No freely licensed recording of the Adhan of al-Masjid al-Aqsa was found, and no Jerusalem recording could "
-     "be downloaded and checked here. One candidate exists: the Adhan heard at the Church of the Holy Sepulchre "
-     "in the Old City (Freesound 191866, Zabuhailo, CC BY 4.0, 109 s). Freesound refuses the cloud session "
-     "Minhad is made in, so it is listed in tools/sounds/adhan_sources.json (status \"candidate\") for the Fetch "
-     "workflow to download on GitHub; it must be listened to before it is used. Examined and not usable (16 "
+     "be downloaded and checked here. The one candidate, the Adhan heard at the Church of the Holy Sepulchre "
+     "in the Old City (Freesound 191866, Zabuhailo, CC BY 4.0, 109 s), was fetched on GitHub and examined on 16 "
+     "November 2026: a speech recogniser heard no phrase of the Adhan in it, so it is not used. Examined and not usable (16 "
      "November 2026): on Wikimedia Commons, a 15-second clip heard from a distance at the Garden Tomb and a "
      "60-second travel video from the Haram (Neollene Films, 2017: too short to hold a whole Adhan); radio "
      "aporee field recordings on the Internet Archive from the Golden Gate (2014: the end of a prayer over a "
@@ -68,22 +77,6 @@ MISSING = [
      "at once, and not Jerusalem; a speech recogniser heard no words in either). Freesound's \"Palestine muezzin\" "
      "(nicotep) is CC BY-NC; other uploads on the Internet Archive are broadcast or YouTube copies whose "
      "uploader does not hold the rights."),
-    ("Egypt", "مصر",
-     "No single, clear Egyptian Adhan with a usable licence could be downloaded and checked here. Six candidates "
-     "were found on Freesound, each a field recording published by its recordist: Al-Azhar Park, Cairo (Ahmad "
-     "Aiuby, CC0, 64 s), Maadi, Cairo (Ahmad Aiuby, CC BY 4.0, 74 s), El Quseir (Ahmad Aiuby, CC0, 127 s), a "
-     "rooftop at Khan el-Khalili (3bagbrew, CC0, 336 s) and two in Alexandria (CyWeb, CC BY 4.0, 185 s; "
-     "nervousneal, CC0, 54 s). Freesound refuses the cloud session Minhad is made in, so they are listed in "
-     "tools/sounds/adhan_sources.json (status \"candidate\") for the Fetch workflow to download on GitHub; they "
-     "must be listened to before one is used. Examined and not usable (16 November 2026): radio aporee field "
-     "recordings on the Internet Archive from Maadi (2012, CC BY 3.0: the dawn call of many distant mosques at "
-     "once), Hurghada (2010: starts in the middle of the Adhan, at \"Ashhadu anna Muhammadan rasul Allah\", with "
-     "street and café noise), Aswan (2009: several mosques overlapping, starting mid-phrase) and Luxor (2019: "
-     "street noise). Not used for their terms or origin: the Cambridge \"Voices and Faces of the Adhan: Cairo\" "
-     "collection (CC BY-NC-ND), several Freesound recordings under CC BY-NC, Freesound's \"Pandemic Adhan - "
-     "Maadi\" (by its title the Adhan of the 2020 pandemic, which adds \"pray in your homes\"; not listened to), "
-     "and the Internet Archive's \"Adhan from Egypt, Abdulnasser Harak\" (a radio recording re-uploaded by someone "
-     "who does not hold its rights)."),
 ]
 
 # Five recordings of nature (the owner: real recordings, high quality and clear, from a known source; no music,
