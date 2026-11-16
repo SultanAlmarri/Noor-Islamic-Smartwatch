@@ -61,7 +61,7 @@ object PrayerEngine {
         val minutes = LinkedHashMap<Prayer, Int?>()
         for (p in Prayer.entries) {
             val s = raw.getValue(p)
-            minutes[p] = if (s.isNaN()) null else round(s, profile.rounding) + profile.offset(p) + (user.minuteOffsets[p] ?: 0)
+            minutes[p] = if (s.isNaN()) null else round(s, profile.rounding(p)) + profile.offset(p, point.latitude) + (user.minuteOffsets[p] ?: 0)
         }
         return PrayerDay(date, zone, profile.id, raw, minutes)
     }

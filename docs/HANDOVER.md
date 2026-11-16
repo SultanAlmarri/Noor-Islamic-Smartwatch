@@ -63,7 +63,10 @@ without the phone, using the last configuration or its own setup.
 - NREL SPA port, agreeing with pvlib to 0.007 s on 37,254 Dubai event times.
 - Dubai profile "C1": 527 of 588 official IACAD times exact; the other 61 differ by exactly 1 minute and are still
   **unexplained**. No date-specific adjustment is used. `PrayerEngineTest.iacadOfficialAgreementIsAsDocumented` locks
-  these numbers. Full detail in `docs/PRAYER_ACCURACY.md`.
+  these numbers. Full detail in `docs/PRAYER_ACCURACY.md`. 16 Nov 2026: shown to be beyond any single calculation rule
+  (even Dhuhr's residuals spread over 65 s; simpler ephemerides and refits do no better on unseen days); exact times
+  need IACAD's own table. Awqaf profile refitted to the UAE calendar for Abu Dhabi (96.2%, 12/12 on Awqaf's website).
+  Every authority's agreement with its own table: `accuracy/results/EVIDENCE.md`.
 - Blind test: predictions for Dec 2026 – Jun 2027 are frozen. `iacad-monthly.yml` scores each new IACAD month and
   commits the result, so pull before you push.
 - Hijri: Umm al-Qura with a ±2-day user adjustment. It can differ from the UAE calendar by a day.

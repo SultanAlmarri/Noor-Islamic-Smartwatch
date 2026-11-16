@@ -1,0 +1,9 @@
+Awqaf profile before 16 Nov 2026 (provisional): calendar (1134, {'fajr': 325, 'shuruq': 227, 'dhuhr': 107, 'asr': 0, 'maghrib': 336, 'isha': 139}), Awqaf website (8, {'fajr': 1, 'shuruq': 2, 'dhuhr': 2, 'asr': 0, 'maghrib': 2, 'isha': 1})
+c1family odd->even fit 943/1032, held-out 968/1086 (89.1%) {'fajr': 170, 'shuruq': 170, 'dhuhr': 157, 'asr': 176, 'maghrib': 127, 'isha': 168}
+c1family even->odd fit 1002/1086, held-out 936/1032 (90.7%) {'fajr': 160, 'shuruq': 118, 'dhuhr': 170, 'asr': 153, 'maghrib': 163, 'isha': 172}
+c1family whole calendar: lat 24.46 lon 54.420; Fajr 18.1° ceil -1; Shuruq dip 0.35° ceil -2; Dhuhr ceil +2; Asr ceil +0; Maghrib dip 0.35° ceil +1; Isha 18.0° ceil +0
+         fit 1939/2118 (91.5%); Awqaf website (never seen) (12, {'fajr': 2, 'shuruq': 2, 'dhuhr': 2, 'asr': 2, 'maghrib': 2, 'isha': 2})
+free     odd->even fit 999/1032, held-out 1040/1086 (95.8%) {'fajr': 178, 'shuruq': 171, 'dhuhr': 172, 'asr': 171, 'maghrib': 170, 'isha': 178}
+free     even->odd fit 1051/1086, held-out 984/1032 (95.3%) {'fajr': 161, 'shuruq': 165, 'dhuhr': 170, 'asr': 153, 'maghrib': 163, 'isha': 172}
+free     whole calendar: lat 24.44 lon 54.280; Fajr 18.1° round -1; Shuruq dip 0.32° ceil -3; Dhuhr round +2; Asr round +0; Maghrib dip 0.31° round +1; Isha 18.1° ceil -1
+         fit 2042/2118 (96.4%); Awqaf website (never seen) (12, {'fajr': 2, 'shuruq': 2, 'dhuhr': 2, 'asr': 2, 'maghrib': 2, 'isha': 2})
