@@ -186,6 +186,24 @@ object RealSky {
     }
 
     private val lifts = HashMap<String, FloatArray>()
+    private val skylines = HashMap<String, FloatArray>()
+
+    /**
+     * (0.18) The scenery's whole skyline: for equal strips across its picture, the tangent of the angle over the
+     * horizon of the highest point of land in each (tools/scenery/skyline.py writes it into land.json as `skyline`).
+     * The Sun's path is drawn behind it, so it passes behind a mountain or a tree as the Sun does, and never runs down
+     * over the land to the level horizon (until 0.17 it was cut at the level horizon only, and lay over the mountains
+     * and trees of the higher sceneries). Null when the scenery has none: the path is then cut at the level horizon.
+     */
+    fun skyline(context: Context, biome: Biome): FloatArray? = synchronized(skylines) {
+        skylines.getOrPut(biome.id) {
+            runCatching {
+                val meta = org.json.JSONObject(context.assets.open("sky2/land/${biome.id}/land.json").bufferedReader().use { it.readText() })
+                val a = meta.optJSONArray("skyline") ?: return@runCatching FloatArray(0)
+                FloatArray(a.length()) { a.optDouble(it, 0.0).toFloat() }
+            }.getOrElse { FloatArray(0) }
+        }.takeIf { it.isNotEmpty() }
+    }
 
     /**
      * How high a scenery's skyline stands where the Sun rises and where it sets: tangents of the angle over the

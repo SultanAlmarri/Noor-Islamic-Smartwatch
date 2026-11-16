@@ -65,6 +65,7 @@ g[:grow, :, 1] = (v & 255) / 255.0
 bake.save8(os.path.join(d, 'g.png'), g[..., :3])
 
 meta['lift'] = bake.sun_lift(a[..., 3], meta['top'], meta['horizon'], meta.get('focal', 1.15) * meta['width'], meta['height'])
+meta['skyline'] = bake.skyline_profile(a[..., 3], meta['top'], meta['horizon'], meta.get('focal', 1.15) * meta['width'], meta['height'])
 meta['openHorizon'] = True
 json.dump(meta, open(os.path.join(d, 'land.json'), 'w'), indent=1)
 print('open horizon in %s: %d pixels of far land taken out above row %d, lift now %s' % (d, gone, row, meta['lift']), flush=True)

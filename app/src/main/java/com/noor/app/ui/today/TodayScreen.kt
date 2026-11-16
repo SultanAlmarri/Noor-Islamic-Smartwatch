@@ -202,7 +202,28 @@ private class HeroGeometry(top: Dp, height: Dp) {
     val horizon: Dp = height - landDepth
     val ground: Dp = height - 6.dp
     /** The noon Sun sits a little below the text, never behind it, while leaving the arc some height. */
-    fun arcTop(textBottom: Dp): Dp = minOf(textBottom + 16.dp, horizon - 28.dp)
+    fun arcTop(textBottom: Dp, horizon: Dp = this.horizon): Dp = minOf(textBottom + 16.dp, horizon - 28.dp)
+
+    /**
+     * (0.18) Where the horizon lies over a scenery whose skyline stands [skyline] high where the Sun rises or sets
+     * (the higher of the two): low enough that the Sun's path, which stands on that skyline at Shuruq and Maghrib
+     * (SunLift), keeps its arch under the text ([SkyGeometry.LIFT_SHARE] of the height at most). Until 0.17 the
+     * horizon stayed where it was and the path was held under the skyline instead: over the fjord, the forest lake and
+     * the red rock the Sun rose and set behind the land, out of sight at the very moments of Shuruq and Maghrib, and
+     * the path and its marks lay on the mountainside. The land then shows a little less of its foreground above the
+     * glass, never less than [MIN_FOREGROUND].
+     */
+    fun horizonFor(textBottom: Dp, skyline: Dp): Dp {
+        if (skyline <= 0.dp) return horizon
+        val fit = arcTop(textBottom) + skyline / SkyGeometry.LIFT_SHARE + 1.dp
+        return maxOf(horizon, minOf(fit, height - MIN_FOREGROUND))
+    }
+    private val height = height
+
+    companion object {
+        /** The least of the land's foreground left in sight between the horizon and the glass. */
+        val MIN_FOREGROUND = 30.dp
+    }
 }
 
 /** The whole Today screen for a given state; stateless so previews and tests can render any date. */
@@ -255,6 +276,9 @@ fun TodayContent(
         RealSky.sunLift(skyContext, Biome.of(u.settings.scenery, u.place.countryCode, u.place.point.elevationM, u.place.point.latitude))
     } else floatArrayOf(0f, 0f)
     SunLift.rise = lift[0]; SunLift.set = lift[1]
+    SunLift.skyline = if (realSky) remember(u.settings.scenery, u.place) {
+        RealSky.skyline(skyContext, Biome.of(u.settings.scenery, u.place.countryCode, u.place.point.elevationM, u.place.point.latitude))
+    } else null
     val bridge = remember { RealSkyBridge() }
     val pagePx = with(LocalDensity.current) { Triple(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), home.heroHeight.toPx()) }
     val glassRadius = with(LocalDensity.current) { 28.dp.toPx() }
@@ -378,9 +402,12 @@ private fun SkyHeader(
     val density = LocalDensity.current
     // The text's real bottom (it depends on the font size and the language), measured once laid out.
     var textBottom by remember(hero) { mutableStateOf(hero.textBottom) }
-    val layout = remember(hero, height, textBottom) {
-        val arcTop = hero.arcTop(textBottom)
-        SceneLayout(cloudTop = (arcTop - 8.dp) / height, arcTop = arcTop / height, horizon = hero.horizon / height, ground = hero.ground / height)
+    // (0.18) Over a scenery with a high skyline the horizon lies lower, so that the path still stands on it (HeroGeometry.horizonFor).
+    val skylineDp = if (real != null) (maxOf(SunLift.rise, SunLift.set) * SunLift.FOCAL * real.w / density.density).dp else 0.dp
+    val layout = remember(hero, height, textBottom, skylineDp) {
+        val horizon = hero.horizonFor(textBottom, skylineDp)
+        val arcTop = hero.arcTop(textBottom, horizon)
+        SceneLayout(cloudTop = (arcTop - 8.dp) / height, arcTop = arcTop / height, horizon = horizon / height, ground = hero.ground / height)
     }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val ambient = LocalAmbientMotion.current

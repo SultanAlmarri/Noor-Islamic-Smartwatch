@@ -123,13 +123,23 @@ function crossing(el, rising) {      // fraction of the day when the Sun crosses
   for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if ((elevationAt(m) < el) === rising) lo = m; else hi = m; }
   return (lo + hi) / 2;
 }
+// (0.18) The horizon the home screen uses over this scenery (HeroGeometry.horizonFor): lowered so that the Sun's path,
+// which stands on the skyline where the Sun rises and sets, keeps its arch (a skyline takes 0.72 of it at most), and
+// never closer to the glass than 30 dp. P.legacy: as until 0.17 (the horizon fixed; the path held under the skyline).
+function hz() {
+  const land = LAND[(BIOMES[P.biome] || BIOMES[0]).id];
+  if (P.legacy || !land || !land.lift) return P.horizon;
+  const lift = Math.max(land.lift[0], land.lift[1]) * P.focal * W;
+  const fit = (P.arcTop * H + lift / 0.72 + DP()) / H;
+  return Math.max(P.horizon, Math.min(fit, P.panelTop - 30 * DP() / H));
+}
 function chart() {
   const rise = crossing(-0.833, true), set = crossing(-0.833, false), fajr = crossing(-18, true), isha = crossing(-18, false);
   const half = 30 / 1440;
   const xs = [0, fajr - half, rise, set, isha + half, 1], ys = [0, 0.08, 0.22, 0.78, 0.92, 1];
   const warp = f => { for (let i = 1; i < xs.length; i++) if (f <= xs[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * (f - xs[i - 1]) / (xs[i] - xs[i - 1]); return 1; };
   const maxEl = Math.max(elevationAt(0.5), 12), minEl = Math.min(elevationAt(0), -24);
-  const hy = P.horizon * H, at = P.arcTop * H, gy = P.ground * H;
+  const hy = hz() * H, at = P.arcTop * H, gy = P.ground * H;
   const x = f => { const uu = (-0.04 + 1.08 * warp(f)) * W; return P.rtl ? W - uu : uu; };
   // The path stands on the scenery's own skyline where the Sun rises and sets (SkyGeometry.y in the app).
   const land = LAND[(BIOMES[P.biome] || BIOMES[0]).id];
@@ -140,7 +150,7 @@ function chart() {
 }
 function viewRay(px, py) {
   let x = px - 0.5 * W; if (P.rtl) x = -x;
-  return norm([x, P.horizon * H - py, P.focal * W]);
+  return norm([x, hz() * H - py, P.focal * W]);
 }
 function dirAzEl(az, el) { return [Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)]; }
 
@@ -181,7 +191,7 @@ function updateUniforms() {
   G.landLight = lw; G.cloudLight = cw;
   Object.assign(u, {
     uView: [W, H], uTime: P.time, uFrame: G.frame,
-    uCam: [P.focal * W, P.horizon * H, P.eye, P.rtl ? 1 : 0],
+    uCam: [P.focal * W, hz() * H, P.eye, P.rtl ? 1 : 0],
     uWater: [P.waterRough, P.waterClear, 0, 0],
     uSunDir: drawn, uLightDir: light, uSunTrue: dirAzEl(az, el * DEG), uSunEl: el,
     uMoon: [...moonDir, illum], uMoonLit: [lx * Math.sin(pa), ly * Math.sin(pa), Math.cos(pa), moonVis],
@@ -197,7 +207,7 @@ function updateUniforms() {
     uPanel: [P.panel ? P.panelTop * H : H * 2, 30 * 2.625, P.panelTint, P.light],
     uPanelTint: P.light ? [0.965, 0.955, 0.935] : [0.027, 0.039, 0.078], uFade: 1,
   }, celestial());
-  const key = [el.toFixed(3), sx.toFixed(1), sy.toFixed(1), P.haze, P.hijriDay, P.rtl, P.focal, P.horizon].join();
+  const key = [el.toFixed(3), sx.toFixed(1), sy.toFixed(1), P.haze, P.hijriDay, P.rtl, P.focal, hz()].join();
   if (key !== G.lastLightKey) { G.lastLightKey = key; G.dirty.light = true; }
   if (P.haze !== G.lastHaze) { G.lastHaze = P.haze; G.dirty.trans = true; G.dirty.light = true; }
   G.info = { el, sx, sy, drawnEl, night, mel, illum };
@@ -537,6 +547,86 @@ function frame(amort = 16) {
   G.frame++;
 }
 
+// ---- The sun path over the scene ------------------------------------------------------------------------------
+//
+// The app draws the Sun's path and the prayers on it over the renderer's picture (LivingSky.kt, layers 3 and 5, in
+// Compose). `P.arc`: 0 = none; 1 = drawn here the way LivingSky draws it, so sheets show the screen as a whole.
+const DP = () => W / 412;
+const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mixRgb = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const rgba = (c, a) => `rgba(${c.map(v => Math.round(v)).join(',')},${a})`;
+function prayerFractions() {
+  const decl = -23.44 * Math.cos(2 * Math.PI * (P.doy + 10) / 365);
+  const asrEl = Math.atan(1 / (1 + Math.tan(Math.abs(P.lat - decl) * DEG))) / DEG;
+  return { FAJR: crossing(-18, true), SHURUQ: crossing(-0.833, true), DHUHR: 0.5 + 2 / 1440, ASR: crossing(asrEl, false), MAGHRIB: crossing(-0.833, false), ISHA: crossing(-18, false) };
+}
+function overlay(g, ox = 0, oy = 0, s = 1) {
+  if (!P.arc) return;
+  const ch = chart(), dp = DP();
+  const f = ((P.tod % 1) + 1) % 1;
+  const el = elevationAt(f);
+  const hy = hz() * H;
+  const golden = smooth(0, 1, 1 - Math.abs(el - 1) / 10);
+  const sunCore = mixRgb(hexRgb('#FFEDC2'), hexRgb('#FFC27A'), golden * 0.75);
+  const sunGlow = mixRgb(hexRgb('#FFD58C'), hexRgb('#FF9A62'), golden * 0.6);
+  g.save();
+  g.translate(ox, oy); g.scale(s, s);
+  const pts = [];
+  for (let i = 0; i <= 288; i++) { const ff = i / 288; pts.push([ch.x(ff), ch.y(elevationAt(ff), ff)]); }
+  const path = () => { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); };
+  const stroke = 1.6 * dp;
+  const sx = ch.x(f), sy = ch.y(el, f);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  if (P.legacy) {
+    // As until 0.17: cut at the level horizon, the line cut square across the Sun.
+    g.save(); g.beginPath(); g.rect(0, 0, W, hy); g.clip();
+    g.setLineDash([2 * dp, 5 * dp]); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = stroke * 0.8; path(); g.stroke(); g.setLineDash([]);
+    g.beginPath(); g.rect(P.rtl ? sx : 0, 0, P.rtl ? W - sx : sx, hy); g.clip();
+    g.strokeStyle = rgba(sunGlow, 0.24); g.lineWidth = stroke * 4; path(); g.stroke();
+    g.strokeStyle = rgba(sunCore, 0.95); g.lineWidth = stroke; path(); g.stroke();
+    g.restore();
+  } else {
+    // (0.18, LivingSky layer 3) Behind the land (above its skyline, a hair clear of it); meeting the Sun softly; a
+    // soft shade under the line, stronger by day.
+    const land = LAND[(BIOMES[P.biome] || BIOMES[0]).id];
+    const sky = land && land.meta.skyline;
+    g.save(); g.beginPath();
+    if (sky) {
+      const n = sky.length;
+      g.moveTo(0, -1); g.lineTo(W, -1);
+      for (let j = 0; j < n; j++) {
+        const i = P.rtl ? j : n - 1 - j;
+        const y = Math.min(hy, hy - sky[i] * P.focal * W - 0.6 * dp);
+        g.lineTo(W * (n - j) / n, y); g.lineTo(W * (n - j - 1) / n, y);
+      }
+      g.closePath();
+    } else g.rect(0, 0, W, hy);
+    g.clip();
+    const disc = 0.0135 * P.focal * W, reach = disc * 3.2;
+    const day = smooth(-4, 12, el);
+    const meet = c => { const gr = g.createRadialGradient(sx, sy, 0, sx, sy, reach); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.24, 'rgba(0,0,0,0)'); gr.addColorStop(0.62, c); gr.addColorStop(1, c); return gr; };
+    const shade = `rgba(0,0,0,${0.04 + 0.08 * day})`;
+    g.strokeStyle = meet(shade); g.lineWidth = stroke * 2.4; path(); g.stroke();
+    g.setLineDash([2 * dp, 5 * dp]);
+    g.strokeStyle = meet('rgba(255,255,255,0.5)'); g.lineWidth = stroke * 0.8; path(); g.stroke();
+    g.setLineDash([]);
+    g.beginPath(); g.rect(P.rtl ? sx : 0, 0, P.rtl ? W - sx : sx, H); g.clip();
+    g.strokeStyle = meet(rgba(sunGlow, 0.24)); g.lineWidth = stroke * 4; path(); g.stroke();
+    g.strokeStyle = meet(rgba(sunCore, 0.95)); g.lineWidth = stroke; path(); g.stroke();
+    g.restore();
+  }
+  // The prayers on the path (layer 5).
+  const marks = prayerFractions();
+  for (const [p, mf] of Object.entries(marks)) {
+    const x = ch.x(mf), y = ch.y(elevationAt(mf), mf);
+    const passed = smooth(-1, 1, (f - mf) / (4 / 1440));
+    if (y > hy + 2 * dp) { g.fillStyle = 'rgba(0,0,0,0.28)'; g.beginPath(); g.arc(x, y, 7 * dp, 0, 7); g.fill(); }
+    if (passed < 1) { g.strokeStyle = `rgba(255,255,255,${0.8 * (1 - passed)})`; g.lineWidth = 1.2 * dp; g.beginPath(); g.arc(x, y, 3.4 * dp, 0, 7); g.stroke(); }
+    if (passed > 0) { g.fillStyle = `rgba(255,255,255,${0.95 * passed})`; g.beginPath(); g.arc(x, y, (3.4 - 0.4 * passed) * dp, 0, 7); g.fill(); }
+  }
+  g.restore();
+}
+
 // ---- Console API -------------------------------------------------------------------------------------------------
 
 const bench = {
@@ -554,6 +644,7 @@ const bench = {
     const c = document.createElement('canvas');
     c.width = Math.round(W * scale); c.height = Math.round(H * scale);
     c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height);
+    overlay(c.getContext('2d'), 0, 0, scale);
     const data = c.toDataURL(name.endsWith('.jpg') ? 'image/jpeg' : 'image/png', 0.9);
     await fetch('/save/' + name, { method: 'POST', body: data });
     return name;
@@ -568,13 +659,16 @@ const bench = {
     list.forEach((o, i) => {
       bench.set(o).settle();
       g.drawImage(canvas, 0, 0, W, H * crop, (i % cols) * tw, Math.floor(i / cols) * th, tw, th);
+      g.save(); g.beginPath(); g.rect((i % cols) * tw, Math.floor(i / cols) * th, tw, th); g.clip();
+      overlay(g, (i % cols) * tw, Math.floor(i / cols) * th, tw / W);
+      g.restore();
     });
     await fetch('/save/' + name, { method: 'POST', body: c.toDataURL(name.endsWith('.jpg') ? 'image/jpeg' : 'image/png', 0.9) });
     return name;
   },
   // A cropped picture round the horizon (the scenery cards in Settings): saved at w x h.
   async thumb(name, w = 560, h = 420, above = 0.62) {
-    const hy = P.horizon * H;
+    const hy = hz() * H;
     const sh = W * h / w, sy = Math.max(0, hy - sh * above);
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
@@ -595,6 +689,7 @@ const bench = {
   compileTimes() { return Object.values(G.progs).map(p => p && `${p.label}: ${p.ms.toFixed(0)} ms, ${p.chars} chars`).join('\n'); },
 };
 bench.loadSky = loadSky; bench.SKIES = SKIES; bench.LAND = LAND;
+bench.crossing = crossing; bench.elevationAt = elevationAt; bench.overlay = overlay; bench.chart = chart;
 window.bench = bench;
 
 init().then(ok => {
