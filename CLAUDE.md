@@ -29,12 +29,14 @@ The owner's Windows PC, where 0.9.12 to 0.13.0 were made, is gone ("I lost acces
 November 2026): do not wait for it and do not plan for it. Development now happens in Claude Code cloud sessions,
 which the owner follows from his phone. Everything the PC did works there (HANDOVER.md section 24):
 
-- **Set-up.** The session's environment has a set-up script that fetches JDK 17, the Android SDK and Blender into
-  `/opt/noortools`, tells Gradle where JDK 17 is (`~/.gradle/gradle.properties`), puts Google's mirror of Maven
-  Central first (`~/.gradle/init.gradle`: Maven Central answers "429 Too Many Requests" there), links
-  `~/ProjectMinhad/NoorTools` to `/opt/noortools` (the scenery scripts look there) and writes `local.properties`.
-  The same script is kept in `tools/cloud/setup.sh`: if a session starts without those tools, run it from the
-  folder that holds the checkout.
+- **Set-up.** A new session starts with JDK 21 and no Android SDK or Blender. Run `bash tools/cloud/setup.sh`
+  from the folder that holds the checkout (a minute and a half): it fetches JDK 17, the Android SDK and Blender
+  4.5 into `/opt/noortools`, tells Gradle where JDK 17 is (`~/.gradle/gradle.properties`), puts Google's mirror
+  of Maven Central first (`~/.gradle/init.gradle`: Maven Central answers "429 Too Many Requests" there), links
+  `~/ProjectMinhad/NoorTools` to `/opt/noortools` (the scenery scripts look there) and writes
+  `local.properties`. (It is not installed as the environment's own set-up script: that would mean an
+  environment with a fixed list of allowed hosts, and making a scenery fetches data from hosts nobody can list
+  beforehand; a set-up script that fails also keeps a session from starting.)
 - **The machine is small**: 4 CPU cores and 15 GB of memory for everything, and a process that asks for more is
   killed without an error of its own ("the kernel killed a process"; Blender dies silently; a bench sheet comes
   out black; "Gradle build daemon disappeared"). So: `--no-parallel` for Gradle and `./gradlew --stop` when its
