@@ -65,7 +65,7 @@ fun NoorWearNav(vm: WearViewModel, pending: String?, onPendingHandled: () -> Uni
     LaunchedEffect(pending, state != null) {
         val dest = pending ?: return@LaunchedEffect
         if (state == null) return@LaunchedEffect
-        if (dest in Dest.external && (config != null || dest == Dest.FACE)) nav.navigate(dest) { launchSingleTop = true }
+        if (dest in Dest.external && (config != null || dest == Dest.FACE || dest == Dest.FACES)) nav.navigate(dest) { launchSingleTop = true }
         onPendingHandled()
     }
     LifecycleResumeEffect(Unit) { vm.refreshPhone(); onPauseOrDispose { } }

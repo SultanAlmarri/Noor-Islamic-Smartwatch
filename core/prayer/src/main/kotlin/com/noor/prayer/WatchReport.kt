@@ -67,6 +67,8 @@ data class WatchReport(
         /** Deep links the phone opens on the watch with RemoteActivityHelper. */
         const val LINK_OPEN = "noor://open"
         const val LINK_ACTIVATE_FACE = "noor://face/activate"
+        /** 0.18: the watch app's face page, where Minhad Studio can be shown. */
+        const val LINK_STUDIO = "noor://studio"
 
         fun decode(text: String): WatchReport? = runCatching {
             val m = text.lineSequence().mapNotNull { l -> l.indexOf('=').takeIf { it > 0 }?.let { l.substring(0, it) to l.substring(it + 1) } }.toMap()

@@ -53,6 +53,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="noor" android:host="open" />
                 <data android:scheme="noor" android:host="face" />
+                <data android:scheme="noor" android:host="studio" />
             </intent-filter>
         </activity>
 
