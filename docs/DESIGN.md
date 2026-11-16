@@ -458,7 +458,40 @@ letters of the other script, apart from names that are not language (devices, li
 Every text colour meets WCAG AA (4.5:1) on every surface in both themes, white on the sky meets 7:1 at every solar
 elevation, and gold on the sky 4.5:1 (`ThemeContrastTest`, `SkyPaletteTest`).
 
+## The interface of 0.14: one system, and an opening
+
+The owner (15 November 2026): "totally revolutionize the user interface and keep the Apple aesthetic... make the
+user interface a lot more intuitive"; "as soon as I open the app, I want to have a beautiful animation". The whole
+account, screen by screen, with the seventeen bugs fixed on the way, is in [UI_014_NOTES.md](UI_014_NOTES.md). In
+short:
+
+- **One page for every screen** (`ui/components/Page.kt`): a tab opens on a large title that scrolls away into a
+  slim bar; a pushed page has the slim bar with a gold back chevron. Content is never wider than 640 dp (the
+  owner's phone folds open). One margin, one grid, one kind of grouped list, one button, one search field, one
+  segmented control; choices open in a sheet from the bottom, where the thumb is. Gold means "this can be acted
+  on, or is chosen", and nothing else.
+- **Order of use.** Today: a bell at the end of each time says what will happen then, and the row opens that
+  prayer's alert; the place opens the location page. Adhan: the one switch, what needs attention (only when
+  something does, each row its own fix), the prayers, then everything else. Settings: where, how the times are
+  worked out, alerts, the notification bar, appearance, language, calendar, watch, about (and, until release,
+  testing).
+- **The Qibla screen keeps its design.**
+- **The opening, "first light".** Android's launch screen is the sky's own waiting colour with Noor's crescent
+  and star; the app takes it over without a cut; light gathers round the mark, the mark dissolves into it, the
+  light travels to where the Sun stands in the sky behind, and the dusk opens from there like a soft iris onto the
+  home screen, whose Sun runs to this moment while the place, the countdown and the day's times settle in. 2.3
+  seconds at most; a touch finishes it in a quarter of a second; with "Remove animations" nothing moves; the dusk
+  waits up to 0.7 s for the real sky's first picture (`RealSky.waitingForPicture`). It plays on a cold start, and
+  again when Noor comes back to the home screen after fifteen minutes away (without the dusk).
+- **Tester's options** (Settings → Testing; `com.noor.app.testing`; English only; nothing stored; to be removed
+  before release): the time of day, a day that runs by itself, the season, the kind of weather, fog, the scenery,
+  the place chooser, and a demo through every scenery. A strip over the tab bar says what is being shown while
+  they are on; a tap on it goes back to the real sky.
+
 ## Components
+
+(The list below is 0.6's; 0.14's components are described in [UI_014_NOTES.md](UI_014_NOTES.md), section 1.)
+
 
 - **Large screen titles** on every tab; sub-pages use a back arrow and a title.
 - **Grouped lists**: rounded groups, an icon in a soft gold tile at the start of each row, dividers aligned with the
