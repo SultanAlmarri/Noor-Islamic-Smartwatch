@@ -8,33 +8,58 @@ The other documents in `docs/` describe each part in detail and are kept up to d
 An Islamic prayer-time product for Samsung Galaxy Watch (the owner wears a Galaxy Watch 5 Pro) and Android phones:
 
 - **Phone app** (`app`, package `com.noor.smartwatch`): Today (home), Qibla, Adhan, Watch and Settings screens.
+  Until the app is released it also has the **tester's options** (Settings → Testing; `com.noor.app.testing`):
+  for testing only, to be removed before release (the owner's word).
 - **Wear OS app** (`wear`, same package `com.noor.smartwatch`): works alone or synced with the phone; tiles,
   complications, alerts, and installs the Noor watch face through Watch Face Push.
 - **Shared modules**: `core/prayer` (pure Kotlin prayer engine and everything both apps must compute identically),
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.13.0** (versionCode 27), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
-0.9.13, 0.9.14, 0.10.0, 0.11.0, 0.12.0 and 0.13.0 changed only the phone. Everything is on `main`. The merged work
+Current version: phone **0.14.0** (versionCode 28), watch **0.9.12** (versionCode 17); 0.9.7, 0.9.9–0.9.11,
+0.9.13, 0.9.14 and 0.10.0 to 0.14.0 changed only the phone. Everything is on `main`. The merged work
 branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
 branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
 Android 17 emulator experiments: that image does not run reliably on GitHub's machines) and `noor/0912` (a first
 widget countdown, replaced by 0.9.13's). Deleting those needs the owner's yes.
 
-Development also happens on the owner's Windows PC (Claude Code desktop, checkout in `ProjectMinhad\Noor`). There:
-JDK 17 in `%USERPROFILE%\.jdks\temurin-17` (listed in `~/.gradle/gradle.properties` as
-`org.gradle.java.installations.paths`), the SDK in `%LOCALAPPDATA%\Android\Sdk` (`local.properties`), and Python
-3.12 (embeddable, standard library only) in `%LOCALAPPDATA%\Programs\Python\py312-embed`, which must come first on
-`PATH` so `python3` is not the Microsoft Store stub. Found on 13 November 2026, needed for Gradle to run there:
-- Set `JAVA_HOME` to the Temurin 17 above for the Gradle run (the PC's default `JAVA_HOME` is Corretto 21), and set
-  `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\Users\Public`; without both, Gradle stops at once with
-  "Unable to establish loopback connection".
-- `local.properties` must use forward slashes (`sdk.dir=C:/Users/.../Android/Sdk`): single backslashes are dropped
-  when the file is read ("The filename, directory name, or volume label syntax is incorrect").
-- Add `-Pkotlin.compiler.execution.strategy=in-process`: the Kotlin compile daemon cannot be reached there either
-  (it falls back by itself, but with long stack traces).
-- In the Claude Code desktop app, Gradle needs to run outside the command sandbox, and `gradlew.bat` is called with its
-  full path and `-p <project>` from `cmd /c`.
+### Working in a cloud session (since 16 November 2026)
+
+The owner's Windows PC, where 0.9.12 to 0.13.0 were made, is gone ("I lost access to my PC for a long time", 16
+November 2026): do not wait for it and do not plan for it. Development now happens in Claude Code cloud sessions,
+which the owner follows from his phone. Everything the PC did works there (HANDOVER.md section 24):
+
+- **Set-up.** The session's environment has a set-up script that fetches JDK 17, the Android SDK and Blender into
+  `/opt/noortools`, tells Gradle where JDK 17 is (`~/.gradle/gradle.properties`), puts Google's mirror of Maven
+  Central first (`~/.gradle/init.gradle`: Maven Central answers "429 Too Many Requests" there), links
+  `~/ProjectMinhad/NoorTools` to `/opt/noortools` (the scenery scripts look there) and writes `local.properties`.
+  The same script is kept in `tools/cloud/setup.sh`: if a session starts without those tools, run it from the
+  folder that holds the checkout.
+- **The machine is small**: 4 CPU cores and 15 GB of memory for everything, and a process that asks for more is
+  killed without an error of its own ("the kernel killed a process"; Blender dies silently; a bench sheet comes
+  out black; "Gradle build daemon disappeared"). So: `--no-parallel` for Gradle and `./gradlew --stop` when its
+  daemons are no longer needed (each holds 3 GB); one Blender bake at a time, `-t 2` or `-t 3`, under about 5 GB;
+  no bench sheets of all six sceneries while a bake runs.
+- **Blender** 4.5.16 renders with Cycles on the CPU (no GPU): about four times slower than the PC was on a simple
+  scene. Compose with previews; bake once, in the background (`nohup`), and read the log.
+- **The design bench** runs in the session's own headless Chromium (Playwright is installed; launch with
+  `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`): serve the repository root with
+  `python3 tools/sky3d/serve.py`, then drive the page with `tools/cloud/bench.cjs <script.js> '<json args>'`
+  (it waits for "ready" and runs the script's text in the page). A sheet of a dozen tiles takes about a minute.
+- **Helpers.** A piece of work that stands by itself (a scenery, a set of clouds, the interface) can be given to
+  a helper agent in a git worktree of its own, on a branch the lead merges. Never two bakes at once.
+- **Nothing outside the repository survives a session**: commit and push the work branch often. The data the
+  sceneries are built from (scans, elevation models) must be fetched again when it is needed; every scenery's
+  script says where from.
+- **Delivery** is as below, with one more step: a cloud session works on its own branch and merges it into `main`
+  when the work is tested (the owner's standing instruction is that every change reaches him through `main` and
+  the `dev-latest` links).
+- The watch can no longer be reached with `adb` from the PC. The watch app has not changed since 0.9.12; when it
+  does, the owner needs another way to install it (docs/INSTALL.md).
+
+The notes that only held for the PC (JAVA_HOME and the loopback error, backslashes in `local.properties`, the
+Microsoft Store's `python3` stub, perl in Git Bash, "SVM Mode" for an emulator) are in HANDOVER.md section 20 and
+in this file's history.
 
 ## The owner
 
@@ -59,9 +84,11 @@ JDK 17 in `%USERPROFILE%\.jdks\temurin-17` (listed in `~/.gradle/gradle.properti
    purpose: phone and watch must share one signature, and every build must install over the last. Do not replace
    them, or users' installed builds stop updating and phone↔watch pairing breaks.
 4. **Do not remove or weaken tests to make a build pass.** Fix the cause.
-5. **Do not break working features.** Change only what the task needs. Phone screens outside the approved plan
-   (HANDOVER.md section 10: home, Adhan and alerts, Settings, the date picker, small Qibla fixes, the persistent
-   notification) stay exactly as they are (see HANDOVER.md, "Design history"). The Qibla screen is liked as it is:
+5. **Do not break working features.** Change only what the task needs. Until 0.13 every phone screen outside the
+   approved plan (HANDOVER.md section 10) had to stay exactly as it was; on 15 November 2026 the owner lifted that
+   for the interface ("totally revolutionize the user interface and keep the Apple aesthetic... a lot more
+   intuitive"), and 0.14 redesigned every screen but one on one system (`ui/components/Page.kt`,
+   docs/UI_014_NOTES.md): new screens follow that system. The Qibla screen is liked as it is:
    fix, do not redesign.
 6. **Do not fabricate** test results, data, or certainty. Do not invent missing data.
 7. **No scraping** of websites or apps without authorisation. **No unlicensed copyrighted recordings.** Adhan audio
@@ -107,7 +134,7 @@ watch-face packaging step). Point Gradle at the SDK with `ANDROID_HOME` or with 
   at a time, and run `./gradlew --stop` if the daemon dies.
 - `app/build.gradle.kts` sets `forkEvery = 1` for unit tests because DataStore allows one instance per process.
   Keep it. For the same reason, each Robolectric render test class uses a single `@Test` method.
-- Rendered screens: `ScreenshotTest` writes 57 PNGs (plus 55 from `StatusNotificationTest`), and fails if any screen shows text in the other language to `app/build/screenshots` (CI publishes them as
+- Rendered screens: `ScreenshotTest` writes 62 PNGs (plus 55 from `StatusNotificationTest`), and fails if any screen shows text in the other language to `app/build/screenshots` (CI publishes them as
   `screenshots.zip`). The home-screen design renders (`app/src/test/.../design/Today*DesignTest`) write to
   `app/build/design`. These are software renders, useful for reviewing layout, not proof of device behaviour.
 - Release builds are signed with the development key, so they install over earlier builds.
