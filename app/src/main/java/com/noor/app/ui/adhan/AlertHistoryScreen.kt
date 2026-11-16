@@ -81,8 +81,8 @@ fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
                 Column {
                     history.forEachIndexed { i, r ->
                         if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 40.dp), thickness = 0.5.dp, color = c.separator)
-                        // (0.15: the newest record says how to fix what went wrong; older ones only tell.)
-                        HistoryRow(r, f, zone, fixable = i == 0)
+                        // (0.15: records of the last two days say how to fix what went wrong; older ones only tell.)
+                        HistoryRow(r, f, zone, fixable = System.currentTimeMillis() - r.dueAtMs < 48L * 3600_000L)
                     }
                 }
             }

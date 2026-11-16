@@ -586,7 +586,7 @@
     <string name="adhan_hint_silent">Notice only, no sound</string>
     <string name="adhan_plays">Plays: %s</string>
     <string name="hijri_today_is">Today: %s</string>
-    <string name="qibla_poor_hint">The compass is unsure here, so the turn is not shown yet. Tap for how to calibrate.</string>
+    <string name="qibla_poor_hint">The compass is unsure here: calibrate before following the turn. Tap for how.</string>
     <string name="watch_get_wearable">Get Galaxy Wearable</string>
     <string name="watch_how_to">How to put Noor on your watch</string>
     <string name="qibla_calibrate_first">Calibrate first: move the phone in a figure 8</string>
