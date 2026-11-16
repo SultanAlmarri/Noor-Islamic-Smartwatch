@@ -53,8 +53,11 @@ class AlertReceiver : BroadcastReceiver() {
         val host = context.alertHost ?: return
         val config = host.alertConfig() ?: return
         val alerts = config.alerts ?: return
-        val due = AlertPlanner.onRemind(config, alerts, host.alertDevice, prayer, date, Instant.ofEpochMilli(firedAt)) ?: return
-        AlertNotifications.postReminder(context, config, due)
+        // 0.16: or a reminder after it (the iqamah).
+        val due = if (intent.getBooleanExtra(AlertScheduler.EXTRA_AFTER, false))
+            AlertPlanner.onAfter(config, alerts, host.alertDevice, prayer, date, Instant.ofEpochMilli(firedAt))
+        else AlertPlanner.onRemind(config, alerts, host.alertDevice, prayer, date, Instant.ofEpochMilli(firedAt))
+        AlertNotifications.postReminder(context, config, due ?: return)
     }
 
     private suspend fun handle(context: Context, intent: Intent, firedAt: Long) {

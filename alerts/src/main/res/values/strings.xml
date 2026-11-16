@@ -37,4 +37,7 @@
         <item quantity="one">%1$s minute</item>
         <item quantity="other">%1$s minutes</item>
     </plurals>
+    <!-- 0.16: a reminder after a prayer began (the iqamah); the minutes are noor_remind_minutes. -->
+    <string name="noor_after_title">%1$s began %2$s ago</string>
+    <string name="noor_after_title_sunrise">Sunrise was %1$s ago</string>
 </resources>

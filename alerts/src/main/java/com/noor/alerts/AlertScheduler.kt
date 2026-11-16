@@ -28,6 +28,9 @@ object AlertScheduler {
     const val ACTION_REMIND = "com.noor.alerts.REMIND"
     /** Reminder alarms use request codes REQUEST_BASE + 20 + prayer (the test alarm uses + 50). */
     private const val REMINDER_OFFSET = 20
+    /** 0.16: reminders after a prayer (the iqamah) use REQUEST_BASE + 30 + prayer, with the same action. */
+    private const val AFTER_OFFSET = 30
+    const val EXTRA_AFTER = "after"
     const val EXTRA_PRAYER = "prayer"
     const val EXTRA_DATE = "date"
     const val EXTRA_AT = "at"
@@ -46,7 +49,8 @@ object AlertScheduler {
         val now = Instant.now()
         val alerts = config?.alerts
         val plan = if (host != null && alerts != null) AlertPlanner.plan(config, alerts, host.alertDevice, now) else emptyList()
-        val reminders = if (host != null && alerts != null) AlertPlanner.reminders(config, alerts, host.alertDevice, now) else emptyList()
+        val reminders = if (host != null && alerts != null) AlertPlanner.reminders(config, alerts, host.alertDevice, now) +
+            AlertPlanner.afterReminders(config, alerts, host.alertDevice, now) else emptyList()
         return apply(context, config, plan, reminders)
     }
 
@@ -97,14 +101,14 @@ object AlertScheduler {
     private fun applyReminders(context: Context, reminders: List<PlannedReminder>) {
         val am = context.getSystemService(AlarmManager::class.java)
         val exact = canScheduleExact(context)
-        val byPrayer = reminders.associateBy { it.prayer }
-        for (p in Prayer.entries) {
-            val r = byPrayer[p]
+        // (0.16: before and after each prayer, each its own alarm.)
+        for (after in listOf(false, true)) for (p in Prayer.entries) {
+            val r = reminders.firstOrNull { it.prayer == p && it.after == after }
             if (r == null) {
-                reminderPending(context, p, null, PendingIntent.FLAG_NO_CREATE)?.let { pi -> am?.cancel(pi); pi.cancel() }
+                reminderPending(context, p, null, PendingIntent.FLAG_NO_CREATE, after)?.let { pi -> am?.cancel(pi); pi.cancel() }
                 continue
             }
-            val pi = reminderPending(context, p, r, PendingIntent.FLAG_UPDATE_CURRENT) ?: continue
+            val pi = reminderPending(context, p, r, PendingIntent.FLAG_UPDATE_CURRENT, after) ?: continue
             val at = r.remindAt.toEpochMilli()
             runCatching {
                 if (exact) am?.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi) else am?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
@@ -112,10 +116,10 @@ object AlertScheduler {
         }
     }
 
-    private fun reminderPending(context: Context, p: Prayer, r: PlannedReminder?, flag: Int): PendingIntent? {
-        val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_REMIND).putExtra(EXTRA_PRAYER, p.name)
+    private fun reminderPending(context: Context, p: Prayer, r: PlannedReminder?, flag: Int, after: Boolean = false): PendingIntent? {
+        val intent = Intent(context, AlertReceiver::class.java).setAction(ACTION_REMIND).putExtra(EXTRA_PRAYER, p.name).putExtra(EXTRA_AFTER, after)
         if (r != null) intent.putExtra(EXTRA_DATE, r.date.toString()).putExtra(EXTRA_AT, r.at.toEpochMilli())
-        return PendingIntent.getBroadcast(context, REQUEST_BASE + REMINDER_OFFSET + p.ordinal, intent, flag or PendingIntent.FLAG_IMMUTABLE)
+        return PendingIntent.getBroadcast(context, REQUEST_BASE + (if (after) AFTER_OFFSET else REMINDER_OFFSET) + p.ordinal, intent, flag or PendingIntent.FLAG_IMMUTABLE)
     }
 
     private fun pending(context: Context, p: Prayer, planned: PlannedAlert?, flag: Int): PendingIntent? {

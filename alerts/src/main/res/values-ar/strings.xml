@@ -40,4 +40,7 @@
         <item quantity="many">%1$s دقيقة</item>
         <item quantity="other">%1$s دقيقة</item>
     </plurals>
+    <!-- 0.16: a reminder after a prayer began (the iqamah); the minutes are noor_remind_minutes. -->
+    <string name="noor_after_title">دخل %1$s منذ %2$s</string>
+    <string name="noor_after_title_sunrise">كان الشروق منذ %1$s</string>
 </resources>

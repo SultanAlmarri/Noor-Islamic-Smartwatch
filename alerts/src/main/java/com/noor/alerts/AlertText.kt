@@ -52,5 +52,11 @@ internal class AlertText(context: Context, private val config: WatchConfig) {
         return if (p == Prayer.SHURUQ) string(R.string.noor_remind_title_sunrise, m) else string(R.string.noor_remind_title, prayer(p, date), m)
     }
 
+    /** 0.16: "Asr began 20 minutes ago" (the iqamah); after sunrise, "Sunrise was 20 minutes ago". */
+    fun afterTitle(p: Prayer, date: LocalDate, minutes: Int): String {
+        val m = ctx.resources.getQuantityString(R.plurals.noor_remind_minutes, minutes, number(minutes))
+        return if (p == Prayer.SHURUQ) string(R.string.noor_after_title_sunrise, m) else string(R.string.noor_after_title, prayer(p, date), m)
+    }
+
     fun body(p: Prayer, at: Instant): String = listOf(time(at), place).filter { it.isNotBlank() }.joinToString(" · ")
 }

@@ -89,14 +89,16 @@ object AlertNotifications {
         ensureChannels(context)
         if (!canPost(context, CHANNEL_REMIND)) return
         val text = AlertText(context, config)
-        val untilPrayer = (due.at.toEpochMilli() - System.currentTimeMillis()).coerceAtLeast(60_000L)
-        val n = base(context, CHANNEL_REMIND, text.reminderTitle(due.prayer, due.date, due.minutesLeft), text.body(due.prayer, due.at), due.at)
+        // (A reminder before goes when the prayer begins; one after it, in a quarter of an hour.)
+        val untilPrayer = if (due.after) 15 * 60_000L else (due.at.toEpochMilli() - System.currentTimeMillis()).coerceAtLeast(60_000L)
+        val title = if (due.after) text.afterTitle(due.prayer, due.date, due.minutesLeft) else text.reminderTitle(due.prayer, due.date, due.minutesLeft)
+        val n = base(context, CHANNEL_REMIND, title, text.body(due.prayer, due.at), due.at)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setTimeoutAfter(untilPrayer)
             .build()
-        runCatching { NotificationManagerCompat.from(context).notify(reminderId(due.prayer), n) }
+        runCatching { NotificationManagerCompat.from(context).notify(reminderId(due.prayer) + if (due.after) 10 else 0, n) }
     }
 
     internal fun cancelReminder(context: Context, p: Prayer) {
