@@ -89,7 +89,7 @@ fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
         }
         com.noor.app.ui.components.NoorButton(stringResource(R.string.history_share), {
             val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                .putExtra(Intent.EXTRA_SUBJECT, "Noor alert report")
+                .putExtra(Intent.EXTRA_SUBJECT, "Minhad alert report")
                 .putExtra(Intent.EXTRA_TEXT, vm.report())
             runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }, Modifier.fillMaxWidth(), kind = com.noor.app.ui.components.ButtonKind.Tonal)

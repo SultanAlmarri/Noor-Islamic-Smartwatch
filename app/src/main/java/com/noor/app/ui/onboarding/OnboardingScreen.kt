@@ -118,9 +118,9 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
                 .padding(horizontal = 28.dp).wrapContentWidth().widthIn(max = 520.dp),
         ) {
             Spacer(Modifier.weight(0.9f))
-            // Wordmark: نور in Kufi is Noor's logo (shown in both languages, like the icon); the Latin name beneath only in English.
+            // Wordmark: منهاد in Kufi is Minhad's logo (0.18: Noor was renamed Minhad) (shown in both languages, like the icon); the Latin name beneath only in English.
             Column(Modifier.graphicsLayer { alpha = intro.value; translationY = (1f - intro.value) * 24.dp.toPx() }) {
-                Text("نور", style = MaterialTheme.typography.displayLarge.copy(fontFamily = Kufi, fontSize = 96.sp, fontWeight = FontWeight.Normal),
+                Text("منهاد", style = MaterialTheme.typography.displayLarge.copy(fontFamily = Kufi, fontSize = 96.sp, fontWeight = FontWeight.Normal),
                     color = Sky.GoldOnSky, modifier = Modifier.semantics { heading() })
                 if (!isArabicUi()) Text("NOOR", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 8.sp, fontSize = 13.sp), color = Sky.OnSkySecondary,
                     modifier = Modifier.padding(start = 4.dp))

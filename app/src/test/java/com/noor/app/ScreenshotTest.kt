@@ -384,7 +384,7 @@ class ScreenshotTest {
         arabic = true; shot("50_adhan_history_night_ar", "سجل التنبيهات")
         arabic = false
         screen = Screen.ONBOARDING; shot("42_onboarding_en", "Use my location")
-        arabic = true; shot("43_onboarding_ar", "نور")
+        arabic = true; shot("43_onboarding_ar", "منهاد")
         arabic = false
         assertTrue("Text in the wrong language:\n" + languageProblems.joinToString("\n"), languageProblems.isEmpty())
     }
@@ -396,7 +396,7 @@ class ScreenshotTest {
     private val languageProblems = mutableListOf<String>()
     private val arabicLetters = Regex("[\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF]")
     private val latinLetters = Regex("[A-Za-z]")
-    private val allowedInEnglish = listOf("نور")
+    private val allowedInEnglish = listOf("منهاد")
     private val allowedInArabic = listOf(
         Regex("(Galaxy|Pixel) Watch\\S*( Pro| Classic)?( \\([0-9A-F]{4}\\))?"), // a device's own name, as Android reports it
         Regex("Wear OS"), Regex("Galaxy Wearable"), Regex("WGS-84"), Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), // product, standard and format names
