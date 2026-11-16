@@ -90,17 +90,11 @@ fun CalendarPicker(
 
 @Composable
 private fun CalendarSwitch(hijri: Boolean, f: Formatter, onChange: (Boolean) -> Unit) {
-    val c = NoorTheme.colors
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp).clip(RoundedCornerShape(50)).background(c.surfaceRaised).padding(3.dp)) {
-        listOf(false to stringResource(R.string.calendar_gregorian), true to stringResource(R.string.calendar_hijri)).forEach { (h, label) ->
-            val on = h == hijri
-            Box(Modifier.weight(1f).clip(RoundedCornerShape(50)).then(if (on) Modifier.background(c.gold) else Modifier)
-                .clickable(onClickLabel = label) { onChange(h) }.padding(vertical = 8.dp)
-                .semantics { this.selected = on }, contentAlignment = Alignment.Center) {
-                Text(label, style = MaterialTheme.typography.titleSmall, color = if (on) c.onGold else c.textSecondary)
-            }
-        }
-    }
+    // 0.14: the app's one segmented control (a full 48 dp to touch, a thumb that slides).
+    com.noor.app.ui.adhan.Segmented(
+        listOf(false to stringResource(R.string.calendar_gregorian), true to stringResource(R.string.calendar_hijri)), hijri, onChange,
+        Modifier.padding(horizontal = 12.dp),
+    )
 }
 
 @Composable

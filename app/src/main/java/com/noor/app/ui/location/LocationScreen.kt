@@ -794,7 +794,7 @@ private fun Loading() = Box(Modifier.fillMaxWidth().padding(24.dp), contentAlign
 @Composable
 private fun RoundButton(icon: ImageVector, description: String?, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    Box(Modifier.size(46.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(c.surfaceRaised).clickable(onClick = onClick)
+    Box(Modifier.size(48.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(c.surfaceRaised).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
         .semantics { if (description != null) contentDescription = description }, contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = c.textPrimary, modifier = Modifier.size(22.dp))
     }

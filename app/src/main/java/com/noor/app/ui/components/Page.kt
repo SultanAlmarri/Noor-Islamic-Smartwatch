@@ -231,7 +231,7 @@ fun NoorSearchField(value: String, onChange: (String) -> Unit, hint: String, mod
                 }
                 if (value.isNotEmpty()) {
                     val clear = stringResource(R.string.settings_search_clear)
-                    Box(Modifier.size(44.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = clear) { onChange("") }.semantics { contentDescription = clear },
+                    Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = clear) { onChange("") }.semantics { contentDescription = clear },
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.Cancel, null, tint = c.textMuted, modifier = Modifier.size(18.dp))
                     }

@@ -63,10 +63,13 @@ object Opening {
     /** The light round the mark. */
     const val GLOW_MS = 950
     /** The mark dissolves into the light. */
-    const val MARK_FADE_AT = 220
-    const val MARK_FADE_MS = 480
+    const val MARK_FADE_AT = 150
+    const val MARK_FADE_MS = 330
+    /** The light leaves the mark for the place of the Sun in the sky behind. */
+    const val TRAVEL_AT = 120
+    const val TRAVEL_MS = 560
     /** The dusk opens. */
-    const val IRIS_AT = 260
+    const val IRIS_AT = 300
     const val IRIS_MS = 1000
     /** From here the veil is gone and touches reach the home screen. */
     const val VEIL_END = IRIS_AT + IRIS_MS
@@ -132,6 +135,8 @@ class OpeningState(mode: OpeningMode = OpeningMode.NONE, veil: Boolean = true) {
         private set
     /** Where the launch screen drew Noor's mark, in the window's pixels (null: the middle of the screen). */
     var mark: Rect? by mutableStateOf(null)
+    /** Where the light goes and the dusk opens from: the Sun of the home screen's sky, told by the home screen (px). */
+    var focus: Offset? by mutableStateOf(null)
     private var skyRun = -1
 
     val totalMs: Int get() = when (mode) { OpeningMode.FULL -> Opening.FULL_MS; OpeningMode.BRIEF -> Opening.BRIEF_MS; OpeningMode.NONE -> 0 }
@@ -197,6 +202,8 @@ val LocalOpening = staticCompositionLocalOf { OpeningState.None }
 
 /** The colour of the launch screen and of the veil: the sky that holds the scene's place until its first picture. */
 val Dusk: Color get() = RealSky.WAITING_SKY
+private val GlowCore = Color(0xFFFFF6E0)
+private val GlowEdge = Color(0xFFF2A65A)
 
 /**
  * A part of the home screen that settles into place during the opening: it fades in and rises [lift], the [order]-th
@@ -239,22 +246,30 @@ fun OpeningVeil(state: OpeningState, modifier: Modifier = Modifier) {
             return@Canvas
         }
         drawRect(Dusk)
-        // Light gathers round the mark and spreads: it swells, then thins as the dusk opens.
+        // The light gathers round the mark, then leaves it for the place of the Sun in the sky behind (or, at night,
+        // the middle of the sky), and it is from there that the dusk opens: the mark's light becomes the day's.
+        val to = state.focus ?: Offset(size.width / 2f, size.height * 0.3f)
+        val travel = state.part(Opening.TRAVEL_AT, Opening.TRAVEL_MS, FastOutSlowInEasing)
+        val at = Offset(c.x + (to.x - c.x) * travel, c.y + (to.y - c.y) * travel)
         val g = state.part(0, Opening.GLOW_MS, FastOutSlowInEasing)
         val glow = sin(g * Math.PI).toFloat()
         if (glow > 0f) {
-            val r = box.width * (0.42f + 1.9f * g)
-            drawCircle(Brush.radialGradient(0f to Sky.SunCore.copy(alpha = 0.55f * glow), 0.35f to Sky.SunGlow.copy(alpha = 0.22f * glow), 1f to Color.Transparent, center = c, radius = r), r, c)
+            val r = box.width * (0.36f + 1.5f * g)
+            drawCircle(
+                Brush.radialGradient(0f to GlowCore.copy(alpha = 0.95f * glow), 0.1f to Sky.SunGlow.copy(alpha = 0.6f * glow), 0.42f to GlowEdge.copy(alpha = 0.2f * glow),
+                    1f to Color.Transparent, center = at, radius = r),
+                r, at, blendMode = BlendMode.Plus,
+            )
         }
         // The mark dissolves into the light, growing a touch as it goes.
         val m = state.part(Opening.MARK_FADE_AT, Opening.MARK_FADE_MS, FastOutSlowInEasing)
         if (m < 1f) scale(1f + 0.14f * m, c) { translate(box.left, box.top) { with(mark) { draw(box.size, alpha = 1f - m) } } }
-        // The dusk opens from the mark: a circle of nothing with a soft edge, growing until none of the veil is left.
+        // The dusk opens: a circle of nothing with a soft edge, growing until none of the veil is left.
         val o = state.part(Opening.IRIS_AT, Opening.IRIS_MS, FastOutSlowInEasing)
         if (o > 0f) {
-            val reach = max(max(hypot(c.x, c.y), hypot(size.width - c.x, c.y)), max(hypot(c.x, size.height - c.y), hypot(size.width - c.x, size.height - c.y)))
-            val r = o * reach / 0.5f
-            drawCircle(Brush.radialGradient(0f to Color.Black, 0.5f to Color.Black, 1f to Color.Transparent, center = c, radius = r), r, c, blendMode = BlendMode.DstOut)
+            val reach = max(max(hypot(at.x, at.y), hypot(size.width - at.x, at.y)), max(hypot(at.x, size.height - at.y), hypot(size.width - at.x, size.height - at.y)))
+            val r = o * reach / 0.62f
+            drawCircle(Brush.radialGradient(0f to Color.Black, 0.62f to Color.Black, 1f to Color.Transparent, center = at, radius = r), r, at, blendMode = BlendMode.DstOut)
         }
     }
 }

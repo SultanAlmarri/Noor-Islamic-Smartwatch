@@ -3,6 +3,7 @@ package com.noor.app.ui.today
 import androidx.compose.animation.AnimatedContent
 import java.time.temporal.ChronoUnit
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
@@ -441,12 +442,25 @@ private fun SkyHeader(
         }
     }
 
+    // The opening's light goes to the Sun of this sky, and the dusk opens from there (from the middle of the sky at night).
+    var headerWidth by remember { mutableIntStateOf(0) }
+    val headerPx = with(density) { height.toPx() }
+    if (app.arriving && app.veil && headerWidth > 0) {
+        val focus = remember(scene, layout, headerPx, headerWidth, rtl) {
+            val w = headerWidth.toFloat()
+            val g = SkyGeometry(scene, w, headerPx * layout.horizon, headerPx * layout.arcTop, headerPx * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
+            if (scene.sunElevation > 1.0) Offset(g.x(scene.nowFraction), g.y(scene.sunElevation, scene.nowFraction))
+            else Offset(w / 2f, headerPx * (layout.arcTop + layout.horizon) / 2f)
+        }
+        androidx.compose.runtime.SideEffect { app.focus = focus }
+    }
+
     val elevation = scene.sunElevation.roundToInt()
     val desc = stringResource(if (elevation >= 0) R.string.sky_desc_up else R.string.sky_desc_down, f.number(abs(elevation))) + " " + stringResource(R.string.sky_scrub_hint)
     val totalPx = with(density) { height.toPx() }
 
     Box(
-        Modifier.fillMaxWidth().height(height).pointerInput(rtl) {
+        Modifier.fillMaxWidth().height(height).onSizeChanged { headerWidth = it.width }.pointerInput(rtl) {
             detectHorizontalDragGestures(
                 onDragStart = { o ->
                     scrubbing = true
