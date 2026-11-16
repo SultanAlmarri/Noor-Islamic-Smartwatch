@@ -36,9 +36,24 @@ These voices are offered as “add your own recording”.
 - **Al-Quds** (القدس): No freely licensed recording of the Adhan of al-Masjid al-Aqsa or of another mosque in Jerusalem was found. Wikimedia Commons holds only a 15-second clip heard from a distance at the Garden Tomb. On the Internet Archive, two radio aporee field recordings from Jerusalem were examined: one (Golden Gate, 2014) holds the end of a prayer over a loudspeaker, not the Adhan; the other (Pisgat Ze'ev, 2016) holds distant calls mixed with gunfire. Other uploads there are broadcast or YouTube copies whose uploader does not hold the rights.
 - **Egypt** (مصر): No freely licensed recording of a single, clear Egyptian Adhan was found. The only ones with a usable licence are two radio aporee field recordings from Maadi, Cairo (CC BY 3.0, 2012): both capture the dawn call of many distant mosques at once, with no phrase clear enough to cut. The Cambridge "Voices and Faces of the Adhan: Cairo" collection is CC BY-NC-ND (no commercial use, no edits), and the Internet Archive's "Adhan from Egypt, Abdulnasser Harak" is a radio recording re-uploaded by someone who does not hold its rights.
 
-The Dubai voice is added from the owner's own recordings (a `local` source in `tools/sounds/adhan_sources.json`).
+### Dubai — Abdulrahman Al-Hindi (the owner's recordings)
+
+- Recordings: `tools/sounds/owner/dubai.m4a` (the Adhan, used for Dhuhr, Asr, Maghrib and Isha) and
+  `tools/sounds/owner/dubai_fajr.m4a` (the Fajr Adhan, with "As-salatu khayrun min an-nawm").
+- Voice: Abdulrahman Al-Hindi.
+- Rights: supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the
+  rights to use them. The files' own tags name YouTube uploads ("Adhan of Abdulrahman Al Hindi [from Dubai]", Billy
+  Habil & McBill, 2014; "اجمل اذان في العالم - عبد الرحمن الهندي", 2021); the rights statement is the owner's, and a
+  licence document, if there is one, should be kept with the project's records.
+- Changes made by Minhad: silence trimmed at both ends, 70 Hz high-pass, loudness normalised to −16 LUFS, short fades,
+  mono Ogg Vorbis; whole Adhans 128.5 s and 183.7 s; openings ("Allahu Akbar, Allahu Akbar", the first phrase, cut in
+  the pause after it) 11.9 s and 11.4 s.
+- SHA-1 of the originals: `1fc3af8fd1acfe62d6ce563543844c886bb54a33` (Adhan), `4096d83d5f096cc962905998b9be498b1facec12` (Fajr).
 
 ## Sound effects
+
+0.18: every effect was then raised to about −18 LUFS (a gentle peak limiter keeps peaks below −1 dBFS), so an alarm
+with a sound effect is about as loud as one with an Adhan.
 
 Real recordings of nature, with no music, melody or musical tones.
 
@@ -101,7 +116,7 @@ Real recordings of nature, with no music, melody or musical tones.
 - *Time of Adhan, Great Mosque of Mecca – Jan 6, 2018*: starts during the first phrase.
 - *Oración Al-Azzan* (Madinah, public domain): holds the opening only; the Prophet's Mosque recording is complete and cleaner.
 - Makkah and Madinah Adhans on the Internet Archive marked “public domain” or CC0 (HaramainRecordings and similar uploads): captures of television broadcasts whose uploaders do not hold the rights.
-- *Adhan/Azaan (Dubai Mall) – Abdulrahman Al-Hindi* on the Internet Archive: a YouTube copy uploaded by someone who does not hold its rights.
+- *Adhan/Azaan (Dubai Mall) – Abdulrahman Al-Hindi* on the Internet Archive: a YouTube copy uploaded by someone who does not hold its rights (the Dubai voice comes from the owner's own files instead).
 - Jumeira 3, Dubai (radio aporee, 2011): three mosques calling at once, with waves; not the Dubai Mall Adhan.
 - *Call to prayer by Sabah Fakhry.mp3*: tagged public domain, but it is a commercial recording by a singer who died in 2021; the claim is not credible.
 - Alert sounds generated from code (`tools/sounds/synthesize.py`, up to 0.16): removed at the owner's word (“no generated sounds”, “zero music”).

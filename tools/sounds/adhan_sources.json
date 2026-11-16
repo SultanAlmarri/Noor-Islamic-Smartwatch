@@ -72,6 +72,26 @@
    "licence": "Public domain",
    "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
    "provenance": "A mountain stream on the Black Canyon Trail, Rocky Mountain National Park, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings \"are in the public domain and may be downloaded and used without limitation; however, please credit the National Park Service.\""
+  },
+  {
+   "id": "dubai",
+   "kind": "local",
+   "path": "owner/dubai.m4a",
+   "name": "Dubai Adhan, Abdulrahman Al-Hindi (owner's recording)",
+   "artist": "Abdulrahman Al-Hindi",
+   "licence": "Owner's rights",
+   "provenance": "Supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the rights to use them. The files' own tags name YouTube uploads (\"Adhan of Abdulrahman Al Hindi [from Dubai]\", Billy Habil & McBill, 2014; \"اجمل اذان في العالم - عبد الرحمن الهندي\", 2021); the rights statement is the owner's.",
+   "sha1": "1fc3af8fd1acfe62d6ce563543844c886bb54a33"
+  },
+  {
+   "id": "dubai_fajr",
+   "kind": "local",
+   "path": "owner/dubai_fajr.m4a",
+   "name": "Dubai Fajr Adhan, Abdulrahman Al-Hindi (owner's recording)",
+   "artist": "Abdulrahman Al-Hindi",
+   "licence": "Owner's rights",
+   "provenance": "Supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the rights to use them. The files' own tags name YouTube uploads (\"Adhan of Abdulrahman Al Hindi [from Dubai]\", Billy Habil & McBill, 2014; \"اجمل اذان في العالم - عبد الرحمن الهندي\", 2021); the rights statement is the owner's.",
+   "sha1": "4096d83d5f096cc962905998b9be498b1facec12"
   }
  ]
 }

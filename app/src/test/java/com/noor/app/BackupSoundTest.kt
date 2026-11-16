@@ -36,7 +36,10 @@ class BackupSoundTest {
      * the old library (generated "alt." sounds, other Adhans) is left on the phone or the watch.
      */
     @Test fun bundledLibraryIsCreditedAndComplete() {
-        val allowed = setOf("Public domain", "CC0", "CC BY 3.0", "CC BY 4.0", "CC BY-SA 3.0", "CC BY-SA 4.0")
+        val allowed = setOf("Public domain", "CC0", "CC BY 3.0", "CC BY 4.0", "CC BY-SA 3.0", "CC BY-SA 4.0",
+            // 0.18: the owner's own recordings (Dubai), which he states he holds the rights to; their file in the repository
+            // is the source, and the rights statement is written down with them.
+            "Owner's rights")
         for ((assets, label) in listOf(File("src/main/assets") to "phone", File("../wear/src/main/assets") to "watch")) {
             val text = File(assets, "sounds/library.json").readText()
             val ids = Regex("\"id\":\\s*\"([^\"]+)\"").findAll(text).map { it.groupValues[1] }.toList()
@@ -48,7 +51,9 @@ class BackupSoundTest {
             assertTrue("$label: licences $licences", licences.all { it in allowed })
             val sources = Regex("\"source\":\\s*\"([^\"]*)\"").findAll(text).map { it.groupValues[1] }.toList()
             assertEquals(ids.size, sources.size)
-            assertTrue("$label: every sound names its source", sources.all { it.startsWith("https://") })
+            assertTrue("$label: every sound names its source", sources.all { it.startsWith("https://") || (it.startsWith("owner:") && File("../" + it.removePrefix("owner:")).isFile) })
+            val owners = licences.count { it == "Owner's rights" }
+            assertEquals("$label: an owner's recording says whose rights", owners, Regex("\"provenance\":\\s*\"[^\"]{40,}\"").findAll(text).count())
             val bundled = File(assets, "sounds").list()!!.filter { it.endsWith(".ogg") }.toSet()
             val named = Regex("\"file\":\\s*\"sounds/([^\"]+)\"").findAll(text).map { it.groupValues[1] }.toSet()
             // The phone bundles every file it names; the watch bundles the openings and the effects (whole Adhans are

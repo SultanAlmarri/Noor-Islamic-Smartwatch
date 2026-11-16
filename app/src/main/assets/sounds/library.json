@@ -63,6 +63,67 @@
    }
   },
   {
+   "id": "adhan.dubai",
+   "kind": "adhan",
+   "title_en": "Dubai",
+   "title_ar": "دبي",
+   "place_en": "Abdulrahman Al-Hindi",
+   "place_ar": "عبد الرحمن الهندي",
+   "categories": [
+    "renowned"
+   ],
+   "fajr": false,
+   "region": "gulf",
+   "country_en": "United Arab Emirates",
+   "country_ar": "الإمارات",
+   "year": 2026,
+   "file": "sounds/adhan_dubai.ogg",
+   "seconds": 128.5,
+   "short": {
+    "file": "sounds/adhan_dubai_short.ogg",
+    "seconds": 11.9
+   },
+   "credit": {
+    "author": "Abdulrahman Al-Hindi; recording supplied by the app's owner",
+    "licence": "Owner's rights",
+    "licence_url": "",
+    "source": "owner:tools/sounds/owner/dubai.m4a",
+    "provenance": "Supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the rights to use them. The files' own tags name YouTube uploads (\"Adhan of Abdulrahman Al Hindi [from Dubai]\", Billy Habil & McBill, 2014; \"اجمل اذان في العالم - عبد الرحمن الهندي\", 2021); the rights statement is the owner's.",
+    "changes": "Silence trimmed at both ends, 70 Hz high-pass, loudness normalised to -16 LUFS (linear, -1.5 dBTP), short fades, mono Ogg Vorbis; opening (“Allahu Akbar, Allahu Akbar”): the first phrase, ended in the pause after it."
+   }
+  },
+  {
+   "id": "adhan.dubai_fajr",
+   "kind": "adhan",
+   "title_en": "Dubai",
+   "title_ar": "دبي",
+   "place_en": "Abdulrahman Al-Hindi · Fajr",
+   "place_ar": "عبد الرحمن الهندي · الفجر",
+   "categories": [
+    "renowned",
+    "fajr"
+   ],
+   "fajr": true,
+   "region": "gulf",
+   "country_en": "United Arab Emirates",
+   "country_ar": "الإمارات",
+   "year": 2026,
+   "file": "sounds/adhan_dubai_fajr.ogg",
+   "seconds": 183.7,
+   "short": {
+    "file": "sounds/adhan_dubai_fajr_short.ogg",
+    "seconds": 11.4
+   },
+   "credit": {
+    "author": "Abdulrahman Al-Hindi; recording supplied by the app's owner",
+    "licence": "Owner's rights",
+    "licence_url": "",
+    "source": "owner:tools/sounds/owner/dubai_fajr.m4a",
+    "provenance": "Supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the rights to use them. The files' own tags name YouTube uploads (\"Adhan of Abdulrahman Al Hindi [from Dubai]\", Billy Habil & McBill, 2014; \"اجمل اذان في العالم - عبد الرحمن الهندي\", 2021); the rights statement is the owner's.",
+    "changes": "Silence trimmed at both ends, 70 Hz high-pass, loudness normalised to -16 LUFS (linear, -1.5 dBTP), short fades, mono Ogg Vorbis; opening (“Allahu Akbar, Allahu Akbar”): the first phrase, ended in the pause after it. Includes “As-salatu khayrun min an-nawm”."
+   }
+  },
+  {
    "id": "fx.birds",
    "kind": "alt",
    "title_en": "Birds",
