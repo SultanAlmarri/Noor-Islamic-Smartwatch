@@ -47,7 +47,12 @@ data class FaceData(
         val progress: Float,
         /** The time that started the interval ("Dhuhr"), or null before the first of the day. */
         val currentName: String?,
-    )
+    ) {
+        /** "3:14 PM  ·  in 1 h 23 min" (made once, not on every frame). */
+        val detail: String = "$time  ·  $countdown"
+        /** "Asr  1:23". */
+        val nameAndShort: String = "$name  $countdownShort"
+    }
 
     data class Line(val prayer: Prayer, val name: String, val time: String, val isNext: Boolean, val isCurrent: Boolean)
 
@@ -55,7 +60,13 @@ data class FaceData(
      * The Sun's day: [dayFraction] 0 at sunrise to 1 at sunset (null at night, with [nightFraction] from sunset to the
      * next sunrise instead); [marks] each time of the day as a fraction of the 24 hours from midnight; [now] likewise.
      */
-    data class Sun(val dayFraction: Float?, val nightFraction: Float?, val marks: List<Pair<Prayer, Float>>, val now: Float, val nextPrayer: Prayer?)
+    data class Sun(
+        val dayFraction: Float?, val nightFraction: Float?, val marks: List<Pair<Prayer, Float>>, val now: Float, val nextPrayer: Prayer?,
+        val sunriseTime: String? = null, val sunsetTime: String? = null,
+    ) {
+        val sunrise: Float? = marks.firstOrNull { it.first == Prayer.SHURUQ }?.second
+        val sunset: Float? = marks.firstOrNull { it.first == Prayer.MAGHRIB }?.second
+    }
 
     companion object {
         /**
@@ -105,7 +116,8 @@ data class FaceData(
                     val (from, to) = if (now.isBefore(rise)) set.minus(Duration.ofDays(1)) to rise else set to rise.plus(Duration.ofDays(1))
                     (Duration.between(from, now).seconds.toFloat() / Duration.between(from, to).seconds.coerceAtLeast(1)).coerceIn(0f, 1f)
                 } else null
-                Sun(dayF?.coerceIn(0f, 1f), nightF, Prayer.entries.mapNotNull { p -> s.today.instant(p)?.let { p to frac(it) } }, frac(now), s.next.prayer)
+                Sun(dayF?.coerceIn(0f, 1f), nightF, Prayer.entries.mapNotNull { p -> s.today.instant(p)?.let { p to frac(it) } }, frac(now), s.next.prayer,
+                    rise?.let { t.clock(it.atZone(zone)) }, set?.let { t.clock(it.atZone(zone)) })
             }
             val qibla = config?.let { Qibla.from(it.point) }?.takeIf { !it.veryClose }
             val validUntil = st?.next?.at?.takeIf { it.isBefore(nextMinute) } ?: nextMinute

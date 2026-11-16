@@ -14,6 +14,8 @@
     <uses-permission android:name="com.google.wear.permission.PUSH_WATCH_FACES" />
     <!-- Lets the app make the Noor watch face the active one, once, after the user agrees. -->
     <uses-permission android:name="com.google.wear.permission.SET_PUSHED_WATCH_FACE_AS_ACTIVE" />
+    <!-- Minhad Studio (0.18): the face this app draws itself needs to keep the screen updating while it is shown. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".NoorWearApp"
@@ -53,6 +55,22 @@
                 <data android:scheme="noor" android:host="face" />
             </intent-filter>
         </activity>
+
+        <!-- Minhad Studio (0.18): the watch face designed in the phone's editor, drawn by this app (androidx.wear.watchface).
+             Watches that launched with Wear OS 6 run Watch Face Format faces only: there the app disables it at start. -->
+        <service
+            android:name=".studio.StudioFaceService"
+            android:exported="true"
+            android:label="@string/studio_face_name"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/studio_face" />
+            <meta-data android:name="com.google.android.wearable.watchface.preview" android:resource="@drawable/studio_preview" />
+            <meta-data android:name="com.google.android.wearable.watchface.preview_circular" android:resource="@drawable/studio_preview" />
+        </service>
 
         <!-- Receives settings and location from the phone. -->
         <service

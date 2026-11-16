@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minhad Studio and the watch's settings (0.18). Kept apart from strings.xml, which other work edits. -->
+<resources>
+    <string name="studio_face_name">Minhad Studio</string>
+    <string name="settings_face">Watch face</string>
+    <string name="settings_times">Prayer times</string>
+    <string name="settings_display">Language and numbers</string>
+    <string name="settings_alerts_phone">Chosen in Minhad on your phone (Adhan tab). This watch shows what it will do.</string>
+    <string name="settings_alerts_off">Off</string>
+    <string name="settings_alerts_on">On · %1$s</string>
+    <string name="settings_alerts_from_phone">Set on your phone</string>
+    <string name="studio_in_use">In use, with your design</string>
+    <string name="studio_not_in_use">Not your watch face yet</string>
+    <string name="studio_show">Show Minhad Studio</string>
+    <string name="studio_pick_hint">Touch and hold your watch face, swipe to Minhad Studio, then tap it. Wear OS lets you, not an app, choose the face.</string>
+    <string name="studio_design_on_phone">Design it in Minhad on your phone: Settings › Watch › Minhad Studio. Your design appears here at once.</string>
+    <string name="studio_unsupported">This watch came with Wear OS 6, which runs only Watch Face Format faces, so Minhad Studio is not available on it. The Minhad faces below work.</string>
+    <string name="studio_default_design">Minhad\'s own design (nothing sent from the phone yet)</string>
+    <string name="studio_from_phone">Your design from the phone</string>
+    <string name="faces_classic">Minhad faces (Wear OS 6)</string>
+    <string name="hijri_adjust">Hijri date</string>
+    <string name="hijri_adjust_none">As calculated (Umm al-Qura)</string>
+    <string name="hijri_adjust_days">%1$s day</string>
+    <string name="display_language">Language</string>
+    <string name="display_follow">As the watch</string>
+    <string name="display_en">English</string>
+    <string name="display_ar">العربية</string>
+    <string name="display_digits">Numbers</string>
+    <string name="display_digits_western">0 1 2 3</string>
+    <string name="display_digits_arabic">٠ ١ ٢ ٣</string>
+    <string name="display_clock">Clock</string>
+    <string name="display_12">12-hour</string>
+    <string name="display_24">24-hour</string>
+    <string name="settings_from_phone_note">Method, place and language come from your phone. To change them here instead, turn on \"Use this watch\'s settings\".</string>
+</resources>
