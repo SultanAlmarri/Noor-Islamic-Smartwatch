@@ -31,7 +31,8 @@ import org.robolectric.annotation.GraphicsMode
  * screen, tab bar). The launch screen's dusk and mark; light gathering round the mark; the dusk opening onto the home
  * screen while the sky runs from the start of the current prayer's time to now; the place, the prayer, the countdown
  * and the day's times settling in; the tab bar rising. The prayer, its time and the countdown are the real ones from
- * the very first frame (they are in the page before they can be seen). Then the same opening cut short by a touch.
+ * the very first frame (they are in the page before they can be seen). Then the same opening cut short by a touch,
+ * and the home screen coming in again without the veil, as when Noor returns after a long while.
  * Software renders of single frames (the Canvas renderer: no GPU here), not a measure of smoothness on a phone.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -92,5 +93,16 @@ class TodayOpeningDesignTest {
         rule.mainClock.advanceTimeBy(330)
         assertFalse("A touch ends the opening", opening.active)
         h.frame("today_opening_skipped_end")
+
+        // Back after a long while: no veil; the Sun runs to now and the place, the countdown and the times settle again.
+        opening.begin(OpeningMode.FULL, veil = false, now = true)
+        rule.mainClock.advanceTimeByFrame()
+        assertFalse(opening.veiled)
+        rule.mainClock.advanceTimeBy(300); h.frame("today_return_0300ms")
+        rule.mainClock.advanceTimeBy(400); h.frame("today_return_0700ms")
+        rule.mainClock.advanceTimeBy((Opening.FULL_MS - 600).toLong())
+        assertFalse(opening.active)
+        h.frame("today_return_end")
+        h.assertPrayersFit(RenderHarness.PRAYERS_EN)
     }
 }

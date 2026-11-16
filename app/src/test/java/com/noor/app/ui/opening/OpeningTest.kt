@@ -43,6 +43,8 @@ class OpeningTest {
         assertTrue(Opening.HEADER_AT + 4 * Opening.STEP_MS + Opening.RISE_MS <= 1500)
         assertTrue(Opening.PANEL_AT + 6 * Opening.STEP_MS + Opening.RISE_MS <= Opening.FULL_MS)
         assertTrue(Opening.BRIEF_MS <= 600)
+        // On a return (no veil) the day's times have settled within about a second.
+        assertTrue(Opening.PANEL_AT - Opening.NO_VEIL_LEAD_MS + 6 * Opening.STEP_MS + Opening.RISE_MS <= 1150)
     }
 
     @Test fun everyPartComesInOnceAndNeverGoesBack() {

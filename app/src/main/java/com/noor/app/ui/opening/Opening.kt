@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -91,6 +92,8 @@ object Opening {
 
     /** When Noor comes back after this long in the background, the home screen comes in again (without the veil). */
     const val RETURN_AFTER_MS = 15 * 60_000L
+    /** Without the veil there is nothing to wait for: the home screen's parts come in this much earlier. */
+    const val NO_VEIL_LEAD_MS = 500
 
     /** Quick off the mark, a long soft landing: things arrive, they do not bounce. */
     val Settle: Easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
@@ -141,12 +144,15 @@ class OpeningState(mode: OpeningMode = OpeningMode.NONE, veil: Boolean = true) {
 
     val totalMs: Int get() = when (mode) { OpeningMode.FULL -> Opening.FULL_MS; OpeningMode.BRIEF -> Opening.BRIEF_MS; OpeningMode.NONE -> 0 }
     val elapsedMs: Float get() = elapsed.floatValue
+    // (Derived: who reads these is told when they turn, not at every frame of the clock they are worked out from.)
     /** Something is still moving. */
-    val active: Boolean get() = mode != OpeningMode.NONE && elapsed.floatValue < totalMs
+    val active: Boolean by derivedStateOf { this.mode != OpeningMode.NONE && elapsed.floatValue < totalMs }
     /** The home screen's parts are coming in (place, countdown, times, sky). */
-    val arriving: Boolean get() = mode == OpeningMode.FULL && elapsed.floatValue < totalMs
+    val arriving: Boolean by derivedStateOf { this.mode == OpeningMode.FULL && elapsed.floatValue < totalMs }
     /** The veil is on the screen (and takes the touches). */
-    val veiled: Boolean get() = veil && mode != OpeningMode.NONE && elapsed.floatValue < (if (mode == OpeningMode.FULL) Opening.VEIL_END else Opening.BRIEF_MS)
+    val veiled: Boolean by derivedStateOf {
+        this.veil && this.mode != OpeningMode.NONE && elapsed.floatValue < (if (this.mode == OpeningMode.FULL) Opening.VEIL_END else Opening.BRIEF_MS)
+    }
 
     /** 0 → 1 over [durationMs] from [startMs] of a full opening, eased; 1 when there is none. */
     fun part(startMs: Int, durationMs: Int, easing: Easing = Opening.Settle): Float {
@@ -214,7 +220,8 @@ fun Modifier.arrives(order: Int, startMs: Int, lift: Dp = 18.dp): Modifier {
     val o = LocalOpening.current
     if (!o.arriving) return this
     return graphicsLayer {
-        val p = o.part(startMs + order * Opening.STEP_MS, Opening.RISE_MS)
+        val lead = if (o.veil) 0 else Opening.NO_VEIL_LEAD_MS
+        val p = o.part((startMs - lead).coerceAtLeast(0) + order * Opening.STEP_MS, Opening.RISE_MS)
         alpha = p
         translationY = (1f - p) * lift.toPx()
     }

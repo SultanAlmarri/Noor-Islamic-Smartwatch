@@ -376,28 +376,30 @@ private fun SkyHeader(
     // Opening (0.9.6): the day's sky comes in. The scene fades up from the page while the Sun runs, slow at first and
     // settling gently, from the start of the current prayer's time to this moment, so the sky passes through the hours
     // just gone (sunrise into morning, dusk into night); the clouds run fast and slow to their real drift; the land
-    // rises a little; the path and its prayers draw themselves. About two to three seconds, once per launch, and a
-    // brief fade only if the full one was seen in the last half hour. A touch on the sky takes over at once. Only the
-    // scene moves: the prayer, its time and the countdown are the real ones from the first frame.
+    // rises a little; the path and its prayers draw themselves. A drag on the sky takes over at once. The prayer, its
+    // time and the countdown are the real ones from the first frame.
     var intro by remember { mutableStateOf(false) }
     // 0.14: the sweep is one part of the app's opening (ui/opening): it starts as the dusk of the launch screen begins
     // to open, so the sky is seen running through the opening; a touch anywhere finishes it. It also runs, on its own,
     // when Noor comes back after a long while. (Before its first frame the scene is already at its start.)
     val app = LocalOpening.current
-    val opening = remember { Animatable(if (app.arriving && previewScrub == null) 0f else 1f) }
+    val opening = remember { Animatable(if (app.arriving && app.veil && previewScrub == null) 0f else 1f) }
     LaunchedEffect(app.run) {
         if (previewScrub == null && app.claimSky()) {
             val now = current.nowFraction.toFloat()
             val start = OpeningSky.startFraction(current)
             val ms = Opening.skyMs(start, now)
+            // From the launch screen the scene itself comes in (out of the dusk: it fades up, the path draws itself). On
+            // a return the scene stays as it is, and only the Sun runs to now.
+            val fromDusk = app.veil
             intro = true
             try {
-                opening.snapTo(0f)
+                if (fromDusk) opening.snapTo(0f)
                 shown.snapTo(start)
-                snapshotFlow { app.elapsedMs >= Opening.SKY_AT || app.skipped }.first { it }
+                snapshotFlow { app.elapsedMs >= (if (fromDusk) Opening.SKY_AT else 0) || app.skipped }.first { it }
                 kotlinx.coroutines.coroutineScope {
                     val sweep = launch {
-                        launch { opening.animateTo(1f, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
+                        if (fromDusk) launch { opening.animateTo(1f, tween(ms, easing = androidx.compose.animation.core.LinearEasing)) }
                         shown.animateTo(now, tween(ms, easing = OpeningSky.Ease))
                     }
                     val touch = launch { snapshotFlow { app.skipped }.first { it }; sweep.cancel() }
