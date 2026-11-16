@@ -257,6 +257,9 @@ internal object SkyDirector {
     /** What a middle set amounts to, for choosing it by how much middle cloud the hour wants. */
     private val MID_AMOUNT = mapOf("mi_patches" to 0.32f, "mi_bands" to 0.50f, "mi_veil" to 0.68f, "mi_sheet" to 0.86f)
 
+    /** The low sets with a thunderhead in them, and where its towers stand: degrees right of the middle of the set. */
+    val THUNDER = mapOf("lo_storm" to floatArrayOf(14f))
+
     /** How closed a low set's sky is, 0..5 (sets not named: open). */
     fun closedness(set: String?): Int = HOW_CLOSED[set?.removeSuffix(TURNED)] ?: 0
 
@@ -743,21 +746,32 @@ internal class RealSkyFrame(
         u["uNight"] = floatArrayOf(night)
         u["uHaze"] = floatArrayOf(s.haze)
         // Lightning: every so often while a thunderhead stands in the view, a stroke inside the cloud lights it from
-        // within, and flickers out (two or three pulses in a third of a second). It strikes where the storm's tower
-        // stands: 14 degrees right of the middle of its set. (0.13: until now the flash was worked out and never drawn.)
-        val thunder = s.clouds[2].firstOrNull { it.set == "lo_storm" && it.weight * SkyDirector.share(it.offset) > 0.25f }
+        // within, and flickers out (two or three pulses in a third of a second). It strikes where the set's towers
+        // stand (SkyDirector.THUNDER: degrees right of the middle of the set). (0.13: until then the flash was worked
+        // out and never drawn. 0.14: any set with a thunderhead in it, not one; and now and then the stroke is one to
+        // the ground, a crooked line of light under the cloud's base.)
+        val thunder = s.clouds[2].firstOrNull { it.set in SkyDirector.THUNDER && it.weight * SkyDirector.share(it.offset) > 0.25f }
         var flash = 0f
         var strike = floatArrayOf(0f, 0.16f, 0.987f)
+        var bolt = floatArrayOf(0f, 4f, 0f, 0f)
         if (thunder != null && !still) {
             val k = (t * 0.9f).toInt()
             val ph = t * 0.9f - k
             if (CloudField.hash(seed.toInt(), k, 91) < 0.30f) {
                 flash = if (ph < 0.07f) 1f else if (ph > 0.13f && ph < 0.19f) 0.7f else if (ph > 0.24f && ph < 0.27f) 0.35f else 0f
-                // (The tower stands 14 degrees right of its set's middle; left of it when the set passes turned about.)
-                val az = (if (thunder.turned) -14f else 14f) - thunder.offset + (CloudField.hash(seed.toInt(), k, 92) - 0.5f) * 14f
+                // (A tower stands so many degrees right of its set's middle; left of it when the set passes turned about.)
+                val towers = SkyDirector.THUNDER.getValue(thunder.set)
+                val tower = towers[(CloudField.hash(seed.toInt(), k, 95) * towers.size).toInt().coerceIn(0, towers.size - 1)]
+                val az = (if (thunder.turned) -tower else tower) - thunder.offset + (CloudField.hash(seed.toInt(), k, 92) - 0.5f) * 12f
                 strike = dirAzEl(az * DEG, (6f + 9f * CloudField.hash(seed.toInt(), k, 93)) * DEG)
+                // (Two strokes in five reach the ground, if the place they fall is in the view.)
+                if (CloudField.hash(seed.toInt(), k, 94) < 0.40f && abs(az) < 26f)
+                    bolt = floatArrayOf(az, 3.2f + 2.2f * CloudField.hash(seed.toInt(), k, 96), flash, 1f + 9f * CloudField.hash(seed.toInt(), k, 97))
             }
         }
+        u["uBolt"] = bolt
+        // (While a thunderhead is in the view every frame counts: a stroke lasts a few of them.)
+        u["uThunder"] = floatArrayOf(if (thunder != null && !still) 1f else 0f)
         u["uSky"] = floatArrayOf(s.aurora, 0f, flash, 0f)
         u["uFlash"] = floatArrayOf(strike[0], strike[1], strike[2], flash)
         u["uLand"] = floatArrayOf(biome.ordinal.toFloat(), s.season, s.snow, s.wet)

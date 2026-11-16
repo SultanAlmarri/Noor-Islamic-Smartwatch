@@ -749,7 +749,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
         if (!ready && !shown) return false
         // (While birds cross or a star falls, every frame counts.)
-        val lively = (u["uBirds"]?.get(0) ?: -1f) >= 0f || (u["uMeteor"]?.get(0) ?: 0f) > 0f
+        val lively = (u["uBirds"]?.get(0) ?: -1f) >= 0f || (u["uMeteor"]?.get(0) ?: 0f) > 0f || (u["uThunder"]?.get(0) ?: 0f) > 0f
         val sceneDue = busyNow || lively || !shown || fade < 1f || now - lastScene >= (if (water) tier.waterMs else tier.stillMs)
         if (!sceneDue) return false
         lastScene = now

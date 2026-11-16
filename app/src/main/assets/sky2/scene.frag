@@ -21,6 +21,8 @@ uniform vec4 uLandInfo;       // 1 if there is a land picture, the water's level
 uniform vec3 uCelX, uCelY, uCelZ, uGalN, uGalC;   // the turning sky: celestial axes, the Milky Way's pole and centre
 uniform vec4 uSky;            // aurora strength, meteor (0..1 along its track, 0 = none), lightning flash, rainbow
 uniform vec4 uFlash;          // lightning: where it flashes (a direction), and how bright it is this instant (0 = none)
+uniform vec4 uBolt;           // a stroke to the ground (0.14): its bearing (degrees right of the scene's middle), how high
+                              // its top stands (degrees), how bright it is this instant (0 = none), a number of its own
 uniform vec4 uLand;           // biome, season (0 winter .. 1 summer), snow, wetness
 uniform sampler2D tLandA2;    // the land's colours in the season the year is turning to (0.14; the same pictures
 uniform sampler2D tLandK2;    // again where a scenery has no other season), and
@@ -217,16 +219,44 @@ vec3 cloudsOver(vec3 col, vec2 vp, out float through) {
     c = parted(layerAt(tCloud1, uCloudF1, uCloudD.y, vp), vp, 0.6);
     col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
     c = parted(layerAt(tCloud2, uCloudF2, uCloudD.z, vp), vp, 1.0);
-    // Lightning in a thunderhead: for an instant the cloud is lit from within, brightest round the stroke.
-    if (uFlash.w > 0.0) {
+    // Lightning in a thunderhead: for an instant the cloud is lit from within. (0.14, again: until 0.13 the flash
+    // was a round white glow a quarter of the sky wide, laid over the cloud, and the cloud was gone under it. A
+    // stroke inside a cloud lights the cloud: a bright heart where it is, a glow through the body round it, and the
+    // cloud's own folds answer it, the bright ones more, so its forms stand out in the flash instead of vanishing;
+    // veins of light run through it, different with every stroke.)
+    if (uFlash.w > 0.0 && c.a > 0.0) {
         float th = acos(clamp(dot(viewRay(vp), uFlash.xyz), -1.0, 1.0));
-        // (By day it is a pale glow in the cloud; in the dusk and at night it is the brightest thing in the sky. The
-        // cloud keeps its own light and shade under it.)
-        float dark = mix(0.30, 1.0, smoothstep(12.0, -4.0, uSunEl));
-        c.rgb += (c.a * vec3(0.78, 0.84, 1.0) + c.rgb * 1.5) * uFlash.w * dark * (0.05 + 1.1 * exp(-sq(th / 0.13)));
+        // (By day it is a pale glow in the cloud; in the dusk and at night it is the brightest thing in the sky.)
+        float dark = mix(0.22, 1.0, smoothstep(12.0, -4.0, uSunEl));
+        float form = luma(c.rgb / max(c.a, 1e-3));
+        form = form / (form + 0.10);
+        float fall = 0.85 * exp(-sq(th / 0.055)) + 0.40 * exp(-sq(th / 0.14)) + 0.03;
+        float veins = texture(tNoise2D, vp / uView.x * 3.1 + uFlash.xy * 7.0).b;
+        c.rgb += c.a * vec3(0.72, 0.80, 1.0) * uFlash.w * dark * fall * (0.35 + 0.65 * form) * (0.7 + 0.6 * veins) * 0.95;
     }
     col = col * (1.0 - c.a) + c.rgb; through *= 1.0 - c.a;
     return col;
+}
+
+// A stroke of lightning from a far thunderhead's base to the ground (0.14): a thin crooked line of light with a
+// glow round it, a branch leaving it part of the way down. It stands under the cloud, in front of the far sky.
+vec3 bolt(vec3 rd) {
+    float el = asin(clamp(rd.y, -1.0, 1.0)) / DEG;
+    if (uBolt.z <= 0.0 || el < -0.2 || el > uBolt.y + 0.5) return vec3(0.0);
+    float az = atan(rd.x, rd.z) / DEG;
+    float s = uBolt.w;
+    float down = uBolt.y - el;                                   // degrees below its top
+    float path = uBolt.x + (texture(tNoise2D, vec2(el * 0.11 + s, s * 0.37)).r - 0.5) * 2.6 * smoothstep(0.0, 2.0, down)
+               + (texture(tNoise2D, vec2(el * 0.53 + s * 1.7, 0.61)).g - 0.5) * 0.8 + (texture(tNoise2D, vec2(el * 2.3, s)).b - 0.5) * 0.20;
+    float px = 47.0 / uRes.x;                                    // a pixel of this picture, in degrees
+    float w = max(0.045, 0.85 * px);
+    float d = abs(az - path);
+    float line = exp(-sq(d / w)) * 9.0 + 0.16 * exp(-d / 0.30) + 0.03 * exp(-d / 1.4);
+    // (The branch: it leaves the stroke a third of the way down and dies out before the ground.)
+    float lean = (texture(tNoise2D, vec2(s * 0.71, 0.13)).r < 0.5 ? -1.0 : 1.0);
+    float bd = abs(az - (path + lean * (0.35 * max(down - 0.33 * uBolt.y, 0.0) + (texture(tNoise2D, vec2(el * 0.9 + s * 3.1, 0.29)).r - 0.5) * 0.5)));
+    line += exp(-sq(bd / w)) * 3.5 * smoothstep(0.33 * uBolt.y, 0.40 * uBolt.y, down) * smoothstep(0.85 * uBolt.y, 0.6 * uBolt.y, down);
+    return vec3(0.80, 0.86, 1.0) * uBolt.z * line * smoothstep(uBolt.y + 0.5, uBolt.y - 0.6, el);
 }
 
 // How much sky shows through the clouds in a direction.
@@ -563,6 +593,7 @@ void main() {
     float sunShows = mix(0.04, 1.0, cloudGap(uSunDir));
 
     vec3 col = heavens(rd, vp, 0.0, sunShows);
+    if (uBolt.z > 0.0) col += bolt(rd);
     // Birds, between us and the clouds: dark against the sky, a little of its light on them.
     float bird = birds(vp);
     if (bird > 0.0) col = mix(col, mAmbTop() * 0.10 + hazeCol * 0.04, bird * 0.9);
