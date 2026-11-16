@@ -79,7 +79,9 @@ class BundledDataTest {
         val entries = com.noor.alerts.SoundLibrary.parse(text)
         fun exists(path: String) = runCatching { app.assets.open(path).close(); true }.getOrDefault(false)
         val allowed = setOf("CC0", "Public domain", "CC BY 3.0", "CC BY 4.0", "CC BY-SA 3.0", "CC BY-SA 4.0", "Owner's rights")
-        org.junit.Assert.assertTrue(entries.size >= 10)
+        // (0.18: the owner's set, exactly what must be there, rather than a count.)
+        org.junit.Assert.assertTrue(entries.map { it.id }.toString(), entries.map { it.id }.containsAll(listOf("adhan.makkah", "adhan.madinah", "adhan.dubai",
+            "adhan.dubai_fajr", "fx.birds", "fx.rooster", "fx.waves", "fx.rain", "fx.stream")))
         for (e in entries) {
             e.file?.let { org.junit.Assert.assertTrue("missing ${e.id} full", exists(it)) }
             e.shortFile?.let { org.junit.Assert.assertTrue("missing ${e.id} short", exists(it)) }
