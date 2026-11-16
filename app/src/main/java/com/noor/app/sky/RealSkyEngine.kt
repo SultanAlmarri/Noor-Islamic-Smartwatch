@@ -782,7 +782,14 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         // The home screen tells the moment once a minute. While that moment is now, the clouds are carried on from it
         // at their own speed, so that they glide (a moment the Sun has been dragged to is not now: it stands as it
         // is told; so does everything with animations off).
-        val lead = if (f.still || f.shownAtMs <= 0L) 0f else ((System.currentTimeMillis() - f.shownAtMs) / 1000f).let { if (it in 0f..150f) it else 0f }
+        // (0.18) Carried on only as far as the moment shown is now: until 0.17 the clouds were carried on whenever the
+        // moment shown lay within two and a half minutes of the clock, so a drag through now, and the Sun's spring
+        // back to now when it was let go, threw the low clouds five degrees along at a stroke as it crossed that line.
+        val lead = if (f.still || f.shownAtMs <= 0L || f.nowMs <= 0L) 0f else {
+            val since = ((System.currentTimeMillis() - f.nowMs) / 1000f).let { if (it in 0f..150f) it else 0f }
+            val away = abs(f.shownAtMs - f.nowMs) / 1000f
+            since * (1f - smoothstepF(0f, 180f, away))
+        }
         for ((b, leg) in show) {
             if (b.tex["a"] == null) continue
             // (A breath of wind from a touch carries the clouds a little further along.)
@@ -791,6 +798,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         GLES30.glDisable(GLES30.GL_BLEND)
         return !waiting
     }
+    private fun smoothstepF(a: Float, b: Float, x: Float): Float { val t = ((x - a) / (b - a)).coerceIn(0f, 1f); return t * t * (3 - 2 * t) }
     private var coverNow = 0f
     private var travelNow = 0f
     private var appearing = false
