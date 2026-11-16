@@ -383,6 +383,9 @@ internal fun LivingSky(
      *  drawn, over it. */
     real: com.noor.app.sky.RealSkySetup? = null,
 ) {
+    // (Testing only, to be removed before release: the tester's options may set the moment shown. See Tester.)
+    @Suppress("NAME_SHADOWING") val display = if (scrubbing) display else com.noor.app.testing.Tester.shown(display)
+    @Suppress("NAME_SHADOWING") val scrubbing = scrubbing || com.noor.app.testing.Tester.moving
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val ambient = LocalAmbientMotion.current
     val light = lightAt(scene.elevationAt(display), scene.eveningAt(display))
@@ -504,10 +507,18 @@ internal fun LivingSky(
     if (real != null) {
         // The real sky: hand the renderer everything this moment's picture needs (it is told only when that changes).
         // (The time of year: the real one where the seasons are followed, otherwise the one each scenery looks best in.)
-        val year = remember(scene.now, scene.southernHemisphere, real.seasons, real.biome) {
-            if (real.seasons) com.noor.app.sky.SkyDirector.yearPhase(scene.now, scene.southernHemisphere) else real.biome.signatureYear
+        // (Testing only: the tester's options may set the time of year and the kind of weather. See Tester.)
+        val tester = com.noor.app.testing.Tester
+        val testYear = if (tester.on) tester.year else null
+        val testKind = if (tester.on) tester.weather else null
+        val testDay = if (tester.on) tester.weatherDay else 0
+        val year = remember(scene.now, scene.southernHemisphere, real.seasons, real.biome, testYear) {
+            testYear ?: if (real.seasons) com.noor.app.sky.SkyDirector.yearPhase(scene.now, scene.southernHemisphere) else real.biome.signatureYear
         }
-        val wx = remember(scene.seed, real.biome, (year * 24).toInt()) { com.noor.app.sky.SkyDirector.weather(scene.seed, real.biome, year) }
+        val wx = remember(scene.seed, real.biome, (year * 24).toInt(), testKind, testDay) {
+            if (testKind != null) Weather.of(testKind, java.util.Random(4099L + testDay * 7919L))
+            else com.noor.app.sky.SkyDirector.weather(scene.seed + testDay * 1_000_003L, real.biome, year)
+        }
         val frame: () -> com.noor.app.sky.RealSkyFrame? = {
             val v = skyView; val l = look
             if (v == null || l == null || real.w <= 0f) null else {
