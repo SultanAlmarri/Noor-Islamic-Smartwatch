@@ -1534,6 +1534,9 @@ night; prints the time to light a set); the existing sky, land, cloud, director 
 
 ### 30.2 Candidate: the medium land from the real sky's own pictures (a helper on `medium/land`, 17 November 2026)
 
+**Withdrawn** (30.3). Shipped in 0.20.0; the owner rejected it: "I cannot believe you just copied the high settings.
+That's not at all what I wanted. I wanted something between the high settings and the low settings."
+
 **Why.** After 30.1 the medium sky's clouds were the real sky's, but its land was still the layered land the shader
 draws: next to the real sky's sceneries (Blender renders of real elevation data and scans) plainly a painting; the
 red rock read as brickwork. The lead asked for a candidate built from the real sky's own land pictures, as the clouds are.
@@ -1579,6 +1582,58 @@ High, closer under the text because the medium horizon is higher on the screen.
 `SunLift.skylineY`), not `LandProfile.skylineY`.
 
 **Not tested** on a phone or the emulator (photograph `real-sky.yml` tier MEDIUM).
+
+### 30.3 Medium painted again: all six sceneries in the style of the dunes (a helper on `medium/painted`, 17 November 2026; draft for section 32)
+
+**What the owner said** (of 0.20.0): "I am very disappointed with this medium settings sceneries. I cannot believe you
+just copied the high settings. That's not at all what I wanted. I wanted something between the high settings and the
+low settings. I want you to remake all the sceneries in the medium settings, and I really liked the earlier sand dunes
+design ... I like this design, and I want you to actually improve the medium settings and not just copy the high." His
+screenshot was the 0.19.1 layered dunes (smooth painted ranks of dunes fading into haze, soft shade on the slip faces,
+fine ripples, warm sand) under a calm sky, the new path in front.
+
+**What was done.**
+- PictureLand (30.2) is out entirely: `PictureLand.kt`, `PictureLandTest`, the bench's `mland.js`, its wiring in
+  `LivingSky` and the path layer (Medium's ring uses `LandProfile.skylineY` again). The clouds (SetClouds, 30.1) stay.
+- The dunes are untouched: their code path is pixel-identical on the bench at all seven moments.
+- The other five are painted in the dunes' manner (`land_layer.agsl`): every face of a hill, a mountain or a butte is
+  lit as one smooth surface by the light of the moment (`faceSlope`: the crest's slope over a window that widens down
+  the face, so the seam between two faces runs down from each summit and softens, as the dunes' crests do); colour in
+  broad soft fields; fine texture only near (ripples on sand, grass across the near hills); haze from layer to layer. The
+  grids of crowns and cones, the strata, gullies, varnish and blotches of 0.19 are gone. A steep face takes its skylight
+  from the dome (`skyUp`), and the air in front of a high face is the air higher up, so snow at dusk is blue-violet and
+  pink at sunset rather than brown.
+  - Green hills (the meadow): far soft hills, rounded hills, a reservoir (layer 2, still water like the forest lake),
+    its near shore rising at the sides and standing in the water, a bank; woods in soft darker fields; round crowns of
+    oaks along crests in groves (`crowns`).
+  - Ocean: the open sea as before; the beach painted as drifts with ripples; the far headland lit as a face.
+  - Pacific Northwest: a snow-capped volcano (`LandProfile.volcano`: one broad cone with a blunt summit over a low
+    range; snow from its shoulders up over grey rock and dark forest), a fir treeline across the lake (its columns break up
+    down the stand, no stripes), taller firs framing the lake on the near shore, the lake a calm mirror.
+  - Arctic: snowy peaks lit face by face, dark rock on the steep upper faces with snow in the couloirs between its ribs,
+    snow aprons; rocks standing in the fjord, grey, a cap of snow on each; a snow bank in front.
+  - Red rock: a great butte after Cathedral Rock (`LandProfile.cathedral`: a rounded base on its talus, five spires of
+    different heights, a smaller butte elsewhere) over a far rim of mesas; walls in faint soft strata, a little fluted,
+    a paler cap; a band of cottonwoods along the floor (crowns on its skyline), red sand in drifts, a pool in the near
+    bank (`banks`), a sand bank in front.
+- Water: the lake, the reservoir, the pool and the fjord's near water are the calm mirror (sky and far shore, darker and
+  bluer with Fresnel); the haze over water follows its height on the screen, so the lake and the water in the near shore
+  meet without a step. Nothing stands on a near shore where it lies under the water.
+- The Canvas renderer (Medium below Android 13) draws the hills, the forest, the arctic and the red rock from the same
+  profiles (five layers), as the Canvas can.
+- Profiles changed (Kotlin `LandProfile` and the bench's `scene.js`): HILLS (spec and lake), FOREST layer 0, CANYON
+  layers 1-3 (spec too); haze distances: hills 40/12/4, forest's volcano 22 km, arctic 10/5, red rock 20/6.
+- `LandProfileTest`: the still-water test now includes the hills' reservoir; the shore-rising test covers the forest, the
+  hills and the red rock's pool; the red rock test checks the far rim and the great butte (layers 0-1: flat tops on sheer
+  walls) and its spires (layer 2 is now the floor). Same strictness, the new places.
+- Settings cards for Medium regenerated (`cards.py`, a fair afternoon's sets).
+
+**Measured** (bench, SwiftShader, 618 x 600, ms per frame, mean of the 42 scenes of six sceneries at seven moments, run
+back to back): land 329.5 (0.19.1 layered land) → 312.6; sky 19.0 → 18.6. The land program estimates 46 300 nodes of
+65 000 (0.19.1: 59 000).
+
+**Not tested** on a phone or the emulator: photograph `real-sky.yml`, tier MEDIUM, all six (look for the AGSL pitfalls:
+the new helpers `crowns` and `faceSlope` begin with an early return).
 
 ## 31. The Sun's path, Medium from the real sceneries, the level over the pictures (0.20.0, 17 November 2026, phone; watch rebuilt)
 

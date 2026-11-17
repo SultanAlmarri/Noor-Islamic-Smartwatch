@@ -126,9 +126,13 @@ The scene (0.9.6), far to near:
    altitude (by the depth below the crest straight above, each notch let a vertical streak of light down the face). No
    skyline is cut open where the Sun rises and sets any more (the Sun's path is drawn in front of the land), and the
    land has no cloud shadows of its own (the clouds are the sets). `LandProfile.skylineY` is the top of the land as the
-   shader draws it. **0.20 candidate** (`PictureLand.kt`, HANDOVER 30.2): the medium land drawn from the real sky's own
-   land pictures, lit on the phone with the medium sky's light by the real sky's own formula, placed where the real sky
-   puts them, with still water mirroring sky and land; the layered land remains the fallback. Their weather: the forest wetter and
+   shader draws it. (0.20 drew the medium land from the real sky's pictures; the owner rejected it: Medium is to be
+   between High and Low, painted.) **0.21, painted** (HANDOVER 30.3): every scenery in the manner of the dunes the owner
+   liked: each face of a hill, a mountain or a butte lit as one smooth surface (`faceSlope`), colour in broad soft fields,
+   fine texture only near, haze from layer to layer, still water as a calm mirror. The green hills over their reservoir,
+   the forest's snow-capped volcano over firs and a lake, the arctic's peaks over the fjord and its rocks, the red rock's
+   great butte with its spires over a floor of cottonwoods and red sand and a pool, the beach and the open sea with a far
+   headland; the dunes unchanged. Their weather: the forest wetter and
    greyer, the arctic overcast more often, the canyon clearer. The land shader shades only the layers a pixel shows
    (at most three, front to back), which made room for them; the four older sceneries draw exactly as before. The
    Canvas renderer (below Android 13) draws the same sceneries more simply (treelines, lakes, snowy ranges, mesas;
