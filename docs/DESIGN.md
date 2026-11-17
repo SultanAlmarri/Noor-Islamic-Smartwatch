@@ -386,10 +386,17 @@ Sun's true elevation through the atmosphere model.
 its brightest part asks (never brighter than 0.24 where white text stands), so the land's forms and texture show
 through. Light glass (the light theme) is as in 0.10.
 
-**Quality tiers** (`RealSky.Tier`; Settings → Home scenery → Sky quality): Ultra, High, Medium, Low, or Automatic
-(guessed from the phone's GPU and memory, stepped down by itself if pictures take too long), or Classic (the 0.9
-sky). A tier sets the size of the picture, how often it is redrawn, and whether the baked pictures are read at half
-size. Compiled shader programs are cached.
+**Graphics levels (0.19)** (Settings → Home scenery → Graphics; the owner's three levels): **High** is the real sky;
+**Medium** the 0.9 sky (the layered sky drawn on the phone: GPU shaders on Android 13 and later, Canvas below), with
+every one of the six sceneries (0.19 gave the forest, the arctic and the red rock their own land; the green hills are
+the 0.9 hills); **Low** the simplest sky (`SimpleSkyLayer`: the sky's colours, the Sun and the moon, stars at night,
+the scenery's land as flat silhouettes; nothing moves by itself and nothing is drawn again unless the moment changes);
+**Automatic** (the default) chooses for the phone (`SkyLevels.guess`: memory, Android version, a low-memory device,
+OpenGL ES 3) and steps down a level by itself when the frames prove the phone too slow (the real sky at its lowest
+step, the 0.9 sky at its lower resolution), kept until the app is updated. Every level draws the same scenery for a
+place (`Terrain.of(Biome)`). Within High, the real sky still chooses its own steps (`RealSky.Tier`: Ultra, High,
+Medium, Low: the size of the picture, how often it is redrawn, whether the baked pictures are read at half size),
+guessed from the GPU and memory and stepped down by itself. Compiled shader programs are cached.
 
 **While the Sun is dragged (0.18.2).** On a phone whose frames of a drag come slower than about 48 a second, the scene
 is drawn a step smaller (down to 0.6 of its size, `RealSkyEngine.busyScale`) and enlarged by the last pass, so the
