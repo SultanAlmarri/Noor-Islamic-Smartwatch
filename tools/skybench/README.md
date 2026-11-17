@@ -24,10 +24,6 @@ marks, text) roughly as the app does. `sksl_size.py` estimates SkSL's unrolled p
 asks `SkyDirector`), `oldClouds: true` draws the 0.9.9 sprites instead. The land program is built for the scene's
 terrain as the app builds it (`allTerrains: true` keeps the whole source). `perf: n` times one frame of each shader
 (the median of n draws, each waited for): `frame sky/land` in the output. `RAW_DIR`/`SETS_DIR` read other folders.
-(0.20 candidate) The land is drawn from the real sky's own land pictures, lit as the app lights them (`mland.js`, a port
-of `PictureLand.kt`); `layeredLand: true` draws the 0.19 layered land instead (the land shader still runs either way, for
-its timing). `LAND_DIR` reads another folder. `cards.py` makes the Settings cards with it.
-
 The cumulus are baked volumes (`tools/sky/build_clouds.py` → `res/raw/clouds_a.png`, `clouds_b.png`, six-way lit); the
 bench loads them like the app (premultiplied on upload). The night's bright stars come from `res/raw/stars.bin`
 (`tools/sky/build_stars.py`, Yale Bright Star Catalogue).

@@ -51,12 +51,12 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
             FloatArray(LAYERS) { spec[it][0] * density },
             when (terrain) {
                 Terrain.DUNES -> floatArrayOf(22f, 7f, 2.8f, 1.1f, 0.35f)
-                Terrain.HILLS -> floatArrayOf(48f, 15f, 6f, 2.2f, 0.6f)
+                Terrain.HILLS -> floatArrayOf(40f, 12f, 4f, 1.2f, 0.4f)
                 Terrain.MOUNTAINS -> floatArrayOf(34f, 14f, 6f, 2.2f, 0.6f)
                 Terrain.SEA -> floatArrayOf(40f, 10f, 3f, 0.8f, 0.3f)
-                Terrain.FOREST -> floatArrayOf(35f, 8f, 3f, 0.9f, 0.3f)
-                Terrain.ARCTIC -> floatArrayOf(15f, 6f, 3f, 0.8f, 0.3f)
-                Terrain.CANYON -> floatArrayOf(30f, 9f, 3.5f, 1.2f, 0.4f)
+                Terrain.FOREST -> floatArrayOf(22f, 8f, 3f, 0.9f, 0.3f)
+                Terrain.ARCTIC -> floatArrayOf(10f, 5f, 3f, 0.8f, 0.3f)
+                Terrain.CANYON -> floatArrayOf(20f, 6f, 3f, 1.2f, 0.4f)
             },
         )
     }
@@ -82,7 +82,8 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
         const val N = 1024
         const val LAYERS = 5
         /** (height, base below the horizon) in dp, far to near. */
-        private val HILLS = arrayOf(floatArrayOf(40f, 3f), floatArrayOf(28f, 16f), floatArrayOf(24f, 32f), floatArrayOf(22f, 50f), floatArrayOf(24f, 72f))
+        /** (0.21) The green hills: far soft hills, rounded hills over a reservoir (layer [LAKE]), a near shore, a bank. */
+        private val HILLS = arrayOf(floatArrayOf(26f, 3f), floatArrayOf(34f, 13f), floatArrayOf(1f, 24f), floatArrayOf(30f, 52f), floatArrayOf(18f, 74f))
         private val DUNES = arrayOf(floatArrayOf(16f, 3f), floatArrayOf(20f, 16f), floatArrayOf(24f, 32f), floatArrayOf(26f, 50f), floatArrayOf(26f, 72f))
         /** Tall far ranges, then forested ridges, then foothills (0.9.8). */
         private val MOUNTAINS = arrayOf(floatArrayOf(58f, 2f), floatArrayOf(40f, 14f), floatArrayOf(30f, 30f), floatArrayOf(24f, 50f), floatArrayOf(24f, 72f))
@@ -99,13 +100,13 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
         /** The far north (0.19): two snow-covered ranges rising out of a fjord's still water, a shore of snow and rocks. */
         private val ARCTIC = arrayOf(floatArrayOf(52f, 3f), floatArrayOf(36f, 14f), floatArrayOf(1f, 22f), floatArrayOf(16f, 56f), floatArrayOf(14f, 74f))
         /** Red rock (0.19): a far rim, buttes and mesas with sheer walls over their slopes of scree, ledges, the floor. */
-        private val CANYON = arrayOf(floatArrayOf(22f, 3f), floatArrayOf(46f, 14f), floatArrayOf(28f, 30f), floatArrayOf(12f, 52f), floatArrayOf(14f, 74f))
+        private val CANYON = arrayOf(floatArrayOf(16f, 3f), floatArrayOf(60f, 12f), floatArrayOf(10f, 30f), floatArrayOf(18f, 52f), floatArrayOf(14f, 74f))
         private const val DEEPEST = 72f
         /** The layer that is the lake (forest) or the fjord (arctic): flat water. */
         const val LAKE = 2
 
         /** The sceneries with still water in their middle distance (0.19). */
-        fun hasLake(t: Terrain) = t == Terrain.FOREST || t == Terrain.ARCTIC
+        fun hasLake(t: Terrain) = t == Terrain.FOREST || t == Terrain.ARCTIC || t == Terrain.HILLS
 
         private val cache = HashMap<Pair<Long, Terrain>, LandProfile>()
 
@@ -158,6 +159,7 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                         normalise(a, 0.1f)
                     }
                     terrain == Terrain.FOREST -> forest(rnd, layer)
+                    terrain == Terrain.HILLS -> meadow(rnd, layer)
                     terrain == Terrain.ARCTIC -> arctic(rnd, layer)
                     terrain == Terrain.CANYON -> canyon(rnd, layer)
                     terrain == Terrain.MOUNTAINS && layer <= 1 -> {
@@ -267,7 +269,7 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
          * these crests; here only the ground under it.
          */
         private fun forest(rnd: java.util.Random, layer: Int): FloatArray = when (layer) {
-            0 -> range(rnd, 2.4f, 1.45f, 1.2f, 0.4f)
+            0 -> volcano(rnd)
             1 -> rolling(rnd, 1.5f, 0.12f)
             LAKE -> FloatArray(N)
             3 -> {
@@ -292,6 +294,68 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                     (0.12f + 0.25f * n1.at(u * 3.1f) + 0.08f * n2.at(u * 17f) + 0.55f * edge).coerceIn(0f, 1f)
                 }
             }
+        }
+
+        /**
+         * (0.21) The forest's volcano, as the real sky's snow-capped one: one broad cone with a blunt summit, rising over
+         * a low range.
+         */
+        private fun volcano(rnd: java.util.Random): FloatArray {
+            val c = 0.25f + 0.5f * rnd.nextFloat(); val hw = 0.22f + 0.08f * rnd.nextFloat()
+            val low = range(rnd, 2.4f, 1.3f, 1.2f, 0.4f)
+            return normalise(FloatArray(N) { i ->
+                val t = abs(i / (N - 1f) - c) / hw
+                var v = (1f - t).coerceAtLeast(0f).pow(1.35f)
+                v -= 0.06f * smooth(0.85f, 1f, v)
+                max(v, 0.32f * low[i])
+            }, 0f)
+        }
+
+        /** (0.21) The green hills (the real sky's meadow): soft far hills, rounded hills, the reservoir, its near shore, a bank. */
+        private fun meadow(rnd: java.util.Random, layer: Int): FloatArray = when (layer) {
+            0 -> rolling(rnd, 1.1f, 0.15f)
+            1 -> rolling(rnd, 1.5f, 0.08f)
+            LAKE -> FloatArray(N)
+            3 -> banks(rnd, 0.05f)
+            else -> rolling(rnd, 0.9f, 0.1f)
+        }
+
+        /** (0.21) A shore rising at one side of the view or both, the water between (the shader draws it under [low]). */
+        private fun banks(rnd: java.util.Random, low: Float): FloatArray {
+            val sides = rnd.nextInt(3)
+            val wl = 0.2f + 0.2f * rnd.nextFloat(); val wr = 0.2f + 0.2f * rnd.nextFloat()
+            val n1 = Noise(rnd)
+            return FloatArray(N) { i ->
+                val u = i / (N - 1f)
+                val l = if (sides != 1) 1f - smooth(wl * 0.4f, wl, u) else 0f
+                val r = if (sides != 0) smooth(1f - wr, 1f - wr * 0.4f, u) else 0f
+                (low + (0.85f + 0.15f * n1.at(u * 6f) - low) * max(l, r)).coerceIn(0f, 1f)
+            }
+        }
+
+        /**
+         * (0.21) Red rock's great butte, as the real sky's Cathedral Rock: a massive base on its skirt of talus, crowned by
+         * spires of different heights; a smaller butte elsewhere.
+         */
+        private fun cathedral(rnd: java.util.Random): FloatArray {
+            val c = 0.35f + 0.3f * rnd.nextFloat(); val hw = 0.15f + 0.05f * rnd.nextFloat()
+            val c2 = if (c < 0.5f) 0.78f + 0.12f * rnd.nextFloat() else 0.1f + 0.12f * rnd.nextFloat()
+            val hw2 = 0.05f + 0.04f * rnd.nextFloat(); val top2 = 0.32f + 0.12f * rnd.nextFloat()
+            val spires = Array(5) { floatArrayOf(c + (rnd.nextFloat() * 2f - 1f) * hw * 0.75f, 0.008f + 0.012f * rnd.nextFloat(), 0.6f + 0.4f * rnd.nextFloat()) }
+            val n1 = Noise(rnd)
+            fun butte(u: Float, cc: Float, w: Float, top: Float): Float {
+                val d = abs(u - cc) - w
+                return when { d <= 0f -> top * (1f - 0.25f * ((u - cc) / w) * ((u - cc) / w)); d < 0.05f -> top * 0.75f * (1f - d / 0.05f).pow(1.8f); else -> 0f }
+            }
+            return normalise(FloatArray(N) { i ->
+                val u = i / (N - 1f)
+                var v = max(0.03f + 0.03f * n1.at(u * 9f), max(butte(u, c, hw, 0.42f), butte(u, c2, hw2, top2)))
+                for (s in spires) {
+                    val d = abs(u - s[0]) / s[1]
+                    if (d < 1.25f) v = max(v, if (d < 1f) s[2] * (1f - 0.12f * d.pow(6)) else s[2] * 0.88f * (1f - (d - 1f) / 0.25f) + 0.42f * ((d - 1f) / 0.25f))
+                }
+                v
+            }, 0f)
         }
 
         /** The far north (0.19): high ranges, the fjord, a shore of snow and rocks. */
@@ -322,6 +386,12 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
          * then. The shader reads the parts by height (the walls above the scree, a pale cap rock at the top).
          */
         private fun canyon(rnd: java.util.Random, layer: Int): FloatArray {
+            // (0.21) The great butte; the floor with its trees; the pool's banks.
+            when (layer) {
+                1 -> return cathedral(rnd)
+                2 -> return rolling(rnd, 1.4f, 0.1f)
+                3 -> return banks(rnd, 0.06f)
+            }
             val a = FloatArray(N)
             val n1 = Noise(rnd); val n2 = Noise(rnd)
             if (layer >= 3) {

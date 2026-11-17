@@ -76,7 +76,7 @@
     const r = rng(seed * 2654435761 + 7);
     const out = [];
     const norm = (arr, lo) => { const mn = Math.min(...arr), mx = Math.max(...arr); return arr.map(v => lo + (1 - lo) * (v - mn) / (mx - mn + 1e-9)); };
-    if (terrain === 'forest' || terrain === 'arctic' || terrain === 'canyon') {
+    if (terrain === 'forest' || terrain === 'arctic' || terrain === 'canyon' || terrain === 'hills') {
       for (let layer = 0; layer < 5; layer++) out.push(NEW[terrain](r, layer, N, norm));
       return out;
     }
@@ -163,9 +163,38 @@
     const ns = [noise1(r, 64), noise1(r, 64), noise1(r, 64)];
     return norm(Array.from({ length: N }, (_, i) => { const u = i / (N - 1); return 0.62 * ns[0](u * f * 2) + 0.28 * ns[1](u * f * 4.3) + 0.10 * ns[2](u * f * 9.7); }), lo);
   }
+  // (0.21) The volcano, the meadow, the banks, the great butte (LandProfile.volcano, meadow, banks, cathedral).
+  function volcanoJ(r, N, norm) {
+    const c = 0.25 + 0.5 * r(), hw = 0.22 + 0.08 * r(); const low = rangeJ(r, N, norm, 2.4, 1.3, 1.2, 0.4);
+    return norm(Array.from({ length: N }, (_, i) => { const t = Math.abs(i / (N - 1) - c) / hw; let v = Math.pow(Math.max(0, 1 - t), 1.35); v -= 0.06 * smoothJ(0.85, 1, v); return Math.max(v, 0.32 * low[i]); }), 0);
+  }
+  function banksJ(r, N, low) {
+    const sides = Math.floor(r() * 3), wl = 0.2 + 0.2 * r(), wr = 0.2 + 0.2 * r(), n1 = noise1(r, 64);
+    return Array.from({ length: N }, (_, i) => { const u = i / (N - 1);
+      const l = sides !== 1 ? 1 - smoothJ(wl * 0.4, wl, u) : 0, rr = sides !== 0 ? smoothJ(1 - wr, 1 - wr * 0.4, u) : 0;
+      return Math.min(1, Math.max(0, low + (0.85 + 0.15 * n1(u * 6) - low) * Math.max(l, rr))); });
+  }
+  function cathedralJ(r, N, norm) {
+    const c = 0.35 + 0.3 * r(), hw = 0.15 + 0.05 * r();
+    const c2 = c < 0.5 ? 0.78 + 0.12 * r() : 0.1 + 0.12 * r(), hw2 = 0.05 + 0.04 * r(), top2 = 0.32 + 0.12 * r();
+    const spires = Array.from({ length: 5 }, () => [c + (r() * 2 - 1) * hw * 0.75, 0.008 + 0.012 * r(), 0.6 + 0.4 * r()]);
+    const n1 = noise1(r, 64);
+    const butte = (u, cc, w, top) => { const d = Math.abs(u - cc) - w; return d <= 0 ? top * (1 - 0.25 * ((u - cc) / w) ** 2) : d < 0.05 ? top * 0.75 * Math.pow(1 - d / 0.05, 1.8) : 0; };
+    return norm(Array.from({ length: N }, (_, i) => { const u = i / (N - 1);
+      let v = Math.max(0.03 + 0.03 * n1(u * 9), Math.max(butte(u, c, hw, 0.42), butte(u, c2, hw2, top2)));
+      for (const s of spires) { const d = Math.abs(u - s[0]) / s[1]; if (d < 1.25) v = Math.max(v, d < 1 ? s[2] * (1 - 0.12 * Math.pow(d, 6)) : s[2] * 0.88 * (1 - (d - 1) / 0.25) + 0.42 * ((d - 1) / 0.25)); }
+      return v; }), 0);
+  }
   const NEW = {
+    hills(r, layer, N, norm) {
+      if (layer === 0) return rollingJ(r, N, norm, 1.1, 0.15);
+      if (layer === 1) return rollingJ(r, N, norm, 1.5, 0.08);
+      if (layer === 2) return new Array(N).fill(0);
+      if (layer === 3) return banksJ(r, N, 0.05);
+      return rollingJ(r, N, norm, 0.9, 0.1);
+    },
     forest(r, layer, N, norm) {
-      if (layer === 0) return rangeJ(r, N, norm, 2.4, 1.45, 1.2, 0.4);
+      if (layer === 0) return volcanoJ(r, N, norm);
       if (layer === 1) return rollingJ(r, N, norm, 1.5, 0.12);
       if (layer === 2) return new Array(N).fill(0);
       if (layer === 3) {
@@ -195,6 +224,9 @@
       return rollingJ(r, N, norm, 0.9, 0.1);
     },
     canyon(r, layer, N, norm) {
+      if (layer === 1) return cathedralJ(r, N, norm);
+      if (layer === 2) return rollingJ(r, N, norm, 1.4, 0.1);
+      if (layer === 3) return banksJ(r, N, 0.06);
       const a = new Array(N).fill(0); const n1 = noise1(r, 64), n2 = noise1(r, 64);
       if (layer >= 3) {
         for (let i = 0; i < N; i++) { const u = i / (N - 1); a[i] = 0.7 * n1(u * (layer === 3 ? 2.6 : 1.6)) + 0.3 * n2(u * 7); }

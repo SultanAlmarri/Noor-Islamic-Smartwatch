@@ -1,5 +1,5 @@
 """(0.20) The medium graphics' pictures on the scenery cards (Settings -> Home scenery), made with the bench from the
-app's own shaders (0.20 candidate: the land from the real sky's pictures, PictureLand) and clouds: each scenery on a fine afternoon in Dubai, without the path, the marks or the text, framed as the
+app's own shaders (the layered land) and clouds: each scenery on a fine afternoon in Dubai, without the path, the marks or the text, framed as the
 high graphics' cards are (560 x 420, the horizon 62 % down, the whole width of a phone).
 
     cd tools/skybench
