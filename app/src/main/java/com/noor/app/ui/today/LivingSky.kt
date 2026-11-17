@@ -93,12 +93,6 @@ enum class Terrain {
     /** (0.19) Red rock: flat-topped mesas and buttes with sheer walls (the real sky's "canyon"). */
     CANYON;
 
-    /**
-     * The 0.9 terrain whose drawing this one shares where it has none of its own yet (0.19; each of the six sceneries
-     * is drawn by the medium and low graphics, Settings → Home scenery → Graphics).
-     */
-    val base: Terrain get() = when (this) { FOREST -> HILLS; ARCTIC, CANYON -> MOUNTAINS; else -> this }
-
     companion object {
         /**
          * (0.19) The scenery of the real sky drawn by the medium and low graphics: every level shows the same scenery
@@ -505,7 +499,7 @@ internal fun LivingSky(
     val grainBrush by remember { lazy(LazyThreadSafetyMode.NONE) { grain() } }
     val dust by remember { lazy(LazyThreadSafetyMode.NONE) { dustField(220) } }
     val land by remember(scene.landSeed, scene.terrain) { lazy(LazyThreadSafetyMode.NONE) { landField(scene.landSeed, scene.terrain) } }
-    val soil = soilOf(scene.terrain)
+    val soils = soilsOf(scene.terrain)
 
     // 0.9.6: the sky is computed (Atmosphere) for this moment and this header, off the main thread; on Android 13 and
     // later the GPU draws it with clouds and land (ShaderSky); elsewhere the Canvas layers below draw over the same sky.
@@ -772,7 +766,7 @@ internal fun LivingSky(
 
             onDrawBehind {
                 val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
-                drawLand(shapes, light, horizonColor, mid, zenith, page, soil, g.x(display), w)
+                drawLand(shapes, light, horizonColor, mid, zenith, page, soils, g.x(display), w)
             }
         })
 
@@ -1016,8 +1010,8 @@ private fun DrawScope.moon(hijriDay: Int, c: Offset, r: Float, visibility: Float
 /** One layer of land: its top edge as a function of position, in [0, 1] (1 = highest). */
 private class Ridge(val heightDp: Float, val baseDp: Float, val shape: (Float) -> Float)
 
-/** The layers of land for a place, far to near, with crests that differ from place to place. */
-private class LandField(private val ridges: List<Ridge>) {
+/** The layers of land for a place, far to near, with crests that differ from place to place; [stepDp] apart along the crests. */
+private class LandField(private val ridges: List<Ridge>, private val stepDp: Float = 3f) {
     class Shapes(val fills: List<Path>, val edges: List<Path>, val bases: List<Float>, private val skyline: FloatArray, private val step: Float) {
         /** The top of the land at [x]: where it meets the sky. */
         fun skylineAt(x: Float): Float = skyline[(x / step).toInt().coerceIn(0, skyline.size - 1)]
@@ -1025,7 +1019,7 @@ private class LandField(private val ridges: List<Ridge>) {
 
     fun paths(w: Float, horizonY: Float, h: Float, density: Float, riseX: Float = -1e5f, setX: Float = -1e5f): Shapes {
         val fills = ArrayList<Path>(); val edges = ArrayList<Path>(); val bases = ArrayList<Float>()
-        val step = 3f * density
+        val step = stepDp * density
         val skyline = FloatArray((w / step).toInt() + 3) { Float.MAX_VALUE }
         // The layers spread over the depth the header gives the land, so the nearest one always fades into the page.
         val deepest = ridges.maxOf { it.baseDp }
@@ -1057,7 +1051,7 @@ private class LandField(private val ridges: List<Ridge>) {
 private fun landField(seed: Long, terrain: Terrain): LandField {
     val rnd = java.util.Random(seed * 31 + 17)
     fun ph() = rnd.nextFloat() * 6.283f
-    return when (terrain.base) {
+    return when (terrain) {
         Terrain.DUNES -> {
             // A dune: a long gentle windward slope and a steeper slip face; nearer dunes are bigger and wider apart.
             fun dune(freq: Float, p: Float, p2: Float): (Float) -> Float = { u ->
@@ -1110,7 +1104,55 @@ private fun landField(seed: Long, terrain: Terrain): LandField {
                 Ridge(22f, 68f, rolling(0.8f, ph(), ph())),
             ))
         }
-        else -> {   // the sea (and, through Terrain.base, nothing else)
+        Terrain.FOREST -> {
+            // (0.19) A far range, a dark treeline of conifers across a lake, tall conifers on the near shore at one side
+            // or both. Sampled every dp: the trees are a few dp across.
+            val left = rnd.nextInt(3); val wl = 0.18f + 0.15f * rnd.nextFloat(); val wr = 0.18f + 0.15f * rnd.nextFloat()
+            val knolls: (Float) -> Float = { u ->
+                val l = if (left != 1) 1f - smooth01((u - wl * 0.5f) / (wl * 0.5f)) else 0f
+                val r = if (left != 0) smooth01((u - (1f - wr)) / (wr * 0.5f)) else 0f
+                0.08f + 0.6f * max(l, r)
+            }
+            LandField(listOf(
+                Ridge(30f, 4f, peaks(ph(), ph(), ph(), 1.2f)),
+                Ridge(16f, 16f, conifers(rolling(1.5f, ph(), ph()).let { f -> { u: Float -> 0.15f + 0.45f * f(u) } }, 0.0065f, 0.4f, rnd.nextInt())),
+                Ridge(0.5f, 28f, { 0f }),
+                Ridge(28f, 66f, conifers(knolls, 0.016f, 0.42f, rnd.nextInt())),
+            ), stepDp = 1f)
+        }
+        Terrain.ARCTIC -> {
+            // (0.19) Snow-covered ranges, sharp and high, over a fjord; snow and boulders on the shore.
+            val bumps = FloatArray(10) { rnd.nextFloat() }
+            LandField(listOf(
+                Ridge(56f, 4f, peaks(ph(), ph(), ph(), 1f).let { f -> { u: Float -> f(u).pow(1.4f) } }),
+                Ridge(34f, 18f, peaks(ph(), ph(), ph(), 1.5f).let { f -> { u: Float -> f(u).pow(1.7f) } }),
+                Ridge(0.5f, 30f, { 0f }),
+                Ridge(12f, 66f, { u -> (0.2f + 0.15f * sin(7f * u + bumps[0] * 6f) + (0 until 5).maxOf { k ->
+                    val d = (u - bumps[k * 2]) / (0.012f + 0.02f * bumps[k * 2 + 1]); if (abs(d) < 1f) 0.8f * kotlin.math.sqrt(1f - d * d) else 0f
+                }).coerceIn(0f, 1f) }),
+            ))
+        }
+        Terrain.CANYON -> {
+            // (0.19) Flat-topped mesas and buttes on sheer walls over skirts of scree; ledges of rock in front.
+            fun mesas(n: Int, wMin: Float, wMax: Float): (Float) -> Float {
+                val m = Array(n) { floatArrayOf(rnd.nextFloat(), wMin + (wMax - wMin) * rnd.nextFloat(), 0.55f + 0.45f * rnd.nextFloat()) }
+                return { u ->
+                    var v = 0.04f
+                    for (k in m) {
+                        val d = abs(u - k[0]) - k[1]
+                        v = max(v, when { d <= 0f -> k[2]; d < 0.006f -> k[2] - (k[2] * 0.62f) * d / 0.006f; d < 0.05f -> k[2] * 0.38f * (1f - (d - 0.006f) / 0.044f).pow(1.6f); else -> 0f })
+                    }
+                    v
+                }
+            }
+            LandField(listOf(
+                Ridge(22f, 6f, mesas(6, 0.06f, 0.2f)),
+                Ridge(40f, 22f, mesas(5, 0.015f, 0.08f)),
+                Ridge(26f, 42f, mesas(3, 0.03f, 0.09f)),
+                Ridge(12f, 68f, rolling(0.9f, ph(), ph())),
+            ), stepDp = 1.5f)
+        }
+        Terrain.SEA -> {
             // Flat water to the horizon, a low shore in front.
             fun shore(freq: Float, p1: Float): (Float) -> Float = { u -> ((0.6f * sin(2 * PI.toFloat() * freq * u + p1) + 1f) / 2f).coerceIn(0f, 1f) }
             LandField(listOf(
@@ -1123,12 +1165,56 @@ private fun landField(seed: Long, terrain: Terrain): LandField {
     }
 }
 
+private fun smooth01(x: Float): Float { val t = x.coerceIn(0f, 1f); return t * t * (3 - 2 * t) }
+
+/** Ridged peaks (the mountains' crest). */
+private fun peaks(p1: Float, p2: Float, p3: Float, k: Float): (Float) -> Float = { u ->
+    val a = 1f - abs(sin(2.1f * PI.toFloat() * u * k + p1))
+    val b = 1f - abs(sin(4.7f * PI.toFloat() * u * k + p2))
+    val c = 1f - abs(sin(10.9f * PI.toFloat() * u * k + p3))
+    (0.55f * a * a * a + 0.32f * b * b + 0.13f * c).coerceIn(0f, 1f)
+}
+
+private fun rolling(freq: Float, p1: Float, p2: Float): (Float) -> Float = { u ->
+    val v = 0.62f * sin(2 * PI.toFloat() * freq * u + p1) + 0.38f * sin(2 * PI.toFloat() * freq * 2.3f * u + p2)
+    ((v + 1f) / 2f).coerceIn(0f, 1f)
+}
+
+/**
+ * (0.19) A treeline of conifers on [ground]: a pointed crown every [spacing] of the width, up to [tall] of the layer's
+ * height, standing where the ground rises above a fifth of it.
+ */
+private fun conifers(ground: (Float) -> Float, spacing: Float, tall: Float, seed: Int): (Float) -> Float = { u ->
+    val g = ground(u)
+    val x = u / spacing; val i = kotlin.math.floor(x)
+    var best = 0f
+    for (k in -1..1) {
+        val c = i + k
+        val hh = ((c.toInt() * 73_856_093 xor seed) and 0xFFFF) / 65535f
+        val cx = c + 0.5f + (hh - 0.5f) * 0.5f
+        val t = 1f - abs(x - cx) / (0.9f + 0.3f * hh)
+        best = max(best, t.coerceAtLeast(0f) * (0.55f + 0.45f * hh))
+    }
+    (g + tall * best * smooth01((g - 0.12f) / 0.15f)).coerceIn(0f, 1f)
+}
+
 /** The ground's own colour in plain daylight: warm sand, the sage of grass and scrub, grey-green mountains, the sea. */
-private fun soilOf(terrain: Terrain): Color = when (terrain.base) {
+private fun soilOf(terrain: Terrain): Color = when (terrain) {
     Terrain.DUNES -> Color(0xFFD9B07A)
     Terrain.HILLS -> Color(0xFF7F9A78)
     Terrain.MOUNTAINS -> Color(0xFF7D8A86)
     else -> Color(0xFF4F7F96)
+}
+
+/**
+ * Each layer's own colour, far to near (0.19): the four older sceneries one colour throughout; the forest's snowy
+ * range, dark conifers and the lake; the snow and the fjord; the red rock.
+ */
+private fun soilsOf(terrain: Terrain): List<Color> = when (terrain) {
+    Terrain.FOREST -> listOf(Color(0xFFB4BEC6), Color(0xFF2E4A3A), Color(0xFF46697A), Color(0xFF29412F))
+    Terrain.ARCTIC -> listOf(Color(0xFFE4EAF0), Color(0xFFD8E0E8), Color(0xFF40606F), Color(0xFFE0E6EC))
+    Terrain.CANYON -> listOf(Color(0xFFB06A4E), Color(0xFFB8532E), Color(0xFFC0603A), Color(0xFFC27A4E))
+    else -> List(4) { soilOf(terrain) }
 }
 
 /**
@@ -1137,27 +1223,30 @@ private fun soilOf(terrain: Terrain): Color = when (terrain.base) {
  * nearest fades into the page itself, so the land flows into the day's times beneath it. Mist lies in the valleys at
  * dawn; the crests facing a low Sun catch its light.
  */
-private fun DrawScope.drawLand(shapes: LandField.Shapes, light: Light, horizon: Color, mid: Color, zenith: Color, page: Color, soil: Color, sunX: Float, w: Float) {
+private fun DrawScope.drawLand(shapes: LandField.Shapes, light: Light, horizon: Color, mid: Color, zenith: Color, page: Color, soils: List<Color>, sunX: Float, w: Float) {
     val n = shapes.fills.size
     val dark = page.luminance() < 0.3f
     // The ground as the light of this moment shows it.
     val wN = light.night.coerceIn(0f, 1f)
     val wG = (light.golden * (1f - wN)).coerceIn(0f, 1f)
     val wD = (1f - wN - wG).coerceAtLeast(0f)
-    val dayGround = Sky.mix(soil, horizon, 0.12f)
-    val goldGround = Sky.mix(Sky.mix(soil, Color(0xFFE0855A), 0.38f), Color(0xFF2A1830), 0.28f)
-    val nightGround = Sky.mix(Sky.mix(soil, zenith, 0.78f), Color.Black, 0.30f)
-    val t = wN + wG + wD
-    val ground = Color(
-        (nightGround.red * wN + goldGround.red * wG + dayGround.red * wD) / t,
-        (nightGround.green * wN + goldGround.green * wG + dayGround.green * wD) / t,
-        (nightGround.blue * wN + goldGround.blue * wG + dayGround.blue * wD) / t,
-    )
+    fun groundOf(soil: Color): Color {
+        val dayGround = Sky.mix(soil, horizon, 0.12f)
+        val goldGround = Sky.mix(Sky.mix(soil, Color(0xFFE0855A), 0.38f), Color(0xFF2A1830), 0.28f)
+        val nightGround = Sky.mix(Sky.mix(soil, zenith, 0.78f), Color.Black, 0.30f)
+        val t = wN + wG + wD
+        return Color(
+            (nightGround.red * wN + goldGround.red * wG + dayGround.red * wD) / t,
+            (nightGround.green * wN + goldGround.green * wG + dayGround.green * wD) / t,
+            (nightGround.blue * wN + goldGround.blue * wG + dayGround.blue * wD) / t,
+        )
+    }
     val air = Sky.mix(horizon, mid, 0.28f)
     val haze = floatArrayOf(0.58f, 0.32f, 0.14f, 0.04f)
     val toPage = if (dark) floatArrayOf(0.02f, 0.24f, 0.52f, 0.8f) else floatArrayOf(0.0f, 0.14f, 0.36f, 0.62f)
     val mistColor = Sky.mix(horizon, Color.White, 0.5f)
     shapes.fills.forEachIndexed { i, fill ->
+        val ground = groundOf(soils.getOrElse(i) { soils.last() })
         val crest = Sky.mix(Sky.mix(ground, air, haze.getOrElse(i) { 0f }), page, toPage.getOrElse(i) { 1f })
         val nearest = i == n - 1
         val base = shapes.bases[i]

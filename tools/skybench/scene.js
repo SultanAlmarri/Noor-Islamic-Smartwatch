@@ -76,6 +76,10 @@
     const r = rng(seed * 2654435761 + 7);
     const out = [];
     const norm = (arr, lo) => { const mn = Math.min(...arr), mx = Math.max(...arr); return arr.map(v => lo + (1 - lo) * (v - mn) / (mx - mn + 1e-9)); };
+    if (terrain === 'forest' || terrain === 'arctic' || terrain === 'canyon') {
+      for (let layer = 0; layer < 5; layer++) out.push(NEW[terrain](r, layer, N, norm));
+      return out;
+    }
     for (let layer = 0; layer < 5; layer++) {
       const arr = new Array(N).fill(0);
       if (terrain === 'sea' && layer <= 2) {
@@ -136,6 +140,83 @@
     }
     return out;
   }
+
+  // The 0.19 sceneries: ports of LandProfile.forest, arctic and canyon (same shapes, the bench's own random numbers).
+  const smoothJ = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+  function rangeJ(r, N, norm, fq0, sharp, broadFq, broadMin) {
+    const ns = [0, 1, 2, 3, 4, 5].map(() => noise1(r, 64)); const broad = noise1(r, 64); const a = new Array(N);
+    for (let i = 0; i < N; i++) {
+      const u = i / (N - 1); let s = 0, amp = 0.55, fq = fq0, w = 1;
+      for (let o = 0; o < 6; o++) { const v = Math.pow(1 - Math.abs(ns[o](u * fq) * 2 - 1), sharp); s += amp * v * w; w = Math.min(1, v * 2); amp *= 0.5; fq *= 2.1; }
+      a[i] = s * (broadMin + (1 - broadMin) * broad(u * broadFq));
+    }
+    return norm(a, 0);
+  }
+  function rollingJ(r, N, norm, f, lo) {
+    const ns = [noise1(r, 64), noise1(r, 64), noise1(r, 64)];
+    return norm(Array.from({ length: N }, (_, i) => { const u = i / (N - 1); return 0.62 * ns[0](u * f * 2) + 0.28 * ns[1](u * f * 4.3) + 0.10 * ns[2](u * f * 9.7); }), lo);
+  }
+  const NEW = {
+    forest(r, layer, N, norm) {
+      if (layer === 0) return rangeJ(r, N, norm, 2.4, 1.45, 1.2, 0.4);
+      if (layer === 1) return rollingJ(r, N, norm, 1.5, 0.12);
+      if (layer === 2) return new Array(N).fill(0);
+      if (layer === 3) {
+        const sides = Math.floor(r() * 3), wl = 0.16 + 0.2 * r(), wr = 0.16 + 0.2 * r(), n1 = noise1(r, 64), n2 = noise1(r, 64);
+        return Array.from({ length: N }, (_, i) => { const u = i / (N - 1);
+          const l = sides !== 1 ? 1 - smoothJ(wl * 0.55, wl, u) : 0, rr = sides !== 0 ? smoothJ(1 - wr, 1 - wr * 0.55, u) : 0;
+          const knoll = Math.max(l, rr) * (0.7 + 0.3 * n1(u * 9));
+          return Math.min(1, Math.max(0, 0.04 + 0.05 * n2(u * 23) + 0.9 * knoll)); });
+      }
+      const n1 = noise1(r, 64), n2 = noise1(r, 64);
+      return Array.from({ length: N }, (_, i) => { const u = i / (N - 1);
+        const edge = Math.max(1 - smoothJ(0, 0.12, u), smoothJ(0.88, 1, u));
+        return Math.min(1, Math.max(0, 0.12 + 0.25 * n1(u * 3.1) + 0.08 * n2(u * 17) + 0.55 * edge)); });
+    },
+    arctic(r, layer, N, norm) {
+      if (layer === 0) return rangeJ(r, N, norm, 2.2, 1.7, 1.1, 0.35);
+      if (layer === 1) return rangeJ(r, N, norm, 2.9, 1.35, 1.6, 0.1).map(v => v * Math.pow(v, 0.3));
+      if (layer === 2) return new Array(N).fill(0);
+      if (layer === 3) {
+        const n1 = noise1(r, 64), n2 = noise1(r, 64); const a = Array.from({ length: N }, (_, i) => 0.12 + 0.2 * n1(i / (N - 1) * 5));
+        for (let k = 0; k < 12; k++) {
+          const c = r(), hw = 0.008 + 0.025 * r(), hgt = 0.55 + 0.45 * r();
+          for (let i = 0; i < N; i++) { const d = (i / (N - 1) - c) / hw; if (Math.abs(d) < 1) a[i] = Math.max(a[i], hgt * Math.pow(Math.sqrt(1 - d * d), 0.45) * (0.88 + 0.12 * n2(i / (N - 1) * 160))); }
+        }
+        return a;
+      }
+      return rollingJ(r, N, norm, 0.9, 0.1);
+    },
+    canyon(r, layer, N, norm) {
+      const a = new Array(N).fill(0); const n1 = noise1(r, 64), n2 = noise1(r, 64);
+      if (layer >= 3) {
+        for (let i = 0; i < N; i++) { const u = i / (N - 1);
+          const v = 0.6 * n1(u * (layer === 3 ? 4 : 2.2)) + 0.4 * n2(u * 13);
+          const k = v * 4, step = Math.floor(k) + smoothJ(0.55, 1, k - Math.floor(k)); a[i] = step / 4 + 0.08 * n2(u * 31); }
+        return norm(a, 0.08);
+      }
+      for (let i = 0; i < N; i++) a[i] = 0.03 + 0.04 * n1(i / (N - 1) * 11);
+      const count = [6, 5, 3][layer], wMin = [0.06, 0.015, 0.03][layer], wMax = [0.2, 0.08, 0.09][layer], wall = [0.003, 0.006, 0.008][layer];
+      for (let k = 0; k <= count; k++) {
+        const spire = k === count;
+        if (spire && r() < 0.4) continue;
+        const c = r();
+        const hw = spire ? 0.004 + 0.006 * r() : wMin + (wMax - wMin) * r();
+        const top = spire ? 0.8 + 0.2 * r() : 0.5 + 0.5 * r();
+        const scree = (spire ? 0.5 : 0.28 + 0.14 * r()) * top;
+        const slope = (layer === 0 ? 0.02 : 0.035) + 0.04 * r();
+        const tier = !spire && r() < 0.4;
+        const tierW = hw * (0.3 + 0.4 * r()), tierC = c + (hw - tierW) * (r() * 2 - 1);
+        for (let i = 0; i < N; i++) {
+          const u = i / (N - 1), d = Math.abs(u - c) - hw;
+          let v = d <= 0 && spire ? top * (1 - 0.35 * Math.pow(Math.abs((u - c) / hw), 1.5)) : d <= 0 ? top * (0.97 + 0.03 * n2(u * 40)) : d < wall ? top - (top - scree) * (d / wall) : d < wall + slope ? scree * Math.pow(1 - (d - wall) / slope, 1.7) : 0;
+          if (tier) { const dt = Math.abs(u - tierC) - tierW; if (dt < wall) v = Math.max(v, top + 0.22 * (dt <= 0 ? 1 : 1 - dt / wall)); }
+          a[i] = Math.max(a[i], v);
+        }
+      }
+      return norm(a, 0);
+    },
+  };
 
   root.Scene = { day, warp, ridges, solarEl };
 })(typeof window !== 'undefined' ? window : globalThis);
