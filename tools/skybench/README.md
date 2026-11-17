@@ -19,6 +19,12 @@ python3 mkvid.py open_dxb && node run.js open_dxb.json v && ffmpeg -framerate 30
 `render.js` adds a GLSL prelude (`float2` → `vec2`, …, `child.eval` → `texture`) and draws the overlay (path,
 marks, text) roughly as the app does. `sksl_size.py` estimates SkSL's unrolled program size (keep under 65 000).
 
+(0.19.1) The clouds are the real sky's baked sets (`app/src/main/assets/sky2/clouds`), lit as the app lights them
+(`msets.js`, a port of `SetClouds.kt`); a scene names its sets in `legs` (`[{set, offset, weight, turned}]`; the app
+asks `SkyDirector`), `oldClouds: true` draws the 0.9.9 sprites instead. The land program is built for the scene's
+terrain as the app builds it (`allTerrains: true` keeps the whole source). `perf: n` times one frame of each shader
+(the median of n draws, each waited for): `frame sky/land` in the output. `RAW_DIR`/`SETS_DIR` read other folders.
+
 The cumulus are baked volumes (`tools/sky/build_clouds.py` → `res/raw/clouds_a.png`, `clouds_b.png`, six-way lit); the
 bench loads them like the app (premultiplied on upload). The night's bright stars come from `res/raw/stars.bin`
 (`tools/sky/build_stars.py`, Yale Bright Star Catalogue).

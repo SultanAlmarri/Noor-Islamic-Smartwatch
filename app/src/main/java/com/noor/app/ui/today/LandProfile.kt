@@ -66,18 +66,15 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
         (terrain == Terrain.SEA && layer <= 2 && height(layer, u) < 0.02f) || (layer == LAKE && hasLake(terrain))
 
     /**
-     * The top of the land at [x] (px) across a width [w]: where it meets the sky. Where the Sun rises and sets
-     * ([riseX], [setX]) the land is kept below the horizon line [horizonY], as the land shader does.
+     * (0.19.1) The top of the land at [x] (px) across a width [w], as the land shader draws it (px from the top): the
+     * highest of the layers' ridges there ([Geometry.base] less [Geometry.amp] times the ridge's height). The fine
+     * relief the shader adds along a skyline (crags, scrub, the treeline's single trees: a few dp) is left out.
+     * Every skyline is natural: the land no longer opens onto the true horizon where the Sun rises and sets.
      */
-    fun skylineAt(x: Float, w: Float, g: Geometry, horizonY: Float = 0f, density: Float = 1f, riseX: Float = -1e5f, setX: Float = -1e5f): Float {
-        val open = horizonOpening(x, riseX, setX, density)
+    fun skylineY(x: Float, w: Float, g: Geometry): Float {
         var m = Float.MAX_VALUE
-        for (l in 0 until LAYERS) {
-            val y0 = g.base[l] - g.amp[l] * height(l, x / w)
-            val cap = maxOf((g.base[l] - horizonY - density) / g.amp[l], 0f)
-            val y = g.base[l] - g.amp[l] * (height(l, x / w).let { it + (minOf(it, cap) - it) * open })
-            m = min(m, if (open > 0f) y else y0)
-        }
+        val u = x / w
+        for (l in 0 until LAYERS) m = min(m, g.base[l] - g.amp[l] * height(l, u))
         return m
     }
 
@@ -100,7 +97,7 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
          */
         private val FOREST = arrayOf(floatArrayOf(40f, 2f), floatArrayOf(18f, 12f), floatArrayOf(1f, 24f), floatArrayOf(30f, 54f), floatArrayOf(16f, 74f))
         /** The far north (0.19): two snow-covered ranges rising out of a fjord's still water, a shore of snow and rocks. */
-        private val ARCTIC = arrayOf(floatArrayOf(52f, 3f), floatArrayOf(36f, 14f), floatArrayOf(1f, 22f), floatArrayOf(10f, 54f), floatArrayOf(14f, 74f))
+        private val ARCTIC = arrayOf(floatArrayOf(52f, 3f), floatArrayOf(36f, 14f), floatArrayOf(1f, 22f), floatArrayOf(16f, 56f), floatArrayOf(14f, 74f))
         /** Red rock (0.19): a far rim, buttes and mesas with sheer walls over their slopes of scree, ledges, the floor. */
         private val CANYON = arrayOf(floatArrayOf(22f, 3f), floatArrayOf(46f, 14f), floatArrayOf(28f, 30f), floatArrayOf(12f, 52f), floatArrayOf(14f, 74f))
         private const val DEEPEST = 72f
@@ -250,8 +247,9 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
             val a = FloatArray(N) { i ->
                 val u = i / (N - 1f)
                 var env = 0f
-                for (k in m) { val t = (u - k[0]) / k[1]; env = max(env, k[2] * (1f - t * t).coerceAtLeast(0f).pow(0.6f)) }
-                env * (0.5f + 0.5f * detail[i]) + 0.06f * detail[i]
+                // (0.19.1: pointed summits over long slopes, not rounded domes.)
+                for (k in m) { val t = (u - k[0]) / k[1]; env = max(env, k[2] * (1f - abs(t)).coerceAtLeast(0f).pow(1.25f)) }
+                env * (0.72f + 0.28f * detail[i]) + 0.05f * detail[i]
             }
             return normalise(a, 0f)
         }
@@ -304,13 +302,14 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
             1 -> massifs(rnd, 2, 0.09f, 0.17f, 4.2f, 0.55f)
             LAKE -> FloatArray(N)
             3 -> {
-                // Snow along the water (below [ROCK] of the layer's height) with boulders standing out of it.
-                val n1 = Noise(rnd); val n2 = Noise(rnd); val a = FloatArray(N) { 0.12f + 0.2f * n1.at(it / (N - 1f) * 5f) }
+                // (0.19.1) Rocks standing in the water (the shader draws water under their waterline).
+                val n1 = Noise(rnd); val n2 = Noise(rnd); val a = FloatArray(N) { 0.02f * n1.at(it / (N - 1f) * 5f) }
                 repeat(12) {
                     val c = rnd.nextFloat(); val hw = 0.008f + 0.025f * rnd.nextFloat(); val hgt = 0.55f + 0.45f * rnd.nextFloat()
                     for (i in 0 until N) {
                         val d = (i / (N - 1f) - c) / hw
-                        if (abs(d) < 1f) a[i] = max(a[i], hgt * kotlin.math.sqrt(1f - d * d).pow(0.45f) * (0.88f + 0.12f * n2.at(i / (N - 1f) * 160f)))
+                        // (0.19.1: broken blocks, not domes.)
+                        if (abs(d) < 1f) a[i] = max(a[i], hgt * (1f - abs(d)).pow(0.35f) * (0.72f + 0.28f * n2.at(i / (N - 1f) * 90f)))
                     }
                 }
                 a
@@ -326,15 +325,12 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
             val a = FloatArray(N)
             val n1 = Noise(rnd); val n2 = Noise(rnd)
             if (layer >= 3) {
-                // Ledges of rock in steps, then the floor: low and broad.
+                // (0.19.1) The desert floor: low swells of red sand (until 0.19.0 ledges in steps, which read as terraces).
                 for (i in 0 until N) {
                     val u = i / (N - 1f)
-                    // Flat treads of slickrock, short steep risers between them.
-                    val v = 0.75f * n1.at(u * (if (layer == 3) 3f else 1.8f)) + 0.25f * n2.at(u * 8f)
-                    val k = v * 4f; val step = floor(k) + smooth(0.86f, 1f, k - floor(k))
-                    a[i] = step / 4f
+                    a[i] = 0.7f * n1.at(u * (if (layer == 3) 2.6f else 1.6f)) + 0.3f * n2.at(u * 7f)
                 }
-                return normalise(a, 0.08f)
+                return normalise(a, 0.1f)
             }
             for (i in 0 until N) a[i] = 0.03f + 0.04f * n1.at(i / (N - 1f) * 11f)
             val count = intArrayOf(6, 5, 3)[layer]

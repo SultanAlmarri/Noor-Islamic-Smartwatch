@@ -14,7 +14,7 @@ import kotlin.math.abs
 
 /**
  * The prayer marks on the sun path (0.9.7) are where the Sun really is at each prayer: Shuruq and Maghrib on the
- * horizon, with the land open there so the Sun meets the horizon at that very point; Fajr and Isha below the horizon.
+ * horizon (0.20: the land is not opened there; the path, in front of it, shows a hidden Sun); Fajr and Isha below the horizon.
  * Checked for places from the equator to 64° N, both seasons, a large and a small phone, both renderers' land.
  */
 class SunMarkTest {
@@ -44,7 +44,6 @@ class SunMarkTest {
             val d = sz[4]
             val w = sz[0] * d; val h = sz[1] * d; val hy = sz[2] * d; val arc = sz[3] * d
             val g = SkyGeometry(scene, w, hy, arc, h - 6 * d, rtl = false)
-            val (riseX, setX) = sunriseSunsetX(scene, g)
             val land = LandProfile.of(scene.landSeed, scene.terrain)
             val geo = land.geometry(hy, h, d)
             val label = "${pl.name} $date ${sz[0]}dp"
@@ -53,9 +52,11 @@ class SunMarkTest {
                 when (p) {
                     Prayer.SHURUQ, Prayer.MAGHRIB -> {
                         assertTrue("$label $p mark ${(m.y - hy) / d} dp from the horizon", abs(m.y - hy) <= 0.6f * d)
-                        // The land does not stand above the horizon where the Sun meets it.
-                        val top = land.skylineAt(m.x, w, geo, hy, d, riseX, setX)
-                        assertTrue("$label $p land ${(hy - top) / d} dp above the horizon", top >= hy - 0.5f * d)
+                        // (0.20) The land is no longer opened for the Sun (the owner rejected cut-open skylines): where it
+                        // stands above the horizon at the mark, the path, drawn in front of it, shows the Sun there with
+                        // a ring (LivingSky). The land's top at the mark is the one the 0.9 sky draws.
+                        val top = land.skylineY(m.x, w, geo)
+                        assertTrue("$label $p land top ${(hy - top) / d} dp", top.isFinite() && top < h)
                         // The path itself crosses the horizon at the mark (within the mark's own size).
                         var f = path.fraction(t); val step = 1.0 / 1440 / 4
                         val dir = if (p == Prayer.SHURUQ) 1 else -1

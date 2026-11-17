@@ -75,6 +75,23 @@ The scene (0.9.6), far to near:
    0.9.8 sampled its clouds for every pixel of the sky, 15 times a second, in the sky shader; now the phone draws a few
    dozen pictures through one colour matrix each, the same on every phone, and the sky shader (about a third smaller,
    its overcast and cloud-layer parts skipped when the weather has none) is redrawn once a second by day.
+   **0.19.1, the medium graphics' clouds are the real sky's** (`SetClouds.kt`). The owner, of 0.19.0's: "straight
+   lines coming out of them ... artifacts ... the clouds don't seem to appear above a certain level ... like a line
+   blocking them". The photographed sprites (kept below the text), the shader's wind-combed cirrus streaks, its banks,
+   its stratocumulus layer and its overcast deck are gone from the medium sky (the widget still draws the sprites).
+   Now the real sky's own director chooses the clouds (`SkyDirector.at` with the day's weather for the scenery's sky,
+   `skyBiomeOf`, in the time of year the scenery is shown in): the same baked sets (`assets/sky2/clouds/<id>`,
+   path traced in Blender), at the same places, passing side by side across the sky and giving way to one another in
+   patches, as on the High level; its overcast and rain grey the sky and light the land. Each set is read at half its
+   size on a background thread (its opacity, distance, light from the sky and from the ground, and the pictures under
+   the few Suns the moment lies between), lit for the moment into one picture (the Sun as high as it stands over each
+   cloud, so far clouds keep their colour after sunset; the glow round a low Sun; the dome's blue in the shade; light
+   through thin cloud near the Sun; undersides lit from below once the Sun is lower than the cloud; far clouds fading
+   into the air's colour; the lower clouds standing apart round the Sun when the weather lets it through; the glare
+   of the Sun over them), and drawn as one bitmap, the same on every phone, GPU sky or Canvas sky. They fill the whole
+   sky; the text stays readable as on the High level: behind it the brightest parts of the clouds are eased down
+   (at most 0.34 linear luminance where the countdown stands, fading out over an oval). A set is lit again only when
+   the light changes or it has drifted a quarter of a degree; between, its picture glides with the wind.
 4. **Sun**: a disc with limb darkening, its colour the sunlight that reaches the ground (white at noon, orange-red at
    the horizon), a bright core of glare and a wide soft bloom. It sinks behind the true horizon and behind the land.
 5. **Land** (`LandProfile.kt`, `land_layer.agsl`): five layers fading into the haze with distance, the nearest the
@@ -99,7 +116,17 @@ The scene (0.9.6), far to near:
    ribs down the steep faces, snow in the couloirs; a fjord's dark still water; snow and dark boulders on the shore. *Canyon*:
    a far rim, buttes and mesas (flat tops on sheer walls over skirts of red scree, a spire now and then, some with a
    second tier), walls of bedded sandstone (red, orange, a pale cap rock, desert varnish, fluting, their sides lit or
-   shaded by the Sun's side), smooth talus; in front flat treads of slickrock with short red risers, less mist. Their weather: the forest wetter and
+   shaded by the Sun's side), smooth talus; in front flat treads of slickrock with short red risers, less mist. **0.19.1**:
+   the canyon's walls read as brickwork and its ground as terraces, the arctic's snow as blotches with holes and its
+   shore as black domes. Now the red rock has soft uneven strata, fluting and dark varnish streaks from the rim down, a
+   pale cap rock, rough talus with gullies, and in front the desert floor of red sand with sage scattered over it; the
+   arctic has pointed summits of dark rock with snow on their ledges over smooth aprons of snow (as the real sky's
+   fjord), the fjord mirroring them, rocks standing in its water; the forest lake runs in between the wooded knolls;
+   the dunes' slip faces stay in shade under a low Sun and their ripples show; every farthest layer is shaded by
+   altitude (by the depth below the crest straight above, each notch let a vertical streak of light down the face). No
+   skyline is cut open where the Sun rises and sets any more (the Sun's path is drawn in front of the land), and the
+   land has no cloud shadows of its own (the clouds are the sets). `LandProfile.skylineY` is the top of the land as the
+   shader draws it. Their weather: the forest wetter and
    greyer, the arctic overcast more often, the canyon clearer. The land shader shades only the layers a pixel shows
    (at most three, front to back), which made room for them; the four older sceneries draw exactly as before. The
    Canvas renderer (below Android 13) draws the same sceneries more simply (treelines, lakes, snowy ranges, mesas;
@@ -129,7 +156,9 @@ nothing snaps, so the sky never jumps (`SkyDetentTest`). Twilight has more of th
 dawn and dusk changed the colours up to nine times faster per pixel than at midday; now about a third less). The scene
 relights continuously; it springs back to now when let go.
 
-**Calm and cost**: the scene's moment changes once a minute; the clouds redraw about 15 times a second as they drift,
+**Calm and cost**: the scene's moment changes once a minute; the clouds redraw about 15 times a second as they drift
+(0.19.1: one bitmap per set; each set lit again off the main thread only when the light changes or it has drifted a
+quarter of a degree),
 the sky shader once a second by day (15 times at night, for the twinkling stars), the land 4 times a second; both rest when the sky is scrolled away or the app is
 in the background, and stop entirely under "Remove animations". While the Sun is dragged or during the opening, both
 layers redraw every frame.

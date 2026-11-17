@@ -156,8 +156,8 @@
     const detail = rangeJ(r, N, norm, fq, 1.2, 1, 1);
     const m = Array.from({ length: count }, (_, k) => [(k + 0.5 + (r() - 0.5) * 0.6) / count, wMin + (wMax - wMin) * r(), low + (1 - low) * r()]);
     return norm(Array.from({ length: N }, (_, i) => { const u = i / (N - 1); let env = 0;
-      for (const k of m) { const t = (u - k[0]) / k[1]; env = Math.max(env, k[2] * Math.pow(Math.max(0, 1 - t * t), 0.6)); }
-      return env * (0.5 + 0.5 * detail[i]) + 0.06 * detail[i]; }), 0);
+      for (const k of m) { const t = (u - k[0]) / k[1]; env = Math.max(env, k[2] * Math.pow(Math.max(0, 1 - Math.abs(t)), 1.25)); }
+      return env * (0.72 + 0.28 * detail[i]) + 0.05 * detail[i]; }), 0);
   }
   function rollingJ(r, N, norm, f, lo) {
     const ns = [noise1(r, 64), noise1(r, 64), noise1(r, 64)];
@@ -185,10 +185,10 @@
       if (layer === 1) return massifsJ(r, N, norm, 2, 0.09, 0.17, 4.2, 0.55);
       if (layer === 2) return new Array(N).fill(0);
       if (layer === 3) {
-        const n1 = noise1(r, 64), n2 = noise1(r, 64); const a = Array.from({ length: N }, (_, i) => 0.12 + 0.2 * n1(i / (N - 1) * 5));
+        const n1 = noise1(r, 64), n2 = noise1(r, 64); const a = Array.from({ length: N }, (_, i) => 0.02 * n1(i / (N - 1) * 5));
         for (let k = 0; k < 12; k++) {
           const c = r(), hw = 0.008 + 0.025 * r(), hgt = 0.55 + 0.45 * r();
-          for (let i = 0; i < N; i++) { const d = (i / (N - 1) - c) / hw; if (Math.abs(d) < 1) a[i] = Math.max(a[i], hgt * Math.pow(Math.sqrt(1 - d * d), 0.45) * (0.88 + 0.12 * n2(i / (N - 1) * 160))); }
+          for (let i = 0; i < N; i++) { const d = (i / (N - 1) - c) / hw; if (Math.abs(d) < 1) a[i] = Math.max(a[i], hgt * Math.pow(1 - Math.abs(d), 0.35) * (0.72 + 0.28 * n2(i / (N - 1) * 90))); }
         }
         return a;
       }
@@ -197,10 +197,8 @@
     canyon(r, layer, N, norm) {
       const a = new Array(N).fill(0); const n1 = noise1(r, 64), n2 = noise1(r, 64);
       if (layer >= 3) {
-        for (let i = 0; i < N; i++) { const u = i / (N - 1);
-          const v = 0.75 * n1(u * (layer === 3 ? 3 : 1.8)) + 0.25 * n2(u * 8);
-          const k = v * 4, step = Math.floor(k) + smoothJ(0.86, 1, k - Math.floor(k)); a[i] = step / 4; }
-        return norm(a, 0.08);
+        for (let i = 0; i < N; i++) { const u = i / (N - 1); a[i] = 0.7 * n1(u * (layer === 3 ? 2.6 : 1.6)) + 0.3 * n2(u * 7); }
+        return norm(a, 0.1);
       }
       for (let i = 0; i < N; i++) a[i] = 0.03 + 0.04 * n1(i / (N - 1) * 11);
       const count = [6, 5, 3][layer], wMin = [0.06, 0.015, 0.03][layer], wMax = [0.2, 0.08, 0.09][layer], wall = [0.003, 0.006, 0.008][layer];

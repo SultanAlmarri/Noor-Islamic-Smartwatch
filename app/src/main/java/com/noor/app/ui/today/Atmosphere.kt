@@ -44,6 +44,8 @@ internal object Atmosphere {
     private const val G = 0.76
     private const val MS = 0.06
     private const val SAT = 1.25
+    /** The tone curve's colour boost ([tone]), for the clouds' own copy of it (SetClouds). */
+    const val SATURATION = SAT
     const val E_SUN = 20.0
     private const val DEG = PI / 180.0
 
@@ -148,7 +150,7 @@ internal object Atmosphere {
     }
 
     private fun aces(x: Double): Double = ((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14)).coerceIn(0.0, 1.0)
-    private fun srgb(x: Double): Double = if (x <= 0.0031308) 12.92 * x else 1.055 * x.pow(1 / 2.4) - 0.055
+    fun srgb(x: Double): Double = if (x <= 0.0031308) 12.92 * x else 1.055 * x.pow(1 / 2.4) - 0.055
     fun linear(s: Double): Double = if (s <= 0.04045) s / 12.92 else ((s + 0.055) / 1.055).pow(2.4)
 
     /** The filmic curve the shaders also use (sky_common.agsl `tone`): linear light in, display values (0..1) out. */
@@ -216,6 +218,19 @@ internal object Atmosphere {
         val sunDisc = DoubleArray(3)
         /** The glare round the disc. */
         val sunGlow = DoubleArray(3)
+        /** (0.19.1) The sky low over the horizon towards the Sun (3 degrees up): the glow that lights a cloud from there. */
+        val glow = DoubleArray(3)
+    }
+
+    /**
+     * (0.19.1) Sunlight (exposed, linear) at [h] km for the Sun at elevation [elDeg]: as [Light.sunCloud] is for its
+     * own height and the Sun of the moment. The medium graphics' clouds are lit at their own height, by the Sun as high
+     * as it stands over them (a far cloud nearer the Sun's side of the Earth keeps its light after sunset).
+     */
+    fun sunlight(h: Double, elDeg: Double, exposure: Double, out: DoubleArray) {
+        trans(h, sin(elDeg * DEG), out)
+        val s = sun
+        for (k in 0..2) out[k] = out[k] * s[k] * E_SUN * exposure / PI
     }
 
     /** Atmospheric refraction (Sæmundsson), degrees, for a true elevation [el] in degrees; standard air. */
@@ -295,6 +310,8 @@ internal object Atmosphere {
             light.sunDisc[k] = w.t[k] * sun[k] * E_SUN * exposure / PI * DISC
             light.sunGlow[k] = light.sunGround[k] * 0.132
         }
+        radiance(cos(3 * DEG) * sin(sunAz), sin(3 * DEG), cos(3 * DEG) * cos(sunAz), sl, sp, w, light.glow)
+        for (k in 0..2) light.glow[k] *= exposure
         for (k in 0..2) {
             light.ambTop[k] = z[k] * exposure + NIGHT_TOP[k] * night * 1.6
             light.ambLow[k] = hz[k] * exposure + NIGHT_TOP[k] * night * 2.4

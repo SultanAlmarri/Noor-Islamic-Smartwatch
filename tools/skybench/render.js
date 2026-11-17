@@ -43,7 +43,9 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     return t;
   }
 
-  function draw(canvas, fs, uniforms, lut, ridge, stars) {
+  // (0.19.1) With reps > 0, the program is drawn that many times more after the first draw (which includes compiling
+  // it) and the median time of one frame is returned (each waited for with a one-pixel read).
+  function draw(canvas, fs, uniforms, lut, ridge, stars, reps) {
     const gl = canvas.getContext('webgl2', { premultipliedAlpha: true, preserveDrawingBuffer: true, alpha: true });
     const pr = program(gl, fs);
     gl.useProgram(pr);
@@ -66,6 +68,17 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.finish();
+    if (!reps) return 0;
+    const px = new Uint8Array(4); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const times = [];
+    for (let k = 0; k < reps; k++) {
+      const t = performance.now();
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      times.push(performance.now() - t);
+    }
+    times.sort((a, b) => a - b);
+    return times[Math.floor(times.length / 2)];
   }
 
   window.renderFrame = function (cfg, src) {
@@ -104,6 +117,8 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const wDay = Clouds.weather(cfg.weatherType ?? 1, weather[2], weather[3], cirrus);
     const wNow = Object.assign(Clouds.weatherAt(wDay, f), cfg.wx || {});
     weather[0] = wNow.cumulus; weather[1] = wNow.cirrus;
+    // (0.19.1) With the baked sets the shaders draw no clouds of their own; the sky's state is the director's.
+    if (!cfg.oldClouds) { weather[0] = 0; weather[1] = 0; Object.assign(wNow, { cumulus: 0, cirrus: 0, layer: 0, overcast: cfg.overcast ?? 0, rain: cfg.rain ?? 0, storm: 0 }); }
     const night = 1 - smooth(-14, -6, el);
     const hijriDay = cfg.hijriDay ?? 14;
     const age = (((hijriDay - 1) + 0.5) / 29.53);
@@ -167,7 +182,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const dunes = terrain === 'dunes';
     const SPEC = { dunes: [[16, 3], [20, 16], [24, 32], [26, 50], [26, 72]], hills: [[40, 3], [28, 16], [24, 32], [22, 50], [24, 72]],
       mountains: [[58, 2], [40, 14], [30, 30], [24, 50], [24, 72]], sea: [[16, 0], [1, 8], [1, 20], [12, 54], [18, 74]],
-      forest: [[40, 2], [18, 12], [1, 24], [30, 54], [16, 74]], arctic: [[52, 3], [36, 14], [1, 22], [10, 54], [14, 74]], canyon: [[22, 3], [46, 14], [28, 30], [12, 52], [14, 74]] };
+      forest: [[40, 2], [18, 12], [1, 24], [30, 54], [16, 74]], arctic: [[52, 3], [36, 14], [1, 22], [16, 56], [14, 74]], canyon: [[22, 3], [46, 14], [28, 30], [12, 52], [14, 74]] };
     const DIST = { dunes: [22, 7, 2.8, 1.1, 0.35], hills: [48, 15, 6, 2.2, 0.6], mountains: [34, 14, 6, 2.2, 0.6], sea: [40, 10, 3, 0.8, 0.3],
       forest: [35, 8, 3, 0.9, 0.3], arctic: [15, 6, 3, 0.8, 0.3], canyon: [30, 9, 3.5, 1.2, 0.4] };
     const layers = SPEC[terrain], dists = DIST[terrain];
@@ -197,10 +212,14 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
 
     const skyC = document.createElement('canvas'); skyC.width = SW; skyC.height = SH;
     const t0 = performance.now();
-    draw(skyC, PRELUDE + src.common + src.sky + FOOTER, skyU, lut, ridge, starsTex);
+    const perfSky = draw(skyC, PRELUDE + src.common + src.sky + FOOTER, skyU, lut, ridge, starsTex, cfg.perf || 0);
     const t1 = performance.now();
     const landC = document.createElement('canvas'); landC.width = W; landC.height = H;
-    draw(landC, PRELUDE + src.common + src.land + FOOTER, landU, lut, ridge);
+    // (0.19.1) As the app builds it (SkyShaders.landSource): the terrain made a constant, so the other terrains' code
+    // goes (cfg.allTerrains: the source as it is).
+    const tid = landU.uTerrain;
+    const landSrc = cfg.allTerrains ? src.land : src.land.replace('float terrainId() { return uTerrain; }', `float terrainId() { return ${tid}.0; }`);
+    const perfLand = draw(landC, PRELUDE + src.common + landSrc + FOOTER, landU, lut, ridge, null, cfg.perf || 0);
     const t2 = performance.now();
 
     const out = document.createElement('canvas'); out.width = W; out.height = H + (cfg.pageBelowDp || 0) * dp;
@@ -211,9 +230,54 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip();
     g.globalAlpha = fade;
     g.drawImage(skyC, 0, 0, W, H);
-    // The clouds (CloudField.kt), at full resolution over the sky.
+    // The clouds. (0.19.1) The real sky's baked sets, lit for the moment (SetClouds.kt, msets.js); cfg.oldClouds: the
+    // 0.9.9 photographed clouds (CloudField.kt, clouds.js).
     const t3 = performance.now();
-    if (window.CLOUDS) {
+    let cloudMs = 0;
+    if (!cfg.oldClouds && window.MSETS) {
+      const F = 1.15 * W;
+      const lutAt = (xPx, yPx) => {
+        const alt = altAt(yPx); const v = Math.pow(Math.max(0, Math.min(1, alt / 90)), 1 / lutPow);
+        const fx = Math.max(0, Math.min(1, xPx / W)) * (nx - 1), fy = v * (ny - 1);
+        const i = Math.min(nx - 2, Math.floor(fx)), j = Math.min(ny - 2, Math.floor(fy)), a = fx - i, b = fy - j;
+        const L = fr.lut, o = [0, 0, 0];
+        for (let c = 0; c < 3; c++) {
+          const v0 = L[(j * nx + i) * 4 + c] * (1 - a) + L[(j * nx + i + 1) * 4 + c] * a;
+          const v1 = L[((j + 1) * nx + i) * 4 + c] * (1 - a) + L[((j + 1) * nx + i + 1) * 4 + c] * a;
+          o[c] = (v0 * (1 - b) + v1 * b) / 255;
+        }
+        return o;
+      };
+      const moonLight = el < -6;
+      const moonW = smooth(-6, -10, el);
+      const illum = (1 - Math.cos(phase)) / 2;
+      const mk = cfg.moonK ?? 0.9;
+      const L = {
+        el, sunAz: (sunX - W / 2) / F, sunElSeen: el > 0 ? Math.atan((hy - sunY) / F) / DEG : el,
+        side: moonLight ? Math.max(-1, Math.min(1, (mx - W / 2) / (0.2 * W))) : Math.max(-1, Math.min(1, (f - dd.noonF) / 0.07)) * (cfg.rtl ? -1 : 1),
+        moonLight, moonEl: Math.max(0.7, Math.atan((hy - my) / F) / DEG), glow: smooth(0, 1, (12 - el) / 10),
+        moonW, moon: [0.050, 0.062, 0.095].map(x => x * mk * illum * moonVis),
+        sunlight: fr.sunlight, ambTop: common.uAmbTop, ambLow: common.uAmbLow, sunGround: fr.sunGround, glowCol: fr.glow,
+        haze: cfg.haze ?? 1.0, sunPart: cfg.sunPart ?? 0.6, expose: cfg.cloudExpose ?? 1.0, ambK: cfg.ambK ?? 3.0, night: fr.night, sky: lutAt,
+        sunX, sunY, dp, glare: (cfg.glare ?? 0.8) * smooth(-5, 0.5, el), glareCol: Atmo.tone(fr.sunGlow.slice(), [0, 0, 0]),
+        textY: arcTop - 16 * dp - 0.085 * H, textR: 0.125 * H, textCap: cfg.textCap ?? 0.34, debug: !!cfg.debug,
+      };
+      const V = { W, hy, F, rtl: !!cfg.rtl };
+      const cc = document.createElement('canvas'); cc.width = W; cc.height = H;
+      const cg = cc.getContext('2d'); cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
+      const tc = performance.now();
+      // High, middle, low: each level's sets, the farther behind.
+      const legs = (cfg.legs || []).map(l => Object.assign({ weight: 1, offset: 0, turned: false }, l)).filter(l => window.MSETS[l.set]);
+      legs.sort((a, b) => window.MSETS[a.set].level - window.MSETS[b.set].level);
+      for (const leg of legs) {
+        const r = MSets.compose(window.MSETS[leg.set], L, leg, V);
+        const pc = document.createElement('canvas'); pc.width = r.image.width; pc.height = r.image.height;
+        pc.getContext('2d').putImageData(r.image, 0, 0);
+        cg.drawImage(pc, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
+      }
+      cloudMs = performance.now() - tc;
+      g.drawImage(cc, 0, 0);
+    } else if (window.CLOUDS) {
       const cl = window.CLOUDS; window.DEBUG_CLOUDS = !!cfg.debugClouds;
       const laid = Clouds.layout(cl.table, {
         w: W, h: H, horizonY: hy, dp, fov, time: cfg.time || 0, weather: wDay, state: wNow,
@@ -264,7 +328,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       g.font = `600 ${28 * dp}px sans-serif`; g.fillText(cfg.title || 'Asr  ·  3:28 PM', W / 2, (cfg.topDp + 92) * dp);
       g.font = `300 ${68 * dp}px sans-serif`; g.fillText(cfg.countdown || '1:52:07', W / 2, (cfg.topDp + 168) * dp);
     }
-    return { url: out.toDataURL('image/png'), ms: [t1 - t0, t2 - t1, t4 - t3], el, night, exposure: fr.exposure, clouds: (window.LAST_CLOUDS || []).length, wx: wNow };
+    return { url: out.toDataURL('image/png'), ms: [t1 - t0, t2 - t1, t4 - t3, cloudMs], perf: [perfSky, perfLand], el, night, exposure: fr.exposure, clouds: (window.LAST_CLOUDS || []).length, wx: wNow };
   };
   function smooth(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
 })();

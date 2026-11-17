@@ -1462,3 +1462,72 @@ place (`STAND = (3383.75, 2305.0, -120.3)`, the 0.11 view); and that regenerated
 crest about 0.8 degree lower). With no range to stand in front of it, the lowest Suns (0.7 degree, `s_l0`/`s_r0`) now
 light the sand (our own slope and the far crests' rims); before, the range shadowed all of it. Sources and the thumbnail's recipe: `tools/scenery/sources/dunes.md`. Seen in the
 design bench at dawn, sunrise, midday, golden hour, sunset and night; not yet on the emulator or a phone.
+
+### 30.1 The medium graphics overhauled: the real sky's clouds, natural skylines, the red rock and the arctic redone (0.19.1 work, 17 November 2026, a helper on `medium/overhaul`)
+
+**What the owner said** (after trying 0.19.0): "I'm disappointed with the medium quality setting. It looks so bad ...
+There seems to be a problem with the clouds. Clouds kind of have straight lines coming out of them, and artifacts which
+look very unrealistic, and the clouds don't seem to appear above a certain level ... there's like a line blocking them
+... totally fix the clouds on the medium setting. I want this to be world class." And, for every level's dunes: only
+dunes.
+
+**Why it looked so.** The "line": the 0.9 sky deliberately kept its clouds below the text written on the sky (the
+sprites faded out above `cloudTopY`, the shader's cirrus paled there). The "straight lines": the shader's cirrus was
+noise drawn out a hundred times along one direction (long straight streaks across the sky), and some photographed
+sprites had straight cut edges; the "artifacts": small grey cut-outs and dark backlit sprites. On the land, far ranges
+were shaded by the depth below the crest straight above, so every notch let a vertical streak of light down the face;
+the canyon's walls were a grid of bands and lines (they read as brickwork) over terraces; the arctic's snow was
+blotches with holes and its shore black domes.
+
+**What changed.**
+- Clouds (`ui/today/SetClouds.kt`): the medium sky now shows the real sky's own baked sets
+  (`assets/sky2/clouds/<id>`), chosen by the real sky's director (`SkyDirector.at`, with `SkyDirector.weather` for the
+  scenery's sky, `skyBiomeOf(terrain)`, in the scenery's `signatureYear`; the tester's weather and season are honoured):
+  the same sets at the same places as on High for a place and day, passing side by side and giving way to one another
+  in patches along a line that wanders (an overcast's end was first a straight wall). Each set is read once at half
+  size on a background thread (`CloudSets`: opacity, distance, sky light, ground light; the Sun pictures as the light
+  needs them, at most 10 kept per set, at most 6 sets kept), lit for the moment into one picture (`SetClouds.compose`,
+  a port of `layer.frag`'s light with the medium sky's own `Atmosphere.Light`: the Sun as high as it stands over each
+  cloud, the twilight glow, the dome, light through thin cloud, undersides from below, haze to the air's colour; the
+  lower clouds parting round the Sun as `parted()`; the Sun's glare over them), and drawn as one bitmap
+  (`SetCloudPainter`, `SetCloudLayer`), on the GPU sky and on the Canvas sky alike. A set is lit again only when the
+  light changes or it has drifted a quarter of a degree; between, it glides (`CloudLeg.speed`, anchored to the seconds
+  into the minute shown, so the next minute's places follow on without a jump). The text stays readable as on High:
+  behind it the brightest parts of the clouds are eased down (`SetClouds.TEXT_CAP`, 0.34 linear luminance at the
+  countdown, an oval fading out). Constants: `FOCAL` 1.15 (the real sky's lens), `AMBIENT` 3.0, `GLARE` 0.8.
+- The sky shader (`sky_layer.agsl`) lost its cirrus, banks, stratocumulus and overcast deck (about 7 300 of 65 000
+  now); the overcast pales the bare sky a little. `Atmosphere` gained `sunlight(h, el)` and `Light.glow`.
+- The director's state drives the rest: `weatherNow` for the medium sky is built from `SkyState` (overcast, storm,
+  falling rain: the land's even light, the rain layer). The 0.9.9 sprites (`CloudField`, `CloudAtlas`) remain only for
+  the widget.
+- Land (`land_layer.agsl`, `LandProfile.kt`, the bench's `scene.js`): no notch where the Sun rises and sets (the lead's
+  new path is drawn in front of the land), no cloud shadows of the shader's own; every farthest layer shaded by
+  altitude; the canyon's walls in soft uneven strata with fluting, varnish streaks and a pale cap rock over rough talus,
+  its near layers a desert floor of red sand with sage (rolling ground in `LandProfile`); the arctic's massifs pointed
+  (`massifs`: `(1-|t|)^1.25`), dark rock on their upper cliffs with snow on the ledges, smooth snow aprons below, the
+  fjord mirroring them, its near layer rocks standing in the water (layer 3 is water under its waterline; `ARCTIC`
+  layer 3 is 16 dp high at 56 dp); the forest lake runs in between the wooded knolls the same way; the dunes' slip faces
+  stay in shade (less bounce) and their ripples show. The dunes were already only dunes.
+- `LandProfile.skylineY(x, w, geometry)`: the top of the land at x as the shader draws it (fine relief left out).
+  `skylineAt(..., riseX, setX)` keeps the 0.19.0 notch rule only for SunMarkTest, until the lead rewrites that part.
+- Bench (`tools/skybench`): `msets.js` ports SetClouds (scenes give their sets: `legs`), the land program is
+  specialised per terrain as in the app, and `cfg.perf` times one frame of each shader (median of n, each waited for).
+
+**Measured** (bench, headless Chromium + SwiftShader, 618 × 600 px, ms per frame, mean of the 49 scenes of
+`scenes.py 1.5 terrains`, before and after run back to back): PERF.
+
+**Tests**: `SetCloudsTest` (a set fills the whole sky up to the top of the header, sane colours at noon, sunset and
+night; prints the time to light a set); the existing sky, land, cloud, director and Medium design tests pass.
+
+**Not tested**: on a phone or the emulator (the lead runs `real-sky.yml`, tier MEDIUM). Bench and Robolectric renders only.
+
+**Open**:
+- Photograph Medium on the emulator (`real-sky.yml`, tier MEDIUM) for all six sceneries at sunrise, midday, golden
+  hour, sunset and night, and on a day with an overcast and a storm (the tester's weather): the clouds' first
+  appearance (they fade in over 0.6 s once lit), a drag through the day (sets change light behind the finger: is
+  the lag visible?), the text over bright clouds, and Skia's log for the land program (`Davey`, compile time).
+- The land is still layered and painted; next to the real sky's photographs it is plainly a drawing (the arctic's and
+  the red rock's land especially: no real elevation data behind them). The near layers are thin bands under a tall
+  sky. The forest's near bank and the arctic's snow bank are plain.
+- Lightning, rain shafts and virga were part of the sprites; the sets have none (High draws its own).
+- The widget still draws the 0.9.9 sprites (`CloudField`).

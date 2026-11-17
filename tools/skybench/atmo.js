@@ -209,6 +209,10 @@
       exposure, night, lut, z, sunDisc, sunGlow: sg.map(x => x * 0.132),
       sunGround: sunAt(0.3), sunCloud: sunAt(2.0), sunHigh: sunAt(8.0),
       ambTop: z.map(x => x * exposure), ambHor: hz.map(x => x * exposure),
+      // (0.19.1) For the medium graphics' clouds: sunlight at a height (km) for the Sun at an elevation (degrees),
+      // and the glow of the sky low over the horizon towards the Sun.
+      sunlight: (h, el) => { const T = trans(h, Math.sin(el * DEG), [0, 0, 0]); return T.map((t, c) => t * SUN[c] * 20 * exposure / Math.PI); },
+      glow: radiance(dir(p.sunAz, 3 * DEG), sl, sp, [0, 0, 0]).map(x => x * exposure),
     };
   }
 
