@@ -283,10 +283,11 @@ class StatusRefreshReceiver : BroadcastReceiver() {
 /**
  * Ticks the notification each second while the screen is on, when Noor draws the countdown itself (0.9.8). Stops when
  * the screen goes off, when the notification is turned off, or when Android's own digits match Noor's again. At each
- * prayer, midnight or the end of a "+" period it asks for a full rebuild.
+ * prayer, midnight or the end of a "+" period it asks for a full rebuild. It runs on a thread of its own (up to 0.18.1
+ * it ran on the main thread, where building and posting the notification each second competed with the screen).
  */
 internal object StatusTicker {
-    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val handler = android.os.Handler(android.os.HandlerThread("NoorStatusTicker").apply { start() }.looper)
     @Volatile private var current: StatusNotification.Ticking? = null
     private val tick = object : Runnable {
         override fun run() {

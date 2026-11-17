@@ -75,18 +75,39 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
     fun resize(w: Int, h: Int) { synchronized(lock) { surfaceW = w; surfaceH = h; lock.notifyAll() } }
 
-    /** The view's surface is going away: the render thread lets go of it before this returns. */
+    /**
+     * The view's surface is going away. From here on this engine owns [st] (the view's listener returns false): if
+     * the render thread still has its EGL surface on it, the render thread destroys that and then releases [st]
+     * itself ([releaseRetired]); otherwise nothing draws into it and it is released at once. Either way the main
+     * thread does not wait for the render thread (up to 0.18.1 it waited up to 800 ms for a picture in progress, or a
+     * whole build of the shaders, to finish).
+     */
     fun detach(st: SurfaceTexture) {
         synchronized(lock) {
-            if (surface !== st) return
-            surface = null; surfaceChanged = true; visible = false
-            RealSky.waiting(false)
-            // Leaving before the first picture was shown is not a failed start.
-            if (attempting && !firstShown) { attempting = false; RealSky.cancelAttempt(app) }
+            if (surface === st) {
+                surface = null; surfaceChanged = true; visible = false
+                RealSky.waiting(false)
+                // Leaving before the first picture was shown is not a failed start.
+                if (attempting && !firstShown) { attempting = false; RealSky.cancelAttempt(app) }
+            }
+            // (The render thread reads [surface] and sets [boundTo] to a texture only while it holds the lock.)
+            if (exited || boundTo !== st) runCatching { st.release() } else retired += st
             lock.notifyAll()
-            val until = SystemClock.uptimeMillis() + 800
-            while (eglSurface != EGL14.EGL_NO_SURFACE && SystemClock.uptimeMillis() < until) runCatching { lock.wait(50) }
         }
+    }
+
+    /** The texture the EGL window surface is on, if any; set by the render thread (in [bindSurface], under the lock). */
+    @Volatile private var boundTo: SurfaceTexture? = null
+    /** Textures of gone views that the render thread may still draw into, for it to release (guarded by [lock]). */
+    private val retired = ArrayList<SurfaceTexture>()
+    /** The render thread has stopped (guarded by [lock]): from then on [detach] releases a texture itself. */
+    private var exited = false
+
+    /** On the render thread, holding the lock: releases the textures of gone views that no EGL surface is on any more. */
+    private fun releaseRetired() {
+        if (retired.isEmpty()) return
+        val each = retired.iterator()
+        while (each.hasNext()) { val st = each.next(); if (st !== boundTo) { runCatching { st.release() }; each.remove() } }
     }
 
     fun setVisible(v: Boolean) { synchronized(lock) { visible = v; lock.notifyAll() } }
@@ -157,6 +178,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             if (context != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(display, context)
         }
         eglSurface = EGL14.EGL_NO_SURFACE; pbuffer = EGL14.EGL_NO_SURFACE; context = EGL14.EGL_NO_CONTEXT
+        boundTo = null
         glReady = false
         progs.clear(); tex.clear()
         tTrans = null; tMeter = null; tSky = null; tScene = null; tB4 = null; tB8a = null; tB8b = null
@@ -173,10 +195,12 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             EGL14.eglDestroySurface(display, eglSurface)
             eglSurface = EGL14.EGL_NO_SURFACE
         }
+        boundTo = null
         val st = surface
         if (st != null) {
             eglSurface = EGL14.eglCreateWindowSurface(display, config, st, intArrayOf(EGL14.EGL_NONE), 0)
             if (eglSurface == EGL14.EGL_NO_SURFACE) { Log.w(TAG, "no window surface: ${EGL14.eglGetError()}"); return }
+            boundTo = st
             EGL14.eglMakeCurrent(display, eglSurface, eglSurface, context)
             EGL14.eglSwapInterval(display, 1)
         }
@@ -1009,6 +1033,23 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     }
 
     override fun run() {
+        try { loop() } finally {
+            // Stopped (no EGL, or the real sky failed): let go of the gone views' textures; from now on [detach]
+            // releases them itself.
+            synchronized(lock) {
+                exited = true
+                if (boundTo != null && boundTo in retired) runCatching {
+                    EGL14.eglMakeCurrent(display, pbuffer, pbuffer, context)
+                    EGL14.eglDestroySurface(display, eglSurface)
+                    eglSurface = EGL14.EGL_NO_SURFACE; boundTo = null
+                }
+                retired.forEach { runCatching { it.release() } }
+                retired.clear()
+            }
+        }
+    }
+
+    private fun loop() {
         var failed = false
         try {
             initEgl()
@@ -1021,6 +1062,7 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
             val f: RealSkyFrame?
             synchronized(lock) {
                 if (surfaceChanged) { surfaceChanged = false; runCatching { bindSurface() }; lock.notifyAll() }
+                releaseRetired()
                 while (running && !surfaceChanged && !warmDue(failed) && (surface == null || !visible || pending.get() == null || eglSurface == EGL14.EGL_NO_SURFACE)) runCatching { lock.wait(500) }
                 f = pending.get()
             }
