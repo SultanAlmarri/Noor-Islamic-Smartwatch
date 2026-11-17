@@ -1,0 +1,78 @@
+name: Smoothness on real Android (emulator)
+
+# How smooth the phone app is (0.18.2): the bench build (the release build as the owner installs it, plus test hooks,
+# StrictMode and profileable) on an Android 14 emulator, through a fixed set of moves; the main thread's time per frame
+# for each, cold-start times and StrictMode's main-thread disk access. See tools/devicetest/smooth.sh. The results are
+# published as the smooth-preview pre-release (workflow artifacts cannot be downloaded from a cloud session).
+
+on:
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: How many times the whole set of moves is run
+        default: '2'
+      label:
+        description: A name for this measurement (e.g. before, after)
+        default: run
+
+permissions:
+  contents: write
+
+jobs:
+  smooth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable hardware acceleration for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build the bench app
+        run: ./gradlew :app:assembleBench --stacktrace
+
+      - name: Free the build's memory for the emulator
+        run: |
+          ./gradlew --stop || true
+          pkill -f KotlinCompileDaemon || true
+
+      - name: The moves, measured
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 4
+          ram-size: 4096M
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
+          script: timeout 3600 bash tools/devicetest/smooth.sh app/build/outputs/apk/bench/app-bench.apk smooth ${{ inputs.rounds || '2' }} || true
+
+      - name: What was measured
+        if: always()
+        run: |
+          cat smooth/summary.txt || true
+          echo; echo "Where the main thread touched the disk (StrictMode):"
+          cat smooth/strictmode_places.txt || true
+
+      - name: Publish the results as a pre-release asset
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d smooth ] || exit 0
+          rm -f smooth/logcat.txt
+          name="smooth-${{ inputs.label || 'run' }}.zip"
+          (cd smooth && zip -qr "../$name" .)
+          gh release view smooth-preview >/dev/null 2>&1 || gh release create smooth-preview --prerelease \
+            --title "Smoothness measurements (emulator)" --notes "Frame statistics from the smooth workflow; each label replaced on its next run." || true
+          gh release upload smooth-preview "$name" --clobber

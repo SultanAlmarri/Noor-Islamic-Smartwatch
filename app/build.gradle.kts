@@ -35,6 +35,21 @@ android {
             // Test builds use the public development key (signing/README.md); Play releases need a private key.
             signingConfig = signingConfigs.getByName("dev")
         }
+        // (0.18.2) For measuring smoothness on an emulator (tools/devicetest/smooth.sh): the release build exactly as
+        // the owner installs it (R8, shrunk, not debuggable), plus the debug test hooks to set it up from adb, Android's
+        // StrictMode logging any disk access on the main thread, and profileable for the frame statistics. Never given
+        // to users.
+        create("bench") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            signingConfig = signingConfigs.getByName("dev")
+            proguardFiles("bench-rules.pro")
+        }
+    }
+    sourceSets {
+        getByName("bench") {
+            java.srcDir("src/debug/java")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

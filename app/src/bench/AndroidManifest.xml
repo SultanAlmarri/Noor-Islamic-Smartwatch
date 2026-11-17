@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The bench build only (tools/devicetest/smooth.sh; never given to users): the release build with the debug test hooks
+     (guarded by the DUMP permission only the shell holds), StrictMode logging main-thread disk access, and profileable
+     so that the shell may read its frame statistics. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <application>
+        <profileable android:shell="true" />
+        <receiver
+            android:name="com.noor.app.debug.TestHookReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.noor.smartwatch.debug.SETUP" />
+                <action android:name="com.noor.smartwatch.debug.DUMP" />
+                <action android:name="com.noor.smartwatch.debug.CITY" />
+                <action android:name="com.noor.smartwatch.debug.STATUS" />
+                <action android:name="com.noor.smartwatch.debug.LANG" />
+                <action android:name="com.noor.smartwatch.debug.SYSTEM_LOCALE" />
+            </intent-filter>
+        </receiver>
+        <!-- Created before the Application's onCreate, on the main thread: StrictMode from the very start. -->
+        <provider
+            android:name="com.noor.app.bench.BenchStrictMode"
+            android:authorities="${applicationId}.benchstrictmode"
+            android:exported="false"
+            android:initOrder="1000" />
+    </application>
+</manifest>
