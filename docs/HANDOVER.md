@@ -1435,5 +1435,16 @@ automatic graphics setting ... on by default ... sees your phone and chooses the
   so the compiler drops the other terrains; a new scenery builds its own); pixel-identical on the bench for each of
   the seven, and `SkyShaderCompileTest` compiles all seven. Compare these times (`Davey` in `shader_log.txt`) after
   any change to the land's structure.
+- **Open (follow-up): Medium's land costs about 1.45 times 0.18's per frame.** Timed on the bench (headless Chromium
+  draws with SwiftShader, like the emulator; `run.js` prints each pass's ms), dunes at seven moments, 0.18 and 0.19
+  run alternately: 0.18 ~300 ms, 0.19 ~440 ms (the first 0.19 with three calls of layerColor was ~1 400, one call
+  ~550, one terrain per program ~440). What is left is structure: 0.18 shaded inside the layer loop, where the
+  driver can unroll and fold every `layer == n`; 0.19 finds the shown layers first and shades them with a layer known
+  only at run time. Going back to 0.18's form makes the all-terrain source estimate past 65 000 in `SkyShaderSizeTest`,
+  so that test would have to size the per-terrain programs the app compiles (folding `terrainId()`). On the emulator
+  the first frames at night were 17-29 s against 0.18's 9-10 s. On a phone this is unmeasured: the land is a cached
+  layer redrawn when the moment shown changes, and the frame watcher lowers the resolution, then the level.
+- `real_sky.sh`'s `shader_log.txt` keeps 80 lines sorted by count, then by text: with equal counts the latest clock
+  times come first, so it over-represents the night shots. `skia_log.txt` is complete.
 
 **Not tested**: on a phone or watch. Emulator photographs and software renders only (release report).
