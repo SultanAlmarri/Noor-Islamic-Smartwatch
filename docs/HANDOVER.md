@@ -1327,7 +1327,9 @@ of the world chosen by GPS, the app renamed **Minhad (منهاد)**, and evidenc
   alone failed; with only the progress line's radial gradient replaced by plain colours the whole new code passed.
   A gradient brush on the path's strokes (one of them dashed) kills the emulator's graphics (SwiftShader through gfxstream); the line is
   now drawn in plain colours in a layer of its own and the same fade taken out around the Sun with one gradient-filled
-  circle (`BlendMode.DstOut`). Whether a phone's GPU minded is not known (never on a phone). The emulator also
+  circle (`BlendMode.DstOut`). The full run then lost the emulator again as the forest lake's jagged treeline came
+  in: the clip of the region above the land (360 steps) went too; the land's outline (72 steps, `SunLift.land`) is
+  taken out of the same layer instead. Whether a phone's GPU minded either is not known (never on a phone). The emulator also
   crashed now and then without it (once in five runs of the code before the sky work), so one crash alone proves little.
 - The green hills' autumn pictures (the colour pass of 16 November).
 - Minhad Studio (a helper agent; docs/WATCH.md): `FaceDesign` (core), the `face` module's renderer, the watch's

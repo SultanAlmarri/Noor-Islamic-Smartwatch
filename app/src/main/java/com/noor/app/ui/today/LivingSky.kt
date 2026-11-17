@@ -52,7 +52,6 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onSizeChanged
@@ -191,27 +190,39 @@ internal object SunLift {
     const val FOCAL = 1.15f
 
     /**
-     * The region above the land (px), for drawing the path behind it: bounded below by the skyline, a hair above it,
-     * and never below the level horizon [horizonY]. Null when there is no skyline.
+     * The land's region (px), from the skyline down to [bottom], taken out of the path's layer where the land stands in
+     * front of it: in [STRIPS] strips across, each as high as the highest land in it (a hair over it), never below the
+     * level horizon [horizonY]. Null when there is no skyline.
+     *
+     * (0.18.1) Until 0.18.0 the path was drawn inside a clip of the region above the land, 360 steps across: on the
+     * Android emulator's graphics (SwiftShader through gfxstream) that clip, over the forest lake's treeline, killed the
+     * emulator; now no clip, and a coarser outline.
      */
-    fun above(sky: FloatArray?, w: Float, horizonY: Float, rtl: Boolean, density: Float): Path? {
+    fun land(sky: FloatArray?, w: Float, horizonY: Float, bottom: Float, rtl: Boolean, density: Float): Path? {
         if (sky == null || sky.isEmpty() || w <= 0f) return null
         val n = sky.size
+        val strips = minOf(STRIPS, n)
         val hair = 0.6f * density
         return Path().apply {
-            moveTo(0f, -1f)
-            lineTo(w, -1f)
-            // From the right edge to the left; each strip as a flat step, so the land's highest point in it is never
-            // crossed. (Mirrored, the picture's first strip is on the right.)
-            for (j in 0 until n) {
-                val i = if (rtl) j else n - 1 - j
-                val y = minOf(horizonY, horizonY - sky[i] * FOCAL * w - hair)
-                lineTo(w * (n - j) / n, y)
-                lineTo(w * (n - j - 1) / n, y)
+            moveTo(w, bottom)
+            // From the right edge to the left. (Mirrored, the picture's first strip is on the right.)
+            for (j in 0 until strips) {
+                var top = 0f
+                for (k in (j * n / strips) until ((j + 1) * n / strips)) {
+                    val v = sky[if (rtl) k else n - 1 - k]
+                    if (v.isFinite() && v > top) top = v
+                }
+                val y = minOf(horizonY, horizonY - top * FOCAL * w - hair)
+                lineTo(w * (strips - j) / strips, y)
+                lineTo(w * (strips - j - 1) / strips, y)
             }
+            lineTo(0f, bottom)
             close()
         }
     }
+
+    /** How many steps across the land's outline has where it hides the path. */
+    const val STRIPS = 72
 }
 
 internal class SkyGeometry(
@@ -641,7 +652,7 @@ internal fun LivingSky(
                 // (0.18) The path is drawn behind the land: above the scenery's own skyline, a hair clear of it, so that
                 // it passes behind a mountain or a tree as the Sun does; else above the level horizon. Until 0.17 it
                 // was cut at the level horizon only, and over the higher sceneries it ran down the mountainside.
-                val above = SunLift.above(skyline, w, hy, rtl, density) ?: Path().apply { addRect(Rect(0f, 0f, w, hy)) }
+                val land = SunLift.land(skyline, w, hy, hy + 2f, rtl, density)
                 val stroke = 1.6.dp.toPx()
                 val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
                 val dashed = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash)
@@ -688,7 +699,7 @@ internal fun LivingSky(
                     // filled circle: the same look, drawn the common way.)
                     val shade = Color.Black.copy(alpha = (0.04f + 0.08f * light.day) * pathAlpha)
                     drawContext.canvas.saveLayer(layerBounds, Paint())
-                    clipPath(above) {
+                    clipRect(0f, 0f, w, hy) {
                         drawPath(path, shade, style = dashShade)
                         drawPath(path, Color.White.copy(alpha = 0.5f * pathAlpha), style = dashed)
                         val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
@@ -700,6 +711,8 @@ internal fun LivingSky(
                     // (What is left of the line: nothing within 0.24 of the reach, all of it from 0.62 on.)
                     drawCircle(Brush.radialGradient(0f to Color.Black, 0.24f to Color.Black, 0.62f to Color.Transparent, 1f to Color.Transparent, center = sun, radius = reach),
                         reach, sun, blendMode = BlendMode.DstOut)
+                    // (And where the land stands in front of the path, it is taken out: the path passes behind it.)
+                    if (land != null) drawPath(land, Color.Black, blendMode = BlendMode.DstOut)
                     drawContext.canvas.restore()
                     if (up > 0f) {
                         drawCircle(light.sunCore.copy(alpha = up), (7f + 1.5f * light.golden).dp.toPx(), sun)
