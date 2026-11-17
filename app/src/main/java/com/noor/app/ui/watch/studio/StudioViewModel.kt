@@ -10,10 +10,12 @@ import com.noor.prayer.WatchConfig
 import com.noor.prayer.WatchReport
 import com.noor.prayer.face.FaceDesign
 import com.noor.prayer.face.Slot
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -67,6 +69,8 @@ class StudioViewModel(app: Application) : AndroidViewModel(app) {
     /** The configuration the phone sends the watch: the face's prayer data comes from exactly this. */
     val config: StateFlow<WatchConfig?> = container.settings.settings
         .map { WearSync.configFor(it, 0L, container.timetables) }
+        // (Eight weeks of times: off the main thread.)
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val watches: StateFlow<WatchSetupState?> = container.watchSetup.states()
