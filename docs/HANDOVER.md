@@ -1579,3 +1579,42 @@ High, closer under the text because the medium horizon is higher on the screen.
 `SunLift.skylineY`), not `LandProfile.skylineY`.
 
 **Not tested** on a phone or the emulator (photograph `real-sky.yml` tier MEDIUM).
+
+## 31. The Sun's path, Medium from the real sceneries, the level over the pictures (0.20.0, 17 November 2026, phone; watch rebuilt)
+
+**What the owner asked** (after trying 0.19.0): Medium "looks so bad ... I want it to look absolutely breathtaking";
+its clouds had "straight lines coming out of them" and did not "appear above a certain level ... like a line blocking
+them"; in Settings the scenery pictures did not change with the level ("even if I select low ... they stay to the
+high"), and the level should be chosen "without having to scroll up and down repeatedly"; the Sun's path: "I don't like
+that part of it gets hidden behind mountains ... zero consistency between the sun path on each scenery ... make a smart
+fix"; and on High "remove the distant terrain from the sand dunes". "I want this to be world class."
+
+**What was done** (the lead: the path, Settings, merging and checks; helpers: Medium in sections 30.1 and 30.2, the
+dunes at the end of section 30):
+- **The Sun's path** (`SkyGeometry`, `LivingSky` layer 4b, `SunLift`): one arch over every scenery and every level.
+  Its height is in proportion to the sine of the Sun's apparent elevation (a cosine of the time through the day) and
+  the time runs evenly between sunrise and sunset (`timeWarp`'s day segment straight), so it is an even, round arch
+  in every place and season; in proportion to the elevation it rose almost straight from the horizon near the tropics
+  and met itself at noon in a point (Medium's "tent"). No lift onto each scenery's skyline any more and no horizon
+  lowered per scenery (`HeroGeometry.horizonFor`, `RealSky.sunLift`, `LIFT_SHARE` removed; `lift` in land.json is no
+  longer read). It is drawn after the land (Medium, Low) and with nothing cut out of it (High): never hidden. Where
+  the land stands in front of the Sun itself, a ring on the path shows where it is (`SunLift.skylineY` from land.json's
+  `skyline` for High and for Medium's picture land; `LandProfile.skylineY` for the layered fallback; Low keeps its land
+  under the path). Prayer times are untouched; the marks stay where the Sun is at each prayer (`SunMarkTest`; its
+  retired rule, the land opened where the Sun meets the horizon, replaced). `LivingSkyTest` locks the arch (symmetry,
+  a round top, the same over every terrain) and the skyline lookup. The bench (`tools/sky3d/bench.js`) does the same.
+- **Settings → Home scenery** (`SceneryScreen`): a four-way picker (Auto, High, Medium, Low) at the top, what the level
+  is under it (for Auto, the level chosen for the phone), and every scenery picture shown as that level draws it,
+  fading from one to the other. Pictures: High as before (the dunes' made again); Medium from the bench
+  (`tools/skybench/cards.py`, the picture land and the cloud sets); Low from the app's own code in a software render
+  (`SceneryCardPicturesTest`). `SceneryScreenTest` chooses Low and checks it is saved and described.
+- **Medium** (30.1, 30.2): the real sky's cloud sets, chosen by its director and lit on the CPU (`SetClouds`), over
+  the whole sky; the land from the real sky's own pictures lit on the CPU (`PictureLand`), with a still mirror for the
+  water; the layered land of 0.19 kept as the fallback. Light: no GL ES 3; pictures relit off the main thread only
+  when the light changes.
+- **High dunes**: the far rock range removed and the scenery baked again in the cloud (end of section 30).
+
+**Tested**: unit tests and design renders; the bench; High on the Android 14 emulator (dunes, Pacific Northwest,
+Arctic, Red rock at sunrise and midday: the same arch everywhere, the ring at sunrise behind the land; two of the
+eight photos lost to the emulator's slowness, a locked screen and an "isn't responding" just after the first frame).
+Medium on the emulator: release report. **Not tested**: on a phone or watch.

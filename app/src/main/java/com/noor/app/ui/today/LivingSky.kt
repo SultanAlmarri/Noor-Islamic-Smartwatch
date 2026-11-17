@@ -724,7 +724,9 @@ internal fun LivingSky(
         // 4b · The Sun's path (0.20): in front of the land, the same arch over every scenery and at every level. Until
         // 0.19 the land hid it where it stood in front (the owner: "part of it gets hidden behind mountains"). Where the
         // land stands in front of the Sun itself, a ring on the path shows where the Sun is, behind it.
-        val skyline = if (real != null) SunLift.skyline else null
+        // (The medium land drawn from the real sky's pictures has the real sky's skyline.)
+        val pictureSky = remember(landId) { landId?.let { id -> com.noor.app.sky.Biome.entries.firstOrNull { it.id == id }?.let { com.noor.app.sky.RealSky.skyline(context, it) } } }
+        val skyline = if (real != null) SunLift.skyline else if (pictureLand) pictureSky else null
         val pathLayer = remember(scene, layout, rtl, real != null, simple, skyline) {
             Modifier.fillMaxSize().drawWithCache {
                 val w = size.width; val h = size.height
@@ -734,7 +736,7 @@ internal fun LivingSky(
                 // The land's top at x (px): the real sky's skyline; the 0.9 sky's ridges (LandProfile.skylineY);
                 // none for the simplest sky, which keeps its land under the path.
                 val landTop: ((Float) -> Float)? = when {
-                    real != null -> skyline?.let { sky -> { x -> SunLift.skylineY(sky, x, w, hy, rtl) } }
+                    real != null || skyline != null -> skyline?.let { sky -> { x -> SunLift.skylineY(sky, x, w, hy, rtl) } }
                     simple -> null
                     else -> {
                         val geo = landProfile.geometry(hy, h, density)
