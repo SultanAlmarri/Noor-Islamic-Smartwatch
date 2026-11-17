@@ -87,7 +87,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -158,22 +157,12 @@ fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpe
     val u = ui ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = NoorTheme.colors.gold, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
     }
-    // (0.18.2) The clock ticks every second, the rest of the home screen changes once a minute at most: the screen is
-    // given the same state all minute (the moment to the minute; the countdown, the gold line and "in 2 h 5 min" read
-    // the clock themselves), so that only they are worked out again each second. Until 0.18.1 every part of the
-    // screen, the sky header and the three pages of times among them, was composed anew every second.
-    val clockState = rememberUpdatedState(u.now)
-    val clock = remember { { clockState.value } }
-    val minuteState = u.copy(now = u.now.truncatedTo(ChronoUnit.MINUTES), state = u.state?.copy(untilNext = java.time.Duration.ZERO, progress = 0f))
-    val held = remember { arrayOfNulls<TodayUi>(1) }
-    if (held[0] != minuteState) held[0] = minuteState
-    val m = held[0]!!
-    TodayContent(m, contentPadding, dayFor = { vm.day(m, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer, onScrubbed = vm::scrubLearned,
+    TodayContent(u, contentPadding, dayFor = { vm.day(u, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer, onScrubbed = vm::scrubLearned,
         onToggleAlert = { p, on ->
             // (The first alert turned on asks for Android's notification permission, at the moment its reason is plain.)
-            if (on && !m.settings.alerts.enabled && android.os.Build.VERSION.SDK_INT >= 33) notifications()
+            if (on && !u.settings.alerts.enabled && android.os.Build.VERSION.SDK_INT >= 33) notifications()
             vm.setAlert(p, on)
-        }, clock = clock)
+        })
 }
 
 /**
@@ -265,8 +254,6 @@ fun TodayContent(
     onScrubbed: () -> Unit = {},
     /** A prayer's bell was touched (0.15): its alert on or off. */
     onToggleAlert: (Prayer, Boolean) -> Unit = { _, _ -> },
-    /** (0.18.2) The moment to the second, for what counts seconds; [u]'s moment may be to the minute. */
-    clock: () -> java.time.Instant = { u.now },
 ) {
     val ar = isArabicUi()
     // (Kept between the screen's once-a-second updates: a new formatter each second made every row of the day's
@@ -323,7 +310,7 @@ fun TodayContent(
         // (Whether the list shows today: the sky's hint keeps out of the way of "Today" while another day is shown.)
         var viewingToday by remember { mutableStateOf(true) }
         SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup,
-            showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed, viewingToday = viewingToday, clock = clock)
+            showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed, viewingToday = viewingToday)
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -337,15 +324,6 @@ fun TodayContent(
             LaunchedEffect(todayPage) {
                 if (todayPage != lastTodayPage && pager.currentPage == lastTodayPage) pager.scrollToPage(todayPage)
                 lastTodayPage = todayPage
-            }
-            // (0.18.2) The days either side of the one shown are worked out ahead, off the main thread, so that a swipe
-            // never waits for their times (until 0.18.1 a day beyond the next was worked out as it came into view).
-            LaunchedEffect(pager) {
-                snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { page ->
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                        for (d in intArrayOf(1, -1, 2, -2)) (page + d).takeIf { it in 0 until DateWindow.pageCount }?.let { runCatching { dayFor(DateWindow.dateOf(it)) } }
-                    }
-                }
             }
             // A light tick each time a new day settles, as with a physical date wheel.
             LaunchedEffect(pager) {
@@ -370,7 +348,7 @@ fun TodayContent(
             HorizontalPager(state = pager, beyondViewportPageCount = 1, pageSpacing = 24.dp, verticalAlignment = Alignment.Top) { page ->
                 val date = DateWindow.dateOf(page)
                 val day = remember(date, u.settings, u.place, u.profile) { dayFor(date) }
-                if (day != null) Timeline(day.day, date, isToday = date == today, u, f, home, onOpenPrayer, onToggleAlert, clock)
+                if (day != null) Timeline(day.day, date, isToday = date == today, u, f, home, onOpenPrayer, onToggleAlert)
             }
             // Where the times come from and the method now live in Settings (0.9.2); the home screen is the day itself.
             Spacer(Modifier.height(contentPadding.calculateBottomPadding() + 10.dp))
@@ -405,7 +383,6 @@ private fun SkyHeader(
     onOpenLocation: () -> Unit, onRefresh: () -> Unit, previewScrub: Double?, previewSkyTime: Float?,
     real: RealSkySetup? = null,
     showScrubHint: Boolean = false, onScrubbed: () -> Unit = {}, viewingToday: Boolean = true,
-    clock: () -> java.time.Instant = { u.now },
 ) {
     val st = u.state ?: return
     val place = u.place ?: return
@@ -576,10 +553,7 @@ private fun SkyHeader(
             Box(Modifier.arrives(0, Opening.HEADER_AT, lift = 10.dp)) { PlaceRow(u, f, onOpenLocation, onRefresh, slim = hero.slimPlace) }
             Spacer(Modifier.height(2.dp))
             // The next prayer; while the Sun is being drawn along its path, the moment it stands at takes its place.
-            val awayState = animateFloatAsState(if (scrubbing) 1f else 0f, tween(NoorMotion.Standard), label = "scrub")
-            val away by awayState
-            // (0.18.2) Whether the readout is there, not how far it has come: the latter is read only in layers.
-            val readout by remember { androidx.compose.runtime.derivedStateOf { awayState.value > 0f } }
+            val away by animateFloatAsState(if (scrubbing) 1f else 0f, tween(NoorMotion.Standard), label = "scrub")
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 // (0.15: while another day is listed below, the sky's "now" steps back and says it is today's.)
                 val elsewhere by animateFloatAsState(if (viewingToday) 0f else 1f, tween(NoorMotion.Standard), label = "elsewhere")
@@ -588,6 +562,7 @@ private fun SkyHeader(
                     // then the next prayer's countdown. The notification shows the same.
                     val cd = com.noor.prayer.Countdowns.of(st, u.now, u.settings.elapsedAfterPrayer)
                     val shownAt = cd.event.at
+                    val countdownText = countdownText(cd, f)
                     val label = stringResource(when { !cd.elapsed -> R.string.next_prayer; cd.event.prayer == com.noor.prayer.Prayer.SHURUQ -> R.string.since_sunrise; else -> R.string.since_prayer })
                     val title: @Composable (Boolean) -> Unit = { inline ->
                         AnimatedContent(cd.event.prayer to cd.event.date, transitionSpec = {
@@ -603,10 +578,10 @@ private fun SkyHeader(
                                 Text(f.timeAt(shownAt, place.zone), style = MaterialTheme.typography.titleMedium.merge(Tabular).copy(shadow = SkyText.Shadow), color = Sky.OnSkySecondary)
                             }
                         }
-                        Box(Modifier.weight(1.15f)) { LiveCountdown(st, clock, u.settings.elapsedAfterPrayer, f, hero.countdownMax) }
+                        Box(Modifier.weight(1.15f)) { Countdown(countdownText, hero.countdownMax) }
                     } else {
                         Box(Modifier.arrives(2, Opening.HEADER_AT, lift = 12.dp)) { title(true) }
-                        Box(Modifier.arrives(4, Opening.HEADER_AT, lift = 22.dp)) { LiveCountdown(st, clock, u.settings.elapsedAfterPrayer, f, hero.countdownMax) }
+                        Box(Modifier.arrives(4, Opening.HEADER_AT, lift = 22.dp)) { Countdown(countdownText, hero.countdownMax) }
                         // 0.15: what the number counts, in words ("until Maghrib", "since Asr began"): a sign alone
                         // had to be learned, and "+15:21" read as a time of day.
                         Text(
@@ -622,10 +597,10 @@ private fun SkyHeader(
                         )
                     }
                 }
-                if (readout) AtMoment(shown) { f0 ->
+                if (away > 0f) AtMoment(shown) { f0 ->
                     val at = caught?.second ?: scene.instantAt(f0).plusSeconds(30).truncatedTo(ChronoUnit.MINUTES)
                     ScrubReadout(
-                        at = at, prayer = caught?.first, elevation = scene.elevationAt(f0), now = clock(), zone = place.zone, date = today, f = f, countdownMax = hero.countdownMax,
+                        at = at, prayer = caught?.first, elevation = scene.elevationAt(f0), now = u.now, zone = place.zone, date = today, f = f, countdownMax = hero.countdownMax,
                         modifier = Modifier.matchParentSize().graphicsLayer { alpha = away; translationY = 12.dp.toPx() * (1f - away) },
                     )
                 }
@@ -636,10 +611,8 @@ private fun SkyHeader(
         // (Whether the opening is over, not where it is: read at every frame of it, it recomposed the header each frame.)
         val opened by remember { androidx.compose.runtime.derivedStateOf { opening.value >= 1f } }
         val hintShown = showScrubHint && !scrubbing && opened
-        val hintState = animateFloatAsState(if (hintShown) 1f else 0f, tween(if (hintShown) 900 else 250), label = "scrubHint")
-        val hintAlpha by hintState
-        val hintThere by remember { androidx.compose.runtime.derivedStateOf { hintState.value > 0.01f } }
-        if (hintThere) Row(
+        val hintAlpha by animateFloatAsState(if (hintShown) 1f else 0f, tween(if (hintShown) 900 else 250), label = "scrubHint")
+        if (hintAlpha > 0.01f) Row(
             Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp, start = 24.dp, end = 24.dp).graphicsLayer { alpha = hintAlpha }
                 .clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.28f)).border(0.75.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
                 .padding(horizontal = 14.dp, vertical = 7.dp).clearAndSetSemantics { },
@@ -774,12 +747,6 @@ internal fun terrainFor(s: com.noor.app.data.Scenery, countryCode: String?, elev
 
 /** "−1:10:34" before a prayer, "+04:12" after it (0.9.7): a true minus sign, the same in both languages, as in the notification. */
 internal fun countdownText(c: com.noor.prayer.Countdown, f: Formatter): String = (if (c.elapsed) "+" else "\u2212") + f.timer(c.duration)
-
-/** (0.18.2) The countdown, worked out from the clock in a scope of its own: only it is composed again each second. */
-@Composable
-private fun LiveCountdown(st: com.noor.prayer.ScheduleState, clock: () -> java.time.Instant, elapsedAfter: Boolean, f: Formatter, maxSp: Float) {
-    Countdown(countdownText(com.noor.prayer.Countdowns.of(st, clock(), elapsedAfter), f), maxSp)
-}
 
 /** "2:10" large, ":39" quieter; the changing digits roll into place. Fitted to the width, so it never wraps. */
 @Composable
@@ -928,22 +895,16 @@ private fun DayArrow(icon: androidx.compose.ui.graphics.vector.ImageVector, labe
  */
 @Composable
 private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: TodayUi, f: Formatter, home: HomeLayout, onOpenPrayer: (Prayer) -> Unit = {},
-                     onToggleAlert: (Prayer, Boolean) -> Unit = { _, _ -> }, clock: () -> java.time.Instant = { u.now }) {
+                     onToggleAlert: (Prayer, Boolean) -> Unit = { _, _ -> }) {
     val c = NoorTheme.colors
     val st = u.state
     val current = if (isToday) st?.current?.takeIf { it.date == date }?.prayer else null
     val next = if (isToday) st?.next?.takeIf { it.date == date }?.prayer else null
-    fun progressAt(now: java.time.Instant): Float = if (isToday && st != null && st.current != null) {
+    val progress = if (isToday && st != null && st.current != null) {
         val total = Duration.between(st.current!!.at, st.next.at).seconds.toFloat().coerceAtLeast(1f)
-        (Duration.between(st.current!!.at, now).seconds / total).coerceIn(0f, 1f)
+        (Duration.between(st.current!!.at, u.now).seconds / total).coerceIn(0f, 1f)
     } else 0f
-    // (0.18.2) The gold line follows the clock outside composition and is read only where it is drawn: until 0.18.1 it
-    // was an animated value read here, so the whole list was composed anew at every frame of its glide each second.
-    val fill = remember { androidx.compose.animation.core.Animatable(progressAt(clock())) }
-    val progressNow by rememberUpdatedState<() -> Float>({ progressAt(clock()) })
-    LaunchedEffect(fill) {
-        snapshotFlow { progressNow() }.collectLatest { fill.animateTo(it, tween(600)) }
-    }
+    val fill by animateFloatAsState(progress, tween(600), label = "lineFill")
     // In Ramadan the day turns on two moments: the end of Suhoor at Fajr and Iftar at Maghrib.
     val ramadan = HijriDate.of(date, u.settings.hijriAdjust).isRamadan
     val suhoor = stringResource(R.string.today_suhoor)
@@ -957,24 +918,21 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
             val isNext = p == next
             val passed = isToday && !isCurrent && at != null && at.isBefore(u.now)
             // Gold fills the line from the current moment's node to the next one's, in step with the time.
-            val fillBelow: () -> Float = if (isCurrent && list.getOrNull(i + 1) == next) { { (fill.value * 2f).coerceIn(0f, 1f) } } else NoFill
-            val fillAbove: () -> Float = if (isNext && list.getOrNull(i - 1) == current) { { (fill.value * 2f - 1f).coerceIn(0f, 1f) } } else NoFill
+            val fillBelow = if (isCurrent && list.getOrNull(i + 1) == next) (fill * 2f).coerceIn(0f, 1f) else 0f
+            val fillAbove = if (isNext && list.getOrNull(i - 1) == current) (fill * 2f - 1f).coerceIn(0f, 1f) else 0f
             // 0.14: the bell says what will happen at this time (the Adhan or a sound, a quiet notification, nothing).
             val alert = u.settings.alerts.alert(p)
             val alerting = u.settings.alerts.enabled && alert.enabled
             TimelineRow(
                 p, f.prayerName(p, date), day.minutes[p]?.let { f.time(it) },
-                // (Worked out where it is shown: "in 2 h 5 min" reads the clock, so only that line follows it.)
-                status = {
-                    listOfNotNull(
-                        when {
-                            isCurrent -> stringResource(R.string.now)
-                            isNext && st != null -> stringResource(R.string.today_in, durationText(Duration.between(clock(), st.next.at), f))
-                            else -> null
-                        },
-                        if (ramadan && p == Prayer.FAJR) suhoor else if (ramadan && p == Prayer.MAGHRIB) iftar else null,
-                    ).joinToString(" · ").ifEmpty { null }
-                },
+                status = listOfNotNull(
+                    when {
+                        isCurrent -> stringResource(R.string.now)
+                        isNext && st != null -> stringResource(R.string.today_in, durationText(Duration.between(u.now, st.next.at), f))
+                        else -> null
+                    },
+                    if (ramadan && p == Prayer.FAJR) suhoor else if (ramadan && p == Prayer.MAGHRIB) iftar else null,
+                ).joinToString(" · ").ifEmpty { null },
                 isCurrent = isCurrent, isNext = isNext, passed = passed,
                 first = i == 0, last = i == list.size - 1,
                 lineAboveDone = passed || isCurrent, lineBelowDone = passed, fillAbove = fillAbove, fillBelow = fillBelow, f = f,
@@ -998,9 +956,9 @@ private fun durationText(d: Duration, f: Formatter): String {
 
 @Composable
 private fun TimelineRow(
-    p: Prayer, name: String, time: Pair<String, String?>?, status: @Composable () -> String?,
+    p: Prayer, name: String, time: Pair<String, String?>?, status: String?,
     isCurrent: Boolean, isNext: Boolean, passed: Boolean, first: Boolean, last: Boolean,
-    lineAboveDone: Boolean, lineBelowDone: Boolean, fillAbove: () -> Float, fillBelow: () -> Float, f: Formatter,
+    lineAboveDone: Boolean, lineBelowDone: Boolean, fillAbove: Float, fillBelow: Float, f: Formatter,
     height: Dp = 54.dp, minor: Boolean = false,
     bell: androidx.compose.ui.graphics.vector.ImageVector? = null, bellOn: Boolean = false, bellText: String? = null,
     onClick: (() -> Unit)? = null, onBell: ((Boolean) -> Unit)? = null, modifier: Modifier = Modifier,
@@ -1028,13 +986,11 @@ private fun TimelineRow(
                 val x = size.width / 2; val mid = size.height / 2; val w = 1.5.dp.toPx(); val gap = (if (minor) 14 else 18).dp.toPx()
                 if (!first) {
                     drawLine(if (lineAboveDone) done else track, Offset(x, -2f), Offset(x, (mid - gap).coerceAtLeast(-2f)), w, StrokeCap.Round)
-                    val above = fillAbove()
-                    if (above > 0f) drawLine(c.gold, Offset(x, -2f), Offset(x, -2f + (mid - gap + 2f) * above), w * 1.4f, StrokeCap.Round)
+                    if (fillAbove > 0f) drawLine(c.gold, Offset(x, -2f), Offset(x, -2f + (mid - gap + 2f) * fillAbove), w * 1.4f, StrokeCap.Round)
                 }
                 if (!last) {
                     drawLine(if (lineBelowDone) done else track, Offset(x, mid + gap), Offset(x, size.height + 2f), w, StrokeCap.Round)
-                    val below = fillBelow()
-                    if (below > 0f) drawLine(c.gold, Offset(x, mid + gap), Offset(x, mid + gap + (size.height + 2f - mid - gap) * below), w * 1.4f, StrokeCap.Round)
+                    if (fillBelow > 0f) drawLine(c.gold, Offset(x, mid + gap), Offset(x, mid + gap + (size.height + 2f - mid - gap) * fillBelow), w * 1.4f, StrokeCap.Round)
                 }
             }
             SkyDisc(p, when { minor -> 24.dp; isCurrent -> 38.dp; else -> 32.dp }, passed = passed, lit = isCurrent)
@@ -1044,7 +1000,7 @@ private fun TimelineRow(
         Column(Modifier.weight(1f)) {
             Text(name, style = (if (minor) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium).copy(fontWeight = if (isCurrent || isNext) FontWeight.SemiBold else FontWeight.Medium),
                 color = if (minor && !isNext && !isCurrent) c.textSecondary else fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            RowStatus(status, if (isCurrent) c.textSecondary else c.goldText)
+            if (status != null) Text(status, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.2.sp), color = if (isCurrent) c.textSecondary else c.goldText)
         }
         if (time == null) Text("—", color = c.textMuted)
         else Row(verticalAlignment = Alignment.Bottom) {
@@ -1069,15 +1025,6 @@ private fun TimelineRow(
             }
         } else Spacer(Modifier.width(8.dp))
     }
-}
-
-private val NoFill: () -> Float = { 0f }
-
-/** (0.18.2) A row's status line in a scope of its own: the next prayer's "in 2 h 5 min" follows the clock alone. */
-@Composable
-private fun RowStatus(status: @Composable () -> String?, color: Color) {
-    val text = status() ?: return
-    Text(text, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.2.sp), color = color)
 }
 
 /** No location yet: a dawn sky and one clear action. */
