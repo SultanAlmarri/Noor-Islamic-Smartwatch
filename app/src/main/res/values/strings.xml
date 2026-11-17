@@ -505,6 +505,7 @@
     <string name="sky_graphics_title">Graphics</string>
     <string name="sky_graphics_note">Higher graphics use more battery. Automatic chooses for your phone, and steps down by itself if your phone finds it heavy.</string>
     <string name="sky_graphics_auto">Automatic</string>
+    <string name="sky_graphics_auto_short">Auto</string>
     <string name="sky_graphics_auto_now">Chosen for your phone: %1$s</string>
     <string name="sky_graphics_high">High</string>
     <string name="sky_graphics_high_desc">The realistic sky: rendered sceneries, clouds and water</string>

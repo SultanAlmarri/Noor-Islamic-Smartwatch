@@ -49,18 +49,42 @@ import com.noor.app.data.PrayerProvider
 import com.noor.app.data.Scenery
 import com.noor.app.data.SkyGraphics
 import com.noor.app.sky.Biome
+import com.noor.app.sky.SkyLevel
+import com.noor.app.sky.SkyLevels
+import androidx.compose.runtime.getValue
 import com.noor.app.ui.adhan.BackHeader
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.theme.NoorTheme
 
-/** The picture and the name of each scenery. */
-internal fun sceneryImage(b: Biome): Int = when (b) {
-    Biome.DUNES -> R.drawable.scenery_real_dunes
-    Biome.RAINFOREST -> R.drawable.scenery_real_pnw
-    Biome.ARCTIC -> R.drawable.scenery_real_arctic
-    Biome.OCEAN -> R.drawable.scenery_real_ocean
-    Biome.MEADOW -> R.drawable.scenery_real_meadow
-    Biome.CANYON -> R.drawable.scenery_real_canyon
+/**
+ * The picture of each scenery as a graphics level draws it (0.20): the high graphics' rendered scenery, the medium
+ * graphics' layered sky (tools/skybench/cards.py), the low graphics' simplest sky (SceneryCardPicturesTest).
+ */
+internal fun sceneryImage(b: Biome, level: SkyLevel = SkyLevel.HIGH): Int = when (level) {
+    SkyLevel.HIGH -> when (b) {
+        Biome.DUNES -> R.drawable.scenery_real_dunes
+        Biome.RAINFOREST -> R.drawable.scenery_real_pnw
+        Biome.ARCTIC -> R.drawable.scenery_real_arctic
+        Biome.OCEAN -> R.drawable.scenery_real_ocean
+        Biome.MEADOW -> R.drawable.scenery_real_meadow
+        Biome.CANYON -> R.drawable.scenery_real_canyon
+    }
+    SkyLevel.MEDIUM -> when (b) {
+        Biome.DUNES -> R.drawable.scenery_medium_dunes
+        Biome.RAINFOREST -> R.drawable.scenery_medium_pnw
+        Biome.ARCTIC -> R.drawable.scenery_medium_arctic
+        Biome.OCEAN -> R.drawable.scenery_medium_ocean
+        Biome.MEADOW -> R.drawable.scenery_medium_meadow
+        Biome.CANYON -> R.drawable.scenery_medium_canyon
+    }
+    SkyLevel.LOW -> when (b) {
+        Biome.DUNES -> R.drawable.scenery_low_dunes
+        Biome.RAINFOREST -> R.drawable.scenery_low_pnw
+        Biome.ARCTIC -> R.drawable.scenery_low_arctic
+        Biome.OCEAN -> R.drawable.scenery_low_ocean
+        Biome.MEADOW -> R.drawable.scenery_low_meadow
+        Biome.CANYON -> R.drawable.scenery_low_canyon
+    }
 }
 
 internal fun sceneryName(b: Biome): Int = when (b) {
@@ -80,17 +104,16 @@ internal fun graphicsName(g: SkyGraphics): Int = when (g) {
 }
 
 /** What each level of graphics is (0.19). */
-private fun graphicsDesc(g: SkyGraphics): Int? = when (g) {
-    SkyGraphics.AUTO -> null
-    SkyGraphics.HIGH -> R.string.sky_graphics_high_desc
-    SkyGraphics.MEDIUM -> R.string.sky_graphics_medium_desc
-    SkyGraphics.LOW -> R.string.sky_graphics_low_desc
+private fun levelDesc(l: SkyLevel): Int = when (l) {
+    SkyLevel.HIGH -> R.string.sky_graphics_high_desc
+    SkyLevel.MEDIUM -> R.string.sky_graphics_medium_desc
+    SkyLevel.LOW -> R.string.sky_graphics_low_desc
 }
 
-private fun levelName(l: com.noor.app.sky.SkyLevel): Int = when (l) {
-    com.noor.app.sky.SkyLevel.HIGH -> R.string.sky_graphics_high
-    com.noor.app.sky.SkyLevel.MEDIUM -> R.string.sky_graphics_medium
-    com.noor.app.sky.SkyLevel.LOW -> R.string.sky_graphics_low
+private fun levelName(l: SkyLevel): Int = when (l) {
+    SkyLevel.HIGH -> R.string.sky_graphics_high
+    SkyLevel.MEDIUM -> R.string.sky_graphics_medium
+    SkyLevel.LOW -> R.string.sky_graphics_low
 }
 
 /**
@@ -107,11 +130,24 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
     val auto = Biome.of(Scenery.AUTO, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
     val chosen = Biome.of(s.scenery, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
     val placeName = place?.let { if (ar) it.nameAr ?: it.nameEn else it.nameEn }
+    // (0.20) The graphics level is chosen here, over the sceneries, and every picture shows the sceneries as that level
+    // draws them, at once (until 0.19 the level was at the foot of the page and the pictures were always the high
+    // graphics': the owner chose Low and saw nothing change).
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val autoLevel = SkyLevels.autoLevel.value ?: androidx.compose.runtime.remember { SkyLevels.auto(context) }
+    val level = when (s.skyGraphics) {
+        SkyGraphics.AUTO -> autoLevel
+        SkyGraphics.HIGH -> SkyLevel.HIGH
+        SkyGraphics.MEDIUM -> SkyLevel.MEDIUM
+        SkyGraphics.LOW -> SkyLevel.LOW
+    }
     com.noor.app.ui.components.NoorPage(stringResource(R.string.scenery_title), contentPadding, onBack = onBack, spacing = 0.dp) {
         Text(stringResource(R.string.scenery_intro), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
             modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 12.dp))
+        GraphicsPicker(s.skyGraphics, level, autoLevel) { vm.setSkyGraphics(it) }
+        Spacer(Modifier.height(16.dp))
         SceneryCard(
-            image = sceneryImage(auto), title = stringResource(R.string.scenery_auto),
+            image = sceneryImage(auto, level), title = stringResource(R.string.scenery_auto),
             subtitle = stringResource(R.string.scenery_auto_now, stringResource(sceneryName(auto)), placeName ?: "—"),
             selected = s.scenery == Scenery.AUTO, wide = true,
         ) { vm.setScenery(Scenery.AUTO) }
@@ -124,7 +160,7 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 row.forEach { (sc, b) ->
                     Box(Modifier.weight(1f)) {
-                        SceneryCard(sceneryImage(b), stringResource(sceneryName(b)), null, s.scenery != Scenery.AUTO && chosen == b, wide = false) { vm.setScenery(sc) }
+                        SceneryCard(sceneryImage(b, level), stringResource(sceneryName(b)), null, s.scenery != Scenery.AUTO && chosen == b, wide = false) { vm.setScenery(sc) }
                     }
                 }
             }
@@ -146,31 +182,48 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
             SettingsSwitch(Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc), s.elapsedAfterPrayer) { on -> vm.setElapsedAfterPrayer(on) }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
 
-        // How the sky is drawn (0.19): automatic, or high, medium or low.
-        SettingsSection(stringResource(R.string.sky_graphics_title), footer = stringResource(R.string.sky_graphics_note)) {
-            val context = androidx.compose.ui.platform.LocalContext.current
-            val autoLevel = com.noor.app.sky.SkyLevels.autoLevel.value ?: androidx.compose.runtime.remember { com.noor.app.sky.SkyLevels.auto(context) }
-            SkyGraphics.entries.forEachIndexed { i, g ->
-                val on = s.skyGraphics == g
-                if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 16.dp), thickness = 0.5.dp, color = c.separator)
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = 52.dp).semantics { role = Role.RadioButton; selected = on }
-                        .clickable(onClick = com.noor.app.ui.components.withTick { vm.setSkyGraphics(g) })
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(graphicsName(g)), style = MaterialTheme.typography.bodyLarge, color = if (on) c.goldText else c.textPrimary)
-                        val desc = if (g == SkyGraphics.AUTO) stringResource(R.string.sky_graphics_auto_now, stringResource(levelName(autoLevel)))
-                            else graphicsDesc(g)?.let { stringResource(it) }
-                        if (desc != null) Text(desc, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
-                    }
-                    if (on) Icon(Icons.Rounded.Check, null, tint = c.gold, modifier = Modifier.size(20.dp))
-                }
+/**
+ * (0.20) The graphics level, as four segments in one glass capsule: Automatic, High, Medium, Low. Under it, what the
+ * level is (for Automatic, the level it chose for this phone). The scenery pictures below follow it.
+ */
+@Composable
+private fun GraphicsPicker(choice: SkyGraphics, level: SkyLevel, autoLevel: SkyLevel, onChoose: (SkyGraphics) -> Unit) {
+    val c = NoorTheme.colors
+    Text(stringResource(R.string.sky_graphics_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary,
+        modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 8.dp))
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(c.glass)
+            .border(0.75.dp, c.glassEdge.copy(alpha = c.glassEdge.alpha * 0.6f), shape).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        SkyGraphics.entries.forEach { g ->
+            val on = g == choice
+            val bg by androidx.compose.animation.animateColorAsState(if (on) c.gold else Color.Transparent, label = "segment")
+            val fg by androidx.compose.animation.animateColorAsState(if (on) c.onGold else c.textPrimary, label = "segmentText")
+            Box(
+                Modifier.weight(1f).heightIn(min = 40.dp).clip(RoundedCornerShape(12.dp)).background(bg)
+                    .semantics { role = Role.RadioButton; selected = on }
+                    .clickable(onClick = com.noor.app.ui.components.withTick { onChoose(g) }),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(stringResource(if (g == SkyGraphics.AUTO) R.string.sky_graphics_auto_short else graphicsName(g)),
+                    style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp))
             }
         }
     }
+    val what = if (choice == SkyGraphics.AUTO) stringResource(R.string.sky_graphics_auto_now, stringResource(levelName(autoLevel))) + " · " + stringResource(levelDesc(level))
+        else stringResource(levelDesc(level))
+    androidx.compose.animation.AnimatedContent(what, label = "graphicsWhat") { t ->
+        Text(t, style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp).padding(top = 8.dp))
+    }
+    Text(stringResource(R.string.sky_graphics_note), style = FootnoteStyle, color = c.textMuted,
+        modifier = Modifier.padding(horizontal = 4.dp).padding(top = 4.dp))
 }
 
 @Composable
@@ -183,8 +236,11 @@ private fun SceneryCard(image: Int, title: String, subtitle: String?, selected: 
         .semantics { role = Role.RadioButton; this.selected = selected }
         .clickable(onClick = onClick)) {
         Box {
-            Image(painterResource(image), null, contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().aspectRatio(if (wide) 2.2f else 1.25f))
+            // (0.20) The picture follows the graphics level chosen above: one fades into the other.
+            androidx.compose.animation.Crossfade(image, animationSpec = androidx.compose.animation.core.tween(380), label = "scenery") { img ->
+                Image(painterResource(img), null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(if (wide) 2.2f else 1.25f))
+            }
             if (selected) Box(Modifier.align(Alignment.TopEnd).padding(8.dp).size(26.dp).clip(CircleShape).background(c.gold), contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Check, null, tint = c.onGold, modifier = Modifier.size(18.dp))
             }

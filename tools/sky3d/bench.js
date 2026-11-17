@@ -123,15 +123,15 @@ function crossing(el, rising) {      // fraction of the day when the Sun crosses
   for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if ((elevationAt(m) < el) === rising) lo = m; else hi = m; }
   return (lo + hi) / 2;
 }
-// (0.18) The horizon the home screen uses over this scenery (HeroGeometry.horizonFor): lowered so that the Sun's path,
-// which stands on the skyline where the Sun rises and sets, keeps its arch (a skyline takes 0.72 of it at most), and
-// never closer to the glass than 30 dp. P.legacy: as until 0.17 (the horizon fixed; the path held under the skyline).
-function hz() {
-  const land = LAND[(BIOMES[P.biome] || BIOMES[0]).id];
-  if (P.legacy || !land || !land.lift) return P.horizon;
-  const lift = Math.max(land.lift[0], land.lift[1]) * P.focal * W;
-  const fit = (P.arcTop * H + lift / 0.72 + DP()) / H;
-  return Math.max(P.horizon, Math.min(fit, P.panelTop - 30 * DP() / H));
+// (0.20) The horizon the home screen uses: the same over every scenery (0.18 to 0.19 lowered it over a high skyline,
+// HeroGeometry.horizonFor, for a path lifted onto the skyline; that is gone).
+function hz() { return P.horizon; }
+// The Sun as it is seen near the horizon (LivingSky.horizonLift): its upper edge, lifted by the air.
+function apparent(el) {
+  const refr = e => 1.02 / Math.tan((e + 10.3 / (e + 5.11)) * Math.PI / 180) / 60;
+  if (el >= -0.8333) return el + refr(el) * (0.5667 / refr(-0.8333)) + 0.2667;
+  const t = Math.min(1, Math.max(0, (el + 4) / (4 - 0.8333)));
+  return el + 0.8333 * t * t * (3 - 2 * t);
 }
 function chart() {
   const rise = crossing(-0.833, true), set = crossing(-0.833, false), fajr = crossing(-18, true), isha = crossing(-18, false);
@@ -141,11 +141,9 @@ function chart() {
   const maxEl = Math.max(elevationAt(0.5), 12), minEl = Math.min(elevationAt(0), -24);
   const hy = hz() * H, at = P.arcTop * H, gy = P.ground * H;
   const x = f => { const uu = (-0.04 + 1.08 * warp(f)) * W; return P.rtl ? W - uu : uu; };
-  // The path stands on the scenery's own skyline where the Sun rises and sets (SkyGeometry.y in the app).
-  const land = LAND[(BIOMES[P.biome] || BIOMES[0]).id];
-  const lifts = land && land.lift ? land.lift.map(t => t * P.focal * W) : [0, 0];
-  const lift = f => { const t = Math.min(1, Math.max(0, ((-0.04 + 1.08 * warp(f)) - 0.1976) / 0.6048)); return Math.min((hy - at) * 0.72, lifts[0] + (lifts[1] - lifts[0]) * t * t * (3 - 2 * t)); };
-  const y = (el, f) => { const b = hy - lift(f === undefined ? 0.5 : f); return el >= 0 ? b - el / maxEl * (b - at) : b + (-el / -minEl) * (gy - hy); };
+  // (0.20, SkyGeometry.y) One arch over every scenery: the height in proportion to the sine of the apparent elevation.
+  const sinMax = Math.sin(apparent(maxEl) * Math.PI / 180);
+  const y = (el, f) => { const e = apparent(el); return e >= 0 ? hy - Math.sin(e * Math.PI / 180) / sinMax * (hy - at) : hy + (-e / -minEl) * (gy - hy); };
   return { x, y, rise, set, fajr, isha };
 }
 function viewRay(px, py) {
@@ -587,22 +585,11 @@ function overlay(g, ox = 0, oy = 0, s = 1) {
     g.strokeStyle = rgba(sunCore, 0.95); g.lineWidth = stroke; path(); g.stroke();
     g.restore();
   } else {
-    // (0.18, LivingSky layer 3) Behind the land (above its skyline, a hair clear of it); meeting the Sun softly; a
-    // soft shade under the line, stronger by day.
+    // (0.20, LivingSky layer 4b) In front of the land, above the level horizon; meeting the Sun softly; a soft shade
+    // under the line, stronger by day.
     const land = LAND[(BIOMES[P.biome] || BIOMES[0]).id];
     const sky = land && land.meta.skyline;
-    g.save(); g.beginPath();
-    if (sky) {
-      const n = sky.length;
-      g.moveTo(0, -1); g.lineTo(W, -1);
-      for (let j = 0; j < n; j++) {
-        const i = P.rtl ? j : n - 1 - j;
-        const y = Math.min(hy, hy - sky[i] * P.focal * W - 0.6 * dp);
-        g.lineTo(W * (n - j) / n, y); g.lineTo(W * (n - j - 1) / n, y);
-      }
-      g.closePath();
-    } else g.rect(0, 0, W, hy);
-    g.clip();
+    g.save(); g.beginPath(); g.rect(0, 0, W, hy); g.clip();
     const disc = 0.0135 * P.focal * W, reach = disc * 3.2;
     const day = smooth(-4, 12, el);
     const meet = c => { const gr = g.createRadialGradient(sx, sy, 0, sx, sy, reach); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.24, 'rgba(0,0,0,0)'); gr.addColorStop(0.62, c); gr.addColorStop(1, c); return gr; };
@@ -615,6 +602,19 @@ function overlay(g, ox = 0, oy = 0, s = 1) {
     g.strokeStyle = meet(rgba(sunGlow, 0.24)); g.lineWidth = stroke * 4; path(); g.stroke();
     g.strokeStyle = meet(rgba(sunCore, 0.95)); g.lineWidth = stroke; path(); g.stroke();
     g.restore();
+    // Where the land stands in front of the Sun, a ring on the path shows where it is (SunLift.skylineY in the app).
+    if (sky && el > -1) {
+      const n = sky.length, u = Math.min(0.9999, Math.max(0, sx / W)), k = Math.min(n - 1, Math.floor(u * n));
+      const top = Math.min(hy, hy - sky[P.rtl ? k : n - 1 - k] * P.focal * W);
+      const hidden = smooth(-disc * 0.6, disc * 1.2, sy - top) * smooth(-1, -0.4, el);
+      if (hidden > 0.01) {
+        const ring = (r, c, fill, wdt) => { g.beginPath(); g.arc(sx, sy, r, 0, 7); if (fill) { g.fillStyle = c; g.fill(); } else { g.strokeStyle = c; g.lineWidth = wdt; g.stroke(); } };
+        ring(disc * 1.9, `rgba(0,0,0,${0.16 * hidden})`, true);
+        ring(disc * 1.6, rgba(sunGlow, 0.30 * hidden), true);
+        ring(disc * 1.15, rgba(sunCore, 0.95 * hidden), false, 1.6 * dp);
+        ring(disc * 0.32, `rgba(255,255,255,${0.85 * hidden})`, true);
+      }
+    }
   }
   // The prayers on the path (layer 5).
   const marks = prayerFractions();

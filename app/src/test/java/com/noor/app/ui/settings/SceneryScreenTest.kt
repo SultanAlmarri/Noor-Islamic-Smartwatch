@@ -70,6 +70,15 @@ class SceneryScreenTest {
         }
         assertEquals(Scenery.CANYON, runBlocking { app.container.settings.current().scenery })
         shot("76_scenery_canyon_en")
+        // (0.20) The graphics level is chosen at the top of the page, and the pictures show that level at once.
+        rule.onAllNodesWithText("Low").onFirst().performClick()
+        for (i in 0 until 200) {
+            if (runBlocking { app.container.settings.current().skyGraphics } == com.noor.app.data.SkyGraphics.LOW) break
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(25)
+        }
+        assertEquals(com.noor.app.data.SkyGraphics.LOW, runBlocking { app.container.settings.current().skyGraphics })
+        rule.onAllNodesWithText("The simplest sky", substring = true).onFirst().assertExists()
+        shot("76b_scenery_low_en")
     }
 
     private fun shot(name: String) {
