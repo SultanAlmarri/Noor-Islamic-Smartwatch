@@ -391,6 +391,11 @@ through. Light glass (the light theme) is as in 0.10.
 sky). A tier sets the size of the picture, how often it is redrawn, and whether the baked pictures are read at half
 size. Compiled shader programs are cached.
 
+**While the Sun is dragged (0.18.2).** On a phone whose frames of a drag come slower than about 48 a second, the scene
+is drawn a step smaller (down to 0.6 of its size, `RealSkyEngine.busyScale`) and enlarged by the last pass, so the
+drag keeps pace with the finger, a little softer while it moves; each new drag tries a step finer again, and a still
+picture is always drawn whole. On a phone that keeps up nothing changes.
+
 **Until the first picture; when it cannot run.** As in 0.10: a still dusky sky holds the scene's place until the
 first picture; without OpenGL ES 3.0 and float render targets, on a software GPU (unless a quality is named), after
 a refused shader or three starts that never showed a picture, the 0.9 sky is used.

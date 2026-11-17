@@ -18,11 +18,18 @@ import com.noor.prayer.alerts.AlertSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.shareIn
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "noor_settings")
 
 /** All user settings, persisted on the device with DataStore. */
-class SettingsRepository(private val context: Context) {
+class SettingsRepository(
+    private val context: Context,
+    /** (0.18.2) Where the decoded settings are shared from (the app's own scope; tests may leave the default). */
+    scope: kotlinx.coroutines.CoroutineScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default),
+) {
     /** 0.18: whether Noor's library has a sound (old recordings were replaced by the owner's five voices and five effects). */
     private val known: (String) -> Boolean = { id -> runCatching { com.noor.alerts.SoundLibrary.get(context).byId(id) != null }.getOrDefault(true) }
 
@@ -64,7 +71,7 @@ class SettingsRepository(private val context: Context) {
     private inline fun <reified T : Enum<T>> Preferences.enum(key: Preferences.Key<String>, default: T): T =
         this[key]?.let { v -> enumValues<T>().firstOrNull { it.name == v } } ?: default
 
-    val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
+    private val decoded: Flow<AppSettings> = context.dataStore.data.map { p ->
         val last = p[K.lastFull]?.let(KnownLocation::decode) ?: if (p[K.lat] != null && p[K.lon] != null) KnownLocation(
             point = GeoPoint(p[K.lat]!!, p[K.lon]!!, p[K.elev] ?: 0.0),
             zoneId = p[K.zone] ?: java.time.ZoneId.systemDefault().id,
@@ -98,7 +105,16 @@ class SettingsRepository(private val context: Context) {
         )
     }
 
-    suspend fun current(): AppSettings = settings.first()
+    /**
+     * (0.18.2) The settings as they change, decoded once, off the main thread, and shared by everyone who watches them.
+     * Until 0.18.1 each watcher (the whole app's screen, every page's view model) decoded every change itself, on the
+     * main thread, the alerts and the sound library's list among it.
+     */
+    val settings: Flow<AppSettings> = decoded.distinctUntilChanged().flowOn(kotlinx.coroutines.Dispatchers.Default)
+        .shareIn(scope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000, replayExpirationMillis = 0), replay = 1)
+
+    /** The settings now, read from the store itself (so a change just written is always seen). */
+    suspend fun current(): AppSettings = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { decoded.first() }
 
     suspend fun setOnboardingDone() = context.dataStore.edit { it[K.onboarding] = true }
     suspend fun setLocationMode(mode: LocationMode) = context.dataStore.edit { it[K.locationMode] = mode.name }

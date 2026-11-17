@@ -2,6 +2,9 @@
 // behind the text the way a photographer's graduated filter darkens a sky (so white letters read, and clouds keep
 // their shape), with frosted glass under the day's times, and a fine grain so slow gradients never show steps.
 uniform sampler2D tScene;
+// (0.18.2) xy: the part of tScene that holds the picture (1, 1; less while the Sun is dragged on a phone that cannot
+// keep up: RealSkyEngine.busyScale); zw: half a texel of tScene, to keep its edge from bleeding in.
+uniform vec4 uSceneScale;
 uniform sampler2D tBlur;
 uniform vec4 uText;       // bottom of the text written on the sky (px from the top); 0 = none
 uniform vec4 uPanel;      // top of the glass (px from the top; beyond the view = none), corner radius (px), tint 0..1, 1 = light glass
@@ -49,7 +52,7 @@ float textLimit(vec2 vp) {
 void main() {
     vec2 uv = gl_FragCoord.xy / uRes;
     vec2 vp = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) * (uView / uRes);
-    vec3 c = texture(tScene, uv).rgb;
+    vec3 c = texture(tScene, min(uv * uSceneScale.xy, uSceneScale.xy - uSceneScale.zw)).rgb;
     vec3 b = texture(tBlur, uv).rgb;
     // Glow: only what is brighter than white spreads far; a breath of softness everywhere.
     c += max(b - 1.1, 0.0) * 0.10 + (b - c) * 0.02;
