@@ -1320,6 +1320,15 @@ of the world chosen by GPS, the app renamed **Minhad (منهاد)**, and evidenc
   and set (`HeroGeometry.horizonFor`), the progress line fading into the Sun, cloud sets kept while their shading
   loads and read ahead (`SkyDirector.ahead`), the drift easing in near now, `RealSky.prewarm` behind the launch screen,
   pictures decoded on worker threads into reused buffers, a baseline profile; treeline specks in fog mended.
+- The emulator crash (16–17 November, night): after the sky work every `real-sky.yml` run lost the emulator a few
+  seconds after the app started ("device 'emulator-5554' not found", no picture, no message from the emulator and no
+  out-of-memory kill). Found by experiments on the work branch (A–N in its history): not the prewarm, not the
+  parallel readers, not the skyline clip, not the runner's memory; the code before `fe11503` passed and `fe11503`
+  alone failed; with only the progress line's radial gradient replaced by plain colours the whole new code passed.
+  A gradient brush on the path's strokes (one of them dashed) kills the emulator's graphics (SwiftShader through gfxstream); the line is
+  now drawn in plain colours in a layer of its own and the same fade taken out around the Sun with one gradient-filled
+  circle (`BlendMode.DstOut`). Whether a phone's GPU minded is not known (never on a phone). The emulator also
+  crashed now and then without it (once in five runs of the code before the sky work), so one crash alone proves little.
 - The green hills' autumn pictures (the colour pass of 16 November).
 - Minhad Studio (a helper agent; docs/WATCH.md): `FaceDesign` (core), the `face` module's renderer, the watch's
   `StudioFaceService` (androidx.wear.watchface; not on watches that launched with Wear OS 6, where the app says so),

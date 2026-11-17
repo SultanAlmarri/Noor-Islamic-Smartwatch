@@ -213,7 +213,9 @@ phone) as bland and fake: never call a render beautiful on your own judgment; pu
   opens a save dialog on the owner's screen.
 - Several Blender jobs at once starve each other. At most three, and a bake at AboveNormal priority; a volume
   enlarged k times renders k times thinner (set density per instance scale).
-- Pitfalls met: never write a value near 65 000 into a half-float target (0.10's Sun did, and was black on the
+- Pitfalls met: a gradient brush on a path's strokes (Compose `drawPath(path, brush, Stroke(...))`, one of them dashed)
+  kills the Android emulator's graphics as it is drawn (0.18, HANDOVER.md section 28): draw strokes in plain colours
+  and fade them with a layer and a `DstOut` shape; never write a value near 65 000 into a half-float target (0.10's Sun did, and was black on the
   owner's phone); Blender ignores `mat.cycles.displacement_method` (use `mat.displacement_method`); a generated
   image must be saved and reloaded before Cycles sees it; volume emission is per metre whatever the density;
   BitmapFactory premultiplies alpha unless told not to; `java.util.Random` gives neighbouring seeds nearly the same
