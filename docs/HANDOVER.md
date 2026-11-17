@@ -1378,4 +1378,12 @@ dispatched. Compare builds, not absolute numbers.
   smaller (to 0.6) and enlarged by the last pass (`busyScale`, `uSrcScale` in blur.frag, `uSceneScale` in final.frag;
   the bench sets both to 1); each new drag tries a step finer; still pictures always whole.
 
-**Numbers**: in the release report (before/after from smooth.yml). **Not tested**: on a phone or watch.
+**Numbers** (17 November 2026, smooth.yml, two rounds per run). The frame times are useless on the emulator: its
+software GPU takes 150-350 ms a frame on the render thread and the main thread's time includes waiting for it (three
+runs of the same old code gave a drag median of 1.3 to 12.7 ms). So smooth.sh also reads the CPU time the main thread
+uses in each set of moves (/proc, `cpu.txt`): before (fd6f379; 3 complete rounds) → after (c7c4528; 4 rounds), mean
+main-thread CPU: home left alone 407 → 288 ms (-29%), sky dragged 590 → 320 (-46%), home scrolled 330 → 160 (-52%),
+tabs 830 → 372 (-55%), Adhan page 340 → 192 (-44%), Settings 463 → 242 (-48%): about half. (The whole app's CPU is
+mostly the emulator's software rendering and did not change.) The Watch page (58 days a second before) is not in the
+moves. The emulator died now and then in these runs with the old code as with the new (no message, no out-of-memory
+kill): its own fault, not counted. **Not tested**: on a phone or watch.
