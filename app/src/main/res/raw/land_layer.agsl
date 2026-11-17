@@ -308,34 +308,56 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     return c;
 }
 
+// The top of [layer] at [x], px: its ridge, then the fine relief of its skyline.
+float topOf(float x, int layer) {
+    float base = pick4(uBaseA, uBaseB, layer);
+    float amp = pick4(uAmpA, uAmpB, layer);
+    return base - amp * landHeight(x, layer, base, amp) - edgeDetail(x, layer) * (1.0 - openAt(x));
+}
+
+// One layer's colour at a point, the nearest one fading into the page.
+float3 layerColor(float2 fc, int i, float topY) {
+    float base = pick4(uBaseA, uBaseB, i);
+    float amp = pick4(uAmpA, uAmpB, i);
+    // Slope over a few dp: the table holds 8-bit heights, too coarse to differentiate pixel by pixel.
+    float hl = landHeight(fc.x - 4.0 * uDp, i, base, amp);
+    float hr = landHeight(fc.x + 4.0 * uDp, i, base, amp);
+    float slope = (hl - hr) * amp / (8.0 * uDp);
+    float3 c = shade(fc, i, topY, slope);
+    if (i == 4) {
+        // The nearest land is the page: it fades into the page colour, exactly so at the bottom edge.
+        // Mixed in linear light, so a dark dune meets a light page without a muddy grey band.
+        float t = smoothstep(base - amp * landHeight(fc.x, i, base, amp) + 4.0 * uDp, uSize.y - 2.0 * uDp, fc.y);
+        float3 cl = pow(sat3(c), float3(2.2));
+        float3 pl = pow(sat3(uPage), float3(2.2));
+        c = pow(mix(mix(cl, pl, 0.22), pl, t * t * (3.0 - 2.0 * t)), float3(1.0 / 2.2));
+    }
+    return c;
+}
+
 float4 render(float2 fc) {
-    float4 acc = float4(0.0); // premultiplied, front to back
+    // (0.19) Front to back, find the nearest layer that covers this pixel and the ones showing behind its edge (two
+    // more at most, where skylines cross); only those are shaded (shading every layer in the loop made the program
+    // five times the size of shade).
     float aa = 0.9;
+    int l0 = -1; int l1 = -1; int l2 = -1;
+    float c0 = 0.0; float c1 = 0.0; float c2 = 0.0; float t0 = 0.0; float t1 = 0.0; float t2 = 0.0; float a = 0.0;
     for (int i = 4; i >= 0; i--) {
-        if (acc.a < 0.995) {
-            float base = pick4(uBaseA, uBaseB, i);
-            float amp = pick4(uAmpA, uAmpB, i);
-            float h = landHeight(fc.x, i, base, amp);
-            float topY = base - amp * h - edgeDetail(fc.x, i) * (1.0 - openAt(fc.x));
+        if (a < 0.995 && l2 < 0) {
+            float topY = topOf(fc.x, i);
             float cov = sat((fc.y - topY) / aa + 0.5);
             if (cov > 0.0) {
-                // Slope over a few dp: the table holds 8-bit heights, too coarse to differentiate pixel by pixel.
-                float hl = landHeight(fc.x - 4.0 * uDp, i, base, amp);
-                float hr = landHeight(fc.x + 4.0 * uDp, i, base, amp);
-                float slope = (hl - hr) * amp / (8.0 * uDp);
-                float3 c = shade(fc, i, topY, slope);
-                if (i == 4) {
-                    // The nearest land is the page: it fades into the page colour, exactly so at the bottom edge.
-                    // Mixed in linear light, so a dark dune meets a light page without a muddy grey band.
-                    float t = smoothstep(base - amp * h + 4.0 * uDp, uSize.y - 2.0 * uDp, fc.y);
-                    float3 cl = pow(sat3(c), float3(2.2));
-                    float3 pl = pow(sat3(uPage), float3(2.2));
-                    c = pow(mix(mix(cl, pl, 0.22), pl, t * t * (3.0 - 2.0 * t)), float3(1.0 / 2.2));
-                }
-                acc += float4(c, 1.0) * cov * (1.0 - acc.a);
+                if (l0 < 0) { l0 = i; c0 = cov; t0 = topY; }
+                else if (l1 < 0) { l1 = i; c1 = cov * (1.0 - a); t1 = topY; }
+                else { l2 = i; c2 = cov * (1.0 - a); t2 = topY; }
+                a += cov * (1.0 - a);
             }
         }
     }
+    float4 acc = float4(0.0); // premultiplied
+    if (l0 >= 0) acc = float4(layerColor(fc, l0, t0), 1.0) * c0;
+    if (l1 >= 0) acc += float4(layerColor(fc, l1, t1), 1.0) * c1;
+    if (l2 >= 0) acc += float4(layerColor(fc, l2, t2), 1.0) * c2;
     acc.rgb += (hash12(fc) - 0.5) / 255.0 * acc.a;
     return acc;
 }
