@@ -1,6 +1,7 @@
 // Noor home sky: the sky of the moment (from the precomputed atmosphere table), the Sun, the moon, stars and the
-// Milky Way, high cirrus and distant cloud banks. Rendered at reduced resolution into a cached layer (everything here is
-// soft); see ShaderSky.kt for the uniforms. The clouds themselves are drawn over it as pictures (CloudField.kt, 0.9.9).
+// Milky Way. Rendered at reduced resolution into a cached layer (everything here is
+// soft); see ShaderSky.kt for the uniforms. The clouds are drawn over it as pictures (0.19.1: the real sky's baked sets,
+// SetClouds.kt).
 
 uniform float2 uSize;      // layer size, px
 uniform float uDp;         // layer px per dp
@@ -151,85 +152,6 @@ float4 moon(float2 fc) {
     return float4(c, edge * uMoon.w);
 }
 
-// High cirrus: thin, wind-combed streaks at 9 km, lit long after the Sun has set below the land.
-float4 cirrus(float3 v, float2 fc) {
-    if (uWeather.y <= 0.001 || v.y < 0.01) return float4(0.0);
-    float t = shellDistance(v.y, CIRRUS_H);
-    float2 p = float2(v.x, v.z) * t;
-    float2 q = float2(p.x * 0.75 + p.y * 0.66, -p.x * 0.66 + p.y * 0.75);
-    q += float2(uWind * 1.6, 0.0);
-    float warp = fbm4(q * 0.04 + uWeather.zw * 1.7, float4(1.0, 1.0, 0.0, 0.0));
-    float fade = sat(1.0 - t / 260.0);
-    float n = fbm4(float2(q.x * 0.010, q.y * 0.11 + warp * 1.6) + uWeather.wz, float4(1.0, 0.9, 0.35 * fade, 0.0));
-    // Fine combing along the streaks.
-    float fib = 0.75 + 0.25 * vnoise(float2(q.x * 0.004, q.y * 1.3 + warp * 6.0));
-    float a = smoothstep(0.48, 0.80, n) * fib * uWeather.y * smoothstep(0.0, 0.10, v.y) * fade;
-    float mu = dot(v, uSunDir);
-    float3 c = uSunHigh * (0.55 + 5.0 * hg(mu, 0.55)) + uAmbTop * 1.2;
-    return float4(c, a * 0.75);
-}
-
-// Distant cloud banks lying along the horizon: one sample of the cloud layer far away, combed flat by perspective;
-// they catch the colours of sunrise and sunset first.
-float4 banks(float3 v) {
-    if (uWeather.x <= 0.001 || v.y > 0.14) return float4(0.0);
-    float t = shellDistance(max(v.y, 0.002), 2.2);
-    float2 p = float2(v.x, v.z) * t + float2(uWind, 0.0);
-    float n = fbm4(p * float2(0.035, 0.11) + uWeather.zw, float4(1.0, 1.0, 0.8, 0.5));
-    float a = smoothstep(0.62 - 0.25 * uWeather.x, 0.86 - 0.2 * uWeather.x, n) * smoothstep(18.0, 45.0, t) * (1.0 - smoothstep(0.05, 0.14, v.y));
-    float mu = dot(v, uSunDir);
-    float3 c = uSunCloud * (0.35 + 3.0 * hg(mu, 0.55)) + uAmbLow * 1.1;
-    return float4(c, a * 0.85);
-}
-
-// Cellular noise for a layer of cloud: rounded cells parted by narrow, branching gaps (the gaps are where the noise
-// crosses its middle), as the underside of stratocumulus.
-float cellsOf(float2 p, float fine) {
-    float s = 0.0;
-    s += 0.6 * abs(vnoise(p) * 2.0 - 1.0);
-    s += 0.28 * abs(vnoise(ROT * p * 2.1 + float2(5.2, 1.3)) * 2.0 - 1.0);
-    s += 0.12 * fine * abs(vnoise(ROT * p * 4.3 + float2(1.7, 9.2)) * 2.0 - 1.0);
-    return s / (0.88 + 0.12 * fine);
-}
-
-// A layer of stratocumulus (0.9.9): rolls and cells of cloud on a sheet 2 km up, seen from below in perspective — large
-// and soft overhead, packed into rows towards the horizon; grey underneath where thick, bright at the thin edges and
-// towards the Sun, gaps of blue between.
-float4 cloudLayer(float3 v) {
-    float amount = smoothstep(0.08, 0.3, uWx.y) * uWx.y;
-    if (amount <= 0.001 || v.y < 0.003) return float4(0.0);
-    float t = shellDistance(v.y, 2.0);
-    float2 p = float2(v.x, v.z) * t + float2(uWind * 0.5, 0.0);
-    float far = sat(t / 80.0);
-    float2 q = p * float2(0.30, 0.45) + uWeather.zw * 0.9;
-    float broad = vnoise(q * 0.18 + float2(3.0, 1.0));
-    float cells = sqrt(cellsOf(q, 1.0 - far)) * 0.8 + broad * 0.2;
-    float edge = 0.95 - amount * 0.7;
-    float thick = sat((cells - edge) * 3.0);
-    float a = smoothstep(edge - 0.03, edge + 0.12, cells) * (1.0 - smoothstep(150.0, 260.0, t));
-    float mu = dot(v, uSunDir);
-    float sun = (0.12 + 1.1 * hg(mu, 0.55)) * (1.0 - 0.75 * thick) * (1.0 - 0.8 * uWx.x);
-    float3 c = uAmbTop * (1.6 - 0.8 * thick) + uAmbLow * 0.5 + uSunCloud * sun;
-    return float4(c, a * 0.97);
-}
-
-// An overcast (0.9.9): a grey deck of stratus 1.4 km up over the whole sky, thicker and thinner in broad patches, a
-// little brighter where the Sun is behind it; darker overhead, paler towards the horizon where it is seen edge-on.
-float4 overcastDeck(float3 v) {
-    if (uWx.x <= 0.001) return float4(0.0);
-    float t = shellDistance(max(v.y, 0.003), 1.4);
-    float2 p = float2(v.x, v.z) * t + float2(uWind * 0.4, 0.0);
-    float n = fbm4(p * float2(0.045, 0.07) + uWeather.wz * 0.6, float4(1.0, 0.8, 0.5, 0.25));
-    float thick = sat(uWx.x * 1.35 - 0.25 + (n - 0.5) * 0.9 + 0.2 * smoothstep(20.0, 120.0, t));
-    float a = smoothstep(0.02, 0.5, thick);
-    float mu = dot(v, uSunDir);
-    // Neutral grey: the light of the whole sky, mixed through the cloud.
-    float amb = luma(uAmbTop * 1.4 + uAmbLow * 0.8);
-    float overhead = 1.0 - 0.35 * smoothstep(0.05, 0.6, v.y);
-    float3 c = float3(amb) * float3(0.97, 0.99, 1.03) * (1.1 - 0.55 * thick) * overhead + uSunCloud * (0.04 + 0.6 * hg(mu, 0.6)) * (1.0 - 0.85 * thick);
-    return float4(c, a);
-}
-
 float4 render(float2 fc) {
     float alt = altAt(fc.y);
     float3 v = viewDir(fc);
@@ -257,24 +179,10 @@ float4 render(float2 fc) {
         col = mix(col, max(col, m.rgb), m.a);
     }
 
-    // High cirrus (paler behind the text written on the sky) and banks of cloud far along the horizon.
-    float clear = smoothstep(uCloudTop - 12.0 * uDp, uCloudTop + 46.0 * uDp, fc.y);
-    float4 ci = cirrus(v, fc);
-    float ciA = ci.a * mix(0.35, 1.0, clear);
-    if (ciA > 0.0) col = mix(col, tone(ci.rgb), ciA);
-    float4 bk = banks(v);
-    if (bk.a > 0.0) col = mix(col, mix(tone(bk.rgb), sky, 0.35), bk.a);
-    float4 ly = cloudLayer(v);
-    if (ly.a > 0.0) {
-        float far = 1.0 - exp(-shellDistance(max(v.y, 0.004), 2.0) / 70.0);
-        col = mix(col, mix(tone(ly.rgb), sky, 0.08 + 0.6 * far), ly.a);
-    }
-    float4 dk = overcastDeck(v);
-    if (dk.a > 0.0) {
-        float3 dc = tone(dk.rgb);
-        col = mix(col, dc, dk.a);
-    }
-    // Rain greys the air.
+    // (0.19.1) The clouds are the real sky's baked sets, drawn over this layer (SetClouds.kt): no cirrus streaks, banks
+    // or decks of the shader's own any more (the owner: "straight lines coming out of them", "a line blocking them").
+    // Under an overcast what shows of the sky between the clouds is paler; rain greys the air.
+    if (uWx.x > 0.0) col = mix(col, float3(luma(col)) * float3(0.96, 0.99, 1.04) * 1.08, 0.45 * uWx.x);
     if (uWx.z > 0.0) col = mix(col, float3(luma(col)) * 0.92, 0.35 * uWx.z);
 
     // Text written on the sky stays readable (as the atmosphere table is): small text above gets 4.5:1, the large
@@ -292,7 +200,7 @@ float4 render(float2 fc) {
     float r = length(sd);
     float above = smoothstep(uHorizon + 0.5 * uDp, uHorizon - 0.5 * uDp, fc.y);
     float rd = 7.5;
-    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above * (1.0 - 0.6 * ciA) * (1.0 - 0.97 * dk.a) * (1.0 - 0.9 * ly.a);
+    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above;
     if (disc > 0.0) {
         // The Sun adds light to the sky behind it: never darker than the sky, so it cannot turn black at the horizon.
         float limb = 1.0 - 0.45 * (1.0 - sqrt(sat(1.0 - (r / rd) * (r / rd))));
@@ -306,7 +214,7 @@ float4 render(float2 fc) {
     if (sunVis > 0.0) {
         float3 gc = tone(uSunGlow);
         float wide = 0.22 * exp(-r / 55.0) * mix(1.0, 0.4, smoothstep(-10.0, 30.0, textAbove));
-        float g = (0.55 * exp(-max(r - rd, 0.0) / 9.0) + wide) * sunVis * (1.0 - 0.85 * dk.a) * (1.0 - 0.5 * ly.a);
+        float g = (0.55 * exp(-max(r - rd, 0.0) / 9.0) + wide) * sunVis;
         col = 1.0 - (1.0 - col) * (1.0 - gc * g);
     }
 

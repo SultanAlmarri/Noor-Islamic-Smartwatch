@@ -16,10 +16,20 @@ if mode == "terrains":
     # Istanbul, 7 November 2026: Shuruq 7:42, Maghrib 17:53.
     moments = [("1dawn", 7, 25), ("2morning", 9, 0), ("3midday", 12, 30), ("4golden", 17, 0), ("5sunset", 17, 50), ("6dusk", 18, 15), ("7night", 21, 30)]
     terrains = sys.argv[3].split(",") if len(sys.argv) > 3 else ["dunes", "hills", "mountains", "sea", "forest", "arctic", "canyon"]
+    # (0.19.1) The clouds of each moment: the real sky's baked sets, as its director might choose them (the app asks
+    # SkyDirector; here a fixed, varied day): (set, offset in degrees, weight, turned).
+    legs = {"1dawn": [("hi_wisps", -10, 1, False), ("mi_patches", 14, 1, False)],
+            "2morning": [("hi_sprays", 6, 1, False), ("lo_few", -8, 1, False)],
+            "3midday": [("hi_wisps", 20, 1, True), ("lo_scattered", 4, 1, False)],
+            "4golden": [("hi_mixed", -4, 1, False), ("lo_broken", -12, 1, False), ("lo_scattered", 52, 1, True)],
+            "5sunset": [("hi_ripples", 0, 1, False), ("mi_bands", 10, 1, False), ("lo_few", 20, 0.8, False)],
+            "6dusk": [("hi_veil", -6, 1, False), ("mi_patches", 24, 1, True)],
+            "7night": [("hi_wisps", 12, 0.7, False), ("lo_few", -20, 0.5, False)]}
     for t in terrains:
         for name, h, m in moments:
             out.append(dict(name=f"{t}_{name}", place=ist, date="2026-11-07", fraction=hm(h, m), terrain=t, dunes=t == "dunes", seed=11, landSeed=78,
-                            weatherType=1, density=den, skyScale=0.6, wDp=412, hDp=400, horizonDp=318, arcTopDp=237, topDp=40, time=40, hijriDay=12))
+                            weatherType=1, density=den, skyScale=0.6, wDp=412, hDp=400, horizonDp=318, arcTopDp=237, topDp=40, time=40, hijriDay=12,
+                            legs=[dict(set=a, offset=o, weight=w, turned=tu) for a, o, w, tu in legs[name]]))
 else:
     for tag, place, dunes, seed in [("dxb", dxb, True, 3), ("ist", ist, False, 11)]:
         for name, h, m in times:

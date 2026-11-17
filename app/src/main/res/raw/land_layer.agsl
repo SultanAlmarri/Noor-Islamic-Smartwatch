@@ -50,26 +50,15 @@ bool isCanyon() { return terrainId() > 5.5; }
 // The forest's lake and the arctic fjord (0.19): still water in the middle distance, layer 2.
 bool isLake(int layer) { return layer == 2 && (isForest() || isArctic()); }
 
-// Where the Sun rises and sets, the land opens onto the true horizon (a pass between the hills, a gap between the
-// dunes), so the Sun meets the horizon exactly at the moment of Shuruq and of Maghrib, where their marks are.
-float openAt(float x) {
-    float a = 1.0 - smoothstep(12.0 * uDp, 34.0 * uDp, abs(x - uSunrise.x));
-    float b = 1.0 - smoothstep(12.0 * uDp, 34.0 * uDp, abs(x - uSunrise.y));
-    return max(a, b);
-}
-
 float ridgeAt(float x, int layer) {
     float u = sat(x / uSize.x) * (uRidgeN - 1.0) + 0.5;
     float4 t = ridgeTex(float2(u, layer < 3 ? 0.5 : 1.5));
     return layer == 0 ? t.r : (layer == 1 ? t.g : (layer == 2 ? t.b : (layer == 3 ? t.r : t.g)));
 }
 
-// The height of [layer] at [x], kept below the true horizon where the land opens for sunrise and sunset.
-float landHeight(float x, int layer, float base, float amp) {
-    float h = ridgeAt(x, layer);
-    float cap = max((base - uHorizon - 1.0 * uDp) / max(amp, 1.0), 0.0);
-    return mix(h, min(h, cap), openAt(x));
-}
+// The height of [layer] at [x], 0..1 of its height. (0.19.1: the land no longer opens onto the true horizon where the
+// Sun rises and sets: the Sun's path is drawn in front of the land, and every skyline is natural. uSunrise is unused.)
+float landHeight(float x, int layer, float base, float amp) { return ridgeAt(x, layer); }
 
 // One spire of the treeline at cell [c] (see [conifers]); dp.
 float spire(float c, float xc, float sp, float tall, float g, int layer) {
@@ -129,7 +118,7 @@ float edgeDetail(float x, int layer) {
 float topOf(float x, int layer) {
     float base = pick4(uBaseA, uBaseB, layer);
     float amp = pick4(uAmpA, uAmpB, layer);
-    return base - amp * landHeight(x, layer, base, amp) - edgeDetail(x, layer) * (1.0 - openAt(x));
+    return base - amp * landHeight(x, layer, base, amp) - edgeDetail(x, layer);
 }
 
 // Two octaves of value noise: soft patches (cheaper than fbm4 where the fine octaves are not wanted).
@@ -426,15 +415,8 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
         }
     }
 
-    // Cloud shadows: from this point towards the Sun, is a cumulus in the way?
+    // (0.19.1: no cloud shadows of the shader's own: the clouds are the real sky's sets, drawn over the sky.)
     float shadow = 1.0;
-    if (uWeather.x > 0.001 && uSunEl > 1.5) {
-        float2 g0 = float2(sin(az), cos(az)) * dist;
-        float reach = (CLOUD_BASE + 0.4) / max(sin(e), 0.05);
-        float2 c = g0 + float2(sin(sunAz), cos(sunAz)) * reach * cos(e) + float2(uWind, uWind * 0.35);
-        float th = cumulusCoarse(c, uWeather.x, uWeather.zw);
-        shadow = 1.0 - 0.72 * smoothstep(0.02, 0.35, th);
-    }
 
     // Under an overcast the land is lit by the grey sky alone, softly, without shadows; rain dims it further.
     float direct = (1.0 - 0.85 * uWx.x) * (1.0 - 0.4 * uWx.z);

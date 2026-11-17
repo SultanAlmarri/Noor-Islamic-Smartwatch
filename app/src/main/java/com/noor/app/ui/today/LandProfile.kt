@@ -66,8 +66,22 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
         (terrain == Terrain.SEA && layer <= 2 && height(layer, u) < 0.02f) || (layer == LAKE && hasLake(terrain))
 
     /**
-     * The top of the land at [x] (px) across a width [w]: where it meets the sky. Where the Sun rises and sets
-     * ([riseX], [setX]) the land is kept below the horizon line [horizonY], as the land shader does.
+     * (0.19.1) The top of the land at [x] (px) across a width [w], as the land shader draws it (px from the top): the
+     * highest of the layers' ridges there ([Geometry.base] less [Geometry.amp] times the ridge's height). The fine
+     * relief the shader adds along a skyline (crags, scrub, the treeline's single trees: a few dp) is left out.
+     * Every skyline is natural: the land no longer opens onto the true horizon where the Sun rises and sets.
+     */
+    fun skylineY(x: Float, w: Float, g: Geometry): Float {
+        var m = Float.MAX_VALUE
+        val u = x / w
+        for (l in 0 until LAYERS) m = min(m, g.base[l] - g.amp[l] * height(l, u))
+        return m
+    }
+
+    /**
+     * The top of the land at [x] (px) across a width [w] by the 0.19.0 rule: where the Sun rises and sets ([riseX],
+     * [setX]) the land was kept below the horizon line [horizonY]. (0.19.1: the land shader no longer does so; the Sun's
+     * path is drawn in front of the land. Kept for SunMarkTest until it is rewritten for that; use [skylineY].)
      */
     fun skylineAt(x: Float, w: Float, g: Geometry, horizonY: Float = 0f, density: Float = 1f, riseX: Float = -1e5f, setX: Float = -1e5f): Float {
         val open = horizonOpening(x, riseX, setX, density)

@@ -549,8 +549,26 @@ internal fun LivingSky(
     val capAlt = skyView?.let { it.altitudeAt(it.cloudTopY - 8 * densityValue) } ?: 90.0
     val skyLight = if (real != null || simple) null else rememberSkyLight(look, skyView, capAlt)
     val weather = remember(scene.seed, scene.terrain) { Weather.of(scene.seed, scene.terrain) }
+    // (0.19.1) The medium graphics' sky is the real sky's: its director chooses the clouds (the same baked sets at the
+    // same places for a place and day: SetClouds), the overcast and the rain, for the scenery's own sky.
+    // (Testing only: the tester's options may set the kind of weather and the time of year. See Tester.)
+    val medium = real == null && !simple
+    val skyBiome = skyBiomeOf(scene.terrain)
+    val tester = com.noor.app.testing.Tester
+    val testKind = if (tester.on) tester.weather else null
+    val testDay = if (tester.on) tester.weatherDay else 0
+    val skyYear = (if (tester.on) tester.year else null) ?: skyBiome.signatureYear
+    val skyWeather = remember(scene.seed, skyBiome, (skyYear * 24).toInt(), testKind, testDay) {
+        if (testKind != null) Weather.of(testKind, java.util.Random(4099L + testDay * 7919L))
+        else com.noor.app.sky.SkyDirector.weather(scene.seed + testDay * 1_000_003L, skyBiome, skyYear)
+    }
+    val skyState = if (medium) remember(scene, display, skyWeather, skyYear, look?.mist) {
+        mediumSkyState(scene, display, look?.mist ?: 0f, skyBiome, skyWeather, skyYear)
+    } else null
+    val skyStateNow = rememberUpdatedState(skyState)
     // The weather at the moment shown: it changes through the day, and as the Sun is dragged through it.
-    val weatherNow = weather.at(display)
+    // (0.19.1: for the medium graphics, the director's: the shaders draw no clouds of their own any more.)
+    val weatherNow = skyState?.let { Weather.State(0f, 0f, 0f, 0f, it.overcast, it.storm, it.rain, 0f, 0f, (display * 24).toFloat()) } ?: weather.at(display)
     val landProfile by remember(scene.landSeed, scene.terrain) { lazy(LazyThreadSafetyMode.NONE) { LandProfile.of(scene.landSeed, scene.terrain) } }
     // The layers' own clocks (seconds), each layer redrawn only when its clock moves: the clouds' about 15 times a
     // second (they move less than a fifth of a dp per tick, so it looks continuous); the GPU sky's as often at night
@@ -669,8 +687,9 @@ internal fun LivingSky(
             }
         }
 
-        // 2 · Clouds (0.9.9): the same on every phone, drifting with the wind (still when animations are off).
-        if (real == null && !simple) CloudLayer(gpuInputs, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
+        // 2 · Clouds (0.19.1: the real sky's baked sets, SetClouds): the same on every phone, drifting with the wind
+        // (still when animations are off).
+        if (medium) SetCloudLayer(gpuInputs, { skyStateNow.value }, { displayNow.value }, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
 
         // 3 · The Sun's rays and halo, the sun path above the land, and the Sun. The path and the region above the land
         // are built once per scene and size, not at every frame of a drag or of the opening: the moment is read while
@@ -762,8 +781,8 @@ internal fun LivingSky(
         else if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
         else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
-            val (riseX, setX) = sunriseSunsetX(scene, SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w))
-            val shapes = land.paths(w, h * layout.horizon, h, density, riseX, setX)
+            // (0.19.1: every skyline natural; the land no longer opens where the Sun rises and sets.)
+            val shapes = land.paths(w, h * layout.horizon, h, density)
 
             onDrawBehind {
                 val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
