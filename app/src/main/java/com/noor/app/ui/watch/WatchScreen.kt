@@ -86,24 +86,19 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(),
     val faceChoice by vm.faceChoice.collectAsStateWithLifecycle()
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val syncFailed by vm.syncFailed.collectAsStateWithLifecycle()
-    // (Worked out off the main thread once for the settings and the day, not each second: eight weeks of times. Until
-    // the view model has it, the one already kept for these settings, if any, so a page opened again is whole at once.)
-    val worked by vm.config.collectAsStateWithLifecycle()
-    val config = worked ?: remember(settings) { settings?.let { com.noor.app.data.DailyConfig.peek(it, null) } }
     val context = LocalContext.current
     val s = settings ?: AppSettings()
     val f = Formatter(isArabicUi(), s.numerals, s.timeFormat)
     val clock by produceState(System.currentTimeMillis()) {
         while (true) { delay(1000 - System.currentTimeMillis() % 1000); value = System.currentTimeMillis() }
     }
-    val preview = remember(config, s, clock / 1000, f.arabic) { config?.let { watchPreview(it, Instant.ofEpochMilli(clock), f) } }
+    val preview = remember(s, clock / 1000, f.arabic) { watchPreview(s, Instant.ofEpochMilli(clock), f) }
     // 0.18: Minhad Studio's design being edited, shown live on this page; re-read when coming back from the editor.
     var studioDesign by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.noor.app.ui.watch.studio.StudioRepository(context).draft) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { studioDesign = com.noor.app.ui.watch.studio.StudioRepository(context).draft; onPauseOrDispose { } }
-    val studioConfig = config
-    val configAvailable = remember(settings) { vm.configAvailable(settings) }
+    val studioConfig = remember(s) { WearSync.configFor(s, 0L) }
     WatchContent(
-        contentPadding, state, configAvailable, lastSent, installs, faces, syncing, syncFailed, vm.setup.installedFromPlay,
+        contentPadding, state, vm.configAvailable(settings), lastSent, installs, faces, syncing, syncFailed, vm.setup.installedFromPlay,
         Formatter(isArabicUi(), s.numerals, s.timeFormat),
         WatchActions(
             install = vm::installOnWatch, useFace = vm::useNoorFace, open = vm::openOnWatch, sync = vm::syncNow,
@@ -117,11 +112,8 @@ fun WatchScreen(contentPadding: PaddingValues, vm: WatchViewModel = viewModel(),
 }
 
 /** What the Noor watch app shows at [now], from the exact configuration the phone sends to the watch. */
-fun watchPreview(s: AppSettings, now: Instant, f: Formatter): WatchPreviewState? =
-    WearSync.configFor(s, now.toEpochMilli())?.let { watchPreview(it, now, f) }
-
-/** The same from a configuration already worked out (as [WatchViewModel.config] keeps it), so it is cheap each second. */
-fun watchPreview(config: com.noor.prayer.WatchConfig, now: Instant, f: Formatter): WatchPreviewState? {
+fun watchPreview(s: AppSettings, now: Instant, f: Formatter): WatchPreviewState? {
+    val config = WearSync.configFor(s, now.toEpochMilli()) ?: return null
     val st = runCatching { config.state(now) }.getOrNull() ?: return null
     val zone = config.zone
     val dhuhr = st.today.instant(Prayer.DHUHR)
