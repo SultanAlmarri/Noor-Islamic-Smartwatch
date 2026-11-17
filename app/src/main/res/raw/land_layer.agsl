@@ -12,7 +12,7 @@ uniform float uAmpB;
 uniform float4 uDistA;     // distance of layers 0..3, km
 uniform float uDistB;
 uniform float uRidgeN;     // samples across the width in the ridge table
-uniform float uDunes;      // 1 in sand country
+uniform float uDunes;      // 1 in sand country (0.19: unused, isDunes(); still set by the app and the bench)
 uniform float uTerrain;    // 0 dunes, 1 hills, 2 mountains, 3 sea (0.9.8), 4 forest, 5 arctic, 6 canyon (0.19)
 uniform float uAltTop;     // the sky's altitude at the top edge, degrees (for the sea's reflection)
 uniform float uAltPow;
@@ -37,11 +37,16 @@ uniform float4 uWx;        // the weather of the moment (0.9.9): overcast, layer
 
 float pick4(float4 a, float b, int i) { return i == 0 ? a.x : (i == 1 ? a.y : (i == 2 ? a.z : (i == 3 ? a.w : b))); }
 
-bool isSea() { return uTerrain > 2.5 && uTerrain < 3.5; }
-bool isMountains() { return uTerrain > 1.5 && uTerrain < 2.5; }
-bool isForest() { return uTerrain > 3.5 && uTerrain < 4.5; }
-bool isArctic() { return uTerrain > 4.5 && uTerrain < 5.5; }
-bool isCanyon() { return uTerrain > 5.5; }
+// (0.19) The terrain, read only here: the app builds the land program with this line made a constant for the scenery
+// shown (SkyShaders.landSource), so the compiler drops the other terrains' code and the GPU's driver prepares a
+// program a fraction of the size. The bench and the compile test use the line as it is.
+float terrainId() { return uTerrain; }
+bool isDunes() { return terrainId() < 0.5; }
+bool isSea() { return terrainId() > 2.5 && terrainId() < 3.5; }
+bool isMountains() { return terrainId() > 1.5 && terrainId() < 2.5; }
+bool isForest() { return terrainId() > 3.5 && terrainId() < 4.5; }
+bool isArctic() { return terrainId() > 4.5 && terrainId() < 5.5; }
+bool isCanyon() { return terrainId() > 5.5; }
 // The forest's lake and the arctic fjord (0.19): still water in the middle distance, layer 2.
 bool isLake(int layer) { return layer == 2 && (isForest() || isArctic()); }
 
@@ -101,7 +106,7 @@ float conifers(float x, int layer) {
 // Fine relief on the skyline the table is too coarse to hold: crags far away, scrub nearer, nothing on sand.
 float edgeDetail(float x, int layer) {
     float xd = x / uDp + uSeed * 37.0;
-    if (uDunes > 0.5 || isLake(layer)) return 0.0;
+    if (isDunes() || isLake(layer)) return 0.0;
     if (isSea() && layer <= 2) return ridgeAt(x, layer) > 0.02 ? (vnoise1(xd * 0.4) * 0.8) * uDp : 0.0;
     if (isSea()) return 0.0;                     // sand: smooth
     if (isForest() && layer > 0) return conifers(x, layer);
@@ -258,7 +263,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
         float3 airW = skyAt(fc.x, 0.6);
         return mix(airW, cw, exp(-0.02 * dist * (1.0 - sat(below / 30.0))));
     }
-    if (uDunes > 0.5 || (isSea() && layer >= 3)) {
+    if (isDunes() || (isSea() && layer >= 3)) {
         // Sand: from each summit a sharp crest runs down across the dune to its lee side; on one side of it the
         // windward face, on the other the steeper slip face, so a low Sun lights one and leaves the other in shade.
         float hLee = ridgeAt(fc.x - 10.0 * uDp, layer);
@@ -439,7 +444,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     sky = mix(sky, float3(luma(sky)), 0.8 * uWx.x);
     float3 lit = albedo * (uSunGround * (diffuse * 1.15 * shadow + bounce * sat(uSunEl / 20.0) * shadow) + sky * (0.95 + 0.5 * uWx.x));
     // Rim of light along the crest when the Sun is low behind or beside it.
-    float rimBand = exp(-max(below, 0.0) / (uDunes > 0.5 ? 1.6 : 1.0));
+    float rimBand = exp(-max(below, 0.0) / (isDunes() ? 1.6 : 1.0));
     float back = smoothstep(-1.0, 3.0, uSunEl) * (1.0 - smoothstep(8.0, 24.0, uSunEl));
     float rimNear = exp(-abs(fc.x - uSunPos.x) / (uSize.x * 0.15));
     lit += uSunGround * rimBand * back * rimNear * (isSea() ? 0.4 : 0.7) * shadow;

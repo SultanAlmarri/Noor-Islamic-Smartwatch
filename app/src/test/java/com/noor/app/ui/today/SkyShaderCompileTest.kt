@@ -21,7 +21,10 @@ class SkyShaderCompileTest {
     @Test fun bothShadersCompileOnAndroid() {
         val res = RuntimeEnvironment.getApplication().resources
         val (sky, land) = SkyShaders.sources(res)
-        val errors = listOf("sky" to sky, "land" to land).mapNotNull { (name, src) ->
+        // (0.19) And the land as the app builds it: one program per terrain, the terrain a constant.
+        val each = Terrain.entries.map { "land ${it.name}" to SkyShaders.landSource(res, it) }
+        assertTrue(each.all { it.second != land })
+        val errors = (listOf("sky" to sky, "land" to land) + each).mapNotNull { (name, src) ->
             runCatching { RuntimeShader(dialect(src)) }.exceptionOrNull()?.let { "$name: ${it.message}" }
         }
         assertTrue(errors.joinToString("\n"), errors.isEmpty())

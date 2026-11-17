@@ -1430,6 +1430,10 @@ automatic graphics setting ... on by default ... sees your phone and chooses the
 - Time to prepare the land program: on the emulator, 0.18's Medium held its first frame 10-14 s while SwiftShader
   translated it, the first 0.19 one 25-40 s: `render` called `layerColor` in three places and the GPU's driver copies
   a function into every place it is called. Shaded in a loop of three with one call (pixel-identical on the bench,
-  49 pictures). Compare these times (`Davey` in `shader_log.txt`) after any change to the land's structure.
+  49 pictures). That alone did not shorten it on the emulator (24-28 s): the program held all seven terrains' code.
+  Now the app builds the land program for the scenery shown (`SkyShaders.landSource`: `terrainId()` made a constant,
+  so the compiler drops the other terrains; a new scenery builds its own); pixel-identical on the bench for each of
+  the seven, and `SkyShaderCompileTest` compiles all seven. Compare these times (`Davey` in `shader_log.txt`) after
+  any change to the land's structure.
 
 **Not tested**: on a phone or watch. Emulator photographs and software renders only (release report).

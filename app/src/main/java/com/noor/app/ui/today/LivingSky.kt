@@ -508,7 +508,8 @@ internal fun LivingSky(
     // Held as Any: the shader class exists only on Android 13 and later.
     val context = LocalContext.current
     val quality = remember { SkyQuality.load(context) }.let { SkyQuality.level.intValue.coerceAtLeast(0) }
-    val built: Any? = remember(real != null, simple) { if (real == null && !simple && Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
+    // (0.19) Built for the scenery's terrain (SkyShaders.landSource): a new scenery builds its own.
+    val built: Any? = remember(real != null, simple, scene.terrain) { if (real == null && !simple && Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources, scene.terrain) else null }
     val shaders: Any? = built
     // Frames are watched while the Sun is dragged (not during the opening): if the GPU sky keeps the phone under about
     // 22 frames a second for three seconds, it is drawn at a lower resolution (SkyQuality). The first second of a drag

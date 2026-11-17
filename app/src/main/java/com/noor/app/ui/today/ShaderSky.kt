@@ -43,7 +43,7 @@ import kotlin.math.sin
  * canvas), the Canvas renderer takes over.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-internal class SkyShaders private constructor(val sky: RuntimeShader, val land: RuntimeShader) {
+internal class SkyShaders private constructor(val sky: RuntimeShader, val land: RuntimeShader, val terrain: Terrain) {
     companion object {
         @Volatile var failed = false
         @Volatile private var sources: Pair<String, String>? = null
@@ -70,11 +70,23 @@ float4 ridgeTex(float2 p) { return float4(ridges.eval(p)); }
             (SKY_HEAD + common + read(res, R.raw.sky_layer) + FOOT to LAND_HEAD + common + read(res, R.raw.land_layer) + FOOT).also { sources = it }
         }
 
-        fun create(res: Resources): SkyShaders? {
+        private const val TERRAIN_LINE = "float terrainId() { return uTerrain; }"
+
+        /**
+         * (0.19) The land program for one terrain: its terrain made a constant, so Android's compiler drops the other
+         * terrains' code. With all seven in it the emulator's GPU took about twice 0.18's time to prepare it.
+         */
+        fun landSource(res: Resources, terrain: Terrain): String {
+            val l = sources(res).second
+            check(l.contains(TERRAIN_LINE)) { "land_layer.agsl: the terrain line is missing" }
+            return l.replace(TERRAIN_LINE, "float terrainId() { return ${terrain.ordinal}.0; }")
+        }
+
+        fun create(res: Resources, terrain: Terrain): SkyShaders? {
             if (failed) return null
             return try {
-                val (s, l) = sources(res)
-                SkyShaders(RuntimeShader(s), RuntimeShader(l)).also { Log.i("NoorSky", "GPU sky shaders built") }
+                val s = sources(res).first
+                SkyShaders(RuntimeShader(s), RuntimeShader(landSource(res, terrain)), terrain).also { Log.i("NoorSky", "GPU sky shaders built ($terrain)") }
             } catch (e: Exception) {
                 Log.w("NoorSky", "Sky shaders unavailable; using the Canvas sky", e)
                 failed = true
