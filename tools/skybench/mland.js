@@ -138,15 +138,17 @@
           if (edge < 0) continue;
           const fy = P.top + (oy + 0.5) * SCALE, sy = V.hy + (fy - FRAME_H0) * k;
           if (sy > V.H + 2) break;
-          const my = 2 * edge - oy - 1;
+          const below = oy - edge;
+          const ruffle = (MSets.vnoise(ox * 0.045, oy * 0.9) - 0.5) * (1 + 0.06 * below);
+          const my = Math.trunc(2 * edge - oy - 1 + ruffle * 2.4);
+          const yEdge = V.hy + (P.top + edge * SCALE - FRAME_H0) * k;
+          const xs0 = (ox + 0.5) * SCALE * k;
+          const skyC = L.sky(xs0, V.altAt(Math.min(2 * yEdge - sy, V.hy - 0.5)));
           let refl;
-          if (edge < 0 || wet[oy * w + ox] < 0.5) { /* (wet sand before the water's edge: mirrors only a little, below) */ }
-          if (my >= 0 && isLand[my * w + ox] === 1 && o[(my * w + ox) * 4 + 3] > 127) refl = [lit[(my * w + ox) * 3], lit[(my * w + ox) * 3 + 1], lit[(my * w + ox) * 3 + 2]];
-          else {
-            const yEdge = V.hy + (P.top + edge * SCALE - FRAME_H0) * k;
-            const xs = (ox + 0.5) * SCALE * k;
-            refl = L.sky(xs, V.altAt(Math.min(2 * yEdge - sy, V.hy - 0.5)));
-          }
+          if (my >= 0 && my < oy && isLand[my * w + ox] === 1 && o[(my * w + ox) * 4 + 3] > 127) {
+            const through = 0.22 + 0.1 * Math.abs(ruffle);
+            refl = [0, 1, 2].map(c => lit[(my * w + ox) * 3 + c] + (skyC[c] - lit[(my * w + ox) * 3 + c]) * through);
+          } else refl = skyC;
           const dep = Math.atan((sy - V.hy) / F);
           const fres = 0.02 + 0.98 * Math.pow(1 - Math.sin(Math.max(dep, 0.002)), 5);
           const mixK = Math.max(0, Math.min(1, 0.30 + 0.70 * fres)) * 0.82;

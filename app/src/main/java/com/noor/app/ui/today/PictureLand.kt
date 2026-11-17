@@ -277,15 +277,21 @@ internal object PictureLand {
                     if (edge < 0 && wet > 0.5) edge = oy
                     if (edge < 0) continue
                     val sy = hy + ((p.top + (oy + 0.5) * s) - LandPictures.FRAME_H0) * k
-                    val my = 2 * edge - oy - 1
+                    // (A breath of wind on it: the mirror image is shifted a row or two this way and that, in long
+                    // streaks across, the more the nearer the water; and some of the sky comes through the ruffles.)
+                    val below = oy - edge
+                    val ruffle = (SetClouds.vnoise(ox * 0.045, oy * 0.9) - 0.5) * (1.0 + 0.06 * below)
+                    val my = (2 * edge - oy - 1 + ruffle * 2.4).toInt()
                     val xs = ((ox + 0.5) * s * k).toFloat()
-                    if (my >= 0 && kind[my * w + ox].toInt() == 1 && (out[my * w + ox] ushr 24) > 127) {
-                        for (c in 0..2) refl[c] = lit[(my * w + ox) * 3 + c].toDouble()
-                    } else {
-                        val yEdge = hy + (p.top + edge * s - LandPictures.FRAME_H0) * k
-                        val c = Atmosphere.sample(l.lut, (xs / vw).toDouble(), Atmosphere.rowOf(altitudeAt(min((2 * yEdge - sy).toFloat(), hy - 0.5f))))
-                        refl[0] = ((c shr 16) and 0xFF) / 255.0; refl[1] = ((c shr 8) and 0xFF) / 255.0; refl[2] = (c and 0xFF) / 255.0
-                    }
+                    val yEdge = hy + (p.top + edge * s - LandPictures.FRAME_H0) * k
+                    val sc = Atmosphere.sample(l.lut, (xs / vw).toDouble(), Atmosphere.rowOf(altitudeAt(min((2 * yEdge - sy).toFloat(), hy - 0.5f))))
+                    val skyR = ((sc shr 16) and 0xFF) / 255.0; val skyG = ((sc shr 8) and 0xFF) / 255.0; val skyB = (sc and 0xFF) / 255.0
+                    if (my in 0 until oy && kind[my * w + ox].toInt() == 1 && (out[my * w + ox] ushr 24) > 127) {
+                        val through = 0.22 + 0.1 * kotlin.math.abs(ruffle)
+                        refl[0] = lit[(my * w + ox) * 3] + (skyR - lit[(my * w + ox) * 3]) * through
+                        refl[1] = lit[(my * w + ox) * 3 + 1] + (skyG - lit[(my * w + ox) * 3 + 1]) * through
+                        refl[2] = lit[(my * w + ox) * 3 + 2] + (skyB - lit[(my * w + ox) * 3 + 2]) * through
+                    } else { refl[0] = skyR; refl[1] = skyG; refl[2] = skyB }
                     val dep = kotlin.math.atan((sy - hy) / f)
                     val fres = 0.02 + 0.98 * (1 - sin(max(dep, 0.002))).pow(5)
                     val mixK = (0.30 + 0.70 * fres).coerceIn(0.0, 1.0) * 0.82

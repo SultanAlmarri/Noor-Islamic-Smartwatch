@@ -191,5 +191,5 @@
     return { image: out, x0: cx - half, x1: cx + half, y0: V.hy - V.F * tanTop, y1: V.hy - V.F * tanBot };
   }
 
-  root.MSets = { load, compose, weights, PITCH };
+  root.MSets = { load, compose, weights, PITCH, vnoise };
 })(typeof window !== 'undefined' ? window : globalThis);

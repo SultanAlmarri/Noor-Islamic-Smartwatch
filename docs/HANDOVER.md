@@ -1531,3 +1531,51 @@ night; prints the time to light a set); the existing sky, land, cloud, director 
   sky. The forest's near bank and the arctic's snow bank are plain.
 - Lightning, rain shafts and virga were part of the sprites; the sets have none (High draws its own).
 - The widget still draws the 0.9.9 sprites (`CloudField`).
+
+### 30.2 Candidate: the medium land from the real sky's own pictures (a helper on `medium/land`, 17 November 2026)
+
+**Why.** After 30.1 the medium sky's clouds were the real sky's, but its land was still the layered land the shader
+draws: next to the real sky's sceneries (Blender renders of real elevation data and scans) plainly a painting; the
+red rock read as brickwork. The lead asked for a candidate built from the real sky's own land pictures, as the clouds are.
+
+**What it does** (`ui/today/PictureLand.kt`; the bench's port is `tools/skybench/mland.js`):
+- `LandPictures` reads a scenery's pictures (`assets/sky2/land/<id>`, read only: `a` colours and coverage, `k` lit by a
+  white sky, `g` distance, `m` the mask, `s_*` the unit Suns) at half size on a background thread, only the band the
+  medium header shows: from the picture's top down to 440 px of the real sky's 1080-wide frame under its horizon (0.41
+  of the width). Every picture is read by the same normalised coordinates as the real sky samples it (the open sea's
+  mask is not of its picture's proportions).
+- `PictureLand.compose` lights it for the moment with the medium sky's own `Atmosphere.Light`, by the real sky's
+  `landAt` (scene.frag): `LightWeights.of` the unit Suns (the moon's at night), sunlight on the colours, the glow round a
+  low Sun, skylight on the sky picture (with the night's blue), an overcast's even light, `SkyState.shade`; the hour of
+  colour lifted; the haze and the morning fog of the air between by distance and height, towards the horizon's colour
+  in each column. Placement is the real sky's (`landUv`): the frame's horizon row on the medium horizon, its width the
+  screen's; mirrored in Arabic.
+- Water: the mask's red (the lake, the fjord, the pool, the meadow's lake); the open sea (no mask) where the ground the
+  picture shows lies under the sea's level (`water` in land.json), as the real sky's beach works it out. A still mirror
+  about the water's far edge in each column: the land above it (with a faint static ruffle and a little sky through it)
+  or Medium's sky at the mirrored height; darker and bluer than what it mirrors, more so seen from above (Fresnel); the
+  Sun's glade on it while the Sun is up. Wet sand mirrors a little. No waves, no wind, no seasons, no snow lying
+  (the base pictures; the seasons follow the real sky's signature time of year only through its weather).
+- The nearest land fades into the page at the header's foot. `PictureLandPainter` lights again only when the light of the
+  moment changes (`SkyLight`, shade, overcast, fog, size, page colour), off the main thread, the last request winning;
+  a new picture cross-fades over the last (350 ms; the first fades in over 600 ms over the layered land, which is drawn
+  until then and wherever a scenery's pictures cannot be read: `LandPictures.hasFailed`, the 0.9 mountains). Under it
+  the GPU land shader is not drawn and the land's clock does not run.
+- `tools/skybench/cards.py` makes the Settings cards with it (and a fair afternoon's clouds): regenerated.
+
+**Measured.** Lighting one picture on the JVM (`PictureLandTest`, after warm-up): dunes 19 ms, meadow 26, ocean 18,
+forest 72-140, arctic 32, canyon 20 (a phone is unmeasured). Memory per scenery: the band 1.3-3.0 MB (forest and red rock
+the tallest, 540 × 482), plus up to 10 Sun pictures of 0.12-0.26 MB each, plus the bitmap on show and the one fading out
+(up to 1 MB each). Bench (software GPU): the layered land costs ~337 ms per frame and is drawn again whenever the moment
+or its clock changes; the candidate draws one bitmap, and lights it in ~62 ms (JS, mean of 42 scenes) when the light
+changes.
+
+**Comparison** (sheets in the review folder): the candidate is the real sky's own scenery, so it is far nearer High than
+the layered land in every scenery; against High it lacks the waves, the wind in the grass, the seasons and the glass's
+exposure (a little darker and flatter at midday); tall sceneries (forest, red rock, arctic) rise into the upper sky as on
+High, closer under the text because the medium horizon is higher on the screen.
+
+**For the Sun's path**: with the candidate the land's skyline is the real sky's (`RealSky.skyline(context, biome)` with
+`SunLift.skylineY`), not `LandProfile.skylineY`.
+
+**Not tested** on a phone or the emulator (photograph `real-sky.yml` tier MEDIUM).
