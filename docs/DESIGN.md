@@ -87,6 +87,22 @@ The scene (0.9.6), far to near:
    gullies), not by depth below each jagged crest, which made vertical bands. Dunes: from each summit a sharp crest runs down across the dune, so a low Sun lights the windward face
    and leaves the slip face in blue shade; faint ripples on the nearest. Lit per pixel from the Sun's side, a rim of
    light along crests with the Sun low behind them, shadows of passing cumulus, mist in the valleys at dawn.
+   **0.19, the medium graphics**: the 0.9 sky draws each of the real sky's six sceneries (`Terrain.of(Biome)`: the
+   meadow is the hills, the open sea the sea), the three that had no land of their own now with their own:
+   *Forest* (the forest lake): a far range with snow on its summits, a wooded ridge across a lake, the lake (layer 2,
+   flat: still water mirroring the sky and its far shore, the Sun's sheen on it only when the Sun is low), wooded
+   knolls at one side of the near shore or both, a bank in front; a dark conifer treeline of pointed spires along the
+   crests (tiers of branches, larger and fewer on nearer layers, none where the ground falls to the water), conifer
+   crowns in rows below it, more mist. *Arctic*: two high, sharp ranges snowed nearly to the water, bare rock along
+   their crests, whole faces turned to the Sun or away (little light thrown back into the shade, so the faces keep
+   their shapes and their blue shadows), over a fjord's still water; snow and dark boulders on the shore. *Canyon*:
+   a far rim, buttes and mesas (flat tops on sheer walls over skirts of red scree, a spire now and then, some with a
+   second tier), walls of bedded sandstone (red, orange, a pale cap rock, desert varnish, fluting, their sides lit or
+   shaded by the Sun's side), slickrock ledges and red sand in front, less mist. Their weather: the forest wetter and
+   greyer, the arctic overcast more often, the canyon clearer. The land shader shades only the layers a pixel shows
+   (at most three, front to back), which made room for them; the four older sceneries draw exactly as before. The
+   Canvas renderer (below Android 13) draws the same sceneries more simply (treelines, lakes, snowy ranges, mesas;
+   `TodayMediumSceneriesDesignTest` renders them).
 6. **Over the land**: the sun path (behind the land, gold where the day has passed) and the prayers: on the path while
    the Sun is up, on the skyline at Fajr, Shuruq, Maghrib and Isha. The next prayer's ring breathes; a mark fills as
    the Sun passes it, over a few minutes rather than at once. Birds at dawn and dusk.

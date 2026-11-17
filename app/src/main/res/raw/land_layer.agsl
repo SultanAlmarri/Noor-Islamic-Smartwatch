@@ -297,7 +297,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
             float3 scree = float3(0.43, 0.17, 0.075) * (0.8 + 0.35 * vnoise(float2(xd * 0.5, below * 0.5)));
             float flute = (vnoise1(xd * 0.28 + float(layer) * 4.0) - 0.5) * 0.5;
             float3 nWall = normalize(float3(clamp(slope * 0.9, -2.5, 2.5) + flute, 0.12, -1.0));
-            float3 nScree = normalize(float3(slope * 0.7, 1.0, -0.8));
+            float3 nScree = normalize(float3(slope * 0.7 * exp(-max(below, 0.0) / 8.0), 1.0, -0.8));
             n = normalize(mix(nScree, nWall, wall));
             albedo = mix(scree, rock, wall);
         } else {
@@ -389,15 +389,16 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
                 // dark crags stand out where the faces are steepest.
                 float hb = (ridgeAt(fc.x - 14.0 * uDp, layer) - ridgeAt(fc.x + 14.0 * uDp, layer)) * amp / (28.0 * uDp);
                 float hold = exp(-max(below, 0.0) / 45.0);
-                n = normalize(float3(clamp(hb * 2.2 * hold + slope * 0.8 * exp(-max(below, 0.0) / 9.0), -2.0, 2.0) + (gully - 0.5) * 1.1, 0.5, -0.75));
+                n = normalize(float3(clamp(hb * 2.2 * hold + slope * 0.8 * exp(-max(below, 0.0) / 9.0), -2.0, 2.0) + (gully - 0.5) * 1.1, 0.32, -0.75));
                 // Bare rock where snow cannot hold: along the sharp crests and down their steepest ribs.
-                float crest = 1.0 - smoothstep(1.5, 4.0 + 8.0 * vnoise1(xd * 0.05 + float(layer) * 3.0), below);
-                float crag = gully * 0.6 + vnoise(float2(xd * 0.15, below * 0.15 + float(layer) * 5.0)) * 0.4 + min(abs(slope), 1.5) * 0.25;
+                float crest = 1.0 - smoothstep(1.0, 3.0 + 9.0 * vnoise1(xd * 0.05 + float(layer) * 3.0), below);
+                float crag = vnoise(float2(xd * 0.08, below * 0.08 + float(layer) * 5.0)) * 0.6 + min(abs(slope), 1.5) * 0.35;
                 snow *= 1.0 - crest * smoothstep(0.5, 0.58, crag);
             }
             float3 bare = mix(float3(0.16, 0.16, 0.16), float3(0.27, 0.25, 0.22), gully2);
             albedo = mix(mix(bare, albedo, isArctic() ? 0.0 : (layer == 0 ? (isForest() ? 0.45 : 0.12) : 0.40)), float3(0.82, 0.85, 0.90), sat(snow));
-            bounce = mix(bounce, 0.35, sat(snow));
+            // (0.19: in the arctic little light thrown back into the shade, so the faces keep their shapes.)
+            bounce = mix(bounce, isArctic() ? 0.06 : 0.35, sat(snow));
         }
     }
 
