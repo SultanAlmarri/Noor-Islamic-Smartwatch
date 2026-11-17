@@ -87,6 +87,23 @@ The scene (0.9.6), far to near:
    gullies), not by depth below each jagged crest, which made vertical bands. Dunes: from each summit a sharp crest runs down across the dune, so a low Sun lights the windward face
    and leaves the slip face in blue shade; faint ripples on the nearest. Lit per pixel from the Sun's side, a rim of
    light along crests with the Sun low behind them, shadows of passing cumulus, mist in the valleys at dawn.
+   **0.19, the medium graphics**: the 0.9 sky draws each of the real sky's six sceneries (`Terrain.of(Biome)`: the
+   meadow is the hills, the open sea the sea), the three that had no land of their own now with their own:
+   *Forest* (the forest lake): a far range with snow on its summits, a wooded ridge across a lake, the lake (layer 2,
+   flat: still water mirroring the sky and its far shore, the Sun's sheen on it only when the Sun is low), wooded
+   knolls at one side of the near shore or both, a bank in front; a dark conifer treeline of pointed spires along the
+   crests (tiers of branches, larger and fewer on nearer layers, none where the ground falls to the water), conifer
+   crowns in rows below it, more mist. *Arctic*: broad massifs across the width, each with several jagged summits,
+   snowed nearly to the water: gentle snowfields that take the light, steep faces turned to the Sun or away (little
+   light thrown back into the shade, so they keep their blue shadows), dark rock along the crests and aretes and in
+   ribs down the steep faces, snow in the couloirs; a fjord's dark still water; snow and dark boulders on the shore. *Canyon*:
+   a far rim, buttes and mesas (flat tops on sheer walls over skirts of red scree, a spire now and then, some with a
+   second tier), walls of bedded sandstone (red, orange, a pale cap rock, desert varnish, fluting, their sides lit or
+   shaded by the Sun's side), smooth talus; in front flat treads of slickrock with short red risers, less mist. Their weather: the forest wetter and
+   greyer, the arctic overcast more often, the canyon clearer. The land shader shades only the layers a pixel shows
+   (at most three, front to back), which made room for them; the four older sceneries draw exactly as before. The
+   Canvas renderer (below Android 13) draws the same sceneries more simply (treelines, lakes, snowy ranges, mesas;
+   `TodayMediumSceneriesDesignTest` renders them).
 6. **Over the land**: the sun path (behind the land, gold where the day has passed) and the prayers: on the path while
    the Sun is up, on the skyline at Fajr, Shuruq, Maghrib and Isha. The next prayer's ring breathes; a mark fills as
    the Sun passes it, over a few minutes rather than at once. Birds at dawn and dusk.
@@ -386,10 +403,17 @@ Sun's true elevation through the atmosphere model.
 its brightest part asks (never brighter than 0.24 where white text stands), so the land's forms and texture show
 through. Light glass (the light theme) is as in 0.10.
 
-**Quality tiers** (`RealSky.Tier`; Settings → Home scenery → Sky quality): Ultra, High, Medium, Low, or Automatic
-(guessed from the phone's GPU and memory, stepped down by itself if pictures take too long), or Classic (the 0.9
-sky). A tier sets the size of the picture, how often it is redrawn, and whether the baked pictures are read at half
-size. Compiled shader programs are cached.
+**Graphics levels (0.19)** (Settings → Home scenery → Graphics; the owner's three levels): **High** is the real sky;
+**Medium** the 0.9 sky (the layered sky drawn on the phone: GPU shaders on Android 13 and later, Canvas below), with
+every one of the six sceneries (0.19 gave the forest, the arctic and the red rock their own land; the green hills are
+the 0.9 hills); **Low** the simplest sky (`SimpleSkyLayer`: the sky's colours, the Sun and the moon, stars at night,
+the scenery's land as flat silhouettes; nothing moves by itself and nothing is drawn again unless the moment changes);
+**Automatic** (the default) chooses for the phone (`SkyLevels.guess`: memory, Android version, a low-memory device,
+OpenGL ES 3) and steps down a level by itself when the frames prove the phone too slow (the real sky at its lowest
+step, the 0.9 sky at its lower resolution), kept until the app is updated. Every level draws the same scenery for a
+place (`Terrain.of(Biome)`). Within High, the real sky still chooses its own steps (`RealSky.Tier`: Ultra, High,
+Medium, Low: the size of the picture, how often it is redrawn, whether the baked pictures are read at half size),
+guessed from the GPU and memory and stepped down by itself. Compiled shader programs are cached.
 
 **While the Sun is dragged (0.18.2).** On a phone whose frames of a drag come slower than about 48 a second, the scene
 is drawn a step smaller (down to 0.6 of its size, `RealSkyEngine.busyScale`) and enlarged by the last pass, so the

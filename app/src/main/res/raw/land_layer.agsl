@@ -13,7 +13,7 @@ uniform float4 uDistA;     // distance of layers 0..3, km
 uniform float uDistB;
 uniform float uRidgeN;     // samples across the width in the ridge table
 uniform float uDunes;      // 1 in sand country
-uniform float uTerrain;    // 0 dunes, 1 hills, 2 mountains, 3 sea (0.9.8)
+uniform float uTerrain;    // 0 dunes, 1 hills, 2 mountains, 3 sea (0.9.8), 4 forest, 5 arctic, 6 canyon (0.19)
 uniform float uAltTop;     // the sky's altitude at the top edge, degrees (for the sea's reflection)
 uniform float uAltPow;
 uniform float4 uMoonL;     // the moon: x, y (px), visibility, light (0 new … 1 full), for its path on the sea and moonlight
@@ -37,8 +37,13 @@ uniform float4 uWx;        // the weather of the moment (0.9.9): overcast, layer
 
 float pick4(float4 a, float b, int i) { return i == 0 ? a.x : (i == 1 ? a.y : (i == 2 ? a.z : (i == 3 ? a.w : b))); }
 
-bool isSea() { return uTerrain > 2.5; }
+bool isSea() { return uTerrain > 2.5 && uTerrain < 3.5; }
 bool isMountains() { return uTerrain > 1.5 && uTerrain < 2.5; }
+bool isForest() { return uTerrain > 3.5 && uTerrain < 4.5; }
+bool isArctic() { return uTerrain > 4.5 && uTerrain < 5.5; }
+bool isCanyon() { return uTerrain > 5.5; }
+// The forest's lake and the arctic fjord (0.19): still water in the middle distance, layer 2.
+bool isLake(int layer) { return layer == 2 && (isForest() || isArctic()); }
 
 // Where the Sun rises and sets, the land opens onto the true horizon (a pass between the hills, a gap between the
 // dunes), so the Sun meets the horizon exactly at the moment of Shuruq and of Maghrib, where their marks are.
@@ -61,21 +66,65 @@ float landHeight(float x, int layer, float base, float amp) {
     return mix(h, min(h, cap), openAt(x));
 }
 
+// One spire of the treeline at cell [c] (see [conifers]); dp.
+float spire(float c, float xc, float sp, float tall, float g, int layer) {
+    if (g <= 0.0) return 0.0;   // no tree where the ground has not risen (also keeps the function out of line: below)
+    float hh = hash11(c * 1.37 + float(layer) * 7.0);
+    float cx = c + 0.5 + (hash11(c * 2.71 + 5.0) - 0.5) * 0.7;
+    // A tree stands only where the ground has risen far enough for it (its own threshold, so they thin out).
+    float th = tall * (0.5 + 0.5 * hh) * smoothstep(hh * 0.6, hh * 0.6 + 0.25, g);
+    float t = 1.0 - abs(xc - cx) * sp / max(th * 0.2, 0.5);
+    // Tiers of branches: the flank steps in a little every couple of dp.
+    float y = th * sat(t);
+    return y - min(fract(y / 2.4 + hh * 3.0) * 1.1, y) * sat(th / 8.0);
+}
+
+// The treeline (0.19): the pointed tops of conifers along the crest, narrow spires with tiers of branches, larger and
+// further apart on the nearer layers, standing where the ground rises (none where it falls to the water). dp.
+// (Android's shader compiler copies a function called once, with its only return at the end, into its caller; copied
+// into edgeDetail's `if (...) return conifers(...)`, it lost this function's first local ("'_6_s' / '_6_sp' :
+// undeclared identifier" in the GLSL it generated) and the medium graphics drew no land at all, while the WebGL bench
+// and Robolectric's compiler were fine. A function that can return early is never copied: hence the first lines here
+// and in spire, which change no result.)
+float conifers(float x, int layer) {
+    if (layer < 1) return 0.0;  // (edgeDetail asks for layers 1 to 4 only)
+    float sp = layer == 1 ? 2.3 : (layer == 3 ? 5.0 : 8.5);         // spacing
+    float tall = layer == 1 ? 5.5 : (layer == 3 ? 19.0 : 30.0);     // the tallest
+    float g = layer == 1 ? 1.0 : smoothstep(0.16, 0.5, ridgeAt(x, layer));
+    float xc = x / uDp / sp + uSeed * 3.1 + float(layer) * 17.0;
+    float ci = floor(xc);
+    float best = max(max(spire(ci - 1.0, xc, sp, tall, g, layer), spire(ci, xc, sp, tall, g, layer)), spire(ci + 1.0, xc, sp, tall, g, layer));
+    // Lower crowns fill in between the spires.
+    return max(best, tall * 0.18 * g * (0.6 + 0.4 * vnoise1(xc * 2.3))) * uDp;
+}
+
 // Fine relief on the skyline the table is too coarse to hold: crags far away, scrub nearer, nothing on sand.
 float edgeDetail(float x, int layer) {
     float xd = x / uDp + uSeed * 37.0;
-    if (uDunes > 0.5) return 0.0;
+    if (uDunes > 0.5 || isLake(layer)) return 0.0;
     if (isSea() && layer <= 2) return ridgeAt(x, layer) > 0.02 ? (vnoise1(xd * 0.4) * 0.8) * uDp : 0.0;
     if (isSea()) return 0.0;                     // sand: smooth
-    if (layer == 0 || (isMountains() && layer == 1)) {
+    if (isForest() && layer > 0) return conifers(x, layer);
+    // Red rock: crisp edges, a few loose blocks on the ledges in front. Snow: soft drifts.
+    if (isCanyon()) return layer >= 3 ? pow(vnoise1(xd * 0.45 + float(layer) * 9.0), 4.0) * 0.8 * uDp : 0.15 * vnoise1(xd * 0.9) * uDp;
+    if (isArctic() && layer >= 3) return vnoise1(xd * 0.2 + float(layer) * 13.0) * 0.8 * uDp;
+    bool high = isMountains() || isArctic();
+    if (layer == 0 || (high && layer == 1)) {
         float a = 1.0 - abs(vnoise1(xd * 0.22) * 2.0 - 1.0);
         float b = 1.0 - abs(vnoise1(xd * 0.55 + 7.0) * 2.0 - 1.0);
-        float k = isMountains() ? 2.0 : 1.0;
+        float k = high ? 2.0 : 1.0;
         return (a * a * 1.3 + b * b * 0.6) * uDp * k;
     }
     // Tree crowns and bushes along the crest: rounded bumps a few dp across.
     float s = vnoise1(xd * 0.33 + float(layer) * 13.0) * 0.7 + vnoise1(xd * 0.8 + float(layer) * 5.0) * 0.3;
     return s * s * (0.6 + 0.45 * float(layer)) * uDp;
+}
+
+// The top of [layer] at [x], px: its ridge, then the fine relief of its skyline.
+float topOf(float x, int layer) {
+    float base = pick4(uBaseA, uBaseB, layer);
+    float amp = pick4(uAmpA, uAmpB, layer);
+    return base - amp * landHeight(x, layer, base, amp) - edgeDetail(x, layer) * (1.0 - openAt(x));
 }
 
 // Two octaves of value noise: soft patches (cheaper than fbm4 where the fine octaves are not wanted).
@@ -90,32 +139,67 @@ float3 skyAt(float x, float altDeg) {
     return lutAt(p).rgb;
 }
 
+// The far shore's skyline as still water shows it (0.19): the ridge, and the treeline as a ragged band (the ripples
+// blur the single trees away; cheaper than the trees themselves).
+float mirroredTop(float x, int l) {
+    float base = pick4(uBaseA, uBaseB, l);
+    float amp = pick4(uAmpA, uAmpB, l);
+    float trees = isForest() && l == 1 ? (2.0 + 2.5 * vnoise1(x / uDp * 0.45 + uSeed)) * uDp : 0.0;
+    return base - amp * landHeight(x, l, base, amp) - trees;
+}
+
+// The far shore as still water shows it (0.19): its own colours, simply lit, hazed by its distance. [y] is the point
+// reflected; [l] its layer (0 or 1).
+float3 farShore(float x, float y, int l) {
+    float base = pick4(uBaseA, uBaseB, l);
+    float rel = sat((base - y) / max(pick4(uAmpA, uAmpB, l), uDp));
+    float3 snow = float3(0.80, 0.83, 0.88);
+    float rock = vnoise(float2(x / uDp * 0.07, rel * 7.0 + float(l) * 3.0));
+    float3 alb = isForest()
+        ? (l == 1 ? float3(0.032, 0.055, 0.04) : mix(float3(0.10, 0.12, 0.09), snow, smoothstep(0.5, 0.62, rel + rock * 0.15)))
+        : mix(float3(0.09, 0.09, 0.10), snow, 0.55 + 0.4 * smoothstep(0.3, 0.8, rock));
+    float3 lit = alb * (uSunGround * 0.5 * sat(uSunEl / 12.0 + 0.2) + mix(uAmbLow, uAmbTop, 0.6) * 1.1);
+    float3 tr = exp(-float3(0.020, 0.026, 0.036) * pick4(uDistA, uDistB, l));
+    return mix(skyAt(x, 0.6 + 2.0 * rel), tone(lit), tr);
+}
+
 // The sea (0.9.8): a calm sea mirrors the sky, more so towards the horizon where the light grazes it; small waves,
 // finer and closer together with distance, tilt the reflection; the Sun (and the moon at night) lays a glittering path
 // across the water towards the viewer; a line of foam where the water meets the shore.
-float3 water(float2 fc, float shoreTop) {
+// (0.19) [calm] 1: the still water of a lake or a fjord, which mirrors its far shore too; no swell, no surf.
+float3 water(float2 fc, float shoreTop, float calm) {
     float dy = max(fc.y - uHorizon, 0.4 * uDp);
     float dyDp = dy / uDp;
     float z = 60.0 / (dyDp + 1.5);                       // how far away this part of the sea is (arbitrary units)
     float2 wp = float2(fc.x / uDp * 0.045 * z / 6.0, z * 1.6) + float2(uTime * 0.02, uTime * 0.05);
     float w1 = vnoise(wp * float2(1.0, 0.35));
     float w2 = vnoise(wp * float2(2.3, 0.8) + float2(3.1, 7.7));
-    float slope = (w1 - 0.5) * 0.7 + (w2 - 0.5) * 0.4;   // tilt of the little waves
+    float slope = ((w1 - 0.5) * 0.7 + (w2 - 0.5) * 0.4) * (1.0 - 0.75 * calm);   // tilt of the little waves
     // The angle below the horizon, then the sky at the same angle above it, shifted by the waves.
     float dep = uAltTop * pow(sat(dy / uHorizon), uAltPow);
     float altR = max(dep * (1.0 + slope * 0.9) + slope * 1.5, 0.0);
     float3 refl = skyAt(fc.x + slope * 6.0 * uDp, altR);
+    if (calm > 0.5) {
+        // The far shore upside down: the point as far above the water's edge as this one is below it.
+        float my = 2.0 * pick4(uBaseA, uBaseB, 2) - fc.y + slope * 4.0 * uDp;
+        float mx = fc.x + slope * 5.0 * uDp;
+        float in1 = sat((my - mirroredTop(mx, 1)) / uDp + 0.5);
+        float in0 = sat((my - mirroredTop(mx, 0)) / uDp + 0.5);
+        refl = mix(refl, mix(farShore(mx, my, 0), farShore(mx, my, 1), in1), max(in0, in1) * 0.92);
+    }
     refl = mix(refl, float3(luma(refl)) * 0.85, sat(uWx.x * 0.9 + uWx.z * 0.4));
     float cosv = sin(radians(max(dep, 0.3)));
     float fres = 0.02 + 0.98 * pow(1.0 - cosv, 5.0);
     float3 deep = tone(uAmbTop * 0.10 + uSunGround * 0.012) * float3(0.55, 0.85, 0.95);
-    float3 c = mix(deep, refl, sat(0.25 + 0.75 * fres));
+    // (0.19) The fjord is deep and dark: it mirrors less than the shallow, sunlit sea.
+    float3 c = mix(deep * (isArctic() ? 0.5 : 1.0), refl, sat(0.25 + 0.75 * fres) * (isArctic() ? 0.85 : 1.0));
     // Long swells and wind ripples, drawn out sideways by perspective, darker in the troughs.
     float swell = vnoise(float2(fc.x / uDp * 0.010 * z / 6.0, z * 3.2 + uTime * 0.04));
     float ripple = vnoise(float2(fc.x / uDp * 0.05 * z / 6.0, z * 9.0 - uTime * 0.07));
-    c *= 0.86 + 0.16 * swell + 0.10 * ripple;
+    c *= mix(0.86 + 0.16 * swell + 0.10 * ripple, 0.95 + 0.08 * ripple, calm);
     // The Sun's path: bright flecks where a wave faces it, in a band that widens towards the shore.
-    float sunUp = smoothstep(-1.0, 1.5, uSunEl) * (1.0 - 0.6 * smoothstep(20.0, 60.0, uSunEl)) * (1.0 - 0.95 * uWx.x);
+    float sunUp = smoothstep(-1.0, 1.5, uSunEl) * (1.0 - 0.6 * smoothstep(20.0, 60.0, uSunEl)) * (1.0 - 0.95 * uWx.x)
+        * (1.0 - calm * smoothstep(3.0, 14.0, uSunEl) * 0.85);
     if (sunUp > 0.0) {
         float width = (6.0 + dyDp * 0.7) * uDp * (1.0 + 0.05 * max(uSunEl, 0.0));
         float lane = exp(-pow((fc.x - uSunPos.x) / width, 2.0));
@@ -133,7 +217,7 @@ float3 water(float2 fc, float shoreTop) {
     }
     // Foam where the sea meets the shore.
     float foam = exp(-max(shoreTop - fc.y, 0.0) / (1.2 * uDp)) * step(fc.y, shoreTop + uDp) * (0.55 + 0.45 * vnoise(float2(fc.x / uDp * 0.15, uTime * 0.3)));
-    c = mix(c, tone(uSunGround * 0.9 + uAmbTop * 1.4) + float3(0.04), foam * 0.6);
+    c = mix(c, tone(uSunGround * 0.9 + uAmbTop * 1.4) + float3(0.04), foam * 0.6 * (1.0 - 0.75 * calm));
     return c;
 }
 
@@ -147,7 +231,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     // How high up the layer this point is (0 at its foot, 1 at its highest): on jagged ranges the light, the haze and
     // the snowline follow altitude, not the distance below the crest straight above (which made vertical bands).
     float rel = sat((base - fc.y) / amp);
-    bool range = isMountains() && layer <= 1;
+    bool range = ((isMountains() || isArctic()) && layer <= 1) || (isForest() && layer == 0);
     if (range) depth = mix(depth, 1.0 - rel, 0.85);
     float xd = fc.x / uDp;
 
@@ -167,9 +251,10 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     // Open water; a headland's foot meets the sea at the horizon (0.9.9: its land ran on below the horizon down to
     // the next layer, ending in a straight vertical edge where the headland's tip met the water).
     float rx = ridgeAt(fc.x, layer);
-    if (isSea() && layer <= 2 && (rx < 0.02 || fc.y > uHorizon + 2.0 * uDp * sat(rx * 4.0))) {
+    bool lake = isLake(layer);
+    if (lake || (isSea() && layer <= 2 && (rx < 0.02 || fc.y > uHorizon + 2.0 * uDp * sat(rx * 4.0)))) {
         float sb = pick4(uBaseA, uBaseB, 3); float sa = pick4(uAmpA, uAmpB, 3);
-        float3 cw = water(fc, sb - sa * landHeight(fc.x, 3, sb, sa));
+        float3 cw = water(fc, sb - sa * landHeight(fc.x, 3, sb, sa), lake ? 1.0 : 0.0);
         float3 airW = skyAt(fc.x, 0.6);
         return mix(airW, cw, exp(-0.02 * dist * (1.0 - sat(below / 30.0))));
     }
@@ -202,6 +287,62 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
             albedo = mix(albedo, float3(0.30, 0.27, 0.22), wet * 0.7);
             bounce = 0.22;
         }
+    } else if (isCanyon()) {
+        // Red rock (0.19). Mesas and buttes: sheer walls of bedded sandstone, red below, orange, then a pale cap rock,
+        // streaked with dark desert varnish, fluted, their sides turned to the Sun or away; under the walls slopes of
+        // red scree. In front, ledges of slickrock and red sand.
+        float hx = ridgeAt(fc.x, layer);
+        if (layer <= 2) {
+            float screeTop = 0.30 + 0.08 * (vnoise1(xd * 0.04 + float(layer) * 5.0) - 0.5);
+            float wall = smoothstep(screeTop - 0.012, screeTop + 0.012, rel);
+            float sb = rel * 7.0 + 0.45 * vnoise1(xd * 0.02 + float(layer) * 2.0);
+            float hb = hash11(floor(sb) * 3.7 + float(layer) + uSeed);
+            float3 rock = hb < 0.45 ? float3(0.42, 0.11, 0.045) : (hb < 0.8 ? float3(0.55, 0.20, 0.07) : float3(0.60, 0.38, 0.22));
+            rock *= 0.72 + 0.28 * smoothstep(0.0, 0.14, fract(sb)) * smoothstep(1.0, 0.86, fract(sb));
+            rock = mix(rock, float3(0.62, 0.50, 0.36), smoothstep(0.82, 0.97, rel / max(hx, 0.05)) * 0.75);
+            float varnish = smoothstep(0.6, 0.9, vnoise(float2(xd * 0.7, rel * 2.5 + float(layer))));
+            rock *= 1.0 - 0.22 * varnish * sat(rel * 3.0);
+            float3 scree = float3(0.45, 0.18, 0.08) * (0.9 + 0.12 * vnoise(float2(xd * 0.06, below * 0.1 + float(layer))) - 0.12 * smoothstep(screeTop - 0.12, screeTop, rel));
+            float flute = (vnoise1(xd * 0.28 + float(layer) * 4.0) - 0.5) * 0.5;
+            float3 nWall = normalize(float3(clamp(slope * 0.9, -2.5, 2.5) + flute, 0.12, -1.0));
+            float3 nScree = normalize(float3(slope * 0.7 * exp(-max(below, 0.0) / 8.0), 1.0, -0.8));
+            n = normalize(mix(nScree, nWall, wall));
+            albedo = mix(scree, rock, wall);
+        } else {
+            // Slickrock steps: under each edge a short riser, darker and redder, facing us; then the flat tread.
+            float riser = 1.0 - smoothstep(1.5, 3.5, below);
+            float tone2 = vnoise(float2(xd * 0.02, float(layer) * 5.0 + uSeed));
+            float3 tread = mix(float3(0.56, 0.31, 0.16), float3(0.64, 0.40, 0.23), tone2);
+            albedo = mix(tread, float3(0.44, 0.17, 0.08), riser);
+            n = normalize(mix(float3(slope * 0.4, 1.0, -0.3), float3(slope * 0.6, 0.25, -1.0), riser));
+        }
+        bounce = 0.28;
+    } else if (isForest() && layer > 0) {
+        // Conifers (0.19): dark blue-green crowns in rows, each a narrow cone lit on its Sun side, darker in the gaps;
+        // on the shore and the bank in front, moss and stone where no tree stands.
+        float s = layer == 1 ? 2.3 : (layer == 3 ? 5.0 : 8.5);
+        float2 p = float2(xd / s + uSeed * 3.1 + float(layer) * 17.0, below / (s * 1.7));
+        p.x += floor(p.y) * 0.5;
+        float2 ci = floor(p); float2 f = fract(p);
+        float dx = f.x - (0.25 + 0.5 * hash12(ci + float2(uSeed, float(layer))));
+        float cone = 1.0 - smoothstep(-0.06, 0.06, abs(dx) - (f.y + 0.25) * 0.38);
+        float trees = layer == 1 ? 1.0 : smoothstep(0.16, 0.5, ridgeAt(fc.x, layer));
+        float g = vnoise(float2(xd * 0.05, below * 0.05 + float(layer) * 3.0));
+        float3 needles = mix(float3(0.028, 0.050, 0.040), float3(0.050, 0.072, 0.044), g) * mix(0.45, 1.0, cone);
+        float3 ground = mix(float3(0.09, 0.085, 0.06), float3(0.15, 0.15, 0.09), vnoise(float2(xd * 0.12, below * 0.15)));
+        albedo = mix(ground, needles, trees);
+        n = normalize(mix(float3(slope * 1.0 * exp(-max(below, 0.0) / 6.0), 1.0, -0.6), float3(sign(dx) * 0.9 * cone + slope * 0.4, 0.6, -0.8), trees));
+        bounce = 0.06;
+    } else if (isArctic() && layer >= 3) {
+        // Snow along the fjord (0.19): smooth drifts, dark boulders standing out of it, snow on their tops.
+        float rk = vnoise(float2(xd * 0.05, below * 0.14) + float2(uSeed, float(layer) * 4.0));
+        // The shore's drifts lie below a third of its height; what stands above them is rock.
+        float boulder = layer == 3 ? smoothstep(0.34, 0.4, rel + (rk - 0.5) * 0.12) : 0.0;
+        float stone = layer == 4 ? smoothstep(0.8, 0.84, vnoise(float2(xd * 0.035, below * 0.07) + float2(uSeed, 9.0))) * smoothstep(3.0, 6.0, below) : 0.0;
+        float rock = max(boulder, stone) * smoothstep(1.0, 2.2, below);
+        n = normalize(float3(slope * exp(-max(below, 0.0) / 6.0) + (rk - 0.5) * 1.4 * rock, 1.0, -0.6 - 0.6 * rock));
+        albedo = mix(float3(0.80, 0.83, 0.88), float3(0.07, 0.07, 0.075), rock);
+        bounce = 0.3;
     } else {
         // Hills (0.9.9): seen from afar, a wooded slope is soft — groves and meadows in large patches, the crowns of
         // the trees only on the nearest ridges, round, lit on the Sun's side; the big folds of the ground catch the
@@ -237,7 +378,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
             float k = woods * smoothstep(1.0, 6.0, below);
             albedo *= mix(1.0, mix(0.55, 0.85 + 0.35 * lightSide, crown), k);
         }
-        if (isMountains() && layer <= 1) {
+        if (range) {
             // High ranges: rock in long gullies down the slopes, snow from the summits down, deepest on the highest
             // peaks and lying in the gullies; it takes every colour of sunrise and sunset.
             float hHere = ridgeAt(fc.x, layer);
@@ -248,11 +389,35 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
             float nearCrest = rel;
             n = normalize(n + float3(((gully - 0.5) * 1.2 + (gully2 - 0.5) * 0.3) * (0.4 + 0.6 * nearCrest), 0.0, 0.0));
             // The snowline: an altitude, ragged where gullies hold the snow lower down.
-            float line = (layer == 0 ? 0.52 : 0.78) - (gully - 0.5) * 0.25 - (gully2 - 0.5) * 0.08;
+            // (0.19) In the far north the snow comes down nearly to the water; over the forest only the summits.
+            float line = (isArctic() ? -0.1 : (isForest() ? 0.56 : (layer == 0 ? 0.52 : 0.78)))
+                - (gully - 0.5) * 0.25 - (gully2 - 0.5) * 0.08;
             float snow = smoothstep(line - 0.03, line + 0.03, rel);
+            if (isArctic()) {
+                // The massifs are built of faces: gentle snowfields that take the light, steep faces turned to the
+                // Sun or away (the slope of the crest above, held far down the face). Bare dark rock where snow
+                // cannot hold: along the crests and aretes, and in ribs down the steep faces, snow in the couloirs
+                // between them.
+                float up = (base - fc.y) / amp;   // (unclamped: below the layer's foot the noise must not run straight down)
+                float hb = (ridgeAt(fc.x - 14.0 * uDp, layer) - ridgeAt(fc.x + 14.0 * uDp, layer)) * amp / (28.0 * uDp);
+                float hold = exp(-max(below, 0.0) / 45.0);
+                float side0 = clamp(hb * 2.2 * hold + slope * 0.8 * exp(-max(below, 0.0) / 9.0), -2.0, 2.0);
+                // Faces as plates slanting down the fall line of the face they lie on (angular, not blobs).
+                float2 fp = float2(xd * 0.05 + up * 1.6 * clamp(side0, -1.0, 1.0), up * 2.6 + float(layer) * 7.0);
+                float facet = (1.0 - abs(vnoise(fp) * 2.0 - 1.0)) * 0.7 + vnoise(fp * 2.3 + float2(5.0, 1.0)) * 0.3;
+                float steep = smoothstep(0.5, 0.56, facet + 0.18 * (1.0 - smoothstep(0.0, 22.0, below)) - 0.1 * (1.0 - sat(up * 2.5))) * (layer == 0 ? 0.45 : 1.0);
+                float side = side0 + (gully - 0.5) * 1.2 * steep;
+                n = normalize(float3(side, mix(1.1, 0.16, steep), -0.55));
+                float crest = 1.0 - smoothstep(1.0, 2.5 + 6.0 * vnoise1(xd * 0.05 + float(layer) * 3.0), below);
+                float ribs = smoothstep(0.6, 0.66, gully * 0.5 + (1.0 - abs(vnoise(fp * float2(3.0, 1.2)) * 2.0 - 1.0)) * 0.5);
+                float crag = vnoise(float2(xd * 0.08, below * 0.08 + float(layer) * 5.0)) * 0.6 + min(abs(slope), 1.5) * 0.35;
+                snow *= 1.0 - max(crest * smoothstep(0.5, 0.58, crag), steep * ribs * smoothstep(-0.05, 0.25, up));
+            }
             float3 bare = mix(float3(0.16, 0.16, 0.16), float3(0.27, 0.25, 0.22), gully2);
-            albedo = mix(mix(bare, albedo, layer == 0 ? 0.12 : 0.40), float3(0.82, 0.85, 0.90), sat(snow));
-            bounce = mix(bounce, 0.35, sat(snow));
+            if (isArctic()) bare *= 0.55;   // (0.19) the dark rock of the far north
+            albedo = mix(mix(bare, albedo, isArctic() ? 0.0 : (layer == 0 ? (isForest() ? 0.45 : 0.12) : 0.40)), float3(0.82, 0.85, 0.90), sat(snow));
+            // (0.19: in the arctic little light thrown back into the shade, so the faces keep their shapes.)
+            bounce = mix(bounce, isArctic() ? 0.06 : 0.35, sat(snow));
         }
     }
 
@@ -302,40 +467,56 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     if (uMist > 0.001 && layer < 4) {
         float drift = vnoise(float2(xd * 0.010 + uTime * 0.004, float(layer) * 4.0)) * 0.7 + 0.3 * vnoise(float2(xd * 0.035 - uTime * 0.006, float(layer)));
         float m = smoothstep(base - amp * 0.55, base + 2.0 * uDp, fc.y) * uMist * (0.45 + 0.55 * drift) * (1.0 - 0.15 * float(layer));
+        m *= isForest() ? 1.3 : (isCanyon() ? 0.45 : 1.0);   // (0.19) the forest's damp air, the dry red rock
         float3 mist = mix(air, float3(1.0), 0.18 * (1.0 - uNight));
         c = mix(c, mist, sat(m) * 0.85);
     }
     return c;
 }
 
+// One layer's colour at a point, the nearest one fading into the page.
+float3 layerColor(float2 fc, int i, float topY) {
+    float base = pick4(uBaseA, uBaseB, i);
+    float amp = pick4(uAmpA, uAmpB, i);
+    // Slope over a few dp: the table holds 8-bit heights, too coarse to differentiate pixel by pixel.
+    float hl = landHeight(fc.x - 4.0 * uDp, i, base, amp);
+    float hr = landHeight(fc.x + 4.0 * uDp, i, base, amp);
+    float slope = (hl - hr) * amp / (8.0 * uDp);
+    float3 c = shade(fc, i, topY, slope);
+    if (i == 4) {
+        // The nearest land is the page: it fades into the page colour, exactly so at the bottom edge.
+        // Mixed in linear light, so a dark dune meets a light page without a muddy grey band.
+        float t = smoothstep(base - amp * landHeight(fc.x, i, base, amp) + 4.0 * uDp, uSize.y - 2.0 * uDp, fc.y);
+        float3 cl = pow(sat3(c), float3(2.2));
+        float3 pl = pow(sat3(uPage), float3(2.2));
+        c = pow(mix(mix(cl, pl, 0.22), pl, t * t * (3.0 - 2.0 * t)), float3(1.0 / 2.2));
+    }
+    return c;
+}
+
 float4 render(float2 fc) {
-    float4 acc = float4(0.0); // premultiplied, front to back
+    // (0.19) Front to back, find the nearest layer that covers this pixel and the ones showing behind its edge (two
+    // more at most, where skylines cross); only those are shaded (shading every layer in the loop made the program
+    // five times the size of shade).
     float aa = 0.9;
+    int l0 = -1; int l1 = -1; int l2 = -1;
+    float c0 = 0.0; float c1 = 0.0; float c2 = 0.0; float t0 = 0.0; float t1 = 0.0; float t2 = 0.0; float a = 0.0;
     for (int i = 4; i >= 0; i--) {
-        if (acc.a < 0.995) {
-            float base = pick4(uBaseA, uBaseB, i);
-            float amp = pick4(uAmpA, uAmpB, i);
-            float h = landHeight(fc.x, i, base, amp);
-            float topY = base - amp * h - edgeDetail(fc.x, i) * (1.0 - openAt(fc.x));
+        if (a < 0.995 && l2 < 0) {
+            float topY = topOf(fc.x, i);
             float cov = sat((fc.y - topY) / aa + 0.5);
             if (cov > 0.0) {
-                // Slope over a few dp: the table holds 8-bit heights, too coarse to differentiate pixel by pixel.
-                float hl = landHeight(fc.x - 4.0 * uDp, i, base, amp);
-                float hr = landHeight(fc.x + 4.0 * uDp, i, base, amp);
-                float slope = (hl - hr) * amp / (8.0 * uDp);
-                float3 c = shade(fc, i, topY, slope);
-                if (i == 4) {
-                    // The nearest land is the page: it fades into the page colour, exactly so at the bottom edge.
-                    // Mixed in linear light, so a dark dune meets a light page without a muddy grey band.
-                    float t = smoothstep(base - amp * h + 4.0 * uDp, uSize.y - 2.0 * uDp, fc.y);
-                    float3 cl = pow(sat3(c), float3(2.2));
-                    float3 pl = pow(sat3(uPage), float3(2.2));
-                    c = pow(mix(mix(cl, pl, 0.22), pl, t * t * (3.0 - 2.0 * t)), float3(1.0 / 2.2));
-                }
-                acc += float4(c, 1.0) * cov * (1.0 - acc.a);
+                if (l0 < 0) { l0 = i; c0 = cov; t0 = topY; }
+                else if (l1 < 0) { l1 = i; c1 = cov * (1.0 - a); t1 = topY; }
+                else { l2 = i; c2 = cov * (1.0 - a); t2 = topY; }
+                a += cov * (1.0 - a);
             }
         }
     }
+    float4 acc = float4(0.0); // premultiplied
+    if (l0 >= 0) acc = float4(layerColor(fc, l0, t0), 1.0) * c0;
+    if (l1 >= 0) acc += float4(layerColor(fc, l1, t1), 1.0) * c1;
+    if (l2 >= 0) acc += float4(layerColor(fc, l2, t2), 1.0) * c2;
     acc.rgb += (hash12(fc) - 0.5) / 255.0 * acc.a;
     return acc;
 }

@@ -63,6 +63,8 @@ class SettingsRepository(
         val scrubHint = booleanPreferencesKey("hint_scrub_done")
         val scenery = stringPreferencesKey("scenery")
         val skyGraphics = stringPreferencesKey("sky_graphics")
+        /** (0.19) The graphics level (SkyGraphics); "sky_graphics" is only read to carry an older choice over. */
+        val skyLevel = stringPreferencesKey("sky_level")
         val seasons = booleanPreferencesKey("scenery_seasons")
         val trueStars = booleanPreferencesKey("scenery_true_stars")
         fun offset(p: Prayer) = intPreferencesKey("offset_${p.name.lowercase()}")
@@ -99,7 +101,7 @@ class SettingsRepository(
             elapsedAfterPrayer = p[K.elapsed] ?: true,
             scrubHintDone = p[K.scrubHint] ?: false,
             scenery = p.enum(K.scenery, Scenery.AUTO),
-            skyGraphics = p.enum(K.skyGraphics, SkyGraphics.AUTO),
+            skyGraphics = p[K.skyLevel]?.let { v -> SkyGraphics.entries.firstOrNull { it.name == v } } ?: SkyGraphics.fromOld(p[K.skyGraphics]),
             seasons = p[K.seasons] ?: false,
             trueStars = p[K.trueStars] ?: false,
         )
@@ -138,7 +140,7 @@ class SettingsRepository(
     suspend fun setElapsedAfterPrayer(on: Boolean) = context.dataStore.edit { it[K.elapsed] = on }
     suspend fun setScrubHintDone() = context.dataStore.edit { it[K.scrubHint] = true }
     suspend fun setScenery(v: Scenery) = context.dataStore.edit { it[K.scenery] = v.name }
-    suspend fun setSkyGraphics(v: SkyGraphics) = context.dataStore.edit { it[K.skyGraphics] = v.name }
+    suspend fun setSkyGraphics(v: SkyGraphics) = context.dataStore.edit { it[K.skyLevel] = v.name }
     suspend fun setSeasons(on: Boolean) = context.dataStore.edit { it[K.seasons] = on }
     suspend fun setTrueStars(on: Boolean) = context.dataStore.edit { it[K.trueStars] = on }
     suspend fun setHijriAdjust(d: Int) = context.dataStore.edit { it[K.hijri] = d.coerceIn(-2, 2) }

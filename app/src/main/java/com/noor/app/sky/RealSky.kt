@@ -144,7 +144,7 @@ object RealSky {
     /** Whether to show the real sky now. */
     fun usable(context: Context, choice: SkyGraphics): Boolean {
         graphics = choice
-        if (forceOff || choice == SkyGraphics.CLASSIC) return false
+        if (forceOff) return false
         if (unusable.intValue < 0) {
             val p = runCatching { context.getSharedPreferences(PREFS, 0) }.getOrNull()
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
@@ -164,7 +164,7 @@ object RealSky {
     fun prewarm(context: Context, settings: com.noor.app.data.AppSettings) {
         if (forceOff) return
         runCatching {
-            if (!usable(context, settings.skyGraphics)) return
+            if (SkyLevels.resolve(context, settings.skyGraphics) != SkyLevel.HIGH || !usable(context, settings.skyGraphics)) return
             val place = com.noor.app.data.PrayerProvider.place(settings)
             val biome = place?.let { Biome.of(settings.scenery, it.countryCode, it.point.elevationM, it.point.latitude) }
             engine(context).prewarm(biome)
@@ -260,15 +260,11 @@ object RealSky {
         }
     }
 
-    /** The tier to draw at: the one fixed in Settings, or the one that suits this phone (and has not proved too slow). */
+    /**
+     * The step to draw at: the one that suits this phone and has not proved too slow (0.19: chosen by the real sky
+     * itself; Settings chooses only between the levels of graphics, SkyLevels).
+     */
     internal fun tierFor(context: Context, renderer: String): Tier {
-        when (graphics) {
-            SkyGraphics.ULTRA -> return Tier.ULTRA
-            SkyGraphics.HIGH -> return Tier.HIGH
-            SkyGraphics.MEDIUM -> return Tier.MEDIUM
-            SkyGraphics.LOW -> return Tier.LOW
-            else -> {}
-        }
         val p = context.getSharedPreferences(PREFS, 0)
         val saved = p.getInt(K_TIER, -1)
         if (saved in Tier.entries.indices) return Tier.entries[saved]
@@ -296,9 +292,12 @@ object RealSky {
         }
     }
 
-    /** Frames keep taking too long: draw less. False when already at the lowest tier or the tier is fixed in Settings. */
+    /**
+     * Frames keep taking too long: draw less. False when already at the lowest step: then, where the graphics are
+     * automatic, the home screen goes down to the medium graphics (SkyLevels.lower).
+     */
     internal fun stepDown(context: Context, from: Tier): Boolean {
-        if (graphics != SkyGraphics.AUTO || from == Tier.LOW) return false
+        if (from == Tier.LOW) { SkyLevels.lower(context, SkyLevel.HIGH); return false }
         val next = Tier.entries[from.ordinal + 1]
         context.getSharedPreferences(PREFS, 0).edit().putInt(K_TIER, next.ordinal).apply()
         Log.i(TAG, "Pictures take too long at ${from.name}: stepping down to ${next.name}")

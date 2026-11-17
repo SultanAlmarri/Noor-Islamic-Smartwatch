@@ -35,12 +35,18 @@ class SceneryScreenTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun chooseScenery() {
-        assertEquals(Terrain.DUNES, terrainFor(Scenery.AUTO, "AE", 5.0))
-        assertEquals(Terrain.MOUNTAINS, terrainFor(Scenery.AUTO, "YE", 2250.0))
-        assertEquals(Terrain.SEA, terrainFor(Scenery.AUTO, "MV", 2.0))
-        assertEquals(Terrain.HILLS, terrainFor(Scenery.AUTO, "GB", 30.0))
-        assertEquals(Terrain.MOUNTAINS, terrainFor(Scenery.AUTO, "CH", 400.0))
-        assertEquals(Terrain.SEA, terrainFor(Scenery.SEA, "AE", 5.0))
+        // (0.19) The medium and low graphics draw the scenery the real sky chooses (Biome.of), for every place and choice.
+        assertEquals(Terrain.DUNES, terrainFor(Scenery.AUTO, "AE", 5.0, 25.2))
+        assertEquals(Terrain.DUNES, terrainFor(Scenery.AUTO, "YE", 2250.0, 15.4))
+        assertEquals(Terrain.SEA, terrainFor(Scenery.AUTO, "MV", 2.0, 4.2))
+        assertEquals(Terrain.FOREST, terrainFor(Scenery.AUTO, "GB", 30.0, 51.5))
+        assertEquals(Terrain.HILLS, terrainFor(Scenery.AUTO, "KE", 1795.0, -1.3))
+        assertEquals(Terrain.CANYON, terrainFor(Scenery.AUTO, "TR", 900.0, 39.9))
+        assertEquals(Terrain.ARCTIC, terrainFor(Scenery.AUTO, "NO", 10.0, 69.6))
+        assertEquals(Terrain.SEA, terrainFor(Scenery.SEA, "AE", 5.0, 25.2))
+        for (sc in Scenery.entries) assertEquals(sc.name, Terrain.of(com.noor.app.sky.Biome.of(sc, "AE", 5.0, 25.2)), terrainFor(sc, "AE", 5.0, 25.2))
+        // Each of the six sceneries has its own terrain.
+        assertEquals(6, com.noor.app.sky.Biome.entries.map { Terrain.of(it) }.toSet().size)
 
         val app = RuntimeEnvironment.getApplication() as NoorApplication
         runBlocking { app.container.settings.setManualCity("dxb"); app.container.settings.setOnboardingDone() }

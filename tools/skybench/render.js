@@ -166,8 +166,10 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const terrain = cfg.terrain || (cfg.dunes ? 'dunes' : 'hills');
     const dunes = terrain === 'dunes';
     const SPEC = { dunes: [[16, 3], [20, 16], [24, 32], [26, 50], [26, 72]], hills: [[40, 3], [28, 16], [24, 32], [22, 50], [24, 72]],
-      mountains: [[58, 2], [40, 14], [30, 30], [24, 50], [24, 72]], sea: [[16, 0], [1, 8], [1, 20], [12, 54], [18, 74]] };
-    const DIST = { dunes: [22, 7, 2.8, 1.1, 0.35], hills: [48, 15, 6, 2.2, 0.6], mountains: [34, 14, 6, 2.2, 0.6], sea: [40, 10, 3, 0.8, 0.3] };
+      mountains: [[58, 2], [40, 14], [30, 30], [24, 50], [24, 72]], sea: [[16, 0], [1, 8], [1, 20], [12, 54], [18, 74]],
+      forest: [[40, 2], [18, 12], [1, 24], [30, 54], [16, 74]], arctic: [[52, 3], [36, 14], [1, 22], [10, 54], [14, 74]], canyon: [[22, 3], [46, 14], [28, 30], [12, 52], [14, 74]] };
+    const DIST = { dunes: [22, 7, 2.8, 1.1, 0.35], hills: [48, 15, 6, 2.2, 0.6], mountains: [34, 14, 6, 2.2, 0.6], sea: [40, 10, 3, 0.8, 0.3],
+      forest: [35, 8, 3, 0.9, 0.3], arctic: [15, 6, 3, 0.8, 0.3], canyon: [30, 9, 3.5, 1.2, 0.4] };
     const layers = SPEC[terrain], dists = DIST[terrain];
     const deepest = 72;
     const spread = Math.max(0.55, Math.min(1.4, ((cfg.hDp - cfg.horizonDp) - 12) / deepest));
@@ -187,7 +189,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       uSize: [W, H], uDp: dp, uHorizon: hy, uBaseA: base.slice(0, 4), uBaseB: base[4], uAmpA: amp.slice(0, 4), uAmpB: amp[4],
       uDistA: dists.slice(0, 4), uDistB: dists[4], uRidgeN: N, uDunes: dunes ? 1 : 0, uSunPos: [sunX, sunY],
       uPage: page, uMist: mist, uSeed: (cfg.landSeed || 7) % 97, uSunrise: [xOf(dd.ev.SHURUQ), xOf(dd.ev.MAGHRIB)],
-      uTerrain: { dunes: 0, hills: 1, mountains: 2, sea: 3 }[terrain], uAltTop: altTop, uAltPow: altPow,
+      uTerrain: { dunes: 0, hills: 1, mountains: 2, sea: 3, forest: 4, arctic: 5, canyon: 6 }[terrain], uAltTop: altTop, uAltPow: altPow,
       uMoonL: [mx, my, moonVis, (1 - Math.cos(phase)) / 2],
     });
     const lut = { w: nx, h: ny, data: new Uint8Array(fr.lut.buffer) };
