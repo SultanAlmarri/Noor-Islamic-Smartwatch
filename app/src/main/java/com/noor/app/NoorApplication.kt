@@ -82,7 +82,13 @@ class NoorApplication : Application(), AlertHost {
         super.onCreate()
         container = AppContainer(this)
         container.wear.start(container.scope)
-        AlertNotifications.ensureChannels(this)
+        // (0.18.2) Off the main thread: every alert makes sure of its channels itself before it posts.
+        container.scope.launch { AlertNotifications.ensureChannels(this@NoorApplication) }
+        // (0.18.2) The small preference files the first screen reads, loaded in the background now, so that the first
+        // frame does not wait for the disk (StrictMode found the home sky's quality read there).
+        container.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            for (n in arrayOf("noor_ui", "minhad_permissions")) runCatching { getSharedPreferences(n, MODE_PRIVATE).all }
+        }
         // The home sky's tables (a fraction of a second), built in the background before the first screen needs them.
         container.scope.launch(kotlinx.coroutines.Dispatchers.Default) { com.noor.app.ui.today.CloudAtlas.preload(resources); com.noor.app.ui.today.Atmosphere.warmUp() }
         container.scope.launch {

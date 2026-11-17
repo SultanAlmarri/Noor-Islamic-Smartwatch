@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -79,7 +78,9 @@ data class Backdrop(
     }
 }
 
-val LocalBackdrop = staticCompositionLocalOf { Backdrop.unknown(true) }
+// (0.18.2) Not static: the sky of the moment changes every minute, and only the few places that read it need drawing again
+// (a static local recomposed every screen in sight each minute).
+val LocalBackdrop = androidx.compose.runtime.compositionLocalOf { Backdrop.unknown(true) }
 
 /** The page's sky: the backdrop's colours from top to foot, the horizon's glow, and the stars at night. */
 @Composable
