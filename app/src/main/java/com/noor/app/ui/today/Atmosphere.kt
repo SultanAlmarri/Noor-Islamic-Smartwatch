@@ -44,6 +44,8 @@ internal object Atmosphere {
     private const val G = 0.76
     private const val MS = 0.06
     private const val SAT = 1.25
+    /** The tone curve's colour boost ([tone]), for the clouds' own copy of it (SetClouds). */
+    const val SATURATION = SAT
     const val E_SUN = 20.0
     private const val DEG = PI / 180.0
 

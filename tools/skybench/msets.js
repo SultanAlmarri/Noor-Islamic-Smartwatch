@@ -78,7 +78,8 @@
       for (let c = 0; c < 3; c++) direct[(hi * EN + k) * 3 + c] = s[c] * (1 - L.moonW) + L.moon[c] * L.moonW;
     }
     const lumD = (v) => 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
-    let dome = L.ambLow.map((x, c) => (x + (L.ambTop[c] - x) * 0.6) * L.ambK);
+    const ambient = 1 + (L.ambK - 1) * (1 - L.night);
+    let dome = L.ambLow.map((x, c) => (x + (L.ambTop[c] - x) * 0.6) * ambient);
     const ev = 0.65 * smooth(7, -2, L.el), dl = lumD(dome);
     dome = dome.map((x, c) => x + (dl * [0.78, 0.95, 1.38][c] - x) * ev);
     const sinEl = Math.max(Math.sin(L.el * DEG), 0);
@@ -108,7 +109,8 @@
         if (a0 < 0.004) continue;
         let a = a0;
         // Where this set gives way to its neighbour: in patches, as a sheet of cloud really ends (layer.frag).
-        const gone = smooth(0.5 * PITCH - 14, 0.5 * PITCH + 14, Math.abs(saz) + Math.sign(saz) * 0.2 * (el - 18));
+        const wander = (vnoise(el * 0.11 + 3 * level, saz * 0.035 + 5) - 0.5) * 22 + (vnoise(el * 0.37 + 7, saz * 0.1) - 0.5) * 7;
+        const gone = smooth(0.5 * PITCH - 14, 0.5 * PITCH + 14, Math.abs(saz) + Math.sign(saz) * 0.2 * (el - 18) + wander);
         if (gone > 0) {
           if (gone >= 1) continue;
           const bx = saz * 0.021, by = el * 0.050 + 0.37 * level;

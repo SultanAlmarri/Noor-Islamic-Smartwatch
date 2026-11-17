@@ -689,7 +689,8 @@ internal fun LivingSky(
 
         // 2 · Clouds (0.19.1: the real sky's baked sets, SetClouds): the same on every phone, drifting with the wind
         // (still when animations are off).
-        if (medium) SetCloudLayer(gpuInputs, { skyStateNow.value }, { displayNow.value }, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
+        if (medium) SetCloudLayer(gpuInputs, { skyStateNow.value }, { displayNow.value }, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax,
+            intoMinute = { if (scrubbing || !ambient) 0f else ((System.currentTimeMillis() % 60_000L) / 1000f) })
 
         // 3 · The Sun's rays and halo, the sun path above the land, and the Sun. The path and the region above the land
         // are built once per scene and size, not at every frame of a drag or of the opening: the moment is read while

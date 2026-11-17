@@ -258,7 +258,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
         moonLight, moonEl: Math.max(0.7, Math.atan((hy - my) / F) / DEG), glow: smooth(0, 1, (12 - el) / 10),
         moonW, moon: [0.050, 0.062, 0.095].map(x => x * mk * illum * moonVis),
         sunlight: fr.sunlight, ambTop: common.uAmbTop, ambLow: common.uAmbLow, sunGround: fr.sunGround, glowCol: fr.glow,
-        haze: cfg.haze ?? 1.0, sunPart: cfg.sunPart ?? 0.6, expose: cfg.cloudExpose ?? 1.0, ambK: cfg.ambK ?? 2.2, sky: lutAt,
+        haze: cfg.haze ?? 1.0, sunPart: cfg.sunPart ?? 0.6, expose: cfg.cloudExpose ?? 1.0, ambK: cfg.ambK ?? 3.0, night: fr.night, sky: lutAt,
         sunX, sunY, dp, glare: (cfg.glare ?? 0.8) * smooth(-5, 0.5, el), glareCol: Atmo.tone(fr.sunGlow.slice(), [0, 0, 0]),
         textY: arcTop - 16 * dp - 0.085 * H, textR: 0.125 * H, textCap: cfg.textCap ?? 0.34, debug: !!cfg.debug,
       };

@@ -22,12 +22,10 @@ import com.noor.app.sky.CloudLeg
 import com.noor.app.sky.LightWeights
 import com.noor.app.sky.SkyDirector
 import kotlin.math.abs
-import kotlin.math.acos
 import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
-import kotlin.math.hypot
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
@@ -172,7 +170,29 @@ internal object SetClouds {
         return (a + (b - a) * ux) * (1 - uy) + (c + (d - c) * ux) * uy
     }
 
-    private fun hg(mu: Double, g: Double): Double { val g2 = g * g; return (1 - g2) / (4 * Math.PI * max(1 + g2 - 2 * g * mu, 1e-4).pow(1.5)) }
+    private fun hg(mu: Double, g: Double): Double { val g2 = g * g; val x = max(1 + g2 - 2 * g * mu, 1e-4); return (1 - g2) / (4 * Math.PI * x * sqrt(x)) }
+
+    private fun thinning(x: Double) = if (x < 1e-3) 1.0 else (1 - exp(-x)) / x
+    private fun ch(x: Double) = (x.coerceIn(0.0, 1.0) * 255 + 0.5).toInt()
+
+    /** km to a cloud from its distance picture (skybake: far = 1 - exp(-km / 30)), by the picture's 256 values. */
+    private val KM = DoubleArray(256) { -30 * ln(max(1 - it / 255.0, 1e-3)) }
+
+    /** The sRGB curves by table (the lighting runs for every cloud pixel of a set). */
+    private val SRGB = DoubleArray(4097) { Atmosphere.srgb(it / 4096.0) }
+    private val LINEAR = DoubleArray(1025) { Atmosphere.linear(it / 1024.0) }
+    private fun srgbFast(x: Double): Double { val f = x.coerceIn(0.0, 1.0) * 4096; val i = min(f.toInt(), 4095); return SRGB[i] + (SRGB[i + 1] - SRGB[i]) * (f - i) }
+    private fun linearFast(x: Double): Double { val f = x.coerceIn(0.0, 1.0) * 1024; val i = min(f.toInt(), 1023); return LINEAR[i] + (LINEAR[i + 1] - LINEAR[i]) * (f - i) }
+    private fun aces(x: Double): Double = ((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14)).coerceIn(0.0, 1.0)
+
+    /** [Atmosphere.tone] with the sRGB curve by table. */
+    private fun toneFast(c: DoubleArray, out: DoubleArray) {
+        val l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+        val s = if (l > 1e-6) aces(l) / l else 0.0
+        for (k in 0..2) { val v = max(c[k], 0.0); out[k] = min(v * s, 1.0) * 0.7 + aces(v) * 0.3 }
+        val y = 0.2126 * out[0] + 0.7152 * out[1] + 0.0722 * out[2]
+        for (k in 0..2) out[k] = srgbFast((y + (out[k] - y) * Atmosphere.SATURATION).coerceIn(0.0, 1.0))
+    }
 
     /**
      * Lights set [s] for the moment: [leg] says where it stands ([CloudLeg.offset]: how far right of its middle the view's
@@ -209,7 +229,9 @@ internal object SetClouds {
             for (c in 0..2) direct[(hi * en + k) * 3 + c] = tmp[c] * (1 - l.moonW) + l.moon[c] * l.moonW
         }
         val lt = l.light
-        val dome = DoubleArray(3) { (lt.ambLow[it] + (lt.ambTop[it] - lt.ambLow[it]) * 0.6) * AMBIENT }
+        // (The skylight is raised by day only: the night's own faint light is not, or the clouds glow blue at night.)
+        val ambient = 1 + (AMBIENT - 1) * (1 - lt.night)
+        val dome = DoubleArray(3) { (lt.ambLow[it] + (lt.ambTop[it] - lt.ambLow[it]) * 0.6) * ambient }
         // In the evening a cloud's shaded side is lit by the whole blue dome, not by the orange band at the Sun's horizon.
         val ev = 0.65 * smooth(7.0, -2.0, l.el)
         val dl = 0.2126 * dome[0] + 0.7152 * dome[1] + 0.0722 * dome[2]
@@ -229,23 +251,41 @@ internal object SetClouds {
         val pitch = SkyDirector.PITCH.toDouble()
         val off = offset.toDouble()
         val fogBase = 0.55 * l.haze + 0.25
+        // (Worked out once per column: where the column is in the set and on the screen, and its bearing.)
+        val sazOf = DoubleArray(wc); val sxOf = IntArray(wc); val sinAz = DoubleArray(wc); val cosAz = DoubleArray(wc)
+        val towardSun = DoubleArray(wc); val xPxOf = FloatArray(wc)
+        for (ox in 0 until wc) {
+            val u = (ox + 0.5) / wc
+            val saz = m * (u - 0.5) * 2 * azHalf
+            sazOf[ox] = saz
+            sxOf[ox] = ((0.5 + t * saz / (2 * azHalf)) * wc).toInt().coerceIn(0, wc - 1)
+            val azScr = ((u - 0.5) * 2 * azHalf - m * off) * DEG
+            sinAz[ox] = sin(azScr); cosAz[ox] = cos(azScr); towardSun[ox] = cos(azScr - l.sunAz)
+            xPxOf[ox] = (v.w / 2 + v.focal * azScr).toFloat()
+        }
+        // The sky behind a row, across the table's columns (display colours).
+        val nx = Atmosphere.NX
+        val skyRowC = DoubleArray(nx * 3)
         for (oy in 0 until hc) {
             val e = elOf[oy]; val sy = rowOf[oy]; val fy = rowF[oy].toDouble(); val fy0 = 1 - fy
             val te = tan(e * DEG); val ce = cos(e * DEG); val se = sin(e * DEG)
             val yPx = (v.hy - v.focal * te).toFloat()
             val skyRow = Atmosphere.rowOf(v.altitudeAt(max(yPx, 0f)))
+            var skyReady = false
             val up0 = max(te, 0.0) / sqrt(1 + te * te)
+            val qy = if (l.textR > 0) (yPx - l.textY) / l.textR else 0f
+            val gy = (yPx - l.sunY).toDouble()
             for (ox in 0 until wc) {
-                val u = (ox + 0.5) / wc
-                val saz = m * (u - 0.5) * 2 * azHalf
-                val sx = ((0.5 + t * saz / (2 * azHalf)) * wc).toInt().coerceIn(0, wc - 1)
-                val i0 = sy * wc + sx; val i1 = i0 + wc
-                fun rd(p: ByteArray): Double = ((p[i0].toInt() and 0xFF) * fy0 + (p[i1].toInt() and 0xFF) * fy) / 255.0
+                val i0 = sy * wc + sxOf[ox]; val i1 = i0 + wc
+                fun rd(p: ByteArray): Double = ((p[i0].toInt() and 0xFF) * fy0 + (p[i1].toInt() and 0xFF) * fy) * (1 / 255.0)
                 val a0 = rd(a8)
                 if (a0 < 0.004) continue
                 var a = a0
-                // Where this set gives way to its neighbour: in patches, as a sheet of cloud really ends (layer.frag).
-                val gone = smooth(0.5 * pitch - 14, 0.5 * pitch + 14, abs(saz) + sign(saz) * 0.2 * (e - 18))
+                val saz = sazOf[ox]
+                // Where this set gives way to its neighbour: in patches, as a sheet of cloud really ends (layer.frag), along
+                // a line that wanders far to either side (never straight down the sky: an overcast's end was a wall).
+                val wander = (vnoise(e * 0.11 + 3.0 * level, saz * 0.035 + 5.0) - 0.5) * 22 + (vnoise(e * 0.37 + 7.0, saz * 0.1) - 0.5) * 7
+                val gone = smooth(0.5 * pitch - 14, 0.5 * pitch + 14, abs(saz) + sign(saz) * 0.2 * (e - 18) + wander)
                 if (gone > 0) {
                     if (gone >= 1) continue
                     val bx = saz * 0.021; val by = e * 0.050 + 0.37 * level
@@ -255,7 +295,17 @@ internal object SetClouds {
                     a *= smooth(-0.20, 0.16, patches - 1.4 * gone + 0.16)
                     if (a < 0.004) continue
                 }
-                val azScr = ((u - 0.5) * 2 * azHalf - m * off) * DEG
+                val vx = ce * sinAz[ox]; val vz = ce * cosAz[ox]
+                val mu = vx * sd[0] + se * sd[1] + vz * sd[2]
+                // Round the Sun the lower clouds stand apart when the weather lets it through (scene.frag, parted()).
+                if (share > 0 && l.sunPart > 0 && mu > 0.5) {
+                    val om = 1 - mu
+                    val th2 = 2 * om * (1 + om / 3)                                  // (the angle from the Sun, squared)
+                    val thinA = 0.85 * share * l.sunPart * exp(-th2 / (0.21 * 0.21))
+                    a = ((a - thinA) / (1 - thinA)).coerceIn(0.0, 1.0) * (1 - share * l.sunPart * exp(-th2 / (0.075 * 0.075)))
+                }
+                a *= leg.weight
+                if (a < 0.004) continue
                 // Lit by the Sun (the pictures the moment lies between), by the glow round a low Sun, by the sky, by the ground.
                 var sSun = 0.0
                 for (q in 0 until np) { val x = rd(pics[q]); sSun += x * x * picW[q] }
@@ -263,18 +313,16 @@ internal object SetClouds {
                 for (q in 0 until ng) { val x = rd(glows[q]); sGlow += x * x * glowW[q] }
                 val kv = rd(k8); val gv = rd(g8)
                 val kSky = kv * kv * rMax; val kGround = gv * gv * rMax
-                val far = if (f8 != null) rd(f8) else 0.3
-                val km = -30 * ln(max(1 - far, 1e-3))
-                val elThere = l.el + km * cos(azScr - l.sunAz) / 111.2
+                val km = if (f8 != null) KM[f8[i0].toInt() and 0xFF] * fy0 + KM[f8[i1].toInt() and 0xFF] * fy else 10.7
+                val elThere = l.el + km * towardSun[ox] / 111.2
                 val high = when (level) { 2 -> max(1.2, km * max(se, 0.0) + km * km / 12742).coerceIn(0.2, 14.0); 1 -> 5.5; else -> 9.5 }
                 var hi = 0
                 while (hi < hs.size - 2 && high > hs[hi + 1]) hi++
                 val hf = ((high - hs[hi]) / (hs[hi + 1] - hs[hi])).coerceIn(0.0, 1.0)
                 val ek = ((elThere - e0) / es).coerceIn(0.0, en - 1.001); val ei = ek.toInt(); val efr = ek - ei
-                val vx = ce * sin(azScr); val vz = ce * cos(azScr)
-                val mu = vx * sd[0] + se * sd[1] + vz * sd[2]
                 val through = 0.7 * hg(mu, 0.80) + 0.3 * hg(mu, 0.45)
                 val under = smooth(3.5, -0.5, elThere)
+                val inv = 1 / a0
                 for (c in 0..2) {
                     val j0 = (hi * en + ei) * 3 + c; val j1 = ((hi + 1) * en + ei) * 3 + c
                     val d0 = direct[j0] + (direct[j0 + 3] - direct[j0]) * efr
@@ -283,48 +331,50 @@ internal object SetClouds {
                     var x = (sSun * dc + sGlow * lt.glow[c] * glowK) * 1.15 + kSky * dome[c] * 0.9 + kGround * ground[c] * 0.8
                     x += dc * kSky * through * 0.15 * thinKind * (0.06 + 0.94 * lowSun)
                     x += dc * (0.09 * kGround + 2.6 * sSun) * thinKind * under
-                    tmp[c] = x / a0
+                    tmp[c] = x * inv
                 }
-                Atmosphere.tone(tmp, disp)
+                toneFast(tmp, disp)
                 // Far clouds fade into the air in front of them, which has the colour of the sky behind them.
-                val xPx = (v.w / 2 + v.focal * azScr).toFloat()
+                val xPx = xPxOf[ox]
                 val upKm = km * up0
-                fun thin(x: Double) = if (x < 1e-3) 1.0 else (1 - exp(-x)) / x
-                val fog = (1 - exp(-fogBase * km / 30 * (0.25 * thin(upKm / 8) + 0.75 * thin(upKm / 1.6)))) * hazeK
-                val sky = Atmosphere.sample(l.lut, (xPx / v.w).toDouble(), skyRow)
+                val fog = (1 - exp(-fogBase * km / 30 * (0.25 * thinning(upKm / 8) + 0.75 * thinning(upKm / 1.6)))) * hazeK
+                if (!skyReady) {
+                    for (i in 0 until nx) {
+                        val c = Atmosphere.sample(l.lut, i / (nx - 1.0), skyRow)
+                        skyRowC[i * 3] = ((c shr 16) and 0xFF) / 255.0; skyRowC[i * 3 + 1] = ((c shr 8) and 0xFF) / 255.0; skyRowC[i * 3 + 2] = (c and 0xFF) / 255.0
+                    }
+                    skyReady = true
+                }
+                val sxF = ((xPx / v.w).toDouble().coerceIn(0.0, 1.0)) * (nx - 1)
+                val si = min(sxF.toInt(), nx - 2); val sf = sxF - si
                 for (c in 0..2) {
-                    val sc = ((sky shr (16 - 8 * c)) and 0xFF) / 255.0
+                    val sc = skyRowC[si * 3 + c] * (1 - sf) + skyRowC[si * 3 + 3 + c] * sf
                     disp[c] += (sc - disp[c]) * fog
                 }
-                // Round the Sun the lower clouds stand apart when the weather lets it through (scene.frag, parted()).
-                if (share > 0 && l.sunPart > 0) {
-                    val th = acos(mu.coerceIn(-1.0, 1.0))
-                    val thinA = 0.85 * share * l.sunPart * exp(-(th / 0.21) * (th / 0.21))
-                    a = ((a - thinA) / (1 - thinA)).coerceIn(0.0, 1.0) * (1 - share * l.sunPart * exp(-(th / 0.075) * (th / 0.075)))
-                }
-                a *= leg.weight
-                if (a < 0.004) continue
                 // The glare round the Sun lies over the clouds too.
                 if (l.glare > 0) {
-                    val r = hypot((xPx - l.sunX).toDouble(), (yPx - l.sunY).toDouble()) / l.dp
-                    val gk = (0.55 * exp(-max(r - 7.5, 0.0) / 9) + 0.22 * exp(-r / 55)) * l.glare
-                    for (c in 0..2) disp[c] = 1 - (1 - disp[c]) * (1 - l.glareColor[c] * gk)
+                    val gx = (xPx - l.sunX).toDouble()
+                    val r = sqrt(gx * gx + gy * gy) / l.dp
+                    if (r < 260) {
+                        val gk = (0.55 * exp(-max(r - 7.5, 0.0) / 9) + 0.22 * exp(-r / 55)) * l.glare
+                        for (c in 0..2) disp[c] = 1 - (1 - disp[c]) * (1 - l.glareColor[c] * gk)
+                    }
                 }
                 // The text written on the sky stays readable: behind it the brightest parts of the clouds are eased down.
                 if (l.textR > 0) {
-                    val qx = (xPx - v.w / 2) / (0.44 * v.w); val qy = (yPx - l.textY) / l.textR
-                    val lm = 1 - (1 - l.textCap) * smooth(1.70, 0.25, hypot(qx.toDouble(), qy.toDouble()))
-                    if (lm < 1) {
-                        for (c in 0..2) lin[c] = Atmosphere.linear(disp[c])
+                    val qx = (xPx - v.w / 2) / (0.44f * v.w)
+                    val q2 = (qx * qx + qy * qy).toDouble()
+                    if (q2 < 1.70 * 1.70) {
+                        val lm = 1 - (1 - l.textCap) * smooth(1.70, 0.25, sqrt(q2))
+                        for (c in 0..2) lin[c] = linearFast(disp[c])
                         val lum = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
                         if (lum > lm * 0.5) {
                             val x = (lum - lm * 0.5) / (lm * 0.5)
                             val y = lm * 0.5 + lm * 0.5 * (1 - exp(-x))
-                            for (c in 0..2) disp[c] = Atmosphere.srgb(lin[c] * y / lum)
+                            for (c in 0..2) disp[c] = srgbFast(lin[c] * y / lum)
                         }
                     }
                 }
-                fun ch(x: Double) = (x.coerceIn(0.0, 1.0) * 255 + 0.5).toInt()
                 out[oy * wc + ox] = (ch(a) shl 24) or (ch(disp[0]) shl 16) or (ch(disp[1]) shl 8) or ch(disp[2])
             }
         }
@@ -433,7 +483,12 @@ internal class SetCloudPainter(private val assets: AssetManager) {
  * the ambient clock (seconds), which carries the clouds on with the wind between one minute's state and the next.
  */
 @Composable
-internal fun SetCloudLayer(inputs: () -> GpuSkyInputs?, sky: () -> com.noor.app.sky.SkyState?, display: () -> Double, time: () -> Float, parallax: () -> Float) {
+internal fun SetCloudLayer(
+    inputs: () -> GpuSkyInputs?, sky: () -> com.noor.app.sky.SkyState?, display: () -> Double, time: () -> Float, parallax: () -> Float,
+    /** How many seconds of the minute shown have passed when it is first shown (0 while the Sun is dragged): the
+     *  director places the sets for the minute's start, and the next minute's places must follow on without a jump. */
+    intoMinute: () -> Float = { 0f },
+) {
     val assets = LocalContext.current.assets
     val painter = remember { SetCloudPainter(assets) }
     // The clock when the moment shown last changed: from there the sets glide on with their own speed.
@@ -444,7 +499,7 @@ internal fun SetCloudLayer(inputs: () -> GpuSkyInputs?, sky: () -> com.noor.app.
         val s = sky() ?: return@drawBehind
         val d = display()
         val t = time()
-        if (anchor[1] != d.toFloat()) { anchor[1] = d.toFloat(); anchor[0] = t }
+        if (anchor[1] != d.toFloat()) { anchor[1] = d.toFloat(); anchor[0] = t - intoMinute() }
         val glide = (t - anchor[0]).coerceIn(0f, 120f)
         drawIntoCanvas { painter.draw(it.nativeCanvas, i, s, d, glide, size.width / i.view.w, SkyCompute.synchronous) }
     })

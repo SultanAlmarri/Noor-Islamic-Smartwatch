@@ -315,7 +315,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
             // (Talus: broad patches of paler and darker debris, gullies running down it.)
             float tb = vnoise(float2(xd * 0.07, below * 0.09 + float(layer) * 3.0));
             float tb2 = vnoise(float2(xd * 0.28, below * 0.035 + 5.0));
-            float3 scree = mix(float3(0.38, 0.14, 0.06), float3(0.54, 0.27, 0.13), tb) * (0.88 + 0.16 * tb2)
+            float3 scree = mix(float3(0.32, 0.105, 0.045), float3(0.47, 0.21, 0.095), tb) * (0.88 + 0.16 * tb2)
                 * (1.0 - 0.12 * smoothstep(screeTop - 0.1, screeTop, rel));
             float3 nScree = normalize(float3(slope * 0.7 * exp(-max(below, 0.0) / 8.0) + (tb2 - 0.5) * 0.7, 1.0, -0.8));
             n = normalize(mix(nScree, nWall, wall));
@@ -325,9 +325,11 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
             float2 p = float2(xd / s + uSeed * 1.7 + float(layer) * 13.0, below / (s * 0.5));
             float2 ci = floor(p); float2 f = fract(p);
             float2 jc = 0.3 + 0.4 * hash22(ci + float2(float(layer), uSeed));
-            float2 d = (f - jc) * float2(1.0, 0.6);
-            float rr = 0.16 + 0.2 * hash12(ci * 1.7 + 3.0);
-            float bush = (1.0 - smoothstep(rr * 0.55, rr, length(d))) * step(hash12(ci + 7.1), 0.30) * smoothstep(1.0, 3.0, below);
+            float2 d = (f - jc) * float2(0.8, 0.75);
+            // (Sage in clumps of different sizes, ragged at the edge, more of it in some places than others.)
+            float rr = (0.08 + 0.26 * hash12(ci * 1.7 + 3.0)) * (0.8 + 0.4 * vnoise(float2(xd * 0.35, below * 0.5)));
+            float many = smoothstep(0.25, 0.75, vnoise(float2(xd * 0.015 + float(layer), below * 0.03)));
+            float bush = (1.0 - smoothstep(rr * 0.5, rr, length(d))) * step(hash12(ci + 7.1), 0.12 + 0.3 * many) * smoothstep(1.0, 3.0, below);
             float drift = vnoise(float2(xd * 0.03, below * 0.06 + float(layer) * 4.0));
             float3 sand = mix(float3(0.58, 0.29, 0.14), float3(0.70, 0.45, 0.27), drift);
             sand *= 0.92 + 0.08 * vnoise(float2(xd * 0.6, below * 1.2));
