@@ -9,7 +9,7 @@ const RAW = process.env.RAW_DIR || path.join(__dirname, '../../app/src/main/res/
   const p = await b.newPage();
   p.on('console', m => console.log('page:', m.text()));
   await p.setContent('<html><body></body></html>');
-  for (const f of ['atmo.js', 'scene.js', 'clouds.js', 'msets.js', 'render.js']) await p.addScriptTag({ content: fs.readFileSync(path.join(__dirname, f), 'utf8') });
+  for (const f of ['atmo.js', 'scene.js', 'clouds.js', 'msets.js', 'mland.js', 'render.js']) await p.addScriptTag({ content: fs.readFileSync(path.join(__dirname, f), 'utf8') });
   // The catalogue's bright stars (app/src/main/res/raw/stars.bin: count, then RA, Dec, V, K).
   const sb = fs.readFileSync(RAW + 'stars.bin'); const n = sb.readInt32BE(0); const stars = [];
   for (let i = 0; i < n; i++) { const o = 4 + i * 14; stars.push([sb.readFloatBE(o), sb.readFloatBE(o + 4), sb.readFloatBE(o + 8), sb.readInt16BE(o + 12)]); }
@@ -34,6 +34,25 @@ const RAW = process.env.RAW_DIR || path.join(__dirname, '../../app/src/main/res/
       const load = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
       const imgs = {}; for (const [k, u] of Object.entries(files)) imgs[k] = await load(u);
       window.MSETS = window.MSETS || {}; window.MSETS[id] = MSets.load(id, meta, imgs);
+    }, [id, meta, files]);
+  }
+  // (0.20 candidate) The real sky's land pictures for the scenes' sceneries (app/src/main/assets/sky2/land/<id>).
+  const landDir = process.env.LAND_DIR || path.join(__dirname, '../../app/src/main/assets/sky2/land/');
+  const LAND_ID = { dunes: 'dunes', hills: 'meadow', sea: 'ocean', forest: 'pnw', arctic: 'arctic', canyon: 'canyon' };
+  const lids = [...new Set(scenes.filter(sc => !sc.layeredLand).map(sc => LAND_ID[sc.terrain || (sc.dunes ? 'dunes' : 'hills')]).filter(Boolean))];
+  for (const id of lids) {
+    const dir = path.join(landDir, id);
+    const meta = JSON.parse(fs.readFileSync(path.join(dir, 'land.json'), 'utf8'));
+    const files = {};
+    for (const f of fs.readdirSync(dir)) {
+      const n = f.replace(/\.(webp|png)$/, '');
+      if (!/\.(webp|png)$/.test(f) || (n !== 'a' && n !== 'k' && n !== 'g' && n !== 'm' && !n.startsWith('s_'))) continue;
+      files[n] = 'data:image/' + (f.endsWith('png') ? 'png' : 'webp') + ';base64,' + fs.readFileSync(path.join(dir, f)).toString('base64');
+    }
+    await p.evaluate(async ([id, meta, files]) => {
+      const load = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
+      const imgs = {}; for (const [k, u] of Object.entries(files)) imgs[k] = await load(u);
+      window.MLANDS = window.MLANDS || {}; window.MLANDS[id] = MLand.load(id, meta, imgs);
     }, [id, meta, files]);
   }
   const src = { common: fs.readFileSync(RAW + 'sky_common.agsl', 'utf8'), sky: fs.readFileSync(RAW + 'sky_layer.agsl', 'utf8'), land: fs.readFileSync(RAW + 'land_layer.agsl', 'utf8') };

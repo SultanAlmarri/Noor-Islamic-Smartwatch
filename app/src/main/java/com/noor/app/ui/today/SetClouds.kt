@@ -181,12 +181,12 @@ internal object SetClouds {
     /** The sRGB curves by table (the lighting runs for every cloud pixel of a set). */
     private val SRGB = DoubleArray(4097) { Atmosphere.srgb(it / 4096.0) }
     private val LINEAR = DoubleArray(1025) { Atmosphere.linear(it / 1024.0) }
-    private fun srgbFast(x: Double): Double { val f = x.coerceIn(0.0, 1.0) * 4096; val i = min(f.toInt(), 4095); return SRGB[i] + (SRGB[i + 1] - SRGB[i]) * (f - i) }
-    private fun linearFast(x: Double): Double { val f = x.coerceIn(0.0, 1.0) * 1024; val i = min(f.toInt(), 1023); return LINEAR[i] + (LINEAR[i + 1] - LINEAR[i]) * (f - i) }
+    fun srgbFast(x: Double): Double { val f = x.coerceIn(0.0, 1.0) * 4096; val i = min(f.toInt(), 4095); return SRGB[i] + (SRGB[i + 1] - SRGB[i]) * (f - i) }
+    fun linearFast(x: Double): Double { val f = x.coerceIn(0.0, 1.0) * 1024; val i = min(f.toInt(), 1023); return LINEAR[i] + (LINEAR[i + 1] - LINEAR[i]) * (f - i) }
     private fun aces(x: Double): Double = ((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14)).coerceIn(0.0, 1.0)
 
     /** [Atmosphere.tone] with the sRGB curve by table. */
-    private fun toneFast(c: DoubleArray, out: DoubleArray) {
+    fun toneFast(c: DoubleArray, out: DoubleArray) {
         val l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
         val s = if (l > 1e-6) aces(l) / l else 0.0
         for (k in 0..2) { val v = max(c[k], 0.0); out[k] = min(v * s, 1.0) * 0.7 + aces(v) * 0.3 }

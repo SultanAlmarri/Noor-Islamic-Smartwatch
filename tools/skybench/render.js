@@ -298,7 +298,47 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     g.lineWidth = 6.4 * dp; g.strokeStyle = `rgba(255,213,140,${0.20 * pathA})`; g.stroke(path);
     g.lineWidth = 1.6 * dp; g.strokeStyle = `rgba(255,237,194,${0.95 * pathA})`; g.stroke(path);
     g.restore(); g.restore();
-    g.drawImage(landC, 0, lift);
+    // (0.20 candidate) The land from the real sky's own pictures (PictureLand.kt, mland.js); cfg.layeredLand: the 0.19
+    // layered land.
+    const landId = { dunes: 'dunes', hills: 'meadow', sea: 'ocean', forest: 'pnw', arctic: 'arctic', canyon: 'canyon' }[terrain];
+    const P = !cfg.layeredLand && window.MLANDS && window.MLANDS[landId];
+    let landMs = 0;
+    if (P) {
+      const F = 1.15 * W;
+      const lutAlt = (xPx, alt) => {
+        const v = Math.pow(Math.max(0, Math.min(1, alt / 90)), 1 / lutPow);
+        const fx = Math.max(0, Math.min(1, xPx / W)) * (nx - 1), fy = v * (ny - 1);
+        const i = Math.min(nx - 2, Math.floor(fx)), j = Math.min(ny - 2, Math.floor(fy)), a = fx - i, b = fy - j;
+        const Lt = fr.lut, o = [0, 0, 0];
+        for (let c = 0; c < 3; c++) {
+          const v0 = Lt[(j * nx + i) * 4 + c] * (1 - a) + Lt[(j * nx + i + 1) * 4 + c] * a;
+          const v1 = Lt[((j + 1) * nx + i) * 4 + c] * (1 - a) + Lt[((j + 1) * nx + i + 1) * 4 + c] * a;
+          o[c] = (v0 * (1 - b) + v1 * b) / 255;
+        }
+        return o;
+      };
+      const elSeen = el > 0 ? Math.atan((hy - sunY) / F) : el * DEG;
+      const saz = (sunX - W / 2) / F;
+      const illum = (1 - Math.cos(phase)) / 2;
+      const gl = smooth(0, 3, el) * (1 - 0.6 * smooth(20, 60, el)) * (1 - (cfg.overcast ?? 0));
+      const L = {
+        el, side: el < -6 ? Math.max(-1, Math.min(1, (mx - W / 2) / (0.2 * W))) : Math.max(-1, Math.min(1, (f - dd.noonF) / 0.07)) * (cfg.rtl ? -1 : 1),
+        moonLight: el < -6, moonEl: Math.max(0.7, Math.atan((hy - my) / F) / DEG), glow: smooth(0, 1, (12 - el) / 10),
+        moonW: smooth(-6, -10, el), moon: [0.050, 0.062, 0.095].map(x => x * illum * moonVis * (cfg.landMoonK ?? 1.6)),
+        sunGround: fr.sunGround, ambTop: common.uAmbTop, ambLow: common.uAmbLow, glowCol: fr.glow.map(x => x * (cfg.landGlowK ?? 1.0)), night: fr.night,
+        shade: cfg.shade ?? 0, overcast: cfg.overcast ?? 0, haze: cfg.haze ?? 1, fog: cfg.fogAmt ?? 0,
+        sky: lutAlt, sunX, sunY, dp, page, lightK: cfg.landLightK ?? 1.0, ambK: cfg.landAmbK ?? 1.0,
+        sunDir: [Math.cos(elSeen) * Math.sin(saz), Math.sin(elSeen), Math.cos(elSeen) * Math.cos(saz)],
+        glade: gl * (cfg.glade ?? 0.5), gladeCol: Atmo.tone(fr.sunGround.map(x => x * 1.2), [0, 0, 0]).map(x => 0.7 * x + 0.3),
+      };
+      const V = { W, hy, H, rtl: !!cfg.rtl, altAt };
+      const tl = performance.now();
+      const r = MLand.compose(P, L, V);
+      landMs = performance.now() - tl;
+      const pc = document.createElement('canvas'); pc.width = r.image.width; pc.height = r.image.height;
+      pc.getContext('2d').putImageData(r.image, 0, 0);
+      g.drawImage(pc, r.x0, r.y0 + lift, r.x1 - r.x0, r.y1 - r.y0);
+    } else g.drawImage(landC, 0, lift);
     Clouds.rain(g, W, H, wNow.rain, cfg.time || 0, dp, night);
     // Prayer marks: in the sky, or on the skyline when the Sun is down.
     const skyline = (x) => { let m = 1e9; for (let l = 0; l < 5; l++) { const h = rid[l][Math.round(Math.max(0, Math.min(1, x / W)) * (N - 1))]; m = Math.min(m, base[l] - amp[l] * h); } return m; };
@@ -328,7 +368,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       g.font = `600 ${28 * dp}px sans-serif`; g.fillText(cfg.title || 'Asr  ·  3:28 PM', W / 2, (cfg.topDp + 92) * dp);
       g.font = `300 ${68 * dp}px sans-serif`; g.fillText(cfg.countdown || '1:52:07', W / 2, (cfg.topDp + 168) * dp);
     }
-    return { url: out.toDataURL('image/png'), ms: [t1 - t0, t2 - t1, t4 - t3, cloudMs], perf: [perfSky, perfLand], el, night, exposure: fr.exposure, clouds: (window.LAST_CLOUDS || []).length, wx: wNow };
+    return { url: out.toDataURL('image/png'), ms: [t1 - t0, t2 - t1, t4 - t3, cloudMs, landMs], perf: [perfSky, perfLand], el, night, exposure: fr.exposure, clouds: (window.LAST_CLOUDS || []).length, wx: wNow };
   };
   function smooth(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
 })();

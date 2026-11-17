@@ -528,6 +528,12 @@ internal fun LivingSky(
         mediumSkyState(scene, display, look?.mist ?: 0f, skyBiome, skyWeather, skyYear)
     } else null
     val skyStateNow = rememberUpdatedState(skyState)
+    // (0.20 candidate) The medium land from the real sky's own pictures (PictureLand); the layered land of 0.19 where
+    // they cannot be read, and under the first picture until it has faded in.
+    val landId = if (medium) LandPictures.idOf(scene.terrain) else null
+    val landPainter = remember(landId) { landId?.let { PictureLandPainter(context.assets, it) } }
+    val pictureLand = landPainter != null && !landPainter.failed.value
+    val pictureLandSolid = pictureLand && landPainter!!.solid.value
     // The weather at the moment shown: it changes through the day, and as the Sun is dragged through it.
     // (0.19.1: for the medium graphics, the director's: the shaders draw no clouds of their own any more.)
     val weatherNow = skyState?.let { Weather.State(0f, 0f, 0f, 0f, it.overcast, it.storm, it.rain, 0f, 0f, (display * 24).toFloat()) } ?: weather.at(display)
@@ -546,7 +552,7 @@ internal fun LivingSky(
     val decked = rememberUpdatedState(weatherNow.overcast > 0.03f || weatherNow.layer > 0.08f)
     // (0.19.1) The medium land moves only where it has water or mist (its cloud shadows are gone): a dry, clear land is
     // drawn again only when the moment shown changes, not four times a second.
-    val landMoves = rememberUpdatedState(scene.terrain == Terrain.SEA || scene.terrain == Terrain.FOREST || scene.terrain == Terrain.ARCTIC || (look?.mist ?: 0f) > 0.001f || real != null || !medium)
+    val landMoves = rememberUpdatedState(!pictureLandSolid && (scene.terrain == Terrain.SEA || scene.terrain == Terrain.FOREST || scene.terrain == Terrain.ARCTIC || (look?.mist ?: 0f) > 0.001f || real != null || !medium))
     // (0.18.2) Only for the 0.9 sky: under the real sky nothing reads these clocks, and until 0.18.1 they still asked
     // for a frame fifteen times a second.
     if (ambient && real == null) LaunchedEffect(Unit) {
@@ -697,7 +703,7 @@ internal fun LivingSky(
         }
 
         // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
-        if (real != null || simple) Unit
+        if (real != null || simple || pictureLandSolid) Unit
         else if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
         else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
@@ -709,6 +715,8 @@ internal fun LivingSky(
                 drawLand(shapes, light, horizonColor, mid, zenith, page, soils, g.x(display), w)
             }
         })
+
+        if (pictureLand) PictureLandLayer(landPainter!!, gpuInputs, { skyStateNow.value }, { displayNow.value }, landLift)
 
         // Rain falling here (0.9.9), in front of the land.
         if (real == null && !simple) RainLayer(gpuInputs, ambient)
