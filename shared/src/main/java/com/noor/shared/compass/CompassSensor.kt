@@ -7,6 +7,8 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.hardware.display.DisplayManager
+import android.os.Handler
+import android.os.HandlerThread
 import android.view.Surface
 import android.view.Display
 import com.noor.prayer.GeoPoint
@@ -77,8 +79,22 @@ class CompassSensor(private val context: Context, private val samplingUs: Int = 
         var fieldUt: Double? = null
         var headingAccuracy: Double? = null
 
+        // The sensors report on a thread of their own, not the main thread (a reading comes up to 100 times a second);
+        // every callback below runs on it, so the state above is only touched there. trySend is thread-safe.
+        val thread = HandlerThread("NoorCompass").apply { start() }
+        val handler = Handler(thread.looper)
+
         val displays = context.getSystemService(DisplayManager::class.java)
-        fun displayRotation(): Int = displays?.getDisplay(Display.DEFAULT_DISPLAY)?.rotation ?: Surface.ROTATION_0
+        fun readRotation(): Int = displays?.getDisplay(Display.DEFAULT_DISPLAY)?.rotation ?: Surface.ROTATION_0
+        // The screen's rotation, read when the first reading comes and again whenever the display changes (rather than
+        // with every reading): the same value, without asking the system for it a hundred times a second.
+        var rotationNow = -1
+        fun displayRotation(): Int { if (rotationNow < 0) rotationNow = readRotation(); return rotationNow }
+        val displayListener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) {}
+            override fun onDisplayRemoved(displayId: Int) {}
+            override fun onDisplayChanged(displayId: Int) { if (displayId == Display.DEFAULT_DISPLAY) rotationNow = readRotation() }
+        }
 
         fun emit(timestamp: Long, source: CompassReading.Source) {
             // Keep the heading tied to the top of the screen even if the screen is rotated.
@@ -134,10 +150,15 @@ class CompassSensor(private val context: Context, private val samplingUs: Int = 
             }
         }
 
-        rotation?.let { sm.registerListener(listener, it, samplingUs) }
+        displays?.registerDisplayListener(displayListener, handler)
+        rotation?.let { sm.registerListener(listener, it, samplingUs, handler) }
         // The field strength decides the accuracy shown: read it as often as the heading, so a change shows at once.
-        magnetic?.let { sm.registerListener(listener, it, samplingUs) }
-        if (rotation == null) accel?.let { sm.registerListener(listener, it, samplingUs) }
-        awaitClose { sm.unregisterListener(listener) }
+        magnetic?.let { sm.registerListener(listener, it, samplingUs, handler) }
+        if (rotation == null) accel?.let { sm.registerListener(listener, it, samplingUs, handler) }
+        awaitClose {
+            sm.unregisterListener(listener)
+            displays?.unregisterDisplayListener(displayListener)
+            thread.quitSafely()
+        }
     }.conflate()
 }
