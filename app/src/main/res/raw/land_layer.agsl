@@ -229,7 +229,9 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     // the snowline follow altitude, not the distance below the crest straight above (which made vertical bands).
     float rel = sat((base - fc.y) / amp);
     bool range = ((isMountains() || isArctic()) && layer <= 1) || (isForest() && layer == 0);
-    if (range) depth = mix(depth, 1.0 - rel, 0.85);
+    // (0.19.1: on every farthest layer too: by the distance below the crest straight above, each notch let a
+    // vertical streak of light down the whole face.)
+    if (range || layer == 0) depth = mix(depth, 1.0 - rel, 0.85);
     float xd = fc.x / uDp;
 
     // The Sun's direction as seen from this point of the land.
@@ -249,9 +251,10 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     // the next layer, ending in a straight vertical edge where the headland's tip met the water).
     float rx = ridgeAt(fc.x, layer);
     bool lake = isLake(layer);
-    // (0.19.1) The fjord's rocks stand in its water, as in the real sky's scenery: under their waterline, water.
-    bool rocksInWater = isArctic() && layer == 3;
-    bool wet = rocksInWater && rel < 0.03 + 0.03 * vnoise1(xd * 0.3);
+    // (0.19.1) The fjord's rocks stand in its water, and the lake runs in between the forest's wooded knolls, as in
+    // the real sky's sceneries: under their waterline, water.
+    bool rocksInWater = (isArctic() || isForest()) && layer == 3;
+    bool wet = rocksInWater && rel < (isForest() ? 0.12 : 0.03) + 0.03 * vnoise1(xd * 0.3);
     if (lake || wet || (isSea() && layer <= 2 && (rx < 0.02 || fc.y > uHorizon + 2.0 * uDp * sat(rx * 4.0)))) {
         int sl = rocksInWater ? 4 : 3;
         float sb = pick4(uBaseA, uBaseB, sl); float sa = pick4(uAmpA, uAmpB, sl);
@@ -269,13 +272,14 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
         float3 windward = normalize(float3(-0.50, 0.80, -0.30));
         float3 slip = normalize(float3(0.75, 0.40, -0.50));
         n = normalize(mix(n, mix(windward, slip, side), smoothstep(0.0, 2.5, below)));
-        // Faint ripples on the windward faces of the nearest dunes.
-        float rip = sin(xd * 0.9 + below * 1.6 + vnoise(float2(xd * 0.03, below * 0.06 + float(layer))) * 6.0);
-        n = normalize(n + float3(0.0, rip * 0.035, rip * 0.035) * (1.0 - side) * sat(float(layer) - 2.0));
+        // Ripples on the windward faces of the nearer dunes (0.19.1: as the real sky's sand shows them, finer with
+        // distance, crossing the slope).
+        float rip = sin(xd * (0.55 + 0.25 * float(layer)) + below * 2.2 + vnoise(float2(xd * 0.03, below * 0.06 + float(layer))) * 6.0);
+        n = normalize(n + float3(rip * 0.05, rip * 0.06, rip * 0.05) * (1.0 - side) * sat(float(layer) - 1.5));
         float tint = vnoise(float2(xd * 0.012, below * 0.03 + float(layer) * 7.0));
         albedo = mix(float3(0.52, 0.32, 0.165), float3(0.62, 0.41, 0.23), tint);
-        // Sand throws warm light into its own shadows.
-        bounce = 0.30;
+        // Sand throws warm light into its own shadows (0.19.1: less, so a low Sun leaves the slip faces in shade).
+        bounce = 0.16;
         if (isSea()) {
             // By the sea (0.9.9): a plain beach, pale dry sand rising gently to low dunes behind it, darker wet sand
             // along the water's edge, the faintest ripples; no streaks.
@@ -458,7 +462,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
     float rimBand = exp(-max(below, 0.0) / (isDunes() ? 1.6 : 1.0));
     float back = smoothstep(-1.0, 3.0, uSunEl) * (1.0 - smoothstep(8.0, 24.0, uSunEl));
     float rimNear = exp(-abs(fc.x - uSunPos.x) / (uSize.x * 0.15));
-    lit += uSunGround * rimBand * back * rimNear * (isSea() ? 0.4 : 0.7) * shadow;
+    lit += uSunGround * rimBand * back * rimNear * (isSea() ? 0.3 : 0.45) * shadow;
 
     // Moonlight (0.9.8): by the light of a high, full moon the land shows its shapes in silver-blue, from the moon's side.
     float mvis = uMoonL.z * uNight * uMoonL.w;
