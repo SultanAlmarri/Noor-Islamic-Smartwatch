@@ -539,11 +539,12 @@ function frame(amort = 16) {
     gl.bindVertexArray(G.stars.vao); gl.drawArrays(gl.POINTS, 0, G.stars.n); gl.bindVertexArray(null);
     gl.disable(gl.BLEND);
   }
-  use(p.blur, G.fB4, { tSrc: T.tScene, uMode: 0, uDir: [1 / T.tScene.w, 1 / T.tScene.h] }); draw();
-  use(p.blur, G.fB8a, { tSrc: G.b4, uMode: 0, uDir: [1 / G.b4.w, 1 / G.b4.h] }); draw();
-  use(p.blur, G.fB8b, { tSrc: G.b8a, uMode: 1, uDir: [1.6 / G.b8a.w, 0] }); draw();
-  use(p.blur, G.fB8a, { tSrc: G.b8b, uMode: 1, uDir: [0, 1.6 / G.b8a.h] }); draw();
-  use(p.final, null); draw();
+  // (uSrcScale, uSceneScale: the whole target holds the picture; the phone draws smaller only while dragged.)
+  use(p.blur, G.fB4, { tSrc: T.tScene, uMode: 0, uDir: [1 / T.tScene.w, 1 / T.tScene.h], uSrcScale: [1, 1] }); draw();
+  use(p.blur, G.fB8a, { tSrc: G.b4, uMode: 0, uDir: [1 / G.b4.w, 1 / G.b4.h], uSrcScale: [1, 1] }); draw();
+  use(p.blur, G.fB8b, { tSrc: G.b8a, uMode: 1, uDir: [1.6 / G.b8a.w, 0], uSrcScale: [1, 1] }); draw();
+  use(p.blur, G.fB8a, { tSrc: G.b8b, uMode: 1, uDir: [0, 1.6 / G.b8a.h], uSrcScale: [1, 1] }); draw();
+  use(p.final, null, { uSceneScale: [1, 1, 0.5 / T.tScene.w, 0.5 / T.tScene.h] }); draw();
   G.frame++;
 }
 

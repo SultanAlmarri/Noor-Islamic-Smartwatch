@@ -344,6 +344,15 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
     private var lastFrame = 0L
     private var lastTidy = 0L
     private var lastSwap = 0L
+    /**
+     * (0.18.2) The scale the scene is drawn at while the Sun is dragged (1 = whole; down to 0.6): lowered a step when the
+     * frames of a drag come slower than about 48 a second; each new drag tries a step finer again, so a phone that was
+     * only busy for a while comes back to the whole picture. The still picture is always drawn whole.
+     */
+    @Volatile private var busyScale = 1f
+    private var busyEma = 0f
+    private var busyFrames = 0
+    private var wasBusy = false
     private var slowFrames = 0
     private var busyNow = false
     private var timedFrames = 0
@@ -450,9 +459,10 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         lightKey = ""
     }
 
-    private fun use(p: Program, t: Target?, extra: Map<String, Any> = emptyMap()) {
+    /** [vw], [vh]: draw into this corner of [t] only (0.18.2, [busyScale]); its whole size otherwise. */
+    private fun use(p: Program, t: Target?, extra: Map<String, Any> = emptyMap(), vw: Int = 0, vh: Int = 0) {
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, t?.fbo ?: 0)
-        val w = t?.w ?: surfaceW; val h = t?.h ?: surfaceH
+        val w = if (vw > 0) vw else t?.w ?: surfaceW; val h = if (vh > 0) vh else t?.h ?: surfaceH
         GLES30.glViewport(0, 0, w, h)
         GLES30.glUseProgram(p.id)
         var unit = 0
@@ -1000,11 +1010,18 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
         val timed = stagesLogged < 3
         val t1 = SystemClock.uptimeMillis()
-        use(progs.getValue("scene"), tScene); draw()
+        // (0.18.2) While the Sun is dragged on a phone that cannot draw the scene at the screen's pace, it is drawn a
+        // little smaller (busyScale) and enlarged by the last pass: the drag stays smooth, softer while it moves, and
+        // the still picture is always drawn whole. On a phone that keeps up nothing changes.
+        val sceneTex = tex.getValue("tScene")
+        val k = if (busyNow && shown) busyScale else 1f
+        val sw = if (k < 1f) ceil(sceneTex.w * k).toInt().coerceIn(1, sceneTex.w) else sceneTex.w
+        val sh = if (k < 1f) ceil(sceneTex.h * k).toInt().coerceIn(1, sceneTex.h) else sceneTex.h
+        use(progs.getValue("scene"), tScene, vw = sw, vh = sh); draw()
         if (timed) GLES30.glFinish()
         val t2 = SystemClock.uptimeMillis()
         if (f.night > 0.05f && starCount > 0) {
-            use(progs.getValue("stars"), tScene)
+            use(progs.getValue("stars"), tScene, vw = sw, vh = sh)
             GLES30.glEnable(GLES30.GL_BLEND); GLES30.glBlendFunc(GLES30.GL_ONE, GLES30.GL_ONE)
             GLES30.glBindVertexArray(starVao)
             GLES30.glDrawArrays(GLES30.GL_POINTS, 0, starCount)
@@ -1013,11 +1030,12 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         }
         val scene = tex.getValue("tScene")
         val blur = progs.getValue("blur")
-        use(blur, tB4, mapOf("tSrc" to scene, "uMode" to 0, "uDir" to floatArrayOf(1f / scene.w, 1f / scene.h))); draw()
-        use(blur, tB8a, mapOf("tSrc" to b4!!, "uMode" to 0, "uDir" to floatArrayOf(1f / b4!!.w, 1f / b4!!.h))); draw()
-        use(blur, tB8b, mapOf("tSrc" to b8a!!, "uMode" to 1, "uDir" to floatArrayOf(1.6f / b8a!!.w, 0f))); draw()
-        use(blur, tB8a, mapOf("tSrc" to b8b!!, "uMode" to 1, "uDir" to floatArrayOf(0f, 1.6f / b8a!!.h))); draw()
-        use(progs.getValue("final"), null); draw()
+        val part = floatArrayOf(sw.toFloat() / scene.w, sh.toFloat() / scene.h)
+        use(blur, tB4, mapOf("tSrc" to scene, "uMode" to 0, "uDir" to floatArrayOf(1f / scene.w, 1f / scene.h), "uSrcScale" to part)); draw()
+        use(blur, tB8a, mapOf("tSrc" to b4!!, "uMode" to 0, "uDir" to floatArrayOf(1f / b4!!.w, 1f / b4!!.h), "uSrcScale" to WHOLE)); draw()
+        use(blur, tB8b, mapOf("tSrc" to b8a!!, "uMode" to 1, "uDir" to floatArrayOf(1.6f / b8a!!.w, 0f), "uSrcScale" to WHOLE)); draw()
+        use(blur, tB8a, mapOf("tSrc" to b8b!!, "uMode" to 1, "uDir" to floatArrayOf(0f, 1.6f / b8a!!.h), "uSrcScale" to WHOLE)); draw()
+        use(progs.getValue("final"), null, mapOf("uSceneScale" to floatArrayOf(part[0], part[1], 0.5f / scene.w, 0.5f / scene.h))); draw()
         if (timed) {
             GLES30.glFinish()
             stagesLogged++
@@ -1107,7 +1125,18 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
                     }
                     if (!firstShown && fade >= 1f) { firstShown = true; attempting = false; RealSky.succeeded(app); onFirstFrame?.invoke() }
                     if (fade >= 1f && shownLogged != landKey) { shownLogged = landKey; Log.i(TAG, "Real sky shown: ${f.biome.id}") }
-                    lastSwap = SystemClock.uptimeMillis()
+                    val swapped = SystemClock.uptimeMillis()
+                    if (busyNow && !wasBusy) busyScale = min(1f, busyScale + 0.1f)
+                    wasBusy = busyNow
+                    if (busyNow && shown && fade >= 1f && lastSwap > 0L) {
+                        val gap = (swapped - lastSwap).toFloat()
+                        if (gap < 250f) { busyEma = if (busyEma == 0f) gap else busyEma * 0.85f + gap * 0.15f; busyFrames++ }
+                        if (busyFrames >= 12) {
+                            busyFrames = 0
+                            if (busyEma > 21f && busyScale > 0.6f) busyScale = max(0.6f, busyScale - 0.1f)
+                        }
+                    } else if (!busyNow) { busyEma = 0f; busyFrames = 0 }
+                    lastSwap = swapped
                 }
                 // Pace: as fast as the screen while something is being dragged or built, otherwise at the tier's rate.
                 val wait = if (busyNow || !shown || fade < 1f) 4L else tier.frameMs - (SystemClock.uptimeMillis() - t0)
@@ -1129,6 +1158,8 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
 
     companion object {
         private const val TAG = "NoorRealSky"
+        /** The whole of a blur's source holds the picture. */
+        private val WHOLE = floatArrayOf(1f, 1f)
         /** (0.18) At most this many bytes of decoding buffers are kept for the next pictures (the rest is let go). */
         private const val POOL_BYTES = 24L * 1024 * 1024
         /** (0.18) How long a set of clouds takes to come in when its pictures were not at hand in time (ms). */
