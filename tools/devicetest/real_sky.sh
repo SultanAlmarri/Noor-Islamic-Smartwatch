@@ -49,7 +49,9 @@ shot() {
 # Waits (up to $1 seconds) until the renderer has shown a picture since the last launch.
 shown() {
   # (0.19) The medium and low graphics draw with the screen itself: no renderer's message to wait for, a while to settle.
-  if [ "$TIER" != "HIGH" ]; then sleep 25; return 0; fi
+  # Medium and Low say nothing when shown: wait. The emulator's software GPU can hold the first frame that uses the
+  # 0.9 sky's land program for about 30 s while it translates it (Android's "Davey" lines in shader_log.txt).
+  if [ "$TIER" != "HIGH" ]; then sleep 55; return 0; fi
   local n=0
   while [ $n -lt "$1" ]; do
     if grep -q "Real sky shown" "$OUT/logcat.txt" 2>/dev/null && [ "$(grep -c 'Real sky shown' "$OUT/logcat.txt")" -gt "$SEEN" ]; then return 0; fi
