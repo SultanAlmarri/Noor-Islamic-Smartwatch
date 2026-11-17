@@ -339,7 +339,9 @@ internal fun RealSkyLayer(modifier: Modifier, frame: () -> RealSkyFrame?) {
                 surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                     override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) = engine.attach(st, w, h)
                     override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) = engine.attach(st, w, h)
-                    override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean { engine.detach(st); return true }
+                    // False: the engine releases the texture itself, once its render thread has let go of it, so the
+                    // main thread never waits for a picture in progress (RealSkyEngine.detach).
+                    override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean { engine.detach(st); return false }
                     override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
                 }
             }
