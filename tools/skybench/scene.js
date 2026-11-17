@@ -152,6 +152,13 @@
     }
     return norm(a, 0);
   }
+  function massifsJ(r, N, norm, count, wMin, wMax, fq, low) {
+    const detail = rangeJ(r, N, norm, fq, 1.2, 1, 1);
+    const m = Array.from({ length: count }, (_, k) => [(k + 0.5 + (r() - 0.5) * 0.6) / count, wMin + (wMax - wMin) * r(), low + (1 - low) * r()]);
+    return norm(Array.from({ length: N }, (_, i) => { const u = i / (N - 1); let env = 0;
+      for (const k of m) { const t = (u - k[0]) / k[1]; env = Math.max(env, k[2] * Math.pow(Math.max(0, 1 - t * t), 0.6)); }
+      return env * (0.5 + 0.5 * detail[i]) + 0.06 * detail[i]; }), 0);
+  }
   function rollingJ(r, N, norm, f, lo) {
     const ns = [noise1(r, 64), noise1(r, 64), noise1(r, 64)];
     return norm(Array.from({ length: N }, (_, i) => { const u = i / (N - 1); return 0.62 * ns[0](u * f * 2) + 0.28 * ns[1](u * f * 4.3) + 0.10 * ns[2](u * f * 9.7); }), lo);
@@ -174,8 +181,8 @@
         return Math.min(1, Math.max(0, 0.12 + 0.25 * n1(u * 3.1) + 0.08 * n2(u * 17) + 0.55 * edge)); });
     },
     arctic(r, layer, N, norm) {
-      if (layer === 0) return rangeJ(r, N, norm, 2.2, 1.7, 1.1, 0.35);
-      if (layer === 1) return rangeJ(r, N, norm, 2.9, 1.35, 1.6, 0.1).map(v => v * Math.pow(v, 0.3));
+      if (layer === 0) return massifsJ(r, N, norm, 3, 0.17, 0.27, 3.4, 0.8);
+      if (layer === 1) return massifsJ(r, N, norm, 2, 0.09, 0.17, 4.2, 0.55);
       if (layer === 2) return new Array(N).fill(0);
       if (layer === 3) {
         const n1 = noise1(r, 64), n2 = noise1(r, 64); const a = Array.from({ length: N }, (_, i) => 0.12 + 0.2 * n1(i / (N - 1) * 5));
@@ -191,8 +198,8 @@
       const a = new Array(N).fill(0); const n1 = noise1(r, 64), n2 = noise1(r, 64);
       if (layer >= 3) {
         for (let i = 0; i < N; i++) { const u = i / (N - 1);
-          const v = 0.6 * n1(u * (layer === 3 ? 4 : 2.2)) + 0.4 * n2(u * 13);
-          const k = v * 4, step = Math.floor(k) + smoothJ(0.55, 1, k - Math.floor(k)); a[i] = step / 4 + 0.08 * n2(u * 31); }
+          const v = 0.75 * n1(u * (layer === 3 ? 3 : 1.8)) + 0.25 * n2(u * 8);
+          const k = v * 4, step = Math.floor(k) + smoothJ(0.86, 1, k - Math.floor(k)); a[i] = step / 4; }
         return norm(a, 0.08);
       }
       for (let i = 0; i < N; i++) a[i] = 0.03 + 0.04 * n1(i / (N - 1) * 11);

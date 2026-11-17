@@ -99,7 +99,7 @@ float edgeDetail(float x, int layer) {
     if (isSea()) return 0.0;                     // sand: smooth
     if (isForest() && layer > 0) return conifers(x, layer);
     // Red rock: crisp edges, a few loose blocks on the ledges in front. Snow: soft drifts.
-    if (isCanyon()) return layer >= 3 ? pow(vnoise1(xd * 0.45 + float(layer) * 9.0), 3.0) * 1.6 * uDp : 0.15 * vnoise1(xd * 0.9) * uDp;
+    if (isCanyon()) return layer >= 3 ? pow(vnoise1(xd * 0.45 + float(layer) * 9.0), 4.0) * 0.8 * uDp : 0.15 * vnoise1(xd * 0.9) * uDp;
     if (isArctic() && layer >= 3) return vnoise1(xd * 0.2 + float(layer) * 13.0) * 0.8 * uDp;
     bool high = isMountains() || isArctic();
     if (layer == 0 || (high && layer == 1)) {
@@ -184,7 +184,8 @@ float3 water(float2 fc, float shoreTop, float calm) {
     float cosv = sin(radians(max(dep, 0.3)));
     float fres = 0.02 + 0.98 * pow(1.0 - cosv, 5.0);
     float3 deep = tone(uAmbTop * 0.10 + uSunGround * 0.012) * float3(0.55, 0.85, 0.95);
-    float3 c = mix(deep, refl, sat(0.25 + 0.75 * fres));
+    // (0.19) The fjord is deep and dark: it mirrors less than the shallow, sunlit sea.
+    float3 c = mix(deep * (isArctic() ? 0.5 : 1.0), refl, sat(0.25 + 0.75 * fres) * (isArctic() ? 0.85 : 1.0));
     // Long swells and wind ripples, drawn out sideways by perspective, darker in the troughs.
     float swell = vnoise(float2(fc.x / uDp * 0.010 * z / 6.0, z * 3.2 + uTime * 0.04));
     float ripple = vnoise(float2(fc.x / uDp * 0.05 * z / 6.0, z * 9.0 - uTime * 0.07));
@@ -294,18 +295,19 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
             rock = mix(rock, float3(0.62, 0.50, 0.36), smoothstep(0.82, 0.97, rel / max(hx, 0.05)) * 0.75);
             float varnish = smoothstep(0.6, 0.9, vnoise(float2(xd * 0.7, rel * 2.5 + float(layer))));
             rock *= 1.0 - 0.22 * varnish * sat(rel * 3.0);
-            float3 scree = float3(0.43, 0.17, 0.075) * (0.8 + 0.35 * vnoise(float2(xd * 0.5, below * 0.5)));
+            float3 scree = float3(0.45, 0.18, 0.08) * (0.9 + 0.12 * vnoise(float2(xd * 0.06, below * 0.1 + float(layer))) - 0.12 * smoothstep(screeTop - 0.12, screeTop, rel));
             float flute = (vnoise1(xd * 0.28 + float(layer) * 4.0) - 0.5) * 0.5;
             float3 nWall = normalize(float3(clamp(slope * 0.9, -2.5, 2.5) + flute, 0.12, -1.0));
             float3 nScree = normalize(float3(slope * 0.7 * exp(-max(below, 0.0) / 8.0), 1.0, -0.8));
             n = normalize(mix(nScree, nWall, wall));
             albedo = mix(scree, rock, wall);
         } else {
-            float sand = vnoise(float2(xd * 0.03, below * 0.05 + float(layer) * 5.0));
-            albedo = mix(float3(0.48, 0.22, 0.10), float3(0.60, 0.35, 0.19), sand);
-            // Thin beds in the ledges' faces, just under their edges.
-            albedo *= 1.0 - 0.18 * (1.0 - smoothstep(1.0, 4.0, below)) * (0.5 + 0.5 * sin(below * 2.2 + vnoise1(xd * 0.05) * 4.0));
-            n = normalize(float3(slope * 1.2 * exp(-max(below, 0.0) / 5.0), 1.0, -0.6 * face));
+            // Slickrock steps: under each edge a short riser, darker and redder, facing us; then the flat tread.
+            float riser = 1.0 - smoothstep(1.5, 3.5, below);
+            float tone2 = vnoise(float2(xd * 0.02, float(layer) * 5.0 + uSeed));
+            float3 tread = mix(float3(0.56, 0.31, 0.16), float3(0.64, 0.40, 0.23), tone2);
+            albedo = mix(tread, float3(0.44, 0.17, 0.08), riser);
+            n = normalize(mix(float3(slope * 0.4, 1.0, -0.3), float3(slope * 0.6, 0.25, -1.0), riser));
         }
         bounce = 0.28;
     } else if (isForest() && layer > 0) {
@@ -385,17 +387,27 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
                 - (gully - 0.5) * 0.25 - (gully2 - 0.5) * 0.08;
             float snow = smoothstep(line - 0.03, line + 0.03, rel);
             if (isArctic()) {
-                // Whole faces turn to the Sun or away (the slope of the crest above, held far down the face), and
-                // dark crags stand out where the faces are steepest.
+                // The massifs are built of faces: gentle snowfields that take the light, steep faces turned to the
+                // Sun or away (the slope of the crest above, held far down the face). Bare dark rock where snow
+                // cannot hold: along the crests and aretes, and in ribs down the steep faces, snow in the couloirs
+                // between them.
+                float up = (base - fc.y) / amp;   // (unclamped: below the layer's foot the noise must not run straight down)
                 float hb = (ridgeAt(fc.x - 14.0 * uDp, layer) - ridgeAt(fc.x + 14.0 * uDp, layer)) * amp / (28.0 * uDp);
                 float hold = exp(-max(below, 0.0) / 45.0);
-                n = normalize(float3(clamp(hb * 2.2 * hold + slope * 0.8 * exp(-max(below, 0.0) / 9.0), -2.0, 2.0) + (gully - 0.5) * 1.1, 0.32, -0.75));
-                // Bare rock where snow cannot hold: along the sharp crests and down their steepest ribs.
-                float crest = 1.0 - smoothstep(1.0, 3.0 + 9.0 * vnoise1(xd * 0.05 + float(layer) * 3.0), below);
+                float side0 = clamp(hb * 2.2 * hold + slope * 0.8 * exp(-max(below, 0.0) / 9.0), -2.0, 2.0);
+                // Faces as plates slanting down the fall line of the face they lie on (angular, not blobs).
+                float2 fp = float2(xd * 0.05 + up * 1.6 * clamp(side0, -1.0, 1.0), up * 2.6 + float(layer) * 7.0);
+                float facet = (1.0 - abs(vnoise(fp) * 2.0 - 1.0)) * 0.7 + vnoise(fp * 2.3 + float2(5.0, 1.0)) * 0.3;
+                float steep = smoothstep(0.5, 0.56, facet + 0.18 * (1.0 - smoothstep(0.0, 22.0, below)) - 0.1 * (1.0 - sat(up * 2.5))) * (layer == 0 ? 0.45 : 1.0);
+                float side = side0 + (gully - 0.5) * 1.2 * steep;
+                n = normalize(float3(side, mix(1.1, 0.16, steep), -0.55));
+                float crest = 1.0 - smoothstep(1.0, 2.5 + 6.0 * vnoise1(xd * 0.05 + float(layer) * 3.0), below);
+                float ribs = smoothstep(0.6, 0.66, gully * 0.5 + (1.0 - abs(vnoise(fp * float2(3.0, 1.2)) * 2.0 - 1.0)) * 0.5);
                 float crag = vnoise(float2(xd * 0.08, below * 0.08 + float(layer) * 5.0)) * 0.6 + min(abs(slope), 1.5) * 0.35;
-                snow *= 1.0 - crest * smoothstep(0.5, 0.58, crag);
+                snow *= 1.0 - max(crest * smoothstep(0.5, 0.58, crag), steep * ribs * smoothstep(-0.05, 0.25, up));
             }
             float3 bare = mix(float3(0.16, 0.16, 0.16), float3(0.27, 0.25, 0.22), gully2);
+            if (isArctic()) bare *= 0.55;   // (0.19) the dark rock of the far north
             albedo = mix(mix(bare, albedo, isArctic() ? 0.0 : (layer == 0 ? (isForest() ? 0.45 : 0.12) : 0.40)), float3(0.82, 0.85, 0.90), sat(snow));
             // (0.19: in the arctic little light thrown back into the shade, so the faces keep their shapes.)
             bounce = mix(bounce, isArctic() ? 0.06 : 0.35, sat(snow));

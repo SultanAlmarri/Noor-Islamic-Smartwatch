@@ -93,12 +93,13 @@ The scene (0.9.6), far to near:
    flat: still water mirroring the sky and its far shore, the Sun's sheen on it only when the Sun is low), wooded
    knolls at one side of the near shore or both, a bank in front; a dark conifer treeline of pointed spires along the
    crests (tiers of branches, larger and fewer on nearer layers, none where the ground falls to the water), conifer
-   crowns in rows below it, more mist. *Arctic*: two high, sharp ranges snowed nearly to the water, bare rock along
-   their crests, whole faces turned to the Sun or away (little light thrown back into the shade, so the faces keep
-   their shapes and their blue shadows), over a fjord's still water; snow and dark boulders on the shore. *Canyon*:
+   crowns in rows below it, more mist. *Arctic*: broad massifs across the width, each with several jagged summits,
+   snowed nearly to the water: gentle snowfields that take the light, steep faces turned to the Sun or away (little
+   light thrown back into the shade, so they keep their blue shadows), dark rock along the crests and aretes and in
+   ribs down the steep faces, snow in the couloirs; a fjord's dark still water; snow and dark boulders on the shore. *Canyon*:
    a far rim, buttes and mesas (flat tops on sheer walls over skirts of red scree, a spire now and then, some with a
    second tier), walls of bedded sandstone (red, orange, a pale cap rock, desert varnish, fluting, their sides lit or
-   shaded by the Sun's side), slickrock ledges and red sand in front, less mist. Their weather: the forest wetter and
+   shaded by the Sun's side), smooth talus; in front flat treads of slickrock with short red risers, less mist. Their weather: the forest wetter and
    greyer, the arctic overcast more often, the canyon clearer. The land shader shades only the layers a pixel shows
    (at most three, front to back), which made room for them; the four older sceneries draw exactly as before. The
    Canvas renderer (below Android 13) draws the same sceneries more simply (treelines, lakes, snowy ranges, mesas;

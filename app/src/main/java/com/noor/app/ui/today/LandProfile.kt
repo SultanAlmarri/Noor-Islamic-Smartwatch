@@ -55,7 +55,7 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                 Terrain.MOUNTAINS -> floatArrayOf(34f, 14f, 6f, 2.2f, 0.6f)
                 Terrain.SEA -> floatArrayOf(40f, 10f, 3f, 0.8f, 0.3f)
                 Terrain.FOREST -> floatArrayOf(35f, 8f, 3f, 0.9f, 0.3f)
-                Terrain.ARCTIC -> floatArrayOf(22f, 8f, 3f, 0.8f, 0.3f)
+                Terrain.ARCTIC -> floatArrayOf(15f, 6f, 3f, 0.8f, 0.3f)
                 Terrain.CANYON -> floatArrayOf(30f, 9f, 3.5f, 1.2f, 0.4f)
             },
         )
@@ -100,7 +100,7 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
          */
         private val FOREST = arrayOf(floatArrayOf(40f, 2f), floatArrayOf(18f, 12f), floatArrayOf(1f, 24f), floatArrayOf(30f, 54f), floatArrayOf(16f, 74f))
         /** The far north (0.19): two snow-covered ranges rising out of a fjord's still water, a shore of snow and rocks. */
-        private val ARCTIC = arrayOf(floatArrayOf(62f, 3f), floatArrayOf(40f, 14f), floatArrayOf(1f, 22f), floatArrayOf(10f, 54f), floatArrayOf(14f, 74f))
+        private val ARCTIC = arrayOf(floatArrayOf(52f, 3f), floatArrayOf(36f, 14f), floatArrayOf(1f, 22f), floatArrayOf(10f, 54f), floatArrayOf(14f, 74f))
         /** Red rock (0.19): a far rim, buttes and mesas with sheer walls over their slopes of scree, ledges, the floor. */
         private val CANYON = arrayOf(floatArrayOf(22f, 3f), floatArrayOf(46f, 14f), floatArrayOf(28f, 30f), floatArrayOf(12f, 52f), floatArrayOf(14f, 74f))
         private const val DEEPEST = 72f
@@ -239,6 +239,23 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
             return normalise(a, 0f)
         }
 
+        /**
+         * (0.19) [count] massifs spread across the width, each a broad rounded mass [wMin]..[wMax] wide (half-widths)
+         * whose crest is broken into summits, notches and ridges by ridged noise ([fq] across the width); [low] is the
+         * least of their heights.
+         */
+        private fun massifs(rnd: java.util.Random, count: Int, wMin: Float, wMax: Float, fq: Float, low: Float): FloatArray {
+            val detail = range(rnd, fq, 1.2f, 1f, 1f)
+            val m = Array(count) { k -> floatArrayOf((k + 0.5f + (rnd.nextFloat() - 0.5f) * 0.6f) / count, wMin + (wMax - wMin) * rnd.nextFloat(), low + (1 - low) * rnd.nextFloat()) }
+            val a = FloatArray(N) { i ->
+                val u = i / (N - 1f)
+                var env = 0f
+                for (k in m) { val t = (u - k[0]) / k[1]; env = max(env, k[2] * (1f - t * t).coerceAtLeast(0f).pow(0.6f)) }
+                env * (0.5f + 0.5f * detail[i]) + 0.06f * detail[i]
+            }
+            return normalise(a, 0f)
+        }
+
         /** Rolling ground: three octaves of smooth noise at [f] bumps across the width. */
         private fun rolling(rnd: java.util.Random, f: Float, lo: Float): FloatArray {
             val ns = Array(3) { Noise(rnd) }
@@ -281,12 +298,10 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
 
         /** The far north (0.19): high ranges, the fjord, a shore of snow and rocks. */
         private fun arctic(rnd: java.util.Random, layer: Int): FloatArray = when (layer) {
-            0 -> range(rnd, 2.2f, 1.7f, 1.1f, 0.35f)
-            1 -> {
-                // A nearer range, broken by a wide saddle or two so the far one shows over it.
-                val a = range(rnd, 2.9f, 1.35f, 1.6f, 0.1f)
-                FloatArray(N) { a[it] * a[it].pow(0.3f) }
-            }
+            // Broad massifs across the width, each with several jagged summits; the nearer ones with gaps between
+            // them, so the far ones show.
+            0 -> massifs(rnd, 3, 0.17f, 0.27f, 3.4f, 0.8f)
+            1 -> massifs(rnd, 2, 0.09f, 0.17f, 4.2f, 0.55f)
             LAKE -> FloatArray(N)
             3 -> {
                 // Snow along the water (below [ROCK] of the layer's height) with boulders standing out of it.
@@ -314,9 +329,10 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                 // Ledges of rock in steps, then the floor: low and broad.
                 for (i in 0 until N) {
                     val u = i / (N - 1f)
-                    val v = 0.6f * n1.at(u * (if (layer == 3) 4f else 2.2f)) + 0.4f * n2.at(u * 13f)
-                    val k = v * 4f; val step = floor(k) + smooth(0.55f, 1f, k - floor(k))
-                    a[i] = step / 4f + 0.08f * n2.at(u * 31f)
+                    // Flat treads of slickrock, short steep risers between them.
+                    val v = 0.75f * n1.at(u * (if (layer == 3) 3f else 1.8f)) + 0.25f * n2.at(u * 8f)
+                    val k = v * 4f; val step = floor(k) + smooth(0.86f, 1f, k - floor(k))
+                    a[i] = step / 4f
                 }
                 return normalise(a, 0.08f)
             }
