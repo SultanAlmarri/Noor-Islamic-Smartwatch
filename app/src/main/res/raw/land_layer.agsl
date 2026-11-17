@@ -66,27 +66,30 @@ float landHeight(float x, int layer, float base, float amp) {
     return mix(h, min(h, cap), openAt(x));
 }
 
+// One spire of the treeline at cell [c] (see [conifers]); dp.
+float spire(float c, float xc, float sp, float tall, float g, int layer) {
+    float hh = hash11(c * 1.37 + float(layer) * 7.0);
+    float cx = c + 0.5 + (hash11(c * 2.71 + 5.0) - 0.5) * 0.7;
+    // A tree stands only where the ground has risen far enough for it (its own threshold, so they thin out).
+    float th = tall * (0.5 + 0.5 * hh) * smoothstep(hh * 0.6, hh * 0.6 + 0.25, g);
+    float t = 1.0 - abs(xc - cx) * sp / max(th * 0.2, 0.5);
+    // Tiers of branches: the flank steps in a little every couple of dp.
+    float y = th * sat(t);
+    return y - min(fract(y / 2.4 + hh * 3.0) * 1.1, y) * sat(th / 8.0);
+}
+
 // The treeline (0.19): the pointed tops of conifers along the crest, narrow spires with tiers of branches, larger and
 // further apart on the nearer layers, standing where the ground rises (none where it falls to the water). dp.
+// (The three neighbouring spires are written out, not looped over: Android's shader compiler, merging this function
+// into the land's loop, lost a variable declared before such a loop ("'_6_s' : undeclared identifier") and drew no
+// land at all on the medium graphics; the WebGL bench and Robolectric's compiler did not show it.)
 float conifers(float x, int layer) {
-    float s = layer == 1 ? 2.3 : (layer == 3 ? 5.0 : 8.5);          // spacing
+    float sp = layer == 1 ? 2.3 : (layer == 3 ? 5.0 : 8.5);         // spacing
     float tall = layer == 1 ? 5.5 : (layer == 3 ? 19.0 : 30.0);     // the tallest
     float g = layer == 1 ? 1.0 : smoothstep(0.16, 0.5, ridgeAt(x, layer));
-    float xc = x / uDp / s + uSeed * 3.1 + float(layer) * 17.0;
+    float xc = x / uDp / sp + uSeed * 3.1 + float(layer) * 17.0;
     float ci = floor(xc);
-    float best = 0.0;
-    for (int k = 0; k < 3; k++) {
-        float c = ci + float(k) - 1.0;
-        float hh = hash11(c * 1.37 + float(layer) * 7.0);
-        float cx = c + 0.5 + (hash11(c * 2.71 + 5.0) - 0.5) * 0.7;
-        // A tree stands only where the ground has risen far enough for it (its own threshold, so they thin out).
-        float th = tall * (0.5 + 0.5 * hh) * smoothstep(hh * 0.6, hh * 0.6 + 0.25, g);
-        float t = 1.0 - abs(xc - cx) * s / max(th * 0.2, 0.5);
-        // Tiers of branches: the flank steps in a little every couple of dp.
-        float y = th * sat(t);
-        y -= min(fract(y / 2.4 + hh * 3.0) * 1.1, y) * sat(th / 8.0);
-        best = max(best, y);
-    }
+    float best = max(max(spire(ci - 1.0, xc, sp, tall, g, layer), spire(ci, xc, sp, tall, g, layer)), spire(ci + 1.0, xc, sp, tall, g, layer));
     // Lower crowns fill in between the spires.
     return max(best, tall * 0.18 * g * (0.6 + 0.4 * vnoise1(xc * 2.3))) * uDp;
 }
