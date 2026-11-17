@@ -8,7 +8,6 @@ model is `Atmosphere.kt` (authoritative; `atmo.js` is a port kept close to it). 
 ```
 cd tools/skybench
 python3 scenes.py 1.5                     # writes scenes.json (Dubai and Istanbul through a day)
-python3 scenes.py 1.5 terrains            # (0.19) every terrain (dunes … canyon) at seven moments of one day
 NODE_PATH=$(npm root -g) node run.js scenes.json out
 python3 sheet.py dxb.png 7 out/dxb_*.png  # contact sheet (needs Pillow)
 python3 sksl_size.py ../../app/src/main/res/raw/sky_common.agsl ../../app/src/main/res/raw/sky_layer.agsl

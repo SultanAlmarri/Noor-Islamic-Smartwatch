@@ -22,25 +22,8 @@ enum class ThemeMode { SUN, SYSTEM, DARK, LIGHT }
  */
 enum class Scenery { AUTO, DUNES, HILLS, MOUNTAINS, SEA, RAINFOREST, ARCTIC, SAVANNA, CANYON }
 
-/**
- * How the home sky is drawn (0.19, the owner's three levels): HIGH the real sky (rendered sceneries; its own quality
- * steps are chosen by itself), MEDIUM the 0.9 sky (the layered sky drawn on the phone), LOW the simplest sky
- * ([com.noor.app.ui.today.SimpleSkyLayer]); AUTO chooses one for the phone ([com.noor.app.sky.SkyLevels]).
- * Stored under a new key ("sky_level"): 0.10-0.18's "sky_graphics" (Ultra, High, Medium, Low were steps of the real sky,
- * Classic the 0.9 sky) is read once to carry the choice over.
- */
-enum class SkyGraphics {
-    AUTO, HIGH, MEDIUM, LOW;
-
-    companion object {
-        /** A choice stored by 0.10-0.18 under "sky_graphics". */
-        fun fromOld(name: String?): SkyGraphics = when (name) {
-            null, "AUTO" -> AUTO
-            "CLASSIC" -> MEDIUM
-            else -> HIGH   // Ultra, High, Medium and Low were all the real sky
-        }
-    }
-}
+/** How the home sky is drawn (0.10): the real sky at a quality tier, chosen automatically or fixed, or the 0.9 sky. */
+enum class SkyGraphics { AUTO, ULTRA, HIGH, MEDIUM, LOW, CLASSIC }
 
 /** The last position the app knows about (or the city chosen by hand). Kept so the app works offline and after restarts. */
 data class KnownLocation(

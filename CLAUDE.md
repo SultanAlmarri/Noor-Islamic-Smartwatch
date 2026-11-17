@@ -20,8 +20,8 @@ Minhad, while package ids (`com.noor.smartwatch`), code packages (`com.noor.*`),
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.19.0** (versionCode 37), watch **0.19.0** (versionCode 23); 0.9.7, 0.9.9–0.9.11,
-0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone (0.16.0 to 0.19.0 rebuilt the watch with the shared alert
+Current version: phone **0.18.2** (versionCode 36), watch **0.18.2** (versionCode 22); 0.9.7, 0.9.9–0.9.11,
+0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone (0.16.0 to 0.18.2 rebuilt the watch with the shared alert
 engine and, in 0.18, its new sounds; the alarms ring on the phone only). Everything is on `main`. The merged work
 branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
 branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
@@ -163,11 +163,6 @@ watch-face packaging step). Point Gradle at the SDK with `ANDROID_HOME` or with 
   large": the first 0.9.6 sky did that on the emulators). `SkyShaderSizeTest` estimates the size and must stay under
   65 000; `SkyShaderCompileTest` compiles both with the SkSL in Robolectric's native graphics (an older dialect:
   `sample(child, p)` for `child.eval(p)`; it does not enforce the size limit).
-  0.19: Android's Skia copies a function called once, with its only return at the end, into its caller; copied into
-  an `if (...) return f(...)` it lost f's first local and emitted broken GLSL ("'_6_sp' : undeclared identifier"): the
-  medium graphics drew no land at all, while the WebGL bench and Robolectric's compiler were fine. Give such a function
-  an early return (never copied). Check any AGSL change on an emulator: `real-sky.yml` with `tier` MEDIUM photographs
-  the 0.9 sky and saves Skia's messages (`shader_log.txt`, and `skia_log.txt` with the generated GLSL).
 - Iterate on looks with a WebGL bench that compiles the same files (headless Chromium, a small GLSL prelude), then
   confirm on Android with `.github/workflows/home-sky.yml` (Android 14 and 15 emulators; pictures also go to the
   `home-sky-preview` pre-release, since workflow artifacts cannot be downloaded from a Claude Code cloud session).

@@ -46,7 +46,7 @@ animations() { for k in animator_duration_scale transition_animation_scale windo
 # the 0.9 sky, which remains the fallback, so it is chosen by name ("Classic") each time a city is set.
 city() {
   adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city "$1" -n $HOOK >/dev/null; sleep 2
-  adb shell am broadcast -a com.noor.smartwatch.debug.SKY --es graphics MEDIUM -n $HOOK >/dev/null; sleep 1
+  adb shell am broadcast -a com.noor.smartwatch.debug.SKY --es graphics CLASSIC -n $HOOK >/dev/null; sleep 1
 }
 # setclock MMDDhhmmYYYY.ss in UTC
 setclock() { adb shell "date -u $1" >/dev/null; }

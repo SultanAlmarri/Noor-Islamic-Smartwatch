@@ -288,12 +288,7 @@ fun TodayContent(
     // The real sky (0.10): the whole screen is the window. The scene is drawn behind everything by its own renderer;
     // the day's times lie on frosted glass over its lower part. Where it cannot run, the 0.9 sky fills the header.
     val skyContext = androidx.compose.ui.platform.LocalContext.current
-    // (0.19) The graphics level: High the real sky (where it can run; otherwise Medium), Medium the 0.9 sky, Low the
-    // simplest sky. Automatic chooses for the phone and may step down (SkyLevels).
-    @Suppress("UNUSED_VARIABLE") val autoNow = com.noor.app.sky.SkyLevels.autoLevel.value   // (read: a step down recomposes)
-    val level = com.noor.app.sky.SkyLevels.resolve(skyContext, u.settings.skyGraphics)
-    val realSky = level == com.noor.app.sky.SkyLevel.HIGH && RealSky.usable(skyContext, u.settings.skyGraphics) && RealSky.unusable.intValue == 0
-    val simpleSky = level == com.noor.app.sky.SkyLevel.LOW
+    val realSky = RealSky.usable(skyContext, u.settings.skyGraphics) && RealSky.unusable.intValue == 0
     SkyText.real = realSky
     // The Sun's path stands on the skyline of the scenery on screen (see SunLift); on a level horizon otherwise.
     val lift = if (realSky) remember(u.settings.scenery, u.place) {
@@ -327,7 +322,7 @@ fun TodayContent(
         val todayDay = remember(today, u.settings, u.place, u.profile) { dayFor(today)?.day }
         // (Whether the list shows today: the sky's hint keeps out of the way of "Today" while another day is shown.)
         var viewingToday by remember { mutableStateOf(true) }
-        SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup, simple = simpleSky,
+        SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup,
             showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed, viewingToday = viewingToday, clock = clock)
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
@@ -409,8 +404,6 @@ private fun SkyHeader(
     u: TodayUi, f: Formatter, todayDay: PrayerDay?, top: Dp, heroHeight: Dp, scroll: ScrollState,
     onOpenLocation: () -> Unit, onRefresh: () -> Unit, previewScrub: Double?, previewSkyTime: Float?,
     real: RealSkySetup? = null,
-    /** (0.19) The low graphics: the simplest sky. */
-    simple: Boolean = false,
     showScrubHint: Boolean = false, onScrubbed: () -> Unit = {}, viewingToday: Boolean = true,
     clock: () -> java.time.Instant = { u.now },
 ) {
@@ -428,7 +421,7 @@ private fun SkyHeader(
     val scene = remember(path, events, minute, next, hijriDay, landSeed, u.settings.scenery) {
         SkyScene(
             path, events, minute, next, hijriDay = hijriDay, southernHemisphere = place.point.latitude < 0,
-            terrain = terrainFor(u.settings.scenery, place.countryCode, place.point.elevationM, place.point.latitude), seed = landSeed * 1_000_003L + today.toEpochDay(), landSeed = landSeed,
+            terrain = terrainFor(u.settings.scenery, place.countryCode, place.point.elevationM), seed = landSeed * 1_000_003L + today.toEpochDay(), landSeed = landSeed,
             latitude = place.point.latitude, longitude = place.point.longitude,
         )
     }
@@ -567,7 +560,7 @@ private fun SkyHeader(
             LivingSky(
                 scene, layout, display = display, scrubbing = scrubbing || intro, page = c.background, description = desc,
                 modifier = Modifier.fillMaxSize(), parallax = { scroll.value.toFloat() }, stillTime = previewSkyTime,
-                opening = { opening.value }, real = real, simple = simple,
+                opening = { opening.value }, real = real,
             )
         }
 
@@ -768,12 +761,16 @@ private object SkyText {
 }
 
 /** The landscape to draw: the user's choice, or the one that fits the place (0.9.8). */
-/**
- * (0.19) The scenery the medium and low graphics draw: the real sky's own choice for the place ([com.noor.app.sky.Biome]),
- * so every level of graphics shows the same scenery (until 0.18 the 0.9 sky chose by rules of its own).
- */
-internal fun terrainFor(s: com.noor.app.data.Scenery, countryCode: String?, elevationM: Double?, latitude: Double?): Terrain =
-    Terrain.of(com.noor.app.sky.Biome.of(s, countryCode, elevationM, latitude))
+internal fun terrainFor(s: com.noor.app.data.Scenery, countryCode: String?, elevationM: Double?): Terrain = when (s) {
+    com.noor.app.data.Scenery.AUTO -> Terrain.auto(countryCode, elevationM)
+    com.noor.app.data.Scenery.DUNES -> Terrain.DUNES
+    com.noor.app.data.Scenery.HILLS -> Terrain.HILLS
+    com.noor.app.data.Scenery.MOUNTAINS -> Terrain.MOUNTAINS
+    com.noor.app.data.Scenery.SEA -> Terrain.SEA
+    // The real sky's sceneries (0.10), where the 0.9 sky still draws: the nearest of its own four.
+    com.noor.app.data.Scenery.RAINFOREST, com.noor.app.data.Scenery.SAVANNA -> Terrain.HILLS
+    com.noor.app.data.Scenery.ARCTIC, com.noor.app.data.Scenery.CANYON -> Terrain.MOUNTAINS
+}
 
 /** "−1:10:34" before a prayer, "+04:12" after it (0.9.7): a true minus sign, the same in both languages, as in the notification. */
 internal fun countdownText(c: com.noor.prayer.Countdown, f: Formatter): String = (if (c.elapsed) "+" else "\u2212") + f.timer(c.duration)

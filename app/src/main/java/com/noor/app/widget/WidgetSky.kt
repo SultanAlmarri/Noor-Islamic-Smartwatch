@@ -47,7 +47,7 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
         SkyScene(
             SunPath.of(today, place.point, zone), events, now.truncatedTo(ChronoUnit.MINUTES), state.next.prayer.takeIf { state.next.date == today },
             hijriDay = HijriDate.of(today, settings.hijriAdjust).day, southernHemisphere = place.point.latitude < 0,
-            terrain = terrainFor(settings.scenery, place.countryCode, place.point.elevationM, place.point.latitude), seed = landSeed * 1_000_003L + today.toEpochDay(),
+            terrain = terrainFor(settings.scenery, place.countryCode, place.point.elevationM), seed = landSeed * 1_000_003L + today.toEpochDay(),
             landSeed = landSeed, latitude = place.point.latitude, longitude = place.point.longitude,
         )
     }
@@ -167,12 +167,10 @@ internal object WidgetSky {
             return argb(1f, air[0] + (out[0] - air[0]) * t, air[1] + (out[1] - air[1]) * t, air[2] + (out[2] - air[2]) * t)
         }
         for (layer in 0 until LandProfile.LAYERS) {
-            val lake = layer == LandProfile.LAKE && LandProfile.hasLake(terrain)
-            val water = (terrain == Terrain.SEA && layer in 1..2) || lake
+            val water = terrain == Terrain.SEA && layer in 1..2
             if (water) {
-                // The sea: the sky mirrored, darker towards the shore, the Sun's path glittering across it. (0.19) The
-                // forest's lake and the fjord: the same, from the foot of the far shore.
-                val top = if (lake) g.base[layer] else view.horizonY
+                // The sea: the sky mirrored, darker towards the shore, the Sun's path glittering across it.
+                val top = view.horizonY
                 val bottom = g.base[3]
                 p.shader = LinearGradient(0f, top, 0f, bottom, intArrayOf(argb(1f, air[0] * 0.92, air[1] * 0.95, air[2]), argb(1f, air[0] * 0.55, air[1] * 0.68, air[2] * 0.8)), null, Shader.TileMode.CLAMP)
                 c.drawRect(0f, top, w, bottom, p); p.shader = null
@@ -198,10 +196,6 @@ internal object WidgetSky {
                 Terrain.DUNES -> doubleArrayOf(0.55, 0.36, 0.19)
                 Terrain.SEA -> if (layer == 0) doubleArrayOf(0.20, 0.24, 0.18) else doubleArrayOf(0.52, 0.46, 0.36)
                 Terrain.MOUNTAINS -> if (layer <= 1) doubleArrayOf(0.20, 0.20, 0.22) else doubleArrayOf(0.11, 0.15, 0.07)
-                // (0.19) Snowy summits over dark conifers; snow and ice; red rock and red sand.
-                Terrain.FOREST -> if (layer == 0) doubleArrayOf(0.32, 0.34, 0.36) else doubleArrayOf(0.04, 0.07, 0.05)
-                Terrain.ARCTIC -> if (layer <= 1) doubleArrayOf(0.70, 0.74, 0.80) else doubleArrayOf(0.78, 0.81, 0.86)
-                Terrain.CANYON -> if (layer <= 2) doubleArrayOf(0.50, 0.19, 0.08) else doubleArrayOf(0.52, 0.27, 0.13)
                 else -> if (layer == 0) doubleArrayOf(0.14, 0.17, 0.13) else doubleArrayOf(0.11, 0.16 - 0.012 * layer, 0.06)
             }
             val top = g.base[layer] - g.amp[layer]
