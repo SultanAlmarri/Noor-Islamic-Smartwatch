@@ -143,7 +143,7 @@ internal class Weather private constructor(
         /** The weather of the day with [seed] (a day at a place) over [terrain]. */
         fun of(seed: Long, terrain: Terrain): Weather {
             val r = java.util.Random(seed xor 0x2545F4914F6CDD1DL)
-            val w = WEIGHTS.getValue(terrain)
+            val w = WEIGHTS.getValue(terrain.base)
             var pick = r.nextFloat() * w.sum(); var type = 0
             while (type < w.size - 1 && pick > w[type]) { pick -= w[type]; type++ }
             return of(type, r)

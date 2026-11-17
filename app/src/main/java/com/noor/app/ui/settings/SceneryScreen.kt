@@ -74,11 +74,23 @@ internal fun sceneryName(b: Biome): Int = when (b) {
 
 internal fun graphicsName(g: SkyGraphics): Int = when (g) {
     SkyGraphics.AUTO -> R.string.sky_graphics_auto
-    SkyGraphics.ULTRA -> R.string.sky_graphics_ultra
     SkyGraphics.HIGH -> R.string.sky_graphics_high
     SkyGraphics.MEDIUM -> R.string.sky_graphics_medium
     SkyGraphics.LOW -> R.string.sky_graphics_low
-    SkyGraphics.CLASSIC -> R.string.sky_graphics_classic
+}
+
+/** What each level of graphics is (0.19). */
+private fun graphicsDesc(g: SkyGraphics): Int? = when (g) {
+    SkyGraphics.AUTO -> null
+    SkyGraphics.HIGH -> R.string.sky_graphics_high_desc
+    SkyGraphics.MEDIUM -> R.string.sky_graphics_medium_desc
+    SkyGraphics.LOW -> R.string.sky_graphics_low_desc
+}
+
+private fun levelName(l: com.noor.app.sky.SkyLevel): Int = when (l) {
+    com.noor.app.sky.SkyLevel.HIGH -> R.string.sky_graphics_high
+    com.noor.app.sky.SkyLevel.MEDIUM -> R.string.sky_graphics_medium
+    com.noor.app.sky.SkyLevel.LOW -> R.string.sky_graphics_low
 }
 
 /**
@@ -135,17 +147,25 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
         }
         Spacer(Modifier.height(24.dp))
 
-        // How finely the sky is drawn.
+        // How the sky is drawn (0.19): automatic, or high, medium or low.
         SettingsSection(stringResource(R.string.sky_graphics_title), footer = stringResource(R.string.sky_graphics_note)) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val autoLevel = com.noor.app.sky.SkyLevels.autoLevel.value ?: androidx.compose.runtime.remember { com.noor.app.sky.SkyLevels.auto(context) }
             SkyGraphics.entries.forEachIndexed { i, g ->
                 val on = s.skyGraphics == g
                 if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 16.dp), thickness = 0.5.dp, color = c.separator)
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 52.dp).semantics { role = Role.RadioButton; selected = on }.clickable { vm.setSkyGraphics(g) }
+                    Modifier.fillMaxWidth().heightIn(min = 52.dp).semantics { role = Role.RadioButton; selected = on }
+                        .clickable(onClick = com.noor.app.ui.components.withTick { vm.setSkyGraphics(g) })
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(graphicsName(g)), style = MaterialTheme.typography.bodyLarge, color = if (on) c.goldText else c.textPrimary, modifier = Modifier.weight(1f))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(graphicsName(g)), style = MaterialTheme.typography.bodyLarge, color = if (on) c.goldText else c.textPrimary)
+                        val desc = if (g == SkyGraphics.AUTO) stringResource(R.string.sky_graphics_auto_now, stringResource(levelName(autoLevel)))
+                            else graphicsDesc(g)?.let { stringResource(it) }
+                        if (desc != null) Text(desc, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+                    }
                     if (on) Icon(Icons.Rounded.Check, null, tint = c.gold, modifier = Modifier.size(20.dp))
                 }
             }

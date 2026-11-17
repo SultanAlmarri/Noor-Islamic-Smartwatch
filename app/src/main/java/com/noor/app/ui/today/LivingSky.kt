@@ -85,9 +85,34 @@ enum class Terrain {
     /** High ranges (0.9.8): tall, sharp ridges with snow on the far peaks, forested slopes nearer. */
     MOUNTAINS,
     /** The open sea to the horizon (0.9.8), the Sun's and the moon's path on the water, a low shore in front. */
-    SEA;
+    SEA,
+    /** (0.19) The forest lake's country: wooded hills under a dark treeline (the real sky's "pnw"). */
+    FOREST,
+    /** (0.19) The far north: snow-covered ranges over ice and dark water (the real sky's "arctic"). */
+    ARCTIC,
+    /** (0.19) Red rock: flat-topped mesas and buttes with sheer walls (the real sky's "canyon"). */
+    CANYON;
+
+    /**
+     * The 0.9 terrain whose drawing this one shares where it has none of its own yet (0.19; each of the six sceneries
+     * is drawn by the medium and low graphics, Settings → Home scenery → Graphics).
+     */
+    val base: Terrain get() = when (this) { FOREST -> HILLS; ARCTIC, CANYON -> MOUNTAINS; else -> this }
 
     companion object {
+        /**
+         * (0.19) The scenery of the real sky drawn by the medium and low graphics: every level shows the same scenery
+         * for a place (the meadow's green hills are the 0.9 hills).
+         */
+        fun of(biome: com.noor.app.sky.Biome): Terrain = when (biome) {
+            com.noor.app.sky.Biome.DUNES -> DUNES
+            com.noor.app.sky.Biome.RAINFOREST -> FOREST
+            com.noor.app.sky.Biome.ARCTIC -> ARCTIC
+            com.noor.app.sky.Biome.OCEAN -> SEA
+            com.noor.app.sky.Biome.MEADOW -> HILLS
+            com.noor.app.sky.Biome.CANYON -> CANYON
+        }
+
         /** Arid countries of the Arabian Peninsula, the Sahara and its edges, and the Levant's deserts. */
         private val ARID = setOf(
             "AE", "SA", "QA", "KW", "BH", "OM", "YE", "IQ", "JO", "EG", "LY", "DZ", "TN", "MA", "EH", "MR", "ML", "NE", "TD", "SD", "DJ",
@@ -425,12 +450,15 @@ internal fun LivingSky(
     /** The real sky (0.10) draws the scene itself, behind the whole screen: here only the path and the prayers are
      *  drawn, over it. */
     real: com.noor.app.sky.RealSkySetup? = null,
+    /** (0.19) The low graphics: the simplest sky ([SimpleSkyLayer]), nothing that moves by itself, for any phone. */
+    simple: Boolean = false,
 ) {
     // (Testing only, to be removed before release: the tester's options may set the moment shown. See Tester.)
     @Suppress("NAME_SHADOWING") val display = if (scrubbing) display else com.noor.app.testing.Tester.shown(display)
     @Suppress("NAME_SHADOWING") val scrubbing = scrubbing || com.noor.app.testing.Tester.moving
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val ambient = LocalAmbientMotion.current
+    // (0.19: under the low graphics nothing moves by itself: the clocks, the breathing ring and the birds rest.)
+    val ambient = LocalAmbientMotion.current && !simple
     val light = lightAt(scene.elevationAt(display), scene.eveningAt(display))
     val spec = if (scrubbing || !ambient) snap<Color>() else tween(1200)
     val zenithState = animateColorAsState(light.zenith, spec, label = "zenith")
@@ -486,12 +514,14 @@ internal fun LivingSky(
     // Held as Any: the shader class exists only on Android 13 and later.
     val context = LocalContext.current
     val quality = remember { SkyQuality.load(context) }.let { SkyQuality.level.intValue.coerceAtLeast(0) }
-    val built: Any? = remember(real != null) { if (real == null && Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
+    val built: Any? = remember(real != null, simple) { if (real == null && !simple && Build.VERSION.SDK_INT >= 33 && androidView.isHardwareAccelerated && !SkyShaders.failed) SkyShaders.create(resources) else null }
     val shaders: Any? = built
     // Frames are watched while the Sun is dragged (not during the opening): if the GPU sky keeps the phone under about
     // 22 frames a second for three seconds, it is drawn at a lower resolution (SkyQuality). The first second of a drag
     // is not judged (a first frame can be slow for reasons of its own).
-    if (shaders != null && ambient && quality == 0) LaunchedEffect(scrubbing) {
+    // (0.19) And where it is already at the lower resolution, or drawn on the Canvas, and still too slow, automatic
+    // graphics go down to the low graphics (SkyLevels.lower; nothing changes for a level chosen by hand).
+    if (real == null && ambient && (shaders == null || quality == 0 || com.noor.app.sky.SkyLevels.choice == com.noor.app.data.SkyGraphics.AUTO)) LaunchedEffect(scrubbing, quality) {
         if (!scrubbing) return@LaunchedEffect
         // Not during the opening (read here, not in composition, so the opening does not recompose the screen).
         androidx.compose.runtime.snapshotFlow { opening() >= 1f }.first { it }
@@ -507,7 +537,10 @@ internal fun LivingSky(
             if (t - start < 1_000_000_000L) continue
             if (ema > 45f) {
                 if (slowSince < 0) slowSince = t
-                if (t - slowSince > 3_000_000_000L) { SkyQuality.stepDown(context); break }
+                if (t - slowSince > 3_000_000_000L) {
+                    if (shaders != null && quality == 0) SkyQuality.stepDown(context) else com.noor.app.sky.SkyLevels.lower(context, com.noor.app.sky.SkyLevel.MEDIUM)
+                    break
+                }
             } else slowSince = -1L
         }
     }
@@ -519,7 +552,7 @@ internal fun LivingSky(
     }
     val look = skyView?.let { SkyLook.at(scene, it, display) }
     val capAlt = skyView?.let { it.altitudeAt(it.cloudTopY - 8 * densityValue) } ?: 90.0
-    val skyLight = if (real != null) null else rememberSkyLight(look, skyView, capAlt)
+    val skyLight = if (real != null || simple) null else rememberSkyLight(look, skyView, capAlt)
     val weather = remember(scene.seed, scene.terrain) { Weather.of(scene.seed, scene.terrain) }
     // The weather at the moment shown: it changes through the day, and as the Sun is dragged through it.
     val weatherNow = weather.at(display)
@@ -591,7 +624,9 @@ internal fun LivingSky(
         .graphicsLayer { alpha = smoothstep(0f, 0.38f, opening()) }) {
         if (real == null && shaders != null && Build.VERSION.SDK_INT >= 33) GpuSkyLayer(shaders as SkyShaders, gpuInputs, { skySeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax, quality)
         // 1 · Sky, warm air round a low Sun, stars, the moon. Farthest away, so it lags most when the page scrolls.
-        if (real == null && shaders == null) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
+        // (0.19) The low graphics: the sky and the land in their simplest form, drawn again only when the moment changes.
+        if (simple) SimpleSkyLayer(scene, layout, display, page, rtl, parallax, Modifier.fillMaxSize())
+        if (real == null && shaders == null && !simple) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
             val w = size.width; val h = size.height
             val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
             // The clock is read only when there is something to move, so a daytime sky is not redrawn for nothing.
@@ -640,12 +675,12 @@ internal fun LivingSky(
         }
 
         // 2 · Clouds (0.9.9): the same on every phone, drifting with the wind (still when animations are off).
-        if (real == null) CloudLayer(gpuInputs, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
+        if (real == null && !simple) CloudLayer(gpuInputs, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
 
         // 3 · The Sun's rays and halo, the sun path above the land, and the Sun. The path and the region above the land
         // are built once per scene and size, not at every frame of a drag or of the opening: the moment is read while
         // drawing (0.18; until then every frame of a drag built them again).
-        val drawnSun = real != null || shaders != null
+        val drawnSun = real != null || shaders != null || simple
         val skyline = if (real != null) SunLift.skyline else null
         val pathLayer = remember(scene, layout, rtl, drawnSun, real != null, skyline, SunLift.rise, SunLift.set) {
             Modifier.fillMaxSize().drawWithCache {
@@ -728,7 +763,7 @@ internal fun LivingSky(
         Box(pathLayer)
 
         // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
-        if (real != null) Unit
+        if (real != null || simple) Unit
         else if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
         else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
@@ -742,7 +777,7 @@ internal fun LivingSky(
         })
 
         // Rain falling here (0.9.9), in front of the land.
-        if (real == null) RainLayer(gpuInputs, ambient)
+        if (real == null && !simple) RainLayer(gpuInputs, ambient)
 
         // 5 · Over the land: the night part of the path, the prayers on it, and the birds. (Built once per scene and
         // size, like the path; the moment is read while drawing.)
@@ -1022,7 +1057,7 @@ private class LandField(private val ridges: List<Ridge>) {
 private fun landField(seed: Long, terrain: Terrain): LandField {
     val rnd = java.util.Random(seed * 31 + 17)
     fun ph() = rnd.nextFloat() * 6.283f
-    return when (terrain) {
+    return when (terrain.base) {
         Terrain.DUNES -> {
             // A dune: a long gentle windward slope and a steeper slip face; nearer dunes are bigger and wider apart.
             fun dune(freq: Float, p: Float, p2: Float): (Float) -> Float = { u ->
@@ -1075,7 +1110,7 @@ private fun landField(seed: Long, terrain: Terrain): LandField {
                 Ridge(22f, 68f, rolling(0.8f, ph(), ph())),
             ))
         }
-        Terrain.SEA -> {
+        else -> {   // the sea (and, through Terrain.base, nothing else)
             // Flat water to the horizon, a low shore in front.
             fun shore(freq: Float, p1: Float): (Float) -> Float = { u -> ((0.6f * sin(2 * PI.toFloat() * freq * u + p1) + 1f) / 2f).coerceIn(0f, 1f) }
             LandField(listOf(
@@ -1089,11 +1124,11 @@ private fun landField(seed: Long, terrain: Terrain): LandField {
 }
 
 /** The ground's own colour in plain daylight: warm sand, the sage of grass and scrub, grey-green mountains, the sea. */
-private fun soilOf(terrain: Terrain): Color = when (terrain) {
+private fun soilOf(terrain: Terrain): Color = when (terrain.base) {
     Terrain.DUNES -> Color(0xFFD9B07A)
     Terrain.HILLS -> Color(0xFF7F9A78)
     Terrain.MOUNTAINS -> Color(0xFF7D8A86)
-    Terrain.SEA -> Color(0xFF4F7F96)
+    else -> Color(0xFF4F7F96)
 }
 
 /**

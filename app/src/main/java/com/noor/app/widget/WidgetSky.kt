@@ -47,7 +47,7 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
         SkyScene(
             SunPath.of(today, place.point, zone), events, now.truncatedTo(ChronoUnit.MINUTES), state.next.prayer.takeIf { state.next.date == today },
             hijriDay = HijriDate.of(today, settings.hijriAdjust).day, southernHemisphere = place.point.latitude < 0,
-            terrain = terrainFor(settings.scenery, place.countryCode, place.point.elevationM), seed = landSeed * 1_000_003L + today.toEpochDay(),
+            terrain = terrainFor(settings.scenery, place.countryCode, place.point.elevationM, place.point.latitude), seed = landSeed * 1_000_003L + today.toEpochDay(),
             landSeed = landSeed, latitude = place.point.latitude, longitude = place.point.longitude,
         )
     }
@@ -146,7 +146,7 @@ internal object WidgetSky {
     }
 
     private fun drawLand(c: Canvas, ws: WidgetScene, view: SkyView, light: SkyLight, look: SkyLook, w: Float, h: Float, density: Float) {
-        val terrain = ws.scene.terrain
+        val terrain = ws.scene.terrain.base
         val land = LandProfile.of(ws.scene.landSeed, terrain)
         val g = land.geometry(view.horizonY, h, density)
         val l = light.light

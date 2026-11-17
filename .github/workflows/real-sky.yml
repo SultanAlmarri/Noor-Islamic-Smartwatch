@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tier:
-        description: Quality tier (LOW, MEDIUM, HIGH, ULTRA)
+        description: Graphics level (HIGH = the real sky; MEDIUM = the 0.9 sky; LOW = the simplest sky)
         default: HIGH
       sceneries:
         description: Sceneries (Scenery names, space separated)

@@ -41,7 +41,7 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
     class Geometry(val base: FloatArray, val amp: FloatArray, val distKm: FloatArray)
 
     fun geometry(horizonY: Float, h: Float, density: Float): Geometry {
-        val spec = when (terrain) { Terrain.DUNES -> DUNES; Terrain.HILLS -> HILLS; Terrain.MOUNTAINS -> MOUNTAINS; Terrain.SEA -> SEA }
+        val spec = when (terrain) { Terrain.DUNES -> DUNES; Terrain.HILLS -> HILLS; Terrain.MOUNTAINS -> MOUNTAINS; else -> SEA }
         val spread = (((h - horizonY) / density - 12f) / DEEPEST).coerceIn(0.55f, 1.4f)
         return Geometry(
             FloatArray(LAYERS) { horizonY + spec[it][1] * spread * density },
@@ -50,7 +50,7 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                 Terrain.DUNES -> floatArrayOf(22f, 7f, 2.8f, 1.1f, 0.35f)
                 Terrain.HILLS -> floatArrayOf(48f, 15f, 6f, 2.2f, 0.6f)
                 Terrain.MOUNTAINS -> floatArrayOf(34f, 14f, 6f, 2.2f, 0.6f)
-                Terrain.SEA -> floatArrayOf(40f, 10f, 3f, 0.8f, 0.3f)
+                else -> floatArrayOf(40f, 10f, 3f, 0.8f, 0.3f)
             },
         )
     }
@@ -92,7 +92,9 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
         private val cache = HashMap<Pair<Long, Terrain>, LandProfile>()
 
         fun of(seed: Long, terrain: Terrain): LandProfile = synchronized(cache) {
-            cache.getOrPut(seed to terrain) { build(seed, terrain) }
+            // (0.19: the three newer sceneries share an older one's land until they have their own.)
+            val t = terrain.base
+            cache.getOrPut(seed to t) { build(seed, t) }
         }
 
         /** Smooth value noise on a loop of [n] random values. */
