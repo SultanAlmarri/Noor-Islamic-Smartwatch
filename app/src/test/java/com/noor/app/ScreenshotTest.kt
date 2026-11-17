@@ -384,7 +384,9 @@ class ScreenshotTest {
             rec(4, com.noor.prayer.Prayer.MAGHRIB, 17, 34, com.noor.alerts.AlertOutcome.DND_BLOCKS_ALARMS)
             rec(5, com.noor.prayer.Prayer.ISHA, 18, 50, com.noor.alerts.AlertOutcome.PLAYED_FALLBACK, played = 32_000, test = true)
         }
-        screen = Screen.ADHAN_HISTORY; shot("49_adhan_history_night_en", "Alert history")
+        // (The history is read from disk off the main thread: wait for its entries, not only the page's title.)
+        screen = Screen.ADHAN_HISTORY; rule.waitForIdle(); rule.waitUntil(20_000) { rule.onAllNodesWithText("Isha · Test").fetchSemanticsNodes().isNotEmpty() }
+        shot("49_adhan_history_night_en", "Alert history")
         arabic = true; shot("50_adhan_history_night_ar", "سجل التنبيهات")
         arabic = false
         screen = Screen.ONBOARDING; shot("42_onboarding_en", "Use my location")

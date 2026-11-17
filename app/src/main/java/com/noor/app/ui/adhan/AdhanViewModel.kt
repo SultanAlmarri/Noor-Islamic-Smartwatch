@@ -237,6 +237,8 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             }
             _readiness.value = r
             lastReadiness = r
+        }
+        viewModelScope.launch {
             _history.value = withContext(Dispatchers.IO) { AlertLog.all(ctx) }
             // (As the alert receivers do, on a background thread: AlarmManager may be called from any.)
             withContext(Dispatchers.Default) { AlertScheduler.reschedule(ctx) }
