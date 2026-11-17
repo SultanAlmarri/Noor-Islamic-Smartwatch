@@ -650,6 +650,8 @@ internal fun LivingSky(
                 val coreStroke = Stroke(stroke, cap = StrokeCap.Round)
                 // The Sun's disc as the renderer draws it (scene.frag: 0.0135 of the focal length), or the Canvas Sun.
                 val disc = if (real != null) 0.0135f * SunLift.FOCAL * w else 7.dp.toPx()
+                // (The path's own layer: from a little over the top of its arch down to the horizon, the width of the screen.)
+                val layerBounds = Rect(0f, (path.getBounds().top - stroke * 4f).coerceIn(0f, hy), w, hy)
                 onDrawBehind {
                     val shownF = displayNow.value
                     val light = lightNow.value
@@ -679,17 +681,26 @@ internal fun LivingSky(
                     // off"); the dashes of the hours to come leave the Sun the same room. And a soft shade under the
                     // line, stronger by day, so that it reads on a bright hazy sky as on a dark one.
                     val reach = disc * 3.2f
-                    fun meet(c: Color) = Brush.radialGradient(0f to Color.Transparent, 0.24f to Color.Transparent, 0.62f to c, 1f to c, center = sun, radius = reach)
+                    // (0.18.0 drew each stroke with a radial gradient for this. On the Android emulator's graphics,
+                    // SwiftShader through gfxstream, a gradient along a dashed stroke killed the emulator as the home
+                    // screen first drew it (real-sky.yml, 16-17 November 2026). The strokes are now in plain colours in
+                    // a layer of their own, and the same fade is taken out of that layer around the Sun with one
+                    // filled circle: the same look, drawn the common way.)
                     val shade = Color.Black.copy(alpha = (0.04f + 0.08f * light.day) * pathAlpha)
+                    drawContext.canvas.saveLayer(layerBounds, Paint())
                     clipPath(above) {
-                        drawPath(path, meet(shade), style = dashShade)
-                        drawPath(path, meet(Color.White.copy(alpha = 0.5f * pathAlpha)), style = dashed)
+                        drawPath(path, shade, style = dashShade)
+                        drawPath(path, Color.White.copy(alpha = 0.5f * pathAlpha), style = dashed)
                         val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
                         clipRect(left, 0f, right, h) {
-                            drawPath(path, meet(light.sunGlow.copy(alpha = 0.24f)), style = glowStroke)
-                            drawPath(path, meet(light.sunCore.copy(alpha = 0.95f)), style = coreStroke)
+                            drawPath(path, light.sunGlow.copy(alpha = 0.24f), style = glowStroke)
+                            drawPath(path, light.sunCore.copy(alpha = 0.95f), style = coreStroke)
                         }
                     }
+                    // (What is left of the line: nothing within 0.24 of the reach, all of it from 0.62 on.)
+                    drawCircle(Brush.radialGradient(0f to Color.Black, 0.24f to Color.Black, 0.62f to Color.Transparent, 1f to Color.Transparent, center = sun, radius = reach),
+                        reach, sun, blendMode = BlendMode.DstOut)
+                    drawContext.canvas.restore()
                     if (up > 0f) {
                         drawCircle(light.sunCore.copy(alpha = up), (7f + 1.5f * light.golden).dp.toPx(), sun)
                         drawCircle(Color.White.copy(alpha = 0.92f * up), 3.2.dp.toPx(), sun)
