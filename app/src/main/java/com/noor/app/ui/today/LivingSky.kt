@@ -188,66 +188,36 @@ data class SceneLayout(
     val ground: Float,
 )
 
-/** Positions on the sky: a smooth time axis that gives daylight most of the width, and an elevation scale. */
 /**
- * How high the scenery's own skyline stands where the Sun rises and where it sets, as tangents of the angle over the
- * horizon (0 = a level horizon). The real sky (0.11) sets it for the scenery on screen; everything else leaves it 0.
- *
- * It is what lets a scenery keep its natural skyline and the prayer times stay exact to the eye: the Sun's path does
- * not meet the level horizon but the land itself, so the Sun comes up over the mountain exactly at Shuruq and goes
- * behind the trees exactly at Maghrib ([SkyGeometry.y]).
+ * The real sky's skyline (0.11; 0.20). Until 0.19 the Sun's path stood on the scenery's own skyline where the Sun rises
+ * and sets (a "lift" for each scenery), and the land hid the path where it stood in front of it. The owner (17 November
+ * 2026): part of the path hidden behind the mountains, and no consistency between the sceneries. Since 0.20 the path is
+ * the same arch over every scenery, on the level horizon, drawn in front of the land; the skyline only tells where the
+ * land stands in front of the Sun, so that the path can show where the Sun is while the land hides it ([sunHidden]).
  */
 internal object SunLift {
-    @Volatile var rise = 0f
-    @Volatile var set = 0f
     /**
-     * (0.18) The scenery's whole skyline (RealSky.skyline): tangents over the horizon, in equal strips across the
-     * unmirrored picture; null on a level horizon. The path is drawn behind it.
+     * The scenery's whole skyline (RealSky.skyline): tangents over the horizon, in equal strips across the unmirrored
+     * picture; null on a level horizon or where the real sky is not drawn.
      */
     @Volatile var skyline: FloatArray? = null
     /** The lens of the real sky (focal length in screen widths): a tangent times this times the width is pixels. */
     const val FOCAL = 1.15f
 
-    /**
-     * The land's region (px), from the skyline down to [bottom], taken out of the path's layer where the land stands in
-     * front of it: in [STRIPS] strips across, each as high as the highest land in it (a hair over it), never below the
-     * level horizon [horizonY]. Null when there is no skyline.
-     *
-     * (0.18.1) Until 0.18.0 the path was drawn inside a clip of the region above the land, 360 steps across: on the
-     * Android emulator's graphics (SwiftShader through gfxstream) that clip, over the forest lake's treeline, killed the
-     * emulator; now no clip, and a coarser outline.
-     */
-    fun land(sky: FloatArray?, w: Float, horizonY: Float, bottom: Float, rtl: Boolean, density: Float): Path? {
-        if (sky == null || sky.isEmpty() || w <= 0f) return null
+    /** The top of the land at screen x [x] (px), from [sky] (as [skyline]); [horizonY] where there is none. */
+    fun skylineY(sky: FloatArray?, x: Float, w: Float, horizonY: Float, rtl: Boolean): Float {
+        if (sky == null || sky.isEmpty() || w <= 0f) return horizonY
         val n = sky.size
-        val strips = minOf(STRIPS, n)
-        val hair = 0.6f * density
-        return Path().apply {
-            moveTo(w, bottom)
-            // From the right edge to the left. (Mirrored, the picture's first strip is on the right.)
-            for (j in 0 until strips) {
-                var top = 0f
-                for (k in (j * n / strips) until ((j + 1) * n / strips)) {
-                    val v = sky[if (rtl) k else n - 1 - k]
-                    if (v.isFinite() && v > top) top = v
-                }
-                val y = minOf(horizonY, horizonY - top * FOCAL * w - hair)
-                lineTo(w * (strips - j) / strips, y)
-                lineTo(w * (strips - j - 1) / strips, y)
-            }
-            lineTo(0f, bottom)
-            close()
-        }
+        // (Mirrored: the picture's first strip is on the right of the screen, as the renderer draws it.)
+        val u = (x / w).coerceIn(0f, 0.9999f)
+        val k = (u * n).toInt().coerceIn(0, n - 1)
+        val v = sky[if (rtl) k else n - 1 - k]
+        return if (v.isFinite()) minOf(horizonY, horizonY - v * FOCAL * w) else horizonY
     }
-
-    /** How many steps across the land's outline has where it hides the path. */
-    const val STRIPS = 72
 }
 
 internal class SkyGeometry(
     scene: SkyScene, private val w: Float, val horizonY: Float, val arcTopY: Float, val groundY: Float, private val rtl: Boolean,
-    /** How far above the horizon line (px) the land stands where the Sun rises, and where it sets. */
-    private val riseLift: Float = 0f, private val setLift: Float = 0f,
 ) {
     private val maxEl = max(scene.path.maxElevation, 12.0)
     private val minEl = minOf(scene.path.minElevation, -24.0)
@@ -259,6 +229,7 @@ internal class SkyGeometry(
     }
 
     private val maxApp = apparent(maxEl)
+    private val sinMax = sin(Math.toRadians(maxApp))
 
     /**
      * Height on screen of the Sun at true elevation [el] (degrees), as it is seen (0.9.7). Shuruq and Maghrib are the
@@ -266,40 +237,25 @@ internal class SkyGeometry(
      * all, by the standard definition the prayer times use. So the path is drawn as the Sun's visible upper edge: it
      * meets the horizon line exactly at Shuruq and at Maghrib, where their marks are. The lift fades out a few degrees
      * below the horizon, where nothing is seen.
+     *
+     * (0.20) Above the horizon the height is in proportion to the sine of the elevation, the Sun's height on the sky's
+     * dome, and no longer to the elevation itself. Through a day the sine of the Sun's elevation is a cosine of the
+     * time (sin el = sin φ sin δ + cos φ cos δ cos H), and the time runs evenly across the day's width ([timeWarp]):
+     * so the path is a smooth, even arch everywhere and in every season. Drawn in proportion to the elevation it rose
+     * almost straight up from the horizon near the tropics and met itself at noon in a point (the owner: it did not
+     * look nice). And it is the same arch over every scenery (0.20: no longer lifted onto each scenery's skyline).
      */
     fun y(el: Double): Float {
         val e = apparent(el)
-        return if (e >= 0) (horizonY - (e / maxApp) * (horizonY - arcTopY)).toFloat()
+        return if (e >= 0) (horizonY - (sin(Math.toRadians(e)) / sinMax) * (horizonY - arcTopY)).toFloat()
         else (horizonY + (-e / -minEl) * (groundY - horizonY)).toFloat()
     }
 
     private fun apparent(el: Double): Double = el + horizonLift(el)
 
-    /** How far above the horizon line (px) the Sun's path stands at a moment of the day: on the skyline where the
-     *  Sun rises in the morning, on the skyline where it sets in the evening, passing from one to the other between. */
-    fun lift(fraction: Double): Float {
-        if (riseLift == 0f && setLift == 0f) return 0f
-        val u = -0.04 + 1.08 * warp(fraction.coerceIn(0.0, 1.0))
-        val t = ((u - 0.1976) / 0.6048).coerceIn(0.0, 1.0)
-        val k = (t * t * (3 - 2 * t)).toFloat()
-        // (Never so high that no arch is left under the top of the path.)
-        return (riseLift + (setLift - riseLift) * k).coerceIn(0f, (horizonY - arcTopY) * LIFT_SHARE)
-    }
-
-    /**
-     * Height on screen of the Sun at true elevation [el] at [fraction] of the day, over a scenery with a skyline of
-     * its own: as [y], but the path stands on the land ([lift]) instead of on the level horizon. Shuruq and Maghrib
-     * are then the moments the Sun meets the skyline: it is seen to rise and to set exactly at their times, whatever
-     * the land is like, and no scenery has to be cut open for it.
-     */
-    fun y(el: Double, fraction: Double): Float {
-        val l = lift(fraction)
-        if (l == 0f) return y(el)
-        val base = horizonY - l
-        val e = apparent(el)
-        return if (e >= 0) (base - (e / maxApp) * (base - arcTopY)).toFloat()
-        else (base + (-e / -minEl) * (groundY - horizonY)).toFloat()
-    }
+    /** Height on screen of the Sun at true elevation [el] at [fraction] of the day: [y] (the same over every scenery). */
+    @Suppress("UNUSED_PARAMETER")
+    fun y(el: Double, fraction: Double): Float = y(el)
 
     /** The fraction of the day drawn at [px] (inverse of [x]). */
     fun fractionAt(px: Float): Double {
@@ -314,9 +270,6 @@ internal class SkyGeometry(
     }
 
     companion object {
-        /** A skyline never takes more than this share of the arch's height (the home screen lowers its horizon so that it need not). */
-        const val LIFT_SHARE = 0.72f
-
         /**
          * Monotone cubic (Fritsch–Carlson) through Fajr−30 min, sunrise, sunset and Isha+30 min. 0.9.6: twilight gets
          * more of the width (8–22 % and 78–92 %, was 10–18 % and 82–90 %): the sky changes fastest then, and dragging
@@ -334,10 +287,13 @@ internal class SkyGeometry(
             add(rise, 0.22); add(set, 0.78)
             isha?.let { add(it + half, 0.92) }
             xs += 1.0; ys += 1.0
-            return monotoneCubic(xs.toDoubleArray(), ys.toDoubleArray())
+            // (0.20) Between sunrise and sunset the time runs evenly across the width, so the path is a true arch (y).
+            val day = xs.indexOf(rise).takeIf { it >= 0 && it + 1 < xs.size && xs[it + 1] == set } ?: -1
+            return monotoneCubic(xs.toDoubleArray(), ys.toDoubleArray(), day)
         }
 
-        fun monotoneCubic(x: DoubleArray, y: DoubleArray): (Double) -> Double {
+        /** Through ([x], [y]); segment [linear] (if not -1) a straight line, as far as the curve stays monotone. */
+        fun monotoneCubic(x: DoubleArray, y: DoubleArray, linear: Int = -1): (Double) -> Double {
             val n = x.size
             val d = DoubleArray(n - 1) { (y[it + 1] - y[it]) / (x[it + 1] - x[it]) }
             val m = DoubleArray(n) { i ->
@@ -348,6 +304,12 @@ internal class SkyGeometry(
                 val a = m[i] / d[i]; val b = m[i + 1] / d[i]
                 val s = a * a + b * b
                 if (s > 9) { val t = 3 / kotlin.math.sqrt(s); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i] }
+            }
+            if (linear in 0 until n - 1) {
+                val k = d[linear]
+                // (Its ends take its own slope; held within three times the neighbours' slopes, the curve's monotone limit.)
+                m[linear] = if (linear > 0) minOf(k, 3 * d[linear - 1]) else k
+                m[linear + 1] = if (linear + 1 < n - 1) minOf(k, 3 * d[linear + 1]) else k
             }
             return { v ->
                 val i = (x.indexOfLast { it <= v }).coerceIn(0, n - 2)
@@ -623,7 +585,7 @@ internal fun LivingSky(
         if (simple) SimpleSkyLayer(scene, layout, display, page, rtl, parallax, Modifier.fillMaxSize())
         if (real == null && shaders == null && !simple) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
             val w = size.width; val h = size.height
-            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
+            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
             // The clock is read only when there is something to move, so a daytime sky is not redrawn for nothing.
             val time = if (light.night > 0f && live) now() else 0.13f
             val hy = h * layout.horizon
@@ -672,27 +634,91 @@ internal fun LivingSky(
         // 2 · Clouds (0.9.9): the same on every phone, drifting with the wind (still when animations are off).
         if (real == null && !simple) CloudLayer(gpuInputs, { cloudSeconds.floatValue + OpeningSky.cloudLapse(opening()) }, parallax)
 
-        // 3 · The Sun's rays and halo, the sun path above the land, and the Sun. The path and the region above the land
-        // are built once per scene and size, not at every frame of a drag or of the opening: the moment is read while
-        // drawing (0.18; until then every frame of a drag built them again).
+        // 3 · The Sun's rays and halo and the Sun, where the renderer does not draw them itself (the Canvas sky): behind
+        // the land, as the Sun is. (Built once per scene and size; the moment is read while drawing.)
         val drawnSun = real != null || shaders != null || simple
+        if (!drawnSun) {
+            val sunLayer = remember(scene, layout, rtl) {
+                Modifier.fillMaxSize().drawWithCache {
+                    val w = size.width; val h = size.height
+                    val hy = h * layout.horizon
+                    val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+                    onDrawBehind {
+                        val shownF = displayNow.value
+                        val light = lightNow.value
+                        val sunEl = scene.elevationAt(shownF)
+                        val sun = Offset(g.x(shownF), g.y(sunEl, shownF))
+                        // The Sun fades as it sinks below the horizon (no sudden switch at sunrise or sunset).
+                        val up = smoothstep(-2.5f, 0.5f, sunEl.toFloat())
+                        if (up > 0f) clipRect(0f, 0f, w, hy + 2.dp.toPx()) {
+                            // Long, faint rays, turning slowly; longer and warmer when the Sun is low.
+                            val rays = 14
+                            val len = w * (0.20f + 0.24f * light.golden)
+                            val turn = nowNow.value() * 2 * PI.toFloat() * 3f
+                            for (i in 0 until rays) {
+                                val a = turn + i * 2 * PI.toFloat() / rays
+                                val l = len * (if (i % 2 == 0) 1f else 0.62f)
+                                val end = Offset(sun.x + l * cos(a), sun.y + l * sin(a))
+                                drawLine(Brush.linearGradient(listOf(light.sunGlow.copy(alpha = (0.13f + 0.10f * light.golden) * up), Color.Transparent), sun, end),
+                                    sun, end, strokeWidth = (if (i % 2 == 0) 3.dp else 1.5.dp).toPx(), cap = StrokeCap.Round)
+                            }
+                            val halo = (52 + 18 * light.golden).dp.toPx()
+                            drawCircle(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.62f * up), light.sunGlow.copy(alpha = 0.14f * up), Color.Transparent), center = sun, radius = halo), halo, sun)
+                            drawCircle(light.sunCore.copy(alpha = up), (7f + 1.5f * light.golden).dp.toPx(), sun)
+                            drawCircle(Color.White.copy(alpha = 0.92f * up), 3.2.dp.toPx(), sun)
+                        }
+                    }
+                }
+            }
+            Box(sunLayer)
+        }
+
+        // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
+        if (real != null || simple) Unit
+        else if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
+        else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
+            val w = size.width; val h = size.height
+            val (riseX, setX) = sunriseSunsetX(scene, SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl))
+            val shapes = land.paths(w, h * layout.horizon, h, density, riseX, setX)
+
+            onDrawBehind {
+                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+                drawLand(shapes, light, horizonColor, mid, zenith, page, soils, g.x(display), w)
+            }
+        })
+
+        // Rain falling here (0.9.9), in front of the land.
+        if (real == null && !simple) RainLayer(gpuInputs, ambient)
+
+        // 4b · The Sun's path (0.20): in front of the land, the same arch over every scenery and at every level. Until
+        // 0.19 the land hid it where it stood in front (the owner: "part of it gets hidden behind mountains"). Where the
+        // land stands in front of the Sun itself, a ring on the path shows where the Sun is, behind it.
         val skyline = if (real != null) SunLift.skyline else null
-        val pathLayer = remember(scene, layout, rtl, drawnSun, real != null, skyline, SunLift.rise, SunLift.set) {
+        val pathLayer = remember(scene, layout, rtl, real != null, simple, skyline) {
             Modifier.fillMaxSize().drawWithCache {
                 val w = size.width; val h = size.height
                 val hy = h * layout.horizon
-                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
+                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
                 val path = sunPath(scene, g)
-                // (0.18) The path is drawn behind the land: above the scenery's own skyline, a hair clear of it, so that
-                // it passes behind a mountain or a tree as the Sun does; else above the level horizon. Until 0.17 it
-                // was cut at the level horizon only, and over the higher sceneries it ran down the mountainside.
-                val land = SunLift.land(skyline, w, hy, hy + 2f, rtl, density)
+                // The land's top at x (px): the real sky's skyline; the 0.9 sky's ridges (open where the Sun rises and
+                // sets); none for the simplest sky, which keeps its land under the path.
+                val landTop: ((Float) -> Float)? = when {
+                    real != null -> skyline?.let { sky -> { x -> SunLift.skylineY(sky, x, w, hy, rtl) } }
+                    simple -> null
+                    else -> {
+                        val geo = landProfile.geometry(hy, h, density)
+                        val (rx, sx) = sunriseSunsetX(scene, g)
+                        val top: (Float) -> Float = { x -> landProfile.skylineAt(x, w, geo, hy, density, rx, sx) }
+                        top
+                    }
+                }
                 val stroke = 1.6.dp.toPx()
                 val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
                 val dashed = Stroke(stroke * 0.8f, cap = StrokeCap.Round, pathEffect = dash)
                 val dashShade = Stroke(stroke * 2.4f, cap = StrokeCap.Round)
                 val glowStroke = Stroke(stroke * 4f, cap = StrokeCap.Round)
                 val coreStroke = Stroke(stroke, cap = StrokeCap.Round)
+                val ringStroke = Stroke(1.6.dp.toPx())
                 // The Sun's disc as the renderer draws it (scene.frag: 0.0135 of the focal length), or the Canvas Sun.
                 val disc = if (real != null) 0.0135f * SunLift.FOCAL * w else 7.dp.toPx()
                 // (The path's own layer: from a little over the top of its arch down to the horizon, the width of the screen.)
@@ -703,39 +729,19 @@ internal fun LivingSky(
                     val sunEl = scene.elevationAt(shownF)
                     val pathAlpha = pathInNow.value()
                     val sun = Offset(g.x(shownF), g.y(sunEl, shownF))
-                    // The Sun fades as it sinks below the horizon (no sudden switch at sunrise or sunset). On the GPU the
-                    // shader draws the Sun itself.
-                    val up = if (drawnSun) 0f else smoothstep(-2.5f, 0.5f, sunEl.toFloat())
-                    if (up > 0f) clipRect(0f, 0f, w, hy + 2.dp.toPx()) {
-                        // Long, faint rays, turning slowly; longer and warmer when the Sun is low.
-                        val rays = 14
-                        val len = w * (0.20f + 0.24f * light.golden)
-                        val turn = nowNow.value() * 2 * PI.toFloat() * 3f
-                        for (i in 0 until rays) {
-                            val a = turn + i * 2 * PI.toFloat() / rays
-                            val l = len * (if (i % 2 == 0) 1f else 0.62f)
-                            val end = Offset(sun.x + l * cos(a), sun.y + l * sin(a))
-                            drawLine(Brush.linearGradient(listOf(light.sunGlow.copy(alpha = (0.13f + 0.10f * light.golden) * up), Color.Transparent), sun, end),
-                                sun, end, strokeWidth = (if (i % 2 == 0) 3.dp else 1.5.dp).toPx(), cap = StrokeCap.Round)
-                        }
-                        val halo = (52 + 18 * light.golden).dp.toPx()
-                        drawCircle(Brush.radialGradient(listOf(light.sunGlow.copy(alpha = 0.62f * up), light.sunGlow.copy(alpha = 0.14f * up), Color.Transparent), center = sun, radius = halo), halo, sun)
-                    }
                     // (0.18) The line meets the Sun softly: it thins out towards the disc and is gone under it, instead
-                    // of being cut square across the Sun's middle (the owner: "where it connects with the Sun, just cuts
-                    // off"); the dashes of the hours to come leave the Sun the same room. And a soft shade under the
-                    // line, stronger by day, so that it reads on a bright hazy sky as on a dark one.
+                    // of being cut square across the Sun's middle; the dashes of the hours to come leave the Sun the same
+                    // room. And a soft shade under the line, stronger by day, so that it reads on a bright hazy sky, on
+                    // dark land and on light sand alike.
                     val reach = disc * 3.2f
-                    // (0.18.0 drew each stroke with a radial gradient for this. On the Android emulator's graphics,
-                    // SwiftShader through gfxstream, a gradient along a dashed stroke killed the emulator as the home
-                    // screen first drew it (real-sky.yml, 16-17 November 2026). The strokes are now in plain colours in
-                    // a layer of their own, and the same fade is taken out of that layer around the Sun with one
-                    // filled circle: the same look, drawn the common way.)
-                    val shade = Color.Black.copy(alpha = (0.04f + 0.08f * light.day) * pathAlpha)
+                    // (The strokes are in plain colours in a layer of their own and the fade is taken out around the
+                    // Sun with one gradient-filled circle: a gradient along a dashed stroke killed the emulator's
+                    // graphics, 0.18.0.)
+                    val shade = Color.Black.copy(alpha = (0.07f + 0.08f * light.day) * pathAlpha)
                     drawContext.canvas.saveLayer(layerBounds, Paint())
                     clipRect(0f, 0f, w, hy) {
                         drawPath(path, shade, style = dashShade)
-                        drawPath(path, Color.White.copy(alpha = 0.5f * pathAlpha), style = dashed)
+                        drawPath(path, Color.White.copy(alpha = 0.55f * pathAlpha), style = dashed)
                         val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
                         clipRect(left, 0f, right, h) {
                             drawPath(path, light.sunGlow.copy(alpha = 0.24f), style = glowStroke)
@@ -745,42 +751,30 @@ internal fun LivingSky(
                     // (What is left of the line: nothing within 0.24 of the reach, all of it from 0.62 on.)
                     drawCircle(Brush.radialGradient(0f to Color.Black, 0.24f to Color.Black, 0.62f to Color.Transparent, 1f to Color.Transparent, center = sun, radius = reach),
                         reach, sun, blendMode = BlendMode.DstOut)
-                    // (And where the land stands in front of the path, it is taken out: the path passes behind it.)
-                    if (land != null) drawPath(land, Color.Black, blendMode = BlendMode.DstOut)
                     drawContext.canvas.restore()
-                    if (up > 0f) {
-                        drawCircle(light.sunCore.copy(alpha = up), (7f + 1.5f * light.golden).dp.toPx(), sun)
-                        drawCircle(Color.White.copy(alpha = 0.92f * up), 3.2.dp.toPx(), sun)
+                    // The Sun behind the land: a ring where it is, as bright as the land hides it.
+                    val top = landTop?.invoke(sun.x)
+                    if (top != null && sunEl > -1.0) {
+                        val hidden = smoothstep(-disc * 0.6f, disc * 1.2f, sun.y - top) * smoothstep(-1.0f, -0.4f, sunEl.toFloat()) * pathAlpha
+                        if (hidden > 0.01f) {
+                            drawCircle(Color.Black.copy(alpha = 0.16f * hidden), disc * 1.9f, sun)
+                            drawCircle(light.sunGlow.copy(alpha = 0.30f * hidden), disc * 1.6f, sun)
+                            drawCircle(light.sunCore.copy(alpha = 0.95f * hidden), disc * 1.15f, sun, style = ringStroke)
+                            drawCircle(Color.White.copy(alpha = 0.85f * hidden), disc * 0.32f, sun)
+                        }
                     }
                 }
             }
         }
         Box(pathLayer)
 
-        // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
-        if (real != null || simple) Unit
-        else if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
-        else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
-            val w = size.width; val h = size.height
-            val (riseX, setX) = sunriseSunsetX(scene, SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w))
-            val shapes = land.paths(w, h * layout.horizon, h, density, riseX, setX)
-
-            onDrawBehind {
-                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
-                drawLand(shapes, light, horizonColor, mid, zenith, page, soils, g.x(display), w)
-            }
-        })
-
-        // Rain falling here (0.9.9), in front of the land.
-        if (real == null && !simple) RainLayer(gpuInputs, ambient)
-
         // 5 · Over the land: the night part of the path, the prayers on it, and the birds. (Built once per scene and
         // size, like the path; the moment is read while drawing.)
-        val marksLayer = remember(scene, layout, rtl, live, ambient, SunLift.rise, SunLift.set) {
+        val marksLayer = remember(scene, layout, rtl, live, ambient) {
             Modifier.fillMaxSize().drawWithCache {
                 val w = size.width; val h = size.height
                 val hy = h * layout.horizon
-                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl, SunLift.rise * SunLift.FOCAL * w, SunLift.set * SunLift.FOCAL * w)
+                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
                 // Each prayer at the Sun's real position at its moment: in the sky on the path, on the horizon at Shuruq
                 // and Maghrib, below it (in the land) at Fajr and Isha.
                 val marks = scene.events.map { (p, t) ->

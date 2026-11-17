@@ -51,35 +51,55 @@ class LivingSkyTest {
     }
 
     /**
-     * Over a scenery with a skyline of its own (0.11) the Sun's path stands on the land: the Sun meets the skyline, not
-     * the level horizon, exactly at Shuruq and at Maghrib, so no scenery has to be cut open for it and the times stay
-     * exact to the eye. Noon stays where it was; without a skyline nothing changes.
+     * (0.20) The Sun's path is one even arch, the same over every scenery (the owner, 17 November 2026: part of it
+     * hidden behind mountains and no consistency between the sceneries; until 0.19 it was lifted onto each scenery's
+     * skyline). Its height is in proportion to the sine of the Sun's elevation and the time runs evenly between sunrise
+     * and sunset, so it is symmetrical about the Sun's highest point and round at the top (in proportion to the
+     * elevation it met itself at noon in a point).
      */
-    @Test fun theSunsPathStandsOnTheSkylineOfAScenery() {
-        val flat = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = false)
-        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = false, riseLift = 60f, setLift = 25f)
-        val rise = path.fraction(at(6, 25)); val set = path.fraction(at(17, 40))
-        assertEquals(60f, g.lift(rise), 1.5f); assertEquals(25f, g.lift(set), 1.5f)
-        // The Sun is on the skyline at Shuruq and at Maghrib (as it was on the horizon line before).
-        assertEquals(flat.y(scene.elevationAt(rise)) - 60f, g.y(scene.elevationAt(rise), rise), 2f)
-        assertEquals(flat.y(scene.elevationAt(set)) - 25f, g.y(scene.elevationAt(set), set), 2f)
-        // Before Shuruq and after Maghrib it is under the skyline; between them over it, all day.
-        assertTrue(g.y(scene.elevationAt(rise - 0.01), rise - 0.01) > 900f - g.lift(rise - 0.01))
-        assertTrue(g.y(scene.elevationAt(set + 0.01), set + 0.01) > 900f - g.lift(set + 0.01))
-        var f = rise + 0.004
-        while (f < set - 0.004) {
-            assertTrue("above the land at $f", g.y(scene.elevationAt(f), f) < 900f - g.lift(f) + 1f)
-            f += 0.004
+    @Test fun theSunsPathIsOneEvenArchOverEveryScenery() {
+        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = false)
+        // The same path whatever the scenery: the geometry knows nothing of the land.
+        for (t in Terrain.entries) {
+            val other = SkyGeometry(scene.copy(terrain = t), 1080f, 900f, 700f, 1100f, rtl = false)
+            var f = 0.0
+            while (f <= 1.0) { assertEquals(g.x(f), other.x(f), 0f); assertEquals(g.y(scene.elevationAt(f), f), other.y(scene.elevationAt(f), f), 0f); f += 0.05 }
         }
-        // The top of the path does not move, and the path passes smoothly from one skyline to the other.
-        assertEquals(700f, g.y(path.maxElevation.coerceAtLeast(12.0), scene.noonFraction), 0.5f)
-        var last = g.lift(0.0); f = 0.0
-        while (f <= 1.0) { assertTrue(abs(g.lift(f) - last) < 2.5f); last = g.lift(f); f += 0.002 }
-        // No skyline: the path is the one it always was.
-        f = 0.0
-        while (f <= 1.0) { assertEquals(flat.y(scene.elevationAt(f)), flat.y(scene.elevationAt(f), f), 0f); f += 0.05 }
-        // A skyline never leaves less than a quarter of the arch.
-        assertTrue(SkyGeometry(scene, 1080f, 900f, 700f, 1100f, false, 500f, 500f).lift(rise) <= 200f * 0.72f + 0.01f)
+        val rise = path.fraction(at(6, 25)); val set = path.fraction(at(17, 40))
+        val noon = (rise + set) / 2
+        fun pt(f: Double) = g.x(f) to g.y(scene.elevationAt(f), f)
+        val top = pt(noon)
+        // Symmetrical about the middle of the day, in height and in width.
+        var dt = 0.01
+        while (noon - dt > rise) {
+            val (xa, ya) = pt(noon - dt); val (xb, yb) = pt(noon + dt)
+            assertEquals("height at ±$dt", ya, yb, 2.5f)
+            assertEquals("width at ±$dt", top.first - xa, xb - top.first, 2.5f)
+            dt += 0.02
+        }
+        // Round at the top: a quarter of an hour either side of noon it has come down less than 1 % of its height.
+        val (_, yq) = pt(noon + 15.0 / 1440)
+        assertTrue("${yq - top.second} px", yq - top.second < 0.01f * 200f)
+        // Rising all morning and falling all afternoon, smoothly (no step larger than a few pixels in five minutes).
+        var f = rise; var last = pt(f).second
+        while (f < set) {
+            val y = pt(f).second
+            if (f < noon - 0.002) assertTrue("rising at $f", y <= last + 0.01f) else if (f > noon + 0.002) assertTrue("falling at $f", y >= last - 0.01f)
+            assertTrue(abs(y - last) < 6f)
+            last = y; f += 5.0 / 1440
+        }
+    }
+
+    /** (0.20) The real sky's skyline gives the top of the land at a point of the screen, mirrored as the renderer draws it. */
+    @Test fun theSkylineGivesTheTopOfTheLand() {
+        val sky = FloatArray(360) { if (it < 180) 0.1f else 0.0f }   // land on the picture's first half only
+        // Left to right, the picture's first strip is on the right of the screen: land on the right.
+        assertEquals(500f - 0.1f * SunLift.FOCAL * 1000f, SunLift.skylineY(sky, 900f, 1000f, 500f, rtl = false), 0.01f)
+        assertEquals(500f, SunLift.skylineY(sky, 100f, 1000f, 500f, rtl = false), 0.01f)
+        // In Arabic it is not mirrored: land on the left.
+        assertEquals(500f - 0.1f * SunLift.FOCAL * 1000f, SunLift.skylineY(sky, 100f, 1000f, 500f, rtl = true), 0.01f)
+        // No skyline: the level horizon.
+        assertEquals(500f, SunLift.skylineY(null, 300f, 1000f, 500f, rtl = false), 0f)
     }
 
     /** Sunrise and sunset sit on the horizon line; noon is the highest point drawn. */

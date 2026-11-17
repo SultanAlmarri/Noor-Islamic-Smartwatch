@@ -202,7 +202,6 @@ object RealSky {
         android.os.Handler(android.os.Looper.getMainLooper()).post { unusable.intValue = 1 }
     }
 
-    private val lifts = HashMap<String, FloatArray>()
     private val skylines = HashMap<String, FloatArray>()
 
     /**
@@ -220,44 +219,6 @@ object RealSky {
                 FloatArray(a.length()) { a.optDouble(it, 0.0).toFloat() }
             }.getOrElse { FloatArray(0) }
         }.takeIf { it.isNotEmpty() }
-    }
-
-    /**
-     * How high a scenery's skyline stands where the Sun rises and where it sets: tangents of the angle over the
-     * horizon. The packer writes them into land.json (`lift`); for a scenery packed without them they are read once
-     * from the land's own picture (where its alpha begins, 30.24 % of the width to either side of the middle; the
-     * lowest point within the Sun's own width, so the Sun is seen the moment it clears the land).
-     * Zeros when there is no picture or it cannot be read: the Sun then rises and sets on the level horizon.
-     */
-    fun sunLift(context: Context, biome: Biome): FloatArray = synchronized(lifts) {
-        lifts.getOrPut(biome.id) {
-            runCatching {
-                val dir = "sky2/land/${biome.id}"
-                val meta = org.json.JSONObject(context.assets.open("$dir/land.json").bufferedReader().use { it.readText() })
-                meta.optJSONArray("lift")?.takeIf { it.length() == 2 }?.let { l ->
-                    return@runCatching floatArrayOf(l.getDouble(0).toFloat().coerceIn(0f, 0.5f), l.getDouble(1).toFloat().coerceIn(0f, 0.5f))
-                        .also { Log.i(TAG, "Skyline of ${biome.id}: ${it[0]} where the Sun rises, ${it[1]} where it sets") }
-                }
-                val bmp = context.assets.open("$dir/a.webp").use { android.graphics.BitmapFactory.decodeStream(it) } ?: error("unreadable")
-                val width = meta.getDouble("width"); val top = meta.getDouble("top"); val horizon = meta.getDouble("horizon")
-                val rows = meta.getDouble("height")
-                val focal = meta.optDouble("focal", 1.15) * width
-                fun at(u: Double): Float {
-                    var low = Double.MAX_VALUE
-                    var c = u - 0.0125
-                    while (c <= u + 0.0125) {
-                        val x = (c * bmp.width).toInt().coerceIn(0, bmp.width - 1)
-                        var y = 0
-                        while (y < bmp.height && (bmp.getPixel(x, y) ushr 24) < 128) y++
-                        val row = top + y * rows / bmp.height
-                        low = minOf(low, (horizon - row) / focal)
-                        c += 0.0025
-                    }
-                    return low.coerceIn(0.0, 0.5).toFloat()
-                }
-                floatArrayOf(at(0.5 - 0.3024), at(0.5 + 0.3024)).also { bmp.recycle(); Log.i(TAG, "Skyline of ${biome.id}: ${it[0]} where the Sun rises, ${it[1]} where it sets") }
-            }.getOrElse { floatArrayOf(0f, 0f) }
-        }
     }
 
     /**
