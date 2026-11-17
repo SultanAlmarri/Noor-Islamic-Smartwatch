@@ -1427,5 +1427,9 @@ automatic graphics setting ... on by default ... sees your phone and chooses the
   lost the function's first local. A function that can return early is never copied: `conifers` and `spire` now begin
   with an early return that changes no result. `real_sky.sh` also saves Skia's messages whole and in order
   (`skia_log.txt`: the GLSL it generated, line by line). Check every AGSL change with `real-sky.yml`, `tier` MEDIUM.
+- Time to prepare the land program: on the emulator, 0.18's Medium held its first frame 10-14 s while SwiftShader
+  translated it, the first 0.19 one 25-40 s: `render` called `layerColor` in three places and the GPU's driver copies
+  a function into every place it is called. Shaded in a loop of three with one call (pixel-identical on the bench,
+  49 pictures). Compare these times (`Davey` in `shader_log.txt`) after any change to the land's structure.
 
 **Not tested**: on a phone or watch. Emulator photographs and software renders only (release report).

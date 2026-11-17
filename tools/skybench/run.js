@@ -1,7 +1,7 @@
 // node run.js scenes.json outdir  — renders each scene with the repo's shader files.
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
-const RAW = path.join(__dirname, '../../app/src/main/res/raw/');
+const RAW = process.env.RAW_DIR || path.join(__dirname, '../../app/src/main/res/raw/');
 (async () => {
   const scenes = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
   const outDir = process.argv[3]; fs.mkdirSync(outDir, { recursive: true });

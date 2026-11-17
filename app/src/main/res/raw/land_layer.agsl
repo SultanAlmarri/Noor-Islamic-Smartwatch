@@ -476,6 +476,7 @@ float3 shade(float2 fc, int layer, float topY, float slope) {
 
 // One layer's colour at a point, the nearest one fading into the page.
 float3 layerColor(float2 fc, int i, float topY) {
+    if (i < 0) return float3(0.0);  // (never: render asks for shown layers; keeps this out of render's loop, see conifers)
     float base = pick4(uBaseA, uBaseB, i);
     float amp = pick4(uAmpA, uAmpB, i);
     // Slope over a few dp: the table holds 8-bit heights, too coarse to differentiate pixel by pixel.
@@ -513,10 +514,14 @@ float4 render(float2 fc) {
             }
         }
     }
+    // Shaded in a loop with one call, not three calls: the GPU's driver copies a function into every place it is
+    // called, and three copies of shade made the program take twice as long to prepare as 0.18's (emulator: the
+    // first frame 25-40 s against 10-14 s).
     float4 acc = float4(0.0); // premultiplied
-    if (l0 >= 0) acc = float4(layerColor(fc, l0, t0), 1.0) * c0;
-    if (l1 >= 0) acc += float4(layerColor(fc, l1, t1), 1.0) * c1;
-    if (l2 >= 0) acc += float4(layerColor(fc, l2, t2), 1.0) * c2;
+    for (int k = 0; k < 3; k++) {
+        int l = k == 0 ? l0 : (k == 1 ? l1 : l2);
+        if (l >= 0) acc += float4(layerColor(fc, l, k == 0 ? t0 : (k == 1 ? t1 : t2)), 1.0) * (k == 0 ? c0 : (k == 1 ? c1 : c2));
+    }
     acc.rgb += (hash12(fc) - 0.5) / 255.0 * acc.a;
     return acc;
 }
