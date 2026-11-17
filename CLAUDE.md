@@ -209,10 +209,12 @@ phone) as bland and fake: never call a render beautiful on your own judgment; pu
 - Rules a scenery must keep: nature only; every source and licence written down in `tools/scenery/sources/`;
   built from real-world data (scans, elevation models) wherever such data exists, not from formulas; and a natural
   skyline: never cut a range or a treeline open so the Sun rises and sets on level ground (the owner rejected that;
-  the Sun may rise over a mountain). The times stay exact to the eye because the Sun's path stands on the land's
-  own skyline where it rises and sets (`bake.sun_lift` writes `lift` into `land.json` when a scenery is packed,
-  `tools/scenery/lift.py` adds it to one packed earlier; `RealSky.sunLift`, `SunLift`, `SkyGeometry.y(el, fraction)`;
-  the bench does the same). `bake.skyline_limit` is only advice against hiding the Sun's whole day.
+  the Sun may rise over a mountain). The Sun's path (0.20) is the same arch over every scenery and level, on the
+  level horizon, drawn in front of the land, its height in proportion to the sine of the Sun's elevation
+  (`SkyGeometry.y`); where the land hides the Sun a ring on the path shows where it is (`SunLift.skylineY` from
+  `land.json`'s `skyline`, `LandProfile.skylineAt`). The owner rejected the path hidden behind mountains and different
+  over each scenery (0.11 to 0.19 lifted it onto each skyline; `lift` in `land.json` is no longer read).
+  `bake.skyline_limit` is only advice against hiding the Sun's whole day.
 - The data the sceneries and clouds are built from lives outside the repository, in `NoorToolsssets\<source>`:
   Poly Haven and ambientCG scans (CC0), elevation models (USGS 3DEP, Copernicus GLO-30, Kartverket; read with
   `tools/scenery/geotiff.py`, which does not read LZW: see `meadow_dem.py`), NASA's sky maps, and CGHEVEN's cloud
