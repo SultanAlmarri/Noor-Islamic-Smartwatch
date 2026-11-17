@@ -68,6 +68,7 @@ float landHeight(float x, int layer, float base, float amp) {
 
 // One spire of the treeline at cell [c] (see [conifers]); dp.
 float spire(float c, float xc, float sp, float tall, float g, int layer) {
+    if (g <= 0.0) return 0.0;   // no tree where the ground has not risen (also keeps the function out of line: below)
     float hh = hash11(c * 1.37 + float(layer) * 7.0);
     float cx = c + 0.5 + (hash11(c * 2.71 + 5.0) - 0.5) * 0.7;
     // A tree stands only where the ground has risen far enough for it (its own threshold, so they thin out).
@@ -80,10 +81,13 @@ float spire(float c, float xc, float sp, float tall, float g, int layer) {
 
 // The treeline (0.19): the pointed tops of conifers along the crest, narrow spires with tiers of branches, larger and
 // further apart on the nearer layers, standing where the ground rises (none where it falls to the water). dp.
-// (The three neighbouring spires are written out, not looped over: Android's shader compiler, merging this function
-// into the land's loop, lost a variable declared before such a loop ("'_6_s' : undeclared identifier") and drew no
-// land at all on the medium graphics; the WebGL bench and Robolectric's compiler did not show it.)
+// (Android's shader compiler copies a function called once, with its only return at the end, into its caller; copied
+// into edgeDetail's `if (...) return conifers(...)`, it lost this function's first local ("'_6_s' / '_6_sp' :
+// undeclared identifier" in the GLSL it generated) and the medium graphics drew no land at all, while the WebGL bench
+// and Robolectric's compiler were fine. A function that can return early is never copied: hence the first lines here
+// and in spire, which change no result.)
 float conifers(float x, int layer) {
+    if (layer < 1) return 0.0;  // (edgeDetail asks for layers 1 to 4 only)
     float sp = layer == 1 ? 2.3 : (layer == 3 ? 5.0 : 8.5);         // spacing
     float tall = layer == 1 ? 5.5 : (layer == 3 ? 19.0 : 30.0);     // the tallest
     float g = layer == 1 ? 1.0 : smoothstep(0.16, 0.5, ridgeAt(x, layer));

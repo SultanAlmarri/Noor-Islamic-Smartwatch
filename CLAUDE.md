@@ -163,10 +163,11 @@ watch-face packaging step). Point Gradle at the SDK with `ANDROID_HOME` or with 
   large": the first 0.9.6 sky did that on the emulators). `SkyShaderSizeTest` estimates the size and must stay under
   65 000; `SkyShaderCompileTest` compiles both with the SkSL in Robolectric's native graphics (an older dialect:
   `sample(child, p)` for `child.eval(p)`; it does not enforce the size limit).
-  0.19: a function with a `for` loop that reads a local declared before the loop, inlined into the land's loop,
-  made Android's Skia emit broken GLSL ("'_6_s' : undeclared identifier"): the medium graphics drew no land at all,
-  while the WebGL bench and Robolectric's compiler were fine. Write such small loops out; and check any AGSL change on
-  an emulator: `real-sky.yml` with `tier` MEDIUM photographs the 0.9 sky and saves Skia's messages (`shader_log.txt`).
+  0.19: Android's Skia copies a function called once, with its only return at the end, into its caller; copied into
+  an `if (...) return f(...)` it lost f's first local and emitted broken GLSL ("'_6_sp' : undeclared identifier"): the
+  medium graphics drew no land at all, while the WebGL bench and Robolectric's compiler were fine. Give such a function
+  an early return (never copied). Check any AGSL change on an emulator: `real-sky.yml` with `tier` MEDIUM photographs
+  the 0.9 sky and saves Skia's messages (`shader_log.txt`, and `skia_log.txt` with the generated GLSL).
 - Iterate on looks with a WebGL bench that compiles the same files (headless Chromium, a small GLSL prelude), then
   confirm on Android with `.github/workflows/home-sky.yml` (Android 14 and 15 emulators; pictures also go to the
   `home-sky-preview` pre-release, since workflow artifacts cannot be downloaded from a Claude Code cloud session).

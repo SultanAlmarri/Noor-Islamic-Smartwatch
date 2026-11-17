@@ -1422,7 +1422,10 @@ automatic graphics setting ... on by default ... sees your phone and chooses the
 - Pitfall met: the first Medium drew no land at all on the emulator, for every scenery, while the WebGL bench and
   `SkyShaderCompileTest` were fine. Skia's own log (`shader_log.txt`, now saved by `real_sky.sh`) said
   "'_6_s' : undeclared identifier" in the GLSL it generated: the forest's `conifers()` had a small loop reading a
-  local declared before it, and inlined into the land loop Android's SkSL lost that variable. Written out as three
-  `spire()` calls, the land came back. Check every AGSL change with `real-sky.yml`, `tier` MEDIUM.
+  local declared before it. Writing the loop out was not enough ("'_6_sp'" next): Android copies a function called once,
+  with its only return at the end, into its caller, and copied into edgeDetail's `if (...) return conifers(...)` it
+  lost the function's first local. A function that can return early is never copied: `conifers` and `spire` now begin
+  with an early return that changes no result. `real_sky.sh` also saves Skia's messages whole and in order
+  (`skia_log.txt`: the GLSL it generated, line by line). Check every AGSL change with `real-sky.yml`, `tier` MEDIUM.
 
 **Not tested**: on a phone or watch. Emulator photographs and software renders only (release report).

@@ -87,6 +87,8 @@ grep -E "NoorRealSky|AndroidRuntime|FATAL|libc    :|DEBUG   :" "$OUT/logcat.txt"
 # (0.19) What the graphics system said about the app's shaders (the 0.9 sky's AGSL: a program Android refuses to draw
 # leaves no land and no message of the app's own).
 grep -iE "sksl|shader|program is too large|skia|NoorSky|OpenGLRenderer" "$OUT/logcat.txt" | grep -v "NoorRealSky" | sort | uniq -c | sort -rn | head -80 > "$OUT/shader_log.txt" 2>/dev/null
+# Skia's own messages in order, whole: when a shader fails it prints the GLSL it generated, line by line, and the error.
+grep -E " (D|E|W)/skia" "$OUT/logcat.txt" | head -3000 > "$OUT/skia_log.txt" 2>/dev/null
 # (0.18) What the system said about the app: starts, deaths, not responding, memory, the activity on screen.
 grep -E "com.noor.smartwatch|ActivityManager|ActivityTaskManager|lowmemorykiller|lmkd|ANR in|Choreographer|NoorOpening" "$OUT/logcat.txt" \
   | grep -v "NoorRealSky" | tail -300 > "$OUT/system_log.txt" 2>/dev/null
