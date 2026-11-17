@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -114,7 +115,8 @@ fun QiblaContent(
 ) {
     val c = NoorTheme.colors
     val ar = isArabicUi()
-    val f = Formatter(ar, p.settings.numerals, p.settings.timeFormat)
+    // (Made once for its settings, not with every compass reading: the screen recomposes with each one.)
+    val f = remember(ar, p.settings.numerals, p.settings.timeFormat) { Formatter(ar, p.settings.numerals, p.settings.timeFormat) }
     val q = p.qibla
     var showCalibration by rememberSaveable { mutableStateOf(calibrationOpenInitially) }
     val haptics = LocalHapticFeedback.current
@@ -233,7 +235,11 @@ internal fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: ()
             val style = MaterialTheme.typography.titleSmall
             val measurer = androidx.compose.ui.text.rememberTextMeasurer()
             val labels = listOf(R.string.acc_good, R.string.acc_fair, R.string.acc_poor, R.string.acc_calibrate).map { stringResource(it) }
-            val slot = with(androidx.compose.ui.platform.LocalDensity.current) { labels.maxOf { measurer.measure(it, style, maxLines = 1).size.width }.toDp() }
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            // (Measured once for these words, this style and this measurer, not with every compass reading.)
+            val slot = remember(labels, style, density, measurer) {
+                with(density) { labels.maxOf { measurer.measure(it, style, maxLines = 1).size.width }.toDp() }
+            }
             Text(label, style = style, color = accuracyColor(shown), maxLines = 1, modifier = Modifier.width(slot))
             // (Mirrored in Arabic since 0.14: it pointed right in both languages.)
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
@@ -307,6 +313,19 @@ fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter,
     val glow by androidx.compose.animation.core.animateFloatAsState(if (aligned) 1f else 0f, tween(500), label = "alignedGlow")
     val halfBeam = (uncertaintyDeg ?: 8.0).coerceIn(3.0, 30.0)
     val qiblaLabel = stringResource(R.string.qibla_title) + " " + f.degrees(qibla)
+    // Made once, not with every frame (the dial is drawn again with each compass reading): the paints of the letters
+    // and numbers, the numbers' text, and the two gradients (kept until their colours or the dial's size change).
+    val paint = remember(density) {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = android.graphics.Paint.Align.CENTER; textSize = with(density) { 18.sp.toPx() }; isFakeBoldText = true
+        }
+    }
+    val small = remember(paint, c.textMuted) {
+        android.graphics.Paint(paint).apply { textSize = with(density) { 11.sp.toPx() }; isFakeBoldText = false; color = c.textMuted.toArgb() }
+    }
+    val numbers = remember(f) { (30 until 360 step 30).filter { it % 90 != 0 }.map { it to f.number(it) } }
+    val glowBrush = remember { RadialCache() }
+    val beamBrush = remember { RadialCache() }
     Canvas(modifier.semantics { contentDescription = qiblaLabel }) {
         val h = heading ?: 0.0
         val cx = size.width / 2; val cy = size.height / 2
@@ -317,7 +336,7 @@ fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter,
             return Offset(cx + (radius * sin(a)).toFloat(), cy - (radius * cos(a)).toFloat())
         }
         // Face: a soft disc with a faint inner ring; glows gently when aligned.
-        if (glow > 0f) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(c.success.copy(alpha = 0.22f * glow), Color.Transparent), centre, r * 1.35f), r * 1.35f, centre)
+        if (glow > 0f) drawCircle(glowBrush.get(c.success.copy(alpha = 0.22f * glow), Color.Transparent, centre, r * 1.35f), r * 1.35f, centre)
         drawCircle(c.surface, r * 1.12f, centre)
         drawCircle(c.separator, r * 1.12f, centre, style = Stroke(1.dp.toPx()))
         drawCircle(c.separator, r * 0.62f, centre, style = Stroke(0.5.dp.toPx()))
@@ -325,7 +344,7 @@ fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter,
         // The beam to the Kaaba.
         val beamStart = Math.toRadians(qibla - h - halfBeam - 90).toFloat()
         drawArc(
-            androidx.compose.ui.graphics.Brush.radialGradient(listOf(accent.copy(alpha = 0.55f), accent.copy(alpha = 0.06f)), centre, r),
+            beamBrush.get(accent.copy(alpha = 0.55f), accent.copy(alpha = 0.06f), centre, r),
             startAngle = Math.toDegrees(beamStart.toDouble()).toFloat(), sweepAngle = (2 * halfBeam).toFloat(), useCenter = true,
             topLeft = Offset(cx - r, cy - r), size = androidx.compose.ui.geometry.Size(2 * r, 2 * r),
         )
@@ -341,19 +360,15 @@ fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter,
                 inner, outer, strokeWidth = if (cardinal) 2.dp.toPx() else if (ten) 1.2.dp.toPx() else 0.8.dp.toPx(), cap = StrokeCap.Round,
             )
         }
-        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            textAlign = android.graphics.Paint.Align.CENTER; textSize = with(density) { 18.sp.toPx() }; isFakeBoldText = true
-        }
         labels.forEachIndexed { i, l ->
             val pt = pos(i * 90.0, r * 1.08f - 30.dp.toPx())
             paint.color = (if (i == 0) c.danger else c.textPrimary).toArgb()
             drawContext.canvas.nativeCanvas.drawText(l, pt.x, pt.y + paint.textSize / 3, paint)
         }
         // Degree numbers every 30° between the cardinals.
-        val small = android.graphics.Paint(paint).apply { textSize = with(density) { 11.sp.toPx() }; isFakeBoldText = false; color = c.textMuted.toArgb() }
-        for (deg in 30 until 360 step 30) if (deg % 90 != 0) {
+        for ((deg, text) in numbers) {
             val pt = pos(deg.toDouble(), r * 1.08f - 24.dp.toPx())
-            drawContext.canvas.nativeCanvas.drawText(f.number(deg), pt.x, pt.y + small.textSize / 3, small)
+            drawContext.canvas.nativeCanvas.drawText(text, pt.x, pt.y + small.textSize / 3, small)
         }
 
         // The Kaaba on the rim.
@@ -376,6 +391,21 @@ fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter,
             close()
         }
         drawPath(notch, if (aligned) c.success else c.textPrimary)
+    }
+}
+
+/** A two-colour radial gradient, made again only when its colours, centre or radius change (the dial's draw phase). */
+private class RadialCache {
+    private var from = Color.Unspecified
+    private var to = Color.Unspecified
+    private var centre = Offset.Unspecified
+    private var radius = Float.NaN
+    private var brush: androidx.compose.ui.graphics.Brush? = null
+
+    fun get(from: Color, to: Color, centre: Offset, radius: Float): androidx.compose.ui.graphics.Brush {
+        brush?.let { if (from == this.from && to == this.to && centre == this.centre && radius == this.radius) return it }
+        this.from = from; this.to = to; this.centre = centre; this.radius = radius
+        return androidx.compose.ui.graphics.Brush.radialGradient(listOf(from, to), centre, radius).also { brush = it }
     }
 }
 
