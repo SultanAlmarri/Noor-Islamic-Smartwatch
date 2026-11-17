@@ -1419,5 +1419,10 @@ automatic graphics setting ... on by default ... sees your phone and chooses the
   clock, the clouds, rain, birds and the breathing ring. The land is held under the Sun's path where the path is in
   the sky. Test: `TodayLowDesignTest` (all six at four moments).
 - `real_sky.sh`/`real-sky.yml` photograph any level (input `tier`: HIGH, MEDIUM or LOW); `home_sky.sh` uses MEDIUM.
+- Pitfall met: the first Medium drew no land at all on the emulator, for every scenery, while the WebGL bench and
+  `SkyShaderCompileTest` were fine. Skia's own log (`shader_log.txt`, now saved by `real_sky.sh`) said
+  "'_6_s' : undeclared identifier" in the GLSL it generated: the forest's `conifers()` had a small loop reading a
+  local declared before it, and inlined into the land loop Android's SkSL lost that variable. Written out as three
+  `spire()` calls, the land came back. Check every AGSL change with `real-sky.yml`, `tier` MEDIUM.
 
 **Not tested**: on a phone or watch. Emulator photographs and software renders only (release report).
