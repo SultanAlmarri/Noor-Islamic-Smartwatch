@@ -41,7 +41,10 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
     class Geometry(val base: FloatArray, val amp: FloatArray, val distKm: FloatArray)
 
     fun geometry(horizonY: Float, h: Float, density: Float): Geometry {
-        val spec = when (terrain) { Terrain.DUNES -> DUNES; Terrain.HILLS -> HILLS; Terrain.MOUNTAINS -> MOUNTAINS; else -> SEA }
+        val spec = when (terrain) {
+            Terrain.DUNES -> DUNES; Terrain.HILLS -> HILLS; Terrain.MOUNTAINS -> MOUNTAINS; Terrain.SEA -> SEA
+            Terrain.FOREST -> FOREST; Terrain.ARCTIC -> ARCTIC; Terrain.CANYON -> CANYON
+        }
         val spread = (((h - horizonY) / density - 12f) / DEEPEST).coerceIn(0.55f, 1.4f)
         return Geometry(
             FloatArray(LAYERS) { horizonY + spec[it][1] * spread * density },
@@ -50,13 +53,17 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                 Terrain.DUNES -> floatArrayOf(22f, 7f, 2.8f, 1.1f, 0.35f)
                 Terrain.HILLS -> floatArrayOf(48f, 15f, 6f, 2.2f, 0.6f)
                 Terrain.MOUNTAINS -> floatArrayOf(34f, 14f, 6f, 2.2f, 0.6f)
-                else -> floatArrayOf(40f, 10f, 3f, 0.8f, 0.3f)
+                Terrain.SEA -> floatArrayOf(40f, 10f, 3f, 0.8f, 0.3f)
+                Terrain.FOREST -> floatArrayOf(35f, 8f, 3f, 0.9f, 0.3f)
+                Terrain.ARCTIC -> floatArrayOf(22f, 8f, 3f, 0.8f, 0.3f)
+                Terrain.CANYON -> floatArrayOf(30f, 9f, 3.5f, 1.2f, 0.4f)
             },
         )
     }
 
-    /** True where layer [layer] is open water (the sea's far layers, away from a headland). */
-    fun water(layer: Int, u: Float): Boolean = terrain == Terrain.SEA && layer <= 2 && height(layer, u) < 0.02f
+    /** True where layer [layer] is open water (the sea's far layers, away from a headland; the forest's lake, the fjord). */
+    fun water(layer: Int, u: Float): Boolean =
+        (terrain == Terrain.SEA && layer <= 2 && height(layer, u) < 0.02f) || (layer == LAKE && hasLake(terrain))
 
     /**
      * The top of the land at [x] (px) across a width [w]: where it meets the sky. Where the Sun rises and sets
@@ -87,14 +94,26 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
          * the next two layers are water too; then a low shore and the beach in front.
          */
         private val SEA = arrayOf(floatArrayOf(16f, 0f), floatArrayOf(1f, 8f), floatArrayOf(1f, 20f), floatArrayOf(12f, 54f), floatArrayOf(18f, 74f))
+        /**
+         * The forest lake (0.19): a far range with snow on its summits, a wooded ridge across the lake, the lake (layer
+         * [LAKE], flat), then the near shore, its tall conifers standing at one side or both, and a low bank in front.
+         */
+        private val FOREST = arrayOf(floatArrayOf(40f, 2f), floatArrayOf(18f, 12f), floatArrayOf(1f, 24f), floatArrayOf(30f, 54f), floatArrayOf(16f, 74f))
+        /** The far north (0.19): two snow-covered ranges rising out of a fjord's still water, a shore of snow and rocks. */
+        private val ARCTIC = arrayOf(floatArrayOf(62f, 3f), floatArrayOf(40f, 14f), floatArrayOf(1f, 22f), floatArrayOf(10f, 54f), floatArrayOf(14f, 74f))
+        /** Red rock (0.19): a far rim, buttes and mesas with sheer walls over their slopes of scree, ledges, the floor. */
+        private val CANYON = arrayOf(floatArrayOf(22f, 3f), floatArrayOf(46f, 14f), floatArrayOf(28f, 30f), floatArrayOf(12f, 52f), floatArrayOf(14f, 74f))
         private const val DEEPEST = 72f
+        /** The layer that is the lake (forest) or the fjord (arctic): flat water. */
+        const val LAKE = 2
+
+        /** The sceneries with still water in their middle distance (0.19). */
+        fun hasLake(t: Terrain) = t == Terrain.FOREST || t == Terrain.ARCTIC
 
         private val cache = HashMap<Pair<Long, Terrain>, LandProfile>()
 
         fun of(seed: Long, terrain: Terrain): LandProfile = synchronized(cache) {
-            // (0.19: the three newer sceneries share an older one's land until they have their own.)
-            val t = terrain.base
-            cache.getOrPut(seed to t) { build(seed, t) }
+            cache.getOrPut(seed to terrain) { build(seed, terrain) }
         }
 
         /** Smooth value noise on a loop of [n] random values. */
@@ -109,7 +128,7 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
 
         private fun normalise(a: FloatArray, lo: Float): FloatArray {
             val mn = a.min(); val mx = a.max()
-            return FloatArray(a.size) { lo + (1 - lo) * (a[it] - mn) / max(mx - mn, 1e-6f) }
+            return FloatArray(a.size) { (lo + (1 - lo) * (a[it] - mn) / max(mx - mn, 1e-6f)).coerceIn(0f, 1f) }
         }
 
         private fun build(seed: Long, terrain: Terrain): LandProfile {
@@ -141,6 +160,9 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                         }
                         normalise(a, 0.1f)
                     }
+                    terrain == Terrain.FOREST -> forest(rnd, layer)
+                    terrain == Terrain.ARCTIC -> arctic(rnd, layer)
+                    terrain == Terrain.CANYON -> canyon(rnd, layer)
                     terrain == Terrain.MOUNTAINS && layer <= 1 -> {
                         // High ranges: sharp ridged peaks and deep notches, the farthest the tallest and most jagged.
                         val ns = Array(6) { Noise(rnd) }; val broad = Noise(rnd)
@@ -199,6 +221,138 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
                 }
             }
             return LandProfile(terrain, layers)
+        }
+
+        /** Sharp ridged peaks (the mountains' generator): [sharp] above 1 makes them more jagged. */
+        private fun range(rnd: java.util.Random, fq0: Float, sharp: Float, broadFq: Float, broadMin: Float): FloatArray {
+            val ns = Array(6) { Noise(rnd) }; val broad = Noise(rnd)
+            val a = FloatArray(N)
+            for (i in 0 until N) {
+                val u = i / (N - 1f)
+                var sum = 0f; var amp = 0.55f; var fq = fq0; var w = 1f
+                for (o in 0 until 6) {
+                    val v = (1 - abs(ns[o].at(u * fq) * 2 - 1)).pow(sharp)
+                    sum += amp * v * w; w = min(1f, v * 2.0f); amp *= 0.5f; fq *= 2.1f
+                }
+                a[i] = sum * (broadMin + (1 - broadMin) * broad.at(u * broadFq))
+            }
+            return normalise(a, 0f)
+        }
+
+        /** Rolling ground: three octaves of smooth noise at [f] bumps across the width. */
+        private fun rolling(rnd: java.util.Random, f: Float, lo: Float): FloatArray {
+            val ns = Array(3) { Noise(rnd) }
+            return normalise(FloatArray(N) { val u = it / (N - 1f); 0.62f * ns[0].at(u * f * 2) + 0.28f * ns[1].at(u * f * 4.3f) + 0.10f * ns[2].at(u * f * 9.7f) }, lo)
+        }
+
+        private fun smooth(e0: Float, e1: Float, x: Float): Float { val t = ((x - e0) / (e1 - e0)).coerceIn(0f, 1f); return t * t * (3 - 2 * t) }
+
+        /**
+         * The forest lake (0.19). The treeline itself (the pointed tops of the conifers) is drawn by the land shader along
+         * these crests; here only the ground under it.
+         */
+        private fun forest(rnd: java.util.Random, layer: Int): FloatArray = when (layer) {
+            0 -> range(rnd, 2.4f, 1.45f, 1.2f, 0.4f)
+            1 -> rolling(rnd, 1.5f, 0.12f)
+            LAKE -> FloatArray(N)
+            3 -> {
+                // The near shore rises into wooded knolls at one side of the lake or both; between them the water.
+                val sides = rnd.nextInt(3)   // 0 left, 1 right, 2 both
+                val wl = 0.16f + 0.2f * rnd.nextFloat(); val wr = 0.16f + 0.2f * rnd.nextFloat()
+                val n1 = Noise(rnd); val n2 = Noise(rnd)
+                FloatArray(N) { i ->
+                    val u = i / (N - 1f)
+                    val l = if (sides != 1) 1f - smooth(wl * 0.55f, wl, u) else 0f
+                    val r = if (sides != 0) smooth(1f - wr, 1f - wr * 0.55f, u) else 0f
+                    val knoll = max(l, r) * (0.7f + 0.3f * n1.at(u * 9f))
+                    (0.04f + 0.05f * n2.at(u * 23f) + 0.9f * knoll).coerceIn(0f, 1f)
+                }
+            }
+            else -> {
+                // The bank in front: low, rising at the edges of the view.
+                val n1 = Noise(rnd); val n2 = Noise(rnd)
+                FloatArray(N) { i ->
+                    val u = i / (N - 1f)
+                    val edge = max(1f - smooth(0f, 0.12f, u), smooth(0.88f, 1f, u))
+                    (0.12f + 0.25f * n1.at(u * 3.1f) + 0.08f * n2.at(u * 17f) + 0.55f * edge).coerceIn(0f, 1f)
+                }
+            }
+        }
+
+        /** The far north (0.19): high ranges, the fjord, a shore of snow and rocks. */
+        private fun arctic(rnd: java.util.Random, layer: Int): FloatArray = when (layer) {
+            0 -> range(rnd, 2.2f, 1.7f, 1.1f, 0.35f)
+            1 -> {
+                // A nearer range, broken by a wide saddle or two so the far one shows over it.
+                val a = range(rnd, 2.9f, 1.35f, 1.6f, 0.1f)
+                FloatArray(N) { a[it] * a[it].pow(0.3f) }
+            }
+            LAKE -> FloatArray(N)
+            3 -> {
+                // Snow along the water (below [ROCK] of the layer's height) with boulders standing out of it.
+                val n1 = Noise(rnd); val n2 = Noise(rnd); val a = FloatArray(N) { 0.12f + 0.2f * n1.at(it / (N - 1f) * 5f) }
+                repeat(12) {
+                    val c = rnd.nextFloat(); val hw = 0.008f + 0.025f * rnd.nextFloat(); val hgt = 0.55f + 0.45f * rnd.nextFloat()
+                    for (i in 0 until N) {
+                        val d = (i / (N - 1f) - c) / hw
+                        if (abs(d) < 1f) a[i] = max(a[i], hgt * kotlin.math.sqrt(1f - d * d).pow(0.45f) * (0.88f + 0.12f * n2.at(i / (N - 1f) * 160f)))
+                    }
+                }
+                a
+            }
+            else -> rolling(rnd, 0.9f, 0.1f)
+        }
+
+        /**
+         * Red rock (0.19): mesas and buttes, each a flat top on sheer walls standing on a skirt of scree; a spire now and
+         * then. The shader reads the parts by height (the walls above the scree, a pale cap rock at the top).
+         */
+        private fun canyon(rnd: java.util.Random, layer: Int): FloatArray {
+            val a = FloatArray(N)
+            val n1 = Noise(rnd); val n2 = Noise(rnd)
+            if (layer >= 3) {
+                // Ledges of rock in steps, then the floor: low and broad.
+                for (i in 0 until N) {
+                    val u = i / (N - 1f)
+                    val v = 0.6f * n1.at(u * (if (layer == 3) 4f else 2.2f)) + 0.4f * n2.at(u * 13f)
+                    val k = v * 4f; val step = floor(k) + smooth(0.55f, 1f, k - floor(k))
+                    a[i] = step / 4f + 0.08f * n2.at(u * 31f)
+                }
+                return normalise(a, 0.08f)
+            }
+            for (i in 0 until N) a[i] = 0.03f + 0.04f * n1.at(i / (N - 1f) * 11f)
+            val count = intArrayOf(6, 5, 3)[layer]
+            val wMin = floatArrayOf(0.06f, 0.015f, 0.03f)[layer]; val wMax = floatArrayOf(0.2f, 0.08f, 0.09f)[layer]
+            val wall = floatArrayOf(0.003f, 0.006f, 0.008f)[layer]
+            for (k in 0..count) {
+                val spire = k == count
+                if (spire && rnd.nextFloat() < 0.4f) continue
+                val c = rnd.nextFloat()
+                val hw = if (spire) 0.004f + 0.006f * rnd.nextFloat() else wMin + (wMax - wMin) * rnd.nextFloat()
+                val top = if (spire) 0.8f + 0.2f * rnd.nextFloat() else 0.5f + 0.5f * rnd.nextFloat()
+                val scree = (if (spire) 0.5f else 0.28f + 0.14f * rnd.nextFloat()) * top
+                val slope = (if (layer == 0) 0.02f else 0.035f) + 0.04f * rnd.nextFloat()
+                // Some mesas have a second, narrower tier on top.
+                val tier = !spire && rnd.nextFloat() < 0.4f
+                val tierW = hw * (0.3f + 0.4f * rnd.nextFloat()); val tierC = c + (hw - tierW) * (rnd.nextFloat() * 2 - 1)
+                for (i in 0 until N) {
+                    val u = i / (N - 1f)
+                    val d = abs(u - c) - hw
+                    var v = when {
+                        d <= 0f && spire -> top * (1f - 0.35f * ((u - c) / hw).let { abs(it) * kotlin.math.sqrt(abs(it)) })
+                        d <= 0f -> top * (0.97f + 0.03f * n2.at(u * 40f))
+                        d < wall -> top - (top - scree) * (d / wall)
+                        d < wall + slope -> scree * (1f - (d - wall) / slope).pow(1.7f)
+                        else -> 0f
+                    }
+                    if (tier) {
+                        val dt = abs(u - tierC) - tierW
+                        if (dt < wall) v = max(v, top + 0.22f * (if (dt <= 0f) 1f else 1f - dt / wall))
+                    }
+                    a[i] = max(a[i], v)
+                }
+            }
+            return normalise(a, 0f)
         }
     }
 }
