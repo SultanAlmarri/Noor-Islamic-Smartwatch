@@ -30,10 +30,6 @@ class GazetteerStore(private val context: Context) {
 class OfficialTimetables(private val context: Context) {
     private val cache = HashMap<String, Timetable?>()
 
-    /** Goes up each time a fresher table is stored, so what was worked out from the old one is known to be old. */
-    @Volatile var version: Int = 0
-        private set
-
     @Synchronized
     fun get(id: String): Timetable? = cache.getOrPut(id) {
         val bundled = runCatching { context.assets.open("timetables/$id.csv").bufferedReader().readText() }.getOrNull()?.let { Timetable.parse(id, it) }
@@ -47,7 +43,6 @@ class OfficialTimetables(private val context: Context) {
             file(id).parentFile?.mkdirs()
             file(id).writeText(table.encode() + "\n")
             cache.remove(id)
-            version++
         }.onFailure { Log.w("NoorTimetables", "could not store $id", it) }
     }
 

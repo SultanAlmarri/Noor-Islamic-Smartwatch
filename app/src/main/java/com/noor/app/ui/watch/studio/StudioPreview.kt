@@ -10,14 +10,12 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
@@ -67,20 +65,16 @@ fun FaceCanvas(
     val bounds = remember { Rect() }
     // (The clock is the device's, as on the watch; the place's zone is for the prayer times only.)
     val zone = ZoneId.systemDefault()
-    val live = produceState(clock ?: ZonedDateTime.now(zone), clock, zone) {
+    val live by produceState(clock ?: ZonedDateTime.now(zone), clock, zone) {
         if (clock != null) { value = clock; return@produceState }
         while (true) { value = ZonedDateTime.now(zone); delay(1000 - System.currentTimeMillis() % 1000) }
     }
-    // The second is read only where the face is drawn, so a new second redraws it without composing it again; the
-    // composition follows the minute alone (the face's data are built once a minute).
-    val minute by remember(live) { derivedStateOf { live.value.toEpochSecond() / 60 } }
+    val minute = live.toEpochSecond() / 60
     val data = remember(design, config, minute, deviceArabic) {
-        // (The moment the minute changed: the same value, read without making this composition follow every second.)
-        val at = Snapshot.withoutReadObservation { live.value }
-        FaceData.build(design, config, at.toInstant(), zone, PREVIEW_BATTERY, deviceArabic = deviceArabic)
+        FaceData.build(design, config, live.toInstant(), zone, PREVIEW_BATTERY, deviceArabic = deviceArabic)
     }
     Canvas(modifier.aspectRatio(1f).clip(CircleShape).semantics { if (description != null) contentDescription = description }) {
-        val t = live.value
+        val t = live
         bounds.set(0, 0, size.width.toInt(), size.height.toInt())
         frame.set(t.hour, t.minute, t.second, ambient)
         if (ambient && design.pixelShift) {

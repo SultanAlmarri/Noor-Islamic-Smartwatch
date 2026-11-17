@@ -471,12 +471,10 @@ internal fun LivingSky(
     val nowNow = rememberUpdatedState(now)
     val pathInNow = rememberUpdatedState(pathIn)
     val marksInNow = rememberUpdatedState(marksIn)
-    // (0.18.2) Made when first drawn: the 0.9 sky's stars, grain, dust and land are not drawn under the real sky, and
-    // until 0.18.1 they were made at every return to the home screen all the same.
-    val stars by remember { lazy(LazyThreadSafetyMode.NONE) { starField(150) } }
-    val grainBrush by remember { lazy(LazyThreadSafetyMode.NONE) { grain() } }
-    val dust by remember { lazy(LazyThreadSafetyMode.NONE) { dustField(220) } }
-    val land by remember(scene.landSeed, scene.terrain) { lazy(LazyThreadSafetyMode.NONE) { landField(scene.landSeed, scene.terrain) } }
+    val stars = remember { starField(150) }
+    val grainBrush = remember { grain() }
+    val dust = remember { dustField(220) }
+    val land = remember(scene.landSeed, scene.terrain) { landField(scene.landSeed, scene.terrain) }
     val soil = soilOf(scene.terrain)
 
     // 0.9.6: the sky is computed (Atmosphere) for this moment and this header, off the main thread; on Android 13 and
@@ -523,7 +521,7 @@ internal fun LivingSky(
     val weather = remember(scene.seed, scene.terrain) { Weather.of(scene.seed, scene.terrain) }
     // The weather at the moment shown: it changes through the day, and as the Sun is dragged through it.
     val weatherNow = weather.at(display)
-    val landProfile by remember(scene.landSeed, scene.terrain) { lazy(LazyThreadSafetyMode.NONE) { LandProfile.of(scene.landSeed, scene.terrain) } }
+    val landProfile = remember(scene.landSeed, scene.terrain) { LandProfile.of(scene.landSeed, scene.terrain) }
     // The layers' own clocks (seconds), each layer redrawn only when its clock moves: the clouds' about 15 times a
     // second (they move less than a fifth of a dp per tick, so it looks continuous); the GPU sky's as often at night
     // (twinkling stars) but once a second by day (only the high cirrus drifts, far too slowly to see a step: 0.9.8
@@ -536,9 +534,7 @@ internal fun LivingSky(
     val starry = rememberUpdatedState(light.night > 0f)
     // An overcast or a layer of cloud drifts overhead, where it moves fastest: then the sky ticks 4 times a second.
     val decked = rememberUpdatedState(weatherNow.overcast > 0.03f || weatherNow.layer > 0.08f)
-    // (0.18.2) Only for the 0.9 sky: under the real sky nothing reads these clocks, and until 0.18.1 they still asked
-    // for a frame fifteen times a second.
-    if (ambient && real == null) LaunchedEffect(Unit) {
+    if (ambient) LaunchedEffect(Unit) {
         val start = withFrameNanos { it }
         val base = cloudSeconds.floatValue
         while (true) {

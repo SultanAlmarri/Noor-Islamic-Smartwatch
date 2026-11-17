@@ -291,9 +291,7 @@ class ScreenshotTest {
         screen = Screen.WATCH; rule.waitForIdle(); screen = Screen.SETTINGS
         rule.onAllNodes(androidx.compose.ui.test.hasText("Language and region")).onFirst().performClick()
         shot("81_settings_language_en", "Numerals")
-        // (The preview's configuration is worked out off the main thread: wait for it, as the eye would.)
-        screen = Screen.WATCH; rule.waitForIdle(); rule.waitUntil(20_000) { rule.onAllNodesWithText("Dubai").fetchSemanticsNodes().isNotEmpty() }
-        shot("09_watch_night_en", "Galaxy")
+        screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
         // Arabic versions of the text-heavy pages, so the language check covers them (0.9).
         arabic = true
@@ -348,10 +346,8 @@ class ScreenshotTest {
         shot("87_adhan_alarms_night_en", "25 min before Fajr")
         arabic = true; shot("88_adhan_alarms_night_ar", "قبل الفجر")
         rule.onAllNodes(androidx.compose.ui.test.hasText("الأذان")).onFirst().performClick(); rule.waitForIdle(); arabic = false
-        // (When it rings is worked out off the main thread: wait for it in place of the "–" shown until then.)
-        fun ringShown() { rule.waitForIdle(); rule.waitUntil(20_000) { rule.onAllNodesWithText("–").fetchSemanticsNodes().isEmpty() } }
-        alarmEdit = 0; screen = Screen.ALARM_EDIT; ringShown(); shot("89_alarm_new_night_en", "New alarm")
-        alarmEdit = fajrAlarm; arabic = true; ringShown(); shot("90_alarm_edit_night_ar", "تعديل المنبه"); arabic = false
+        alarmEdit = 0; screen = Screen.ALARM_EDIT; shot("89_alarm_new_night_en", "New alarm")
+        alarmEdit = fajrAlarm; arabic = true; shot("90_alarm_edit_night_ar", "تعديل المنبه"); arabic = false
         theme = ThemeMode.LIGHT; shot("91_alarm_edit_day_en", "Edit alarm"); theme = ThemeMode.DARK
         screen = Screen.ALARM_RING; shot("92_alarm_ringing_night_en", "Snooze 10 min")
         arabic = true; shot("93_alarm_ringing_night_ar", "غفوة"); arabic = false
@@ -384,9 +380,7 @@ class ScreenshotTest {
             rec(4, com.noor.prayer.Prayer.MAGHRIB, 17, 34, com.noor.alerts.AlertOutcome.DND_BLOCKS_ALARMS)
             rec(5, com.noor.prayer.Prayer.ISHA, 18, 50, com.noor.alerts.AlertOutcome.PLAYED_FALLBACK, played = 32_000, test = true)
         }
-        // (The history is read from disk off the main thread: wait for its entries, not only the page's title.)
-        screen = Screen.ADHAN_HISTORY; rule.waitForIdle(); rule.waitUntil(20_000) { rule.onAllNodesWithText("Isha · Test").fetchSemanticsNodes().isNotEmpty() }
-        shot("49_adhan_history_night_en", "Alert history")
+        screen = Screen.ADHAN_HISTORY; shot("49_adhan_history_night_en", "Alert history")
         arabic = true; shot("50_adhan_history_night_ar", "سجل التنبيهات")
         arabic = false
         screen = Screen.ONBOARDING; shot("42_onboarding_en", "Use my location")

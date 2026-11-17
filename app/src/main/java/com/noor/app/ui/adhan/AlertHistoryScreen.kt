@@ -62,8 +62,7 @@ fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
     val c = NoorTheme.colors
     val context = LocalContext.current
     val zone = ZoneId.systemDefault()
-    // (Not twice on entry: the view model has just done it; once each time the page comes back.)
-    LifecycleResumeEffect(Unit) { vm.onShown(); onPauseOrDispose { } }
+    LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
     val message by vm.message.collectAsStateWithLifecycle()
     androidx.compose.runtime.LaunchedEffect(message) { message?.let { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show(); vm.consumeMessage() } }
 

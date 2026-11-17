@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.noor.app.NoorApplication
 import com.noor.app.data.WatchSetupState
+import com.noor.app.data.WearSync
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -78,16 +79,7 @@ class WatchViewModel(app: Application) : AndroidViewModel(app) {
         _syncing.value = false
     }
 
-    /**
-     * The configuration the page's preview and its Studio card are drawn from: WearSync.configFor(s, 0L) (without the
-     * timetables, as this page has always asked for it), worked out off the main thread once for each settings value
-     * and day at the place, not every second (it calculates eight weeks of times).
-     */
-    val config: StateFlow<com.noor.prayer.WatchConfig?> = com.noor.app.data.DailyConfig.flow(settings, null)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-
-    /** Whether the phone has a configuration to send: configFor is null exactly when the settings give no place. */
-    fun configAvailable(s: com.noor.app.data.AppSettings?) = s?.let { com.noor.app.data.PrayerProvider.place(it) } != null
+    fun configAvailable(s: com.noor.app.data.AppSettings?) = s?.let { WearSync.configFor(it, 0L) } != null
 
     companion object {
         /** After this long without the watch reporting back, a pending action is shown as not finished. */

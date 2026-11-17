@@ -123,8 +123,7 @@ fun AdhanScreen(
     val context = LocalContext.current
     var gradualDialog by rememberSaveable { mutableStateOf(false) }
 
-    // (Not twice on entry: the view model has just done it; once each time the page comes back.)
-    LifecycleResumeEffect(Unit) { vm.onShown(); onPauseOrDispose { } }
+    LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
     // (Messages from the page's actions, such as the test's "in 10 seconds", or that it could not be set.)
     val message by vm.message.collectAsStateWithLifecycle()
     LaunchedEffect(message) { message?.let { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show(); vm.consumeMessage() } }
