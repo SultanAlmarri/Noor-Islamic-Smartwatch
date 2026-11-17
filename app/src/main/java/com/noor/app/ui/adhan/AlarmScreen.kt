@@ -157,7 +157,8 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
         }) {
         GlassCard(Modifier.fillMaxWidth(), padding = 16.dp, corner = 30.dp, highlighted = true) {
             // When it rings, large, as a clock shows its alarm: the answer to every turn of the wheels below, at once.
-            val next = remember(draftText, rings) { vm.nextRing(draft) }
+            // (Worked out off the main thread, so the wheels turn smoothly; the answer before stays until the new one.)
+            val next by androidx.compose.runtime.produceState(remember { vm.nextRingIfReady(draft) }, draftText, rings) { value = vm.nextRing(draft) }
             Text(next?.let { f.timeAt(it.at, rings.zone) } ?: "–",
                 style = MaterialTheme.typography.displayMedium.copy(fontSize = 46.sp, fontWeight = FontWeight.Light),
                 color = c.textPrimary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)

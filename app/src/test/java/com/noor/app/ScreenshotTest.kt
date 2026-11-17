@@ -291,7 +291,9 @@ class ScreenshotTest {
         screen = Screen.WATCH; rule.waitForIdle(); screen = Screen.SETTINGS
         rule.onAllNodes(androidx.compose.ui.test.hasText("Language and region")).onFirst().performClick()
         shot("81_settings_language_en", "Numerals")
-        screen = Screen.WATCH; shot("09_watch_night_en", "Galaxy")
+        // (The preview's configuration is worked out off the main thread: wait for it, as the eye would.)
+        screen = Screen.WATCH; rule.waitForIdle(); rule.waitUntil(20_000) { rule.onAllNodesWithText("Dubai").fetchSemanticsNodes().isNotEmpty() }
+        shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
         // Arabic versions of the text-heavy pages, so the language check covers them (0.9).
         arabic = true
@@ -346,8 +348,10 @@ class ScreenshotTest {
         shot("87_adhan_alarms_night_en", "25 min before Fajr")
         arabic = true; shot("88_adhan_alarms_night_ar", "قبل الفجر")
         rule.onAllNodes(androidx.compose.ui.test.hasText("الأذان")).onFirst().performClick(); rule.waitForIdle(); arabic = false
-        alarmEdit = 0; screen = Screen.ALARM_EDIT; shot("89_alarm_new_night_en", "New alarm")
-        alarmEdit = fajrAlarm; arabic = true; shot("90_alarm_edit_night_ar", "تعديل المنبه"); arabic = false
+        // (When it rings is worked out off the main thread: wait for it in place of the "–" shown until then.)
+        fun ringShown() { rule.waitForIdle(); rule.waitUntil(20_000) { rule.onAllNodesWithText("–").fetchSemanticsNodes().isEmpty() } }
+        alarmEdit = 0; screen = Screen.ALARM_EDIT; ringShown(); shot("89_alarm_new_night_en", "New alarm")
+        alarmEdit = fajrAlarm; arabic = true; ringShown(); shot("90_alarm_edit_night_ar", "تعديل المنبه"); arabic = false
         theme = ThemeMode.LIGHT; shot("91_alarm_edit_day_en", "Edit alarm"); theme = ThemeMode.DARK
         screen = Screen.ALARM_RING; shot("92_alarm_ringing_night_en", "Snooze 10 min")
         arabic = true; shot("93_alarm_ringing_night_ar", "غفوة"); arabic = false

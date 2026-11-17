@@ -23,7 +23,8 @@ import com.noor.alerts.SoundSource
 import com.noor.app.NoorApplication
 import com.noor.app.data.AppSettings
 import com.noor.app.data.WatchNode
-import com.noor.app.data.WearSync
+import com.noor.app.data.DailyConfig
+import com.noor.app.data.PrayerProvider
 import com.noor.prayer.Prayer
 import com.noor.prayer.WatchReport
 import com.noor.prayer.alerts.AlertDevice
@@ -42,6 +43,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.stateIn
@@ -93,7 +95,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     val next: StateFlow<NextAlert?> = combine(repo.settings, shownAgain) { s, _ -> s }.transformLatest { s ->
         while (true) {
             val n = run {
-                val c = WearSync.configFor(s, System.currentTimeMillis(), container.timetables) ?: return@run null
+                val c = DailyConfig.get(s, container.timetables) ?: return@run null
                 val a = c.alerts ?: return@run null
                 AlertPlanner.plan(c, a, AlertDevice.PHONE, Instant.now()).firstOrNull()?.let { NextAlert(it, c.zone) }
             }
@@ -101,7 +103,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             val at = n?.planned?.at ?: break
             kotlinx.coroutines.delay((java.time.Duration.between(Instant.now(), at).toMillis() + 1_000).coerceAtLeast(1_000))
         }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /**
      * 0.17: when each alarm rings next (by id), from the same planner the scheduler arms, and today's prayer times for
@@ -110,7 +112,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val rings: StateFlow<Rings> = combine(repo.settings, shownAgain) { s, _ -> s }.transformLatest { s ->
         while (true) {
-            val c = WearSync.configFor(s, System.currentTimeMillis(), container.timetables)
+            val c = DailyConfig.get(s, container.timetables)
             val now = Instant.now()
             val r = if (c == null) Rings() else Rings(
                 (c.alerts?.alarms.orEmpty()).mapNotNull { AlarmPlanner.next(c, it, now) }.associateBy { it.alarm.id },
@@ -120,12 +122,25 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             val soonest = (r.next.values.map { it.at } + listOfNotNull(java.time.LocalDate.now(r.zone).plusDays(1).atStartOfDay(r.zone).toInstant())).minOrNull() ?: break
             kotlinx.coroutines.delay((java.time.Duration.between(Instant.now(), soonest).toMillis() + 1_000).coerceIn(1_000, 3_600_000))
         }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, Rings())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, Rings())
 
-    /** 0.17: when [alarm] would ring next if saved as it is (the editor's line "Tomorrow at 4:27 AM"). */
-    fun nextRing(alarm: PrayerAlarm): PlannedAlarm? {
+    /**
+     * 0.17: when [alarm] would ring next if saved as it is (the editor's line "Tomorrow at 4:27 AM"). Off the main
+     * thread: the configuration is worked out once for the settings and the day, then only the alarm is planned.
+     */
+    suspend fun nextRing(alarm: PrayerAlarm): PlannedAlarm? = withContext(Dispatchers.Default) {
+        val s = settings.value ?: return@withContext null
+        val c = DailyConfig.get(s, container.timetables) ?: return@withContext null
+        AlarmPlanner.next(c, alarm.normalized(), Instant.now())
+    }
+
+    /**
+     * The same at once, when the configuration is already worked out (the editor's first frame, so it opens with its
+     * answer); null when it is not yet, and [nextRing] gives it a moment later.
+     */
+    fun nextRingIfReady(alarm: PrayerAlarm): PlannedAlarm? {
         val s = settings.value ?: return null
-        val c = WearSync.configFor(s, System.currentTimeMillis(), container.timetables) ?: return null
+        val c = DailyConfig.peek(s, container.timetables) ?: return null
         return AlarmPlanner.next(c, alarm.normalized(), Instant.now())
     }
 
@@ -159,18 +174,22 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun importForAlarm(uri: Uri, onAdded: (String) -> Unit) = viewModelScope.launch {
         val ctx = getApplication<Application>()
         val result = withContext(Dispatchers.IO) { container.customSounds.import(ctx.contentResolver, uri, null) }
-        _custom.value = container.customSounds.list()
+        reloadCustom()
         if (result is ImportResult.Ok) { onAdded(result.sound.id); _message.value = ctx.getString(com.noor.app.R.string.adhan_import_ok, result.sound.name) }
         else importSoundResult(result)
     }
 
-    val hasLocation: StateFlow<Boolean> = repo.settings.map { WearSync.configFor(it, 0L, container.timetables) != null }
+    // (configFor is null exactly when the settings give no place: the same answer without eight weeks of times.)
+    val hasLocation: StateFlow<Boolean> = repo.settings.map { PrayerProvider.place(it) != null }
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
-    private val _custom = MutableStateFlow(container.customSounds.list())
+    // (Read from disk off the main thread, in init; until then the list as this app last read it.)
+    private val _custom = MutableStateFlow(lastCustom ?: emptyList())
     val custom: StateFlow<List<CustomSound>> = _custom.asStateFlow()
 
-    private val _readiness = MutableStateFlow(Readiness())
+    // (Asked of the system off the main thread, in refresh(); until then as it was last time this app asked.)
+    private val _readiness = MutableStateFlow(lastReadiness ?: Readiness())
     val readiness: StateFlow<Readiness> = _readiness.asStateFlow()
 
     private val _watches = MutableStateFlow<List<WatchAlertState>>(emptyList())
@@ -191,18 +210,46 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         refresh()
-        viewModelScope.launch { container.watchSounds.syncIfNeeded(repo.current().alerts) }
+        viewModelScope.launch { reloadCustom() }
+        viewModelScope.launch(Dispatchers.IO) { container.watchSounds.syncIfNeeded(repo.current().alerts) }
     }
 
-    /** Re-reads permissions and device state (called when the screen is shown again). */
+    /** True until the screen is first shown: init has just done what being shown does. */
+    private var refreshedByInit = true
+
+    /** The screen is shown (again): [refresh], except the first time, right after init's own. */
+    fun onShown() {
+        if (refreshedByInit) { refreshedByInit = false; return }
+        refresh()
+    }
+
+    /**
+     * Re-reads permissions and device state (called when the screen is shown again). The system is asked, the
+     * notification channels made and the alerts re-armed off the main thread; the answers are published as state.
+     */
     fun refresh() {
         shownAgain.value++
         val ctx = getApplication<Application>()
-        AlertNotifications.ensureChannels(ctx)
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) {
+                AlertNotifications.ensureChannels(ctx)
+                readinessOf(ctx)
+            }
+            _readiness.value = r
+            lastReadiness = r
+            _history.value = withContext(Dispatchers.IO) { AlertLog.all(ctx) }
+            // (As the alert receivers do, on a background thread: AlarmManager may be called from any.)
+            withContext(Dispatchers.Default) { AlertScheduler.reschedule(ctx) }
+            val snap = container.watchSetup.snapshot()
+            _watches.value = snap.connected.filter { it.id in snap.withNoor }.map { WatchAlertState(it, snap.reports[it.id]) }
+        }
+    }
+
+    private fun readinessOf(ctx: Application): Readiness {
         val granted = Build.VERSION.SDK_INT < 33 ||
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         val nm = ctx.getSystemService(NotificationManager::class.java)
-        _readiness.value = Readiness(
+        return Readiness(
             notificationsAllowed = granted && NotificationManagerCompat.from(ctx).areNotificationsEnabled(),
             canRequestNotifications = Build.VERSION.SDK_INT >= 33 && !granted,
             adhanChannelBlocked = nm?.getNotificationChannel(AlertNotifications.CHANNEL_ADHAN)?.importance == NotificationManager.IMPORTANCE_NONE,
@@ -211,12 +258,13 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             batteryRestricted = ctx.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(ctx.packageName) == false,
             fullScreenAllowed = Build.VERSION.SDK_INT < 34 || nm?.canUseFullScreenIntent() != false,
         )
-        viewModelScope.launch {
-            _history.value = withContext(Dispatchers.IO) { AlertLog.all(ctx) }
-            AlertScheduler.reschedule(ctx)
-            val snap = container.watchSetup.snapshot()
-            _watches.value = snap.connected.filter { it.id in snap.withNoor }.map { WatchAlertState(it, snap.reports[it.id]) }
-        }
+    }
+
+    /** The user's own sounds, read from disk off the main thread. */
+    private suspend fun reloadCustom() {
+        val list = withContext(Dispatchers.IO) { container.customSounds.list() }
+        _custom.value = list
+        lastCustom = list
     }
 
     private fun update(change: (AlertSettings) -> AlertSettings) = viewModelScope.launch { repo.updateAlerts(change) }
@@ -282,7 +330,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun importSound(uri: Uri, replaceId: String? = null, forPrayer: Prayer? = null) = viewModelScope.launch {
         val ctx = getApplication<Application>()
         val result = withContext(Dispatchers.IO) { container.customSounds.import(ctx.contentResolver, uri, replaceId) }
-        _custom.value = container.customSounds.list()
+        reloadCustom()
         _message.value = when (result) {
             is ImportResult.Ok -> {
                 if (forPrayer != null) setPrayer(forPrayer) { it.copy(enabled = true, mode = AlertMode.CUSTOM, soundId = result.sound.id) }
@@ -353,7 +401,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             withContext(Dispatchers.IO) { container.customSounds.rename(result.sound.id, if (fajr) "$name Fajr" else name) }
             if (!fajr) main = result.sound.id
         }
-        _custom.value = container.customSounds.list()
+        reloadCustom()
         main?.let { applyVoice(target, it); _message.value = ctx.getString(com.noor.app.R.string.adhan_import_ok, name) }
     }
 
@@ -371,7 +419,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 
     fun renameSound(id: String, name: String) = viewModelScope.launch {
         withContext(Dispatchers.IO) { container.customSounds.rename(id, name) }
-        _custom.value = container.customSounds.list()
+        reloadCustom()
     }
 
     /** Prayers that use [id]; they move to the default Adhan when it is deleted. */
@@ -391,7 +439,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         withContext(Dispatchers.IO) { container.customSounds.delete(id) }
-        _custom.value = container.customSounds.list()
+        reloadCustom()
     }
 
     fun test(p: Prayer) {
@@ -455,6 +503,12 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() { player.stop(notify = false) }
+
+    private companion object {
+        /** What the last page asked of the system and read from disk: a new page starts from it, not from nothing. */
+        @Volatile var lastReadiness: Readiness? = null
+        @Volatile var lastCustom: List<CustomSound>? = null
+    }
 }
 
 /** Preview keys of the phone's own sounds. */
