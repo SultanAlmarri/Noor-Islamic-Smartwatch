@@ -40,6 +40,12 @@ internal class LandProfile private constructor(val terrain: Terrain, private val
     /** Where each layer lies, for a header whose horizon is at [horizonY] and bottom at [h] (px), [density] px per dp. */
     class Geometry(val base: FloatArray, val amp: FloatArray, val distKm: FloatArray)
 
+    /** (0.21) Each layer's height and base below the horizon (dp), far to near: the Canvas renderer draws the same land. */
+    fun specDp(): Array<FloatArray> = when (terrain) {
+        Terrain.DUNES -> DUNES; Terrain.HILLS -> HILLS; Terrain.MOUNTAINS -> MOUNTAINS; Terrain.SEA -> SEA
+        Terrain.FOREST -> FOREST; Terrain.ARCTIC -> ARCTIC; Terrain.CANYON -> CANYON
+    }
+
     fun geometry(horizonY: Float, h: Float, density: Float): Geometry {
         val spec = when (terrain) {
             Terrain.DUNES -> DUNES; Terrain.HILLS -> HILLS; Terrain.MOUNTAINS -> MOUNTAINS; Terrain.SEA -> SEA

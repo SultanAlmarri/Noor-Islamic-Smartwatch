@@ -22,8 +22,9 @@ class LandProfileTest {
         }
     }
 
+    // (0.21: the green hills have their reservoir too, as the real sky's meadow.)
     @Test fun theForestAndTheArcticHaveStillWaterInTheMiddleDistance() {
-        for (t in listOf(Terrain.FOREST, Terrain.ARCTIC)) for (s in seeds) {
+        for (t in listOf(Terrain.FOREST, Terrain.ARCTIC, Terrain.HILLS)) for (s in seeds) {
             val p = LandProfile.of(s, t)
             for (i in 0..100) {
                 assertEquals(0f, p.height(LandProfile.LAKE, i / 100f))
@@ -31,23 +32,30 @@ class LandProfileTest {
                 assertTrue(!p.water(1, i / 100f) && !p.water(3, i / 100f))
             }
         }
-        for (t in listOf(Terrain.DUNES, Terrain.HILLS, Terrain.MOUNTAINS, Terrain.CANYON)) assertTrue((0..100).none { LandProfile.of(7L, t).water(LandProfile.LAKE, it / 100f) })
+        for (t in listOf(Terrain.DUNES, Terrain.MOUNTAINS, Terrain.CANYON)) assertTrue((0..100).none { LandProfile.of(7L, t).water(LandProfile.LAKE, it / 100f) })
     }
 
     @Test fun theForestShoreRisesAtTheSidesOfTheLake() {
-        for (s in seeds) {
-            val p = LandProfile.of(s, Terrain.FOREST)
+        for (t in listOf(Terrain.FOREST, Terrain.HILLS, Terrain.CANYON)) for (s in seeds) {
+            val p = LandProfile.of(s, t)
             val edges = maxOf(p.height(3, 0.02f), p.height(3, 0.98f))
             val middle = p.height(3, 0.5f)
             assertTrue("seed $s: knolls ${"%.2f".format(edges)} over the water's edge ${"%.2f".format(middle)}", edges > middle + 0.4f)
         }
     }
 
-    /** Mesas and buttes: flat tops (long runs of nearly equal heights high up) on sheer walls (big steps between samples). */
+    /**
+     * Mesas and buttes: flat tops (long runs of nearly equal heights high up) on sheer walls (big steps between samples).
+     * (0.21: on the far rim and the great butte; layer 2 is now the floor under them, with its trees. The great butte
+     * carries spires: narrow columns standing well above its body.)
+     */
     @Test fun theCanyonHasFlatToppedMesasOnSheerWalls() {
         for (s in seeds) {
             val p = LandProfile.of(s, Terrain.CANYON)
-            for (l in 0..2) {
+            val b = FloatArray(LandProfile.N) { p.height(1, it / (LandProfile.N - 1f)) }
+            val spire = b.indices.filter { b[it] > 0.8f }
+            assertTrue("seed $s: spires (${spire.size} samples)", spire.isNotEmpty() && spire.size < LandProfile.N / 5)
+            for (l in 0..1) {
                 val h = FloatArray(LandProfile.N) { p.height(l, it / (LandProfile.N - 1f)) }
                 var run = 0; var longest = 0
                 for (i in 1 until h.size) { run = if (h[i] > 0.35f && abs(h[i] - h[i - 1]) < 0.004f) run + 1 else 0; longest = maxOf(longest, run) }
