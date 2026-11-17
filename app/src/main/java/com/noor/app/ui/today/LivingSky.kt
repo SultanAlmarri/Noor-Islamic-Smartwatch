@@ -582,6 +582,9 @@ internal fun LivingSky(
     val starry = rememberUpdatedState(light.night > 0f)
     // An overcast or a layer of cloud drifts overhead, where it moves fastest: then the sky ticks 4 times a second.
     val decked = rememberUpdatedState(weatherNow.overcast > 0.03f || weatherNow.layer > 0.08f)
+    // (0.19.1) The medium land moves only where it has water or mist (its cloud shadows are gone): a dry, clear land is
+    // drawn again only when the moment shown changes, not four times a second.
+    val landMoves = rememberUpdatedState(scene.terrain == Terrain.SEA || scene.terrain == Terrain.FOREST || scene.terrain == Terrain.ARCTIC || (look?.mist ?: 0f) > 0.001f || real != null || !medium)
     // (0.18.2) Only for the 0.9 sky: under the real sky nothing reads these clocks, and until 0.18.1 they still asked
     // for a frame fifteen times a second.
     if (ambient && real == null) LaunchedEffect(Unit) {
@@ -593,7 +596,7 @@ internal fun LivingSky(
                     val sec = base + (t - start) / 1e9f
                     cloudSeconds.floatValue = sec
                     if (starry.value || sec - skySeconds.floatValue >= (if (decked.value) 0.25f else 1f)) skySeconds.floatValue = sec
-                    if (sec - landSeconds.floatValue >= 0.25f) landSeconds.floatValue = sec
+                    if (landMoves.value && sec - landSeconds.floatValue >= 0.25f) landSeconds.floatValue = sec
                 }
             }
             delay(60)
