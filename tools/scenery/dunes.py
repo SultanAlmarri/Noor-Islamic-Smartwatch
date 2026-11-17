@@ -25,9 +25,16 @@ UP = 4                            # the field is refined this many times
 WIND_AZ = -118.0                  # the wind blows towards this bearing of the view (degrees right of its middle):
                                   # towards us and to the left, so the dunes ahead show us their slip faces
 EYE = 1.9                         # metres above the sand
-STAND = 6                         # which of the places found by stands() the camera takes
+STAND = (3383.75, 2305.0, -120.3)  # where the camera stands (field metres x, y; the view's bearing in the field,
+                                  # degrees): the found place nearest to this. (Until 0.19 an index into the list
+                                  # stands() found, 6 on the PC; in a cloud session the list came out in another
+                                  # order and 6 was another view: this is the view the app has shipped since 0.11.)
 RISE = 30.0                       # metres: how much higher the great dune stands than the field round it
 REPOSE = 0.62                     # tangent of the slope sand rests at on a slip face
+GREAT = 2.4                       # how much higher than the field the far great dunes are (the field read seven times
+                                  # larger). 3.6 until 0.19: with the far range gone, one of them stood on the skyline
+                                  # as a long flat-topped ridge against a low Sun, too like a mesa; at 2.4 the horizon
+                                  # is a low line of dunes
 FLATTEN = 0.52                    # the simulation's dunes are too steep to windward: their heights are scaled by this
                                   # (the slip faces are then rebuilt at the true angle)
 
@@ -230,7 +237,13 @@ def build(mode, out):
         json.dump(found, open(keep, 'w'))
     for i, c in enumerate(found):
         print('stand %d: score %.2f' % (i, c[0]), c[5], flush=True)
-    c = found[int(os.environ.get('NOOR_STAND', STAND))]
+    if os.environ.get('NOOR_STAND'):
+        c = found[int(os.environ['NOOR_STAND'])]
+    else:
+        c = min(found, key=lambda f: math.hypot(f[1] - STAND[0], f[2] - STAND[1])
+                + 10.0 * abs(math.degrees(f[4]) - STAND[2]))
+        if math.hypot(c[1] - STAND[0], c[2] - STAND[1]) > 20.0 or abs(math.degrees(c[4]) - STAND[2]) > 3.0:
+            raise SystemExit('the field has no place to stand near %s: not the field this scenery was made from?' % (STAND,))
     cx, cy, cz, VIEW['a'] = c[1], c[2], c[3], c[4]
     fine = None
     if os.environ.get('NOOR_HERO'):
@@ -370,7 +383,7 @@ def build(mode, out):
         L.new(x, m.inputs[0]); L.new(y, m.inputs[1])
         return m.outputs[0]
 
-    # Far off, great dunes: the same field read seven times larger and four times higher, beyond a kilometre.
+    # Far off, great dunes: the same field read seven times larger and GREAT times higher, beyond a kilometre.
     uv2 = N.new('ShaderNodeMapping')
     uv2.vector_type = 'POINT'
     uv2.inputs['Scale'].default_value = (1.0 / (size * 7.0), 1.0 / (size * 7.0), 0.0)
@@ -398,7 +411,7 @@ def build(mode, out):
     gap.inputs['From Min'].default_value = 0.05; gap.inputs['From Max'].default_value = 0.17
     gap.inputs['To Min'].default_value = 1.0; gap.inputs['To Max'].default_value = 1.0     # (whole: no gap is cut for the Sun)
     L.new(azb.outputs[0], gap.inputs['Value'])
-    great = mul(mul(tex2.outputs['Color'], 3.6), mul(farf.outputs[0], gap.outputs[0]))
+    great = mul(mul(tex2.outputs['Color'], GREAT), mul(farf.outputs[0], gap.outputs[0]))
 
     h = add(ground_h, mul(mul(ripa.outputs[0], 0.0085), flat.outputs[0]))
     h = add(h, great)
@@ -449,60 +462,9 @@ def build(mode, out):
         L.new(em.outputs[0], outn.inputs['Surface'])
         print('height image', height.size[:], height.channels, list(height.pixels[:8]), flush=True)
     ground.data.materials.append(mat)
-    mountains(cz)
+    # (Nothing but sand: until 0.19 a range of bare rock stood far beyond it, 46 to 70 km off. The owner, 17 November
+    # 2026: "Remove the distant terrain from the sand dunes. I just want the sand dunes.")
     return cz
-
-
-def mountains(cz):
-    """A range of bare rock far beyond the sand (the Hajar, as seen from the desert's edge): ridged, jagged, low
-    on the horizon, unbroken across the view: the Sun rises over it and sets behind it."""
-    rng = np.random.default_rng(11)
-    nx, ny = 700, 160
-    az = np.radians(np.linspace(-40.0, 40.0, nx))
-    r = np.linspace(46000.0, 70000.0, ny)
-    A, R = np.meshgrid(az, r)
-    X, Y = R * np.sin(A), R * np.cos(A)
-
-    def ridged(x, y, octaves=7):
-        out = np.zeros_like(x)
-        amp, f = 1.0, 1.0 / 9000.0
-        for o in range(octaves):
-            ph = rng.uniform(0, 100, 4)
-            n = np.sin(x * f * 1.7 + ph[0] + 1.3 * np.sin(y * f * 1.1 + ph[1])) * np.cos(y * f * 1.9 + ph[2] + 1.1 * np.sin(x * f * 0.8 + ph[3]))
-            out += amp * (1.0 - np.abs(n))
-            amp *= 0.52
-            f *= 2.03
-        return out / 2.0
-
-    h = ridged(X, Y) ** 2.2 * 2500.0
-    # A range, not a wall: high in its middle depth, falling to the plain in front and behind.
-    depth = (R - r[0]) / (r[-1] - r[0])
-    h *= np.clip(np.sin(np.pi * depth), 0, 1) ** 0.8
-    # A range has high and low stretches of its own: a slow rise and fall along it, nothing cut out of it.
-    h *= 0.62 + 0.38 * np.sin(A * 7.3 + 1.1) * np.sin(A * 3.1 + 0.4)
-    co = np.stack([X, Y, h - cz - 40.0], -1).reshape(-1, 3).astype(np.float32)
-    i = np.arange((ny - 1) * (nx - 1))
-    rr, cc = i // (nx - 1), i % (nx - 1)
-    a = rr * nx + cc
-    faces = np.stack([a, a + 1, a + nx + 1, a + nx], -1).astype(np.int32)
-    me = bpy.data.meshes.new('Mountains')
-    me.vertices.add(len(co))
-    me.vertices.foreach_set('co', co.ravel())
-    me.loops.add(faces.size)
-    me.loops.foreach_set('vertex_index', faces.ravel())
-    me.polygons.add(len(faces))
-    me.polygons.foreach_set('loop_start', np.arange(0, faces.size, 4, dtype=np.int32))
-    me.polygons.foreach_set('loop_total', np.full(len(faces), 4, np.int32))
-    me.polygons.foreach_set('use_smooth', np.ones(len(faces), bool))
-    me.update(calc_edges=True)
-    ob = bpy.data.objects.new('Mountains', me)
-    bpy.context.scene.collection.objects.link(ob)
-    mat = bpy.data.materials.new('Rock')
-    mat.use_nodes = True
-    b = mat.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (0.30, 0.215, 0.165, 1)
-    b.inputs['Roughness'].default_value = 0.9
-    ob.data.materials.append(mat)
 
 
 OUT = {}

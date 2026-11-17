@@ -164,7 +164,8 @@ it as through sunglasses). The sun path and the prayers on it are drawn over the
 - **Six sceneries** (`Biome`; Settings → Home scenery, or "Automatic" by place), each a rendered place with
   foreground, middle distance and far distance, built from real-world data wherever it exists (elevation models for
   the shape of the land, photogrammetry scans for its surfaces, stones, logs and plants): **Arabian dunes** (ranks of
-  dunes with sharp crests and slip faces from a simulated sand sea, ripples underfoot, far ranges unbroken),
+  dunes with sharp crests and slip faces from a simulated sand sea, ripples underfoot, and since 0.19 nothing but
+  sand to the horizon: the far range of bare rock that stood behind it until then is gone, at the owner's word),
   **Pacific Northwest** (a still lake, dark conifers, scanned stones and logs on the shore, and since 0.14 a chain of
   snow mountains over it: the Stuart Range and the Enchantments of the Washington Cascades from the USGS elevation
   model, found by searching the model for a real view of a chain; 0.11 to 0.13 had Mount Rainier alone), **Arctic** (Reinefjorden in Lofoten as Norway's elevation model gives it: an unbroken wall of

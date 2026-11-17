@@ -1448,3 +1448,17 @@ automatic graphics setting ... on by default ... sees your phone and chooses the
   times come first, so it over-represents the night shots. `skia_log.txt` is complete.
 
 **Not tested**: on a phone or watch. Emulator photographs and software renders only (release report).
+
+**The dunes without the far range (High level, 17 November 2026).** The owner: "on the high setting, on the sand dunes,
+I don't want the distant terrain. Remove the distant terrain from the sand dunes. I just want the sand dunes." The
+range of bare rock along the horizon (`mountains()` in `tools/scenery/dunes.py`, 46-70 km off) is gone from the
+script, and the scenery was baked again in a cloud session (Blender 4.5.16, CPU, `-t 3`, four `bakepart`s and
+`packparts`: 20 minutes; each part held about 7.5-8.1 GB, mostly the diced ground, so parts do not save much here).
+The far great dunes were lowered (`GREAT` 3.6 to 2.4): left alone on the skyline, the highest one showed against a low
+Sun as a long flat-topped ridge. `lift` went from 0.0209/0.0225 to 0.0081/0.0032 (the Sun now rises and sets on a
+lower skyline), the Settings picture was made again on the bench. Two things found: `STAND = 6` picked another view in
+the cloud (the stand list comes out in another order on the regenerated surface), so the stand is now pinned by its
+place (`STAND = (3383.75, 2305.0, -120.3)`, the 0.11 view); and that regenerated surface is not quite the PC's (near
+crest about 0.8 degree lower). With no range to stand in front of it, the lowest Suns (0.7 degree, `s_l0`/`s_r0`) now
+light the sand (our own slope and the far crests' rims); before, the range shadowed all of it. Sources and the thumbnail's recipe: `tools/scenery/sources/dunes.md`. Seen in the
+design bench at dawn, sunrise, midday, golden hour, sunset and night; not yet on the emulator or a phone.
