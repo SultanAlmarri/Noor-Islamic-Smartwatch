@@ -36,13 +36,25 @@ adb shell am broadcast -a com.noor.smartwatch.debug.CITY --es city dxb -n $HOOK 
 adb shell "date -u 111406002026.00" >/dev/null
 JSON="$OUT/results.jsonl"; : > "$JSON"
 
+# CPU time (clock ticks of 10 ms, user + system) used so far by the app's main thread, and by the whole app. Unlike the
+# frame times, not inflated by waiting for the emulator's slow software GPU: the work Minhad's code itself does.
+cpu() {
+  local pid; pid=$(adb shell pidof $PKG 2>/dev/null | tr -d '\r' | awk '{print $1}')
+  [ -n "$pid" ] || { echo "0 0"; return; }
+  adb shell "cat /proc/$pid/task/$pid/stat /proc/$pid/stat" 2>/dev/null | tr -d '\r' \
+    | awk '{ sub(/^.*\) /, ""); print $12 + $13 }' | tr '\n' ' '
+}
+
 measure() {   # <name> then the moves as a function name
   local name="$1"; shift
   adb shell dumpsys gfxinfo $PKG reset >/dev/null
+  local before; before=$(cpu)
   "$@"
   sleep 2
+  local after; after=$(cpu)
   adb shell dumpsys gfxinfo $PKG framestats > "$OUT/gfx_$name.txt"
   python3 "$HERE/framestats.py" "$name" "$OUT/gfx_$name.txt" "$JSON" | tee -a "$OUT/summary.txt"
+  echo "$before $after" | awk -v n="$name" '{ printf "%-28s CPU ms: main thread %6d | whole app %6d\n", n, ($3-$1)*10, ($4-$2)*10 }' | tee -a "$OUT/summary.txt" "$OUT/cpu.txt"
 }
 
 swipe() { adb shell input swipe "$@"; }
