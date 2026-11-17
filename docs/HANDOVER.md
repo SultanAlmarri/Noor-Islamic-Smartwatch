@@ -1673,3 +1673,23 @@ dunes at the end of section 30):
 Arctic, Red rock at sunrise and midday: the same arch everywhere, the ring at sunrise behind the land; two of the
 eight photos lost to the emulator's slowness, a locked screen and an "isn't responding" just after the first frame).
 Medium on the emulator: release report. **Not tested**: on a phone or watch.
+
+## 32. Medium painted again (0.21.0, 17 November 2026, phone; watch rebuilt)
+
+**What the owner said** (after trying 0.20.0, with a screenshot of the layered dunes): "I am very disappointed with
+this medium settings sceneries. I cannot believe you just copied the high settings. That's not at all what I wanted. I
+wanted something between the high settings and the low settings. I want you to remake all the sceneries in the medium
+settings, and I really liked the earlier sand dunes design ... I want you to actually improve the medium settings and
+not just copy the high."
+
+**Decision**: Medium is its own drawn sky, between High (rendered pictures of real places) and Low (flat shapes). The
+lead had chosen to light High's own land pictures for Medium (section 30.2); that is withdrawn. The owner's
+screenshot of the layered dunes (section 30.1's land) is the standard every Medium scenery is held to.
+
+**What was done** (a helper on `medium/painted`; section 30.3 has the detail): `PictureLand` removed; the dunes
+unchanged; the other five painted again in the dunes' language (smooth faces lit by the moment, haze from layer to
+layer, soft colour fields, fine texture only near): Green hills over a reservoir, the beach and the open sea, the
+Pacific Northwest's snowy volcano over a fir-lined lake, the Arctic's peaks lit face by face over a fjord, Red rock's
+great butte with its spires over red sand and a pool. The clouds stay the real sky's sets lit for Medium (`SetClouds`).
+The Canvas fallback draws the same shapes. Bench land 329 to 313 ms a frame; the size estimate 59 000 to 46 300. The
+Settings cards for Medium were made again. Not yet on a phone.
