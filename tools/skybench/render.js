@@ -182,7 +182,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const dunes = terrain === 'dunes';
     const SPEC = { dunes: [[16, 3], [20, 16], [24, 32], [26, 50], [26, 72]], hills: [[40, 3], [28, 16], [24, 32], [22, 50], [24, 72]],
       mountains: [[58, 2], [40, 14], [30, 30], [24, 50], [24, 72]], sea: [[16, 0], [1, 8], [1, 20], [12, 54], [18, 74]],
-      forest: [[40, 2], [18, 12], [1, 24], [30, 54], [16, 74]], arctic: [[52, 3], [36, 14], [1, 22], [10, 54], [14, 74]], canyon: [[22, 3], [46, 14], [28, 30], [12, 52], [14, 74]] };
+      forest: [[40, 2], [18, 12], [1, 24], [30, 54], [16, 74]], arctic: [[52, 3], [36, 14], [1, 22], [16, 56], [14, 74]], canyon: [[22, 3], [46, 14], [28, 30], [12, 52], [14, 74]] };
     const DIST = { dunes: [22, 7, 2.8, 1.1, 0.35], hills: [48, 15, 6, 2.2, 0.6], mountains: [34, 14, 6, 2.2, 0.6], sea: [40, 10, 3, 0.8, 0.3],
       forest: [35, 8, 3, 0.9, 0.3], arctic: [15, 6, 3, 0.8, 0.3], canyon: [30, 9, 3.5, 1.2, 0.4] };
     const layers = SPEC[terrain], dists = DIST[terrain];
@@ -215,7 +215,11 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const perfSky = draw(skyC, PRELUDE + src.common + src.sky + FOOTER, skyU, lut, ridge, starsTex, cfg.perf || 0);
     const t1 = performance.now();
     const landC = document.createElement('canvas'); landC.width = W; landC.height = H;
-    const perfLand = draw(landC, PRELUDE + src.common + src.land + FOOTER, landU, lut, ridge, null, cfg.perf || 0);
+    // (0.19.1) As the app builds it (SkyShaders.landSource): the terrain made a constant, so the other terrains' code
+    // goes (cfg.allTerrains: the source as it is).
+    const tid = landU.uTerrain;
+    const landSrc = cfg.allTerrains ? src.land : src.land.replace('float terrainId() { return uTerrain; }', `float terrainId() { return ${tid}.0; }`);
+    const perfLand = draw(landC, PRELUDE + src.common + landSrc + FOOTER, landU, lut, ridge, null, cfg.perf || 0);
     const t2 = performance.now();
 
     const out = document.createElement('canvas'); out.width = W; out.height = H + (cfg.pageBelowDp || 0) * dp;
