@@ -36,6 +36,21 @@ const RAW = process.env.RAW_DIR || path.join(__dirname, '../../app/src/main/res/
       window.MSETS = window.MSETS || {}; window.MSETS[id] = MSets.load(id, meta, imgs);
     }, [id, meta, files]);
   }
+  // (0.22) The medium graphics' painted sceneries the scenes name (cfg.painted: app/src/main/assets/medium/<id>, or a
+  // folder of PNGs given as PAINTED_DIR/<id>, e.g. a painter's delivery before it is packed).
+  const pdir = process.env.PAINTED_DIR || path.join(__dirname, '../../app/src/main/assets/medium/');
+  for (const id of [...new Set(scenes.map(sc => sc.painted).filter(Boolean))]) {
+    const files = {};
+    for (const st of ['night', 'twilight', 'golden_left', 'day_left', 'noon', 'day_right', 'golden_right']) {
+      const f = ['.webp', '.png'].map(e => path.join(pdir, id, st + e)).find(f => fs.existsSync(f));
+      if (f) files[st] = 'data:image/' + (f.endsWith('.png') ? 'png' : 'webp') + ';base64,' + fs.readFileSync(f).toString('base64');
+    }
+    await p.evaluate(async ([id, files]) => {
+      const load = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
+      const imgs = {}; for (const [k, u] of Object.entries(files)) imgs[k] = await load(u);
+      window.PAINTED = window.PAINTED || {}; window.PAINTED[id] = imgs;
+    }, [id, files]);
+  }
   const src = { common: fs.readFileSync(RAW + 'sky_common.agsl', 'utf8'), sky: fs.readFileSync(RAW + 'sky_layer.agsl', 'utf8'), land: fs.readFileSync(RAW + 'land_layer.agsl', 'utf8') };
   for (const sc of scenes) {
     try {

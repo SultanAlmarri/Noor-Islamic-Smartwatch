@@ -299,7 +299,17 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     g.lineWidth = 1.6 * dp; g.strokeStyle = `rgba(255,237,194,${0.95 * pathA})`; g.stroke(path);
     g.restore(); g.restore();
     let landMs = 0;
-    g.drawImage(landC, 0, lift);
+    if (cfg.painted && window.PAINTED && window.PAINTED[cfg.painted]) {
+      // (0.22, PaintedLand.weights) The two lights of the moment, one faded over the other; horizon on row 900 of 1080.
+      const P = window.PAINTED[cfg.painted], ev = f > dd.noonF;
+      const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+      const gold = ev ? 'golden_right' : 'golden_left', day = ev ? 'day_right' : 'day_left';
+      const [A, B, t] = el < -3 ? ['night', 'twilight', sm(-11, -3, el)] : el < 3 ? ['twilight', gold, sm(-3, 3, el)] : el < 15 ? [gold, day, sm(3, 15, el)] : [day, 'noon', sm(22, 50, el)];
+      const k = W / 1080, top = hy - 900 * k + lift;
+      if (P[A]) { g.globalAlpha = fade; g.drawImage(P[A], 0, top, W, 1440 * k); }
+      if (P[B]) { g.globalAlpha = fade * (P[A] ? t : 1); g.drawImage(P[B], 0, top, W, 1440 * k); }
+      g.globalAlpha = fade;
+    } else g.drawImage(landC, 0, lift);
     Clouds.rain(g, W, H, wNow.rain, cfg.time || 0, dp, night);
     // Prayer marks: in the sky, or on the skyline when the Sun is down.
     const skyline = (x) => { let m = 1e9; for (let l = 0; l < 5; l++) { const h = rid[l][Math.round(Math.max(0, Math.min(1, x / W)) * (N - 1))]; m = Math.min(m, base[l] - amp[l] * h); } return m; };
