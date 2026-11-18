@@ -59,7 +59,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -525,8 +525,8 @@ private fun FigureEightCanvas(phase: () -> Float, rtl: Boolean, modifier: Modifi
 }
 
 /**
- * A lemniscate of Bernoulli (made a little fuller), drawn as a faint line; a phone glides along it upright, twisting a
- * little as a wrist turns, with a trail that fades behind it. Strokes in plain colours, faded with alpha (a gradient brush on a stroke
+ * A lemniscate of Bernoulli (made a little fuller), drawn as a faint line; a phone, held screen up as in the hand,
+ * travels it and tilts as it goes, with a trail that fades behind it. Strokes in plain colours, faded with alpha (a gradient brush on a stroke
  * stops the emulator's graphics: HANDOVER.md section 28).
  */
 private fun DrawScope.nudgeFigure(phase: Float, rtl: Boolean, trail: Color, track: Color, body: Color, screen: Color) {
@@ -556,21 +556,54 @@ private fun DrawScope.nudgeFigure(phase: Float, rtl: Boolean, trail: Color, trac
             cap = StrokeCap.Round, blendMode = androidx.compose.ui.graphics.BlendMode.Src)
     }
     drawContext.canvas.restore()
-    // The phone, held upright as it is in the hand (the owner: leaning sideways along the curve looked wrong); the turn
-    // of the wrist shows as a gentle twist about its own upright axis, the phone narrowing a little as it turns.
+    // The phone as it is held for this (the owner's reference video): in the hand, screen up, its top pointing away, seen
+    // at a slant from above; it travels the figure and tilts as it goes, rolling towards the outside of each loop and
+    // pitching as it climbs and falls (the gesture turns the phone about every axis). A true 3D turn (Android's
+    // Camera), its thickness showing on the side it rolls away from. (0.22: leaning in the picture's plane, then held
+    // upright, then turned along the line like a car: none of them looked like a phone in a hand.)
     val p = pt(t0)
-    val twist = (0.80 + 0.20 * abs(cos(t0))).toFloat()
+    val roll = (30.0 * cos(t0) * dir).toFloat()
+    val pitch = (38.0 + 14.0 * sin(2 * t0)).toFloat()
     // A soft glow under the phone (a filled circle: a gradient on a fill is safe, only on a stroke it is not).
     val glow = 24.dp.toPx()
     drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(trail.copy(alpha = 0.30f), trail.copy(alpha = 0f)), p, glow), glow, p)
-    scale(twist, 1f, p) {
-        drawRoundRect(body, Offset(p.x - phoneW / 2, p.y - phoneH / 2), androidx.compose.ui.geometry.Size(phoneW, phoneH),
-            androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))
-        val inset = 1.7.dp.toPx()
-        drawRoundRect(screen, Offset(p.x - phoneW / 2 + inset, p.y - phoneH / 2 + inset * 1.8f),
-            androidx.compose.ui.geometry.Size(phoneW - 2 * inset, phoneH - inset * 3.6f), androidx.compose.ui.geometry.CornerRadius(2.5.dp.toPx()))
-        // On its screen, a compass needle in gold.
-        val nh = 6.dp.toPx(); val nw = 2.4.dp.toPx()
-        drawPath(Path().apply { moveTo(p.x, p.y - nh); lineTo(p.x + nw, p.y); lineTo(p.x, p.y + nh); lineTo(p.x - nw, p.y); close() }, trail)
+    val w = phoneW * 1.25f; val h = phoneH * 1.25f; val depth = 2.8.dp.toPx()
+    // The 3D turn worked out here (not Android's Camera, which software renders ignore): a point of the phone (x right,
+    // y down, z away from the viewer, the phone's middle at 0) pitched about its width (its top away from the viewer),
+    // rolled about its length, then seen in perspective from a distance of a few phone heights.
+    val ca = cos(Math.toRadians(pitch.toDouble())); val sa = sin(Math.toRadians(pitch.toDouble()))
+    val cb = cos(Math.toRadians(roll.toDouble())); val sb = sin(Math.toRadians(roll.toDouble()))
+    val dist = h * 4.5
+    fun proj(x: Double, y: Double, z: Double): Offset {
+        val y1 = y * ca - z * sa; val z1 = y * sa + z * ca
+        val x2 = x * cb + z1 * sb; val z2 = -x * sb + z1 * cb
+        val k = dist / (dist + z2)
+        return Offset(p.x + (x2 * k).toFloat(), p.y + (y1 * k).toFloat())
     }
+    // A rounded rectangle's outline (half sizes hx, hy, corner radius rr), at depth z, as a projected path.
+    fun outline(hx: Double, hy: Double, rr: Double, z: Double, dy: Double = 0.0): Path {
+        val path = Path()
+        val corners = listOf(Triple(hx - rr, -hy + rr, -90.0), Triple(hx - rr, hy - rr, 0.0), Triple(-hx + rr, hy - rr, 90.0), Triple(-hx + rr, -hy + rr, 180.0))
+        var first = true
+        for ((cx0, cy0, start) in corners) for (k in 0..6) {
+            val a = Math.toRadians(start + 15.0 * k)
+            val q = proj(cx0 + rr * cos(a), dy + cy0 + rr * sin(a), z)
+            if (first) { path.moveTo(q.x, q.y); first = false } else path.lineTo(q.x, q.y)
+        }
+        path.close()
+        return path
+    }
+    val hx = w / 2.0; val hy = h / 2.0; val rr = 4.dp.toPx().toDouble()
+    val side = body.copy(red = body.red * 0.70f, green = body.green * 0.70f, blue = body.blue * 0.70f)
+    // Its back and sides (a few slices make a solid edge), then its face, screen and needle.
+    for (k in 4 downTo 1) drawPath(outline(hx, hy, rr, depth * k / 4.0), side)
+    drawPath(outline(hx, hy, rr, 0.0), body)
+    val inset = 1.8.dp.toPx().toDouble()
+    drawPath(outline(hx - inset, hy - inset * 1.8, 2.6.dp.toPx().toDouble(), 0.0), screen)
+    // On its screen, a compass needle in gold, pointing to the phone's top.
+    val nh = 7.dp.toPx().toDouble(); val nw = 2.8.dp.toPx().toDouble()
+    drawPath(Path().apply {
+        val a0 = proj(0.0, -nh, 0.0); val a1 = proj(nw, 0.0, 0.0); val a2 = proj(0.0, nh, 0.0); val a3 = proj(-nw, 0.0, 0.0)
+        moveTo(a0.x, a0.y); lineTo(a1.x, a1.y); lineTo(a2.x, a2.y); lineTo(a3.x, a3.y); close()
+    }, trail.copy(alpha = 1f))
 }
