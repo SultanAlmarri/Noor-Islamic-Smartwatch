@@ -40,6 +40,8 @@ def pack(final, sid):
         # The land's outline is the same in every light; the highest of the seven is kept (a crest lit in one, dark in another).
         tops = sk if tops is None else [max(a, b) for a, b in zip(tops, sk)]
         im.save(os.path.join(dst, st + ".webp"), "WEBP", quality=88, alpha_quality=90, method=6)
+    # The land must stay below the home screen's countdown (PaintedLandTest.MAX_RISE).
+    assert max(tops) <= 0.225, f"{sid}: the land rises {max(tops):.3f} of the width over the horizon (at most 0.225)"
     json.dump({"width": W, "height": H, "horizon": HORIZON, "skyline": tops}, open(os.path.join(dst, "meta.json"), "w"))
     card = Image.open(os.path.join(src, "card.png")).convert("RGB")
     assert card.size == (560, 420), f"{sid}/card: {card.size}"

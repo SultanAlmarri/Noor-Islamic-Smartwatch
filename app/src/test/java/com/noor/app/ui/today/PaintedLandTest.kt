@@ -47,6 +47,8 @@ class PaintedLandTest {
         assertEquals(setOf("pnw", "meadow", "arctic", "ocean", "canyon"), Terrain.entries.mapNotNull { PaintedLand.idOf(it) }.toSet())
     }
 
+    private companion object { const val MAX_RISE = 0.225 }
+
     @Test fun everyPaintedSceneryHasItsSevenLights() {
         for (t in Terrain.entries) {
             val id = PaintedLand.idOf(t) ?: continue
@@ -55,6 +57,9 @@ class PaintedLandTest {
             assertEquals(PaintedLand.HORIZON, meta.getInt("horizon"))
             val sky = meta.getJSONArray("skyline")
             assertTrue("$id skyline", sky.length() >= 100)
+            // The land stays below the countdown: its white digits stand about a quarter of the width over the horizon,
+            // and a snowy peak behind them made the time unreadable (the first arctic, 18 November 2026).
+            for (j in 0 until sky.length()) assertTrue("$id rises to ${sky.getDouble(j)} of the width at strip $j", sky.getDouble(j) <= MAX_RISE)
             for (s in PaintedLand.STATES) {
                 val f = File(dir, "$s.webp")
                 assertTrue("$id/$s", f.isFile && f.length() > 10_000)
