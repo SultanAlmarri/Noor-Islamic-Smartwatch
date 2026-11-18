@@ -216,11 +216,19 @@ fun rememberDaylight(s: AppSettings, tables: OfficialTimetables?): Boolean? {
     val minute by produceState(System.currentTimeMillis() / 60_000) {
         while (true) { delay(60_000 - System.currentTimeMillis() % 60_000); value = System.currentTimeMillis() / 60_000 }
     }
-    return remember(s, place, minute) {
+    // (0.22) The day's sunrise and sunset are worked out once a day (and when the settings or the timetables change),
+    // not every minute on the main thread; each minute only compares the time with them.
+    val date = remember(place, minute) { Instant.ofEpochSecond(minute * 60).atZone(place.zone).toLocalDate() }
+    val times = remember(s, place, date, tables) {
+        runCatching {
+            val day = PrayerProvider.resolve(date, place, PrayerProvider.profile(s, place), s, tables).day
+            day.instant(Prayer.SHURUQ) to day.instant(Prayer.MAGHRIB)
+        }.getOrNull()
+    }
+    return remember(times, minute) {
         runCatching {
             val now = Instant.now()
-            val day = PrayerProvider.resolve(now.atZone(place.zone).toLocalDate(), place, PrayerProvider.profile(s, place), s, tables).day
-            val rise = day.instant(Prayer.SHURUQ); val set = day.instant(Prayer.MAGHRIB)
+            val rise = times?.first; val set = times?.second
             if (rise == null || set == null) SunPath.elevation(now, place.point) > -0.833 else !now.isBefore(rise) && now.isBefore(set)
         }.getOrNull()
     }
