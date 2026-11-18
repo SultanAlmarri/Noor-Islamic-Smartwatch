@@ -157,7 +157,11 @@ fun PrayerAlertScreen(
                 // (0.18: the sound effects are back, as Sound: birds and the like, real recordings.)
                 val modes = if (prayer == Prayer.SHURUQ) listOf(AlertMode.SOUND, AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
                 else listOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.SOUND, AlertMode.NOTIFICATION, AlertMode.SILENT)
-                ModeTiles(modes, if (prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM) AlertMode.ADHAN else a.mode) { vm.setMode(prayer, it) }
+                ModeTiles(modes, if (prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM) AlertMode.ADHAN else a.mode) {
+                    // (0.22) A prayer with the user's own recording shows the Adhan tile chosen (it is their Adhan):
+                    // tapping that tile again keeps the recording; it used to put the Makkah voice in its place.
+                    if (!(it == AlertMode.ADHAN && prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM)) vm.setMode(prayer, it)
+                }
             }
 
             if (a.mode in VOICE_MODES || a.mode == AlertMode.SOUND) {

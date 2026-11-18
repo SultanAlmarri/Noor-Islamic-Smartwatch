@@ -135,7 +135,12 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
     // draws them, at once (until 0.19 the level was at the foot of the page and the pictures were always the high
     // graphics': the owner chose Low and saw nothing change).
     val context = androidx.compose.ui.platform.LocalContext.current
-    val autoLevel = SkyLevels.autoLevel.value ?: androidx.compose.runtime.remember { SkyLevels.auto(context) }
+    val autoGuess = SkyLevels.autoLevel.value ?: androidx.compose.runtime.remember { SkyLevels.auto(context) }
+    // (0.22) Where the real sky cannot run on this phone (no OpenGL ES 3, or it failed to start), the home screen draws
+    // the medium graphics' sky in its place: automatic says so, rather than "High" (the logic bug hunt).
+    val realUnusable = com.noor.app.sky.RealSky.unusable.intValue == 1 ||
+        (com.noor.app.sky.RealSky.unusable.intValue < 0 && androidx.compose.runtime.remember { !com.noor.app.sky.RealSky.usable(context, s.skyGraphics) })
+    val autoLevel = if (autoGuess == SkyLevel.HIGH && realUnusable) SkyLevel.MEDIUM else autoGuess
     val level = when (s.skyGraphics) {
         SkyGraphics.AUTO -> autoLevel
         SkyGraphics.HIGH -> SkyLevel.HIGH
