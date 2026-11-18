@@ -631,8 +631,8 @@ internal object WidgetRender {
         val ws = r.ws!!
         val k = r.k
         val avail = r.wDp - 2 * PAD
-        // Shuruq when asked for and there is room for six (a cell of 50 dp or more); otherwise the five prayers.
-        val shown = Prayer.entries.filter { it != Prayer.SHURUQ || (r.o.shuruq && avail / 6f >= 50f) }
+        // Shuruq when asked for and there is room for six (a cell of 58 dp or more); otherwise the five prayers.
+        val shown = Prayer.entries.filter { it != Prayer.SHURUQ || (r.o.shuruq && avail / 6f >= 58f) }
         val n = shown.size
         val inner = r.hDp - 2 * 8f
         // Short (a 4x1 on many phones, under 76 dp): no header; the row alone, the next prayer's cell carrying the
