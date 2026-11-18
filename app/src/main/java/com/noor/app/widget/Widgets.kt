@@ -95,6 +95,15 @@ object Widgets {
     /** When the sky pictures are next due (set by a full update; a minute's update leaves the pictures alone). */
     private var pictureDue: Instant? = null
 
+    /**
+     * What the widgets were last built to say (set by a full update), less the moments it changes at. A minute's update
+     * changes the countdown alone, so it is only right while the rest is still this: the same prayer, time, sign, date
+     * and place.
+     */
+    private var shown: StatusNotification.Content? = null
+
+    private fun said(c: StatusNotification.Content) = c.copy(line = "", nextAt = Instant.EPOCH, refreshAt = Instant.EPOCH)
+
     fun refreshAsync(context: Context) {
         val app = context.applicationContext
         scope.launch { runCatching { refresh(app) } }
@@ -122,6 +131,7 @@ object Widgets {
         val manager = AppWidgetManager.getInstance(app)
         if (config == null || place == null) {
             for ((cls, ids) in all) for (id in ids) runCatching { manager.updateAppWidget(id, noPlace(ctx, app, cls)) }
+            shown = null
             cancelRefresh(app)
             return@withLock
         }
@@ -133,7 +143,11 @@ object Widgets {
             else -> CountMode.MINUTES
         }
         val pictures = pictureDue
-        if (minuteOnly && pictures != null && now.isBefore(pictures) && now.isBefore(c.refreshAt)) {
+        // (0.22) The minute's update armed for the moment the display changes (the end of a "+" period, a prayer with
+        // the "+" turned off, midnight) comes a few hundredths of a second after it, before the full update armed for
+        // it: it must then rebuild everything. Until 0.22 it changed the countdown alone, and the widgets went on naming
+        // the old prayer while counting to the next, until the next picture, up to 15 minutes later.
+        if (minuteOnly && pictures != null && now.isBefore(pictures) && now.isBefore(c.refreshAt) && shown == said(c)) {
             // A new minute: only the countdown's picture or text changes (the seconds turn by themselves).
             for ((cls, ids) in all) for (id in ids) runCatching {
                 partialUpdate(manager, id, RemoteViews(app.packageName, layoutOf(cls)).apply { countdown(this, app, c, now, f, mode, s.numerals) })
@@ -152,6 +166,7 @@ object Widgets {
             manager.updateAppWidget(id, views)
         }
         pictureDue = now.plus(PICTURE_EVERY)
+        shown = said(c)
         armNext(app, c, now, now.plus(PICTURE_EVERY), mode)
     }
 
