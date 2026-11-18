@@ -2,6 +2,7 @@ package com.noor.app.sky
 
 import com.noor.app.ui.today.CloudField
 import com.noor.app.ui.today.NightSky
+import com.noor.app.ui.today.SkyGeometry
 import com.noor.app.ui.today.SkyLook
 import com.noor.app.ui.today.SkyScene
 import com.noor.app.ui.today.SkyView
@@ -935,7 +936,14 @@ internal class RealSkyFrame(
             // Below the horizon the Sun is where it truly is; above it, where the path draws it.
             // (Over a scenery with a skyline of its own the path stands on the land: there the Sun is still drawn above
             // the level horizon for a while after its true height has gone under it.)
-            val sunDir = if (el > 0 || seen[1] > sin(el * DEG)) seen else dirAzEl(az, el * DEG)
+            // (0.23) On the sky dial: the Sun drawn where the path has it while it is up; as it goes under, its glow
+            // sinks to where it truly is (SkyGeometry.onDial), so the dusk lies on the true horizon, without a jump.
+            val sunDir = if (view.geometry.dial) {
+                val t = dirAzEl(az, el * DEG); val k = SkyGeometry.onDial(el)
+                val v = FloatArray(3) { t[it] + (seen[it] - t[it]) * k }
+                val l = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+                floatArrayOf(v[0] / l, v[1] / l, v[2] / l)
+            } else if (el > 0 || seen[1] > sin(el * DEG)) seen else dirAzEl(az, el * DEG)
             val moonUp = look.moonVisibility > 0f
             val moonDir = if (moonUp) ray(look.moonX, look.moonY, w, h, focalPx, horizon, flip) else floatArrayOf(0f, -0.2f, 0.98f)
             // By day the light falls from the side of the Sun's half of the sky (where it rose in the morning, where it

@@ -120,7 +120,7 @@ internal fun SimpleSkyLayer(
 }
 
 private fun geometry(scene: SkyScene, layout: SceneLayout, w: Float, h: Float, rtl: Boolean) =
-    SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+    SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, layout.dial)
 
 private fun ss(a: Float, b: Float, x: Float): Float {
     val t = ((x - a) / (b - a)).coerceIn(0f, 1f)
