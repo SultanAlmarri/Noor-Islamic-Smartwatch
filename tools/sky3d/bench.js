@@ -92,7 +92,6 @@ const P = {
   turnHigh: false, turnMid: false, turnLow: false, turnHigh2: false, turnMid2: false, turnLow2: false,   // a set's picture turned about, left for right (0.14)
   skyHigh2: null, skyMid2: null, skyLow2: null, mixHigh: 0, mixMid: 0, mixLow: 0,         // the next set on the way (it stands 64 degrees along; seen once the first has passed far enough). mix*: unused
   sunPart: 1, halo: 0, shade: 0, overcast: 0,                                                                   // the low clouds stand apart round the Sun; a halo
-  dial: true,                                    // (0.23) the sky dial (SceneLayout.dial); false: the path on the true horizon
   focal: 1.15, eye: 60.0, horizon: 911 / 2340, arcTop: 596 / 2340, ground: 1110 / 2340, textBottom: 554 / 2340, panelTop: 1126 / 2340,
   panelTint: 0.5, light: 0, cloudScale: 1.0, sceneScale: 1.0, steps: 1.0, text: 1, panel: 1,
 };
@@ -143,14 +142,9 @@ function chart() {
   const hy = hz() * H, at = P.arcTop * H, gy = P.ground * H;
   const x = f => { const uu = (-0.04 + 1.08 * warp(f)) * W; return P.rtl ? W - uu : uu; };
   // (0.20, SkyGeometry.y) One arch over every scenery: the height in proportion to the sine of the apparent elevation.
-  // (0.23, the sky dial, SkyGeometry.baseY) It stands on a baseline over the true horizon, DIAL_BASE of the width (at
-  // most DIAL_SHARE of the way up to the top of the arch), and its night is a short dip under it (DIAL_DIP of the way
-  // down to the horizon). dial: false draws the path of 0.20 to 0.22, on the true horizon.
-  const by = P.dial ? hy - Math.max(0, Math.min(0.14 * W, 0.68 * (hy - at))) : hy;
   const sinMax = Math.sin(apparent(maxEl) * Math.PI / 180);
-  const dip = by < hy - 0.5 ? 0.45 * (hy - by) : gy - hy;
-  const y = (el, f) => { const e = apparent(el); return e >= 0 ? by - Math.sin(e * Math.PI / 180) / sinMax * (by - at) : by + (-e / -minEl) * dip; };
-  return { x, y, rise, set, fajr, isha, by };
+  const y = (el, f) => { const e = apparent(el); return e >= 0 ? hy - Math.sin(e * Math.PI / 180) / sinMax * (hy - at) : hy + (-e / -minEl) * (gy - hy); };
+  return { x, y, rise, set, fajr, isha };
 }
 function viewRay(px, py) {
   let x = px - 0.5 * W; if (P.rtl) x = -x;
@@ -163,11 +157,8 @@ function updateUniforms() {
   const f = ((P.tod % 1) + 1) % 1;
   const el = elevationAt(f);
   const sx = ch.x(f), sy = ch.y(el, f);
-  const seen = viewRay(sx, sy);
-  const az = Math.atan2(seen[0], seen[2]);
-  // (0.23, RealSkyFrame.of) On the dial while it is up; as it goes under, its glow sinks to where it truly is.
-  const onDial = P.dial ? smooth(-3, -0.3, el) : (el > 0 || seen[1] > Math.sin(el * DEG) ? 1 : 0), trueDir = dirAzEl(az, el * DEG);
-  const drawn = norm(seen.map((v, i) => trueDir[i] + (v - trueDir[i]) * onDial));
+  const drawn = viewRay(sx, sy);
+  const az = Math.atan2(drawn[0], drawn[2]);
   const drawnEl = Math.asin(drawn[1]) / DEG;
   const night = 1 - smooth(-14, -1, el);
   // The moon rides the Sun's path, as far behind it as it is old.
@@ -568,14 +559,6 @@ function prayerFractions() {
   const asrEl = Math.atan(1 / (1 + Math.tan(Math.abs(P.lat - decl) * DEG))) / DEG;
   return { FAJR: crossing(-18, true), SHURUQ: crossing(-0.833, true), DHUHR: 0.5 + 2 / 1440, ASR: crossing(asrEl, false), MAGHRIB: crossing(-0.833, false), ISHA: crossing(-18, false) };
 }
-// (0.23, LivingSky.frontSun) The Sun drawn in front of the land that stands before it: its glow, a disc, a white heart.
-function frontSun(g, x, y, disc, a, core, glow, dp) {
-  const r = disc * 4.2, gr = g.createRadialGradient(x, y, 0, x, y, r);
-  gr.addColorStop(0, rgba(glow, 0.55 * a)); gr.addColorStop(0.35, rgba(glow, 0.22 * a)); gr.addColorStop(1, rgba(glow, 0));
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
-  g.fillStyle = rgba(core, a); g.beginPath(); g.arc(x, y, disc * 1.05, 0, 7); g.fill();
-  g.fillStyle = `rgba(255,255,255,${0.9 * a})`; g.beginPath(); g.arc(x, y, disc * 0.6, 0, 7); g.fill();
-}
 function overlay(g, ox = 0, oy = 0, s = 1) {
   if (!P.arc) return;
   const ch = chart(), dp = DP();
@@ -606,7 +589,7 @@ function overlay(g, ox = 0, oy = 0, s = 1) {
     // under the line, stronger by day.
     const land = LAND[(BIOMES[P.biome] || BIOMES[0]).id];
     const sky = land && land.meta.skyline;
-    g.save(); g.beginPath(); g.rect(0, 0, W, ch.by); g.clip();
+    g.save(); g.beginPath(); g.rect(0, 0, W, hy); g.clip();
     const disc = 0.0135 * P.focal * W, reach = disc * 3.2;
     const day = smooth(-4, 12, el);
     const meet = c => { const gr = g.createRadialGradient(sx, sy, 0, sx, sy, reach); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.24, 'rgba(0,0,0,0)'); gr.addColorStop(0.62, c); gr.addColorStop(1, c); return gr; };
@@ -619,12 +602,18 @@ function overlay(g, ox = 0, oy = 0, s = 1) {
     g.strokeStyle = meet(rgba(sunGlow, 0.24)); g.lineWidth = stroke * 4; path(); g.stroke();
     g.strokeStyle = meet(rgba(sunCore, 0.95)); g.lineWidth = stroke; path(); g.stroke();
     g.restore();
-    // (0.23) Where the land stands in front of the Sun, the Sun itself is drawn in front of it (SunLift.frontSun).
-    if (sky && el > -1.1) {
+    // Where the land stands in front of the Sun, a ring on the path shows where it is (SunLift.skylineY in the app).
+    if (sky && el > -1) {
       const n = sky.length, u = Math.min(0.9999, Math.max(0, sx / W)), k = Math.min(n - 1, Math.floor(u * n));
       const top = Math.min(hy, hy - sky[P.rtl ? k : n - 1 - k] * P.focal * W);
-      const hidden = smooth(-disc * 0.6, disc * 1.2, sy - top) * smooth(-1.1, -0.8, el);
-      if (hidden > 0.01) frontSun(g, sx, sy, disc, hidden, sunCore, sunGlow, dp);
+      const hidden = smooth(-disc * 0.6, disc * 1.2, sy - top) * smooth(-1, -0.4, el);
+      if (hidden > 0.01) {
+        const ring = (r, c, fill, wdt) => { g.beginPath(); g.arc(sx, sy, r, 0, 7); if (fill) { g.fillStyle = c; g.fill(); } else { g.strokeStyle = c; g.lineWidth = wdt; g.stroke(); } };
+        ring(disc * 1.9, `rgba(0,0,0,${0.16 * hidden})`, true);
+        ring(disc * 1.6, rgba(sunGlow, 0.30 * hidden), true);
+        ring(disc * 1.15, rgba(sunCore, 0.95 * hidden), false, 1.6 * dp);
+        ring(disc * 0.32, `rgba(255,255,255,${0.85 * hidden})`, true);
+      }
     }
   }
   // The prayers on the path (layer 5).
@@ -632,7 +621,7 @@ function overlay(g, ox = 0, oy = 0, s = 1) {
   for (const [p, mf] of Object.entries(marks)) {
     const x = ch.x(mf), y = ch.y(elevationAt(mf), mf);
     const passed = smooth(-1, 1, (f - mf) / (4 / 1440));
-    if (y > ch.by + 2 * dp) { g.fillStyle = 'rgba(0,0,0,0.28)'; g.beginPath(); g.arc(x, y, 7 * dp, 0, 7); g.fill(); }
+    if (y > hy + 2 * dp) { g.fillStyle = 'rgba(0,0,0,0.28)'; g.beginPath(); g.arc(x, y, 7 * dp, 0, 7); g.fill(); }
     if (passed < 1) { g.strokeStyle = `rgba(255,255,255,${0.8 * (1 - passed)})`; g.lineWidth = 1.2 * dp; g.beginPath(); g.arc(x, y, 3.4 * dp, 0, 7); g.stroke(); }
     if (passed > 0) { g.fillStyle = `rgba(255,255,255,${0.95 * passed})`; g.beginPath(); g.arc(x, y, (3.4 - 0.4 * passed) * dp, 0, 7); g.fill(); }
   }

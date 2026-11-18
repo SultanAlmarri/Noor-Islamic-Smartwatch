@@ -195,14 +195,12 @@ float4 render(float2 fc) {
         if (l > capL) col = pow(lin * (capL / l), float3(1.0 / 2.2));
     }
 
-    // The Sun's disc, which goes behind the clouds.
+    // The Sun's disc, which sinks behind the true horizon and goes behind the clouds.
     float2 sd = (fc - uSunPos) / uDp;
     float r = length(sd);
     float above = smoothstep(uHorizon + 0.5 * uDp, uHorizon - 0.5 * uDp, fc.y);
     float rd = 7.5;
-    // (0.23) On the sky dial the Sun stands over the land: its disc is there from Shuruq to Maghrib (its true height
-    // -0.83 degrees at both), as the real sky's is.
-    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above * smoothstep(-1.10, -0.80, uSunEl);
+    float disc = smoothstep(rd + 0.7, rd - 0.7, r) * above;
     if (disc > 0.0) {
         // The Sun adds light to the sky behind it: never darker than the sky, so it cannot turn black at the horizon.
         float limb = 1.0 - 0.45 * (1.0 - sqrt(sat(1.0 - (r / rd) * (r / rd))));

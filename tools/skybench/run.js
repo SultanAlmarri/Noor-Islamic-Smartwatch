@@ -45,14 +45,11 @@ const RAW = process.env.RAW_DIR || path.join(__dirname, '../../app/src/main/res/
       const f = ['.webp', '.png'].map(e => path.join(pdir, id, st + e)).find(f => fs.existsSync(f));
       if (f) files[st] = 'data:image/' + (f.endsWith('.png') ? 'png' : 'webp') + ';base64,' + fs.readFileSync(f).toString('base64');
     }
-    const metaF = path.join(pdir, id, 'meta.json');
-    const skyline = fs.existsSync(metaF) ? JSON.parse(fs.readFileSync(metaF, 'utf8')).skyline : null;
-    await p.evaluate(async ([id, files, skyline]) => {
+    await p.evaluate(async ([id, files]) => {
       const load = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
       const imgs = {}; for (const [k, u] of Object.entries(files)) imgs[k] = await load(u);
-      imgs.skyline = skyline;
       window.PAINTED = window.PAINTED || {}; window.PAINTED[id] = imgs;
-    }, [id, files, skyline]);
+    }, [id, files]);
   }
   const src = { common: fs.readFileSync(RAW + 'sky_common.agsl', 'utf8'), sky: fs.readFileSync(RAW + 'sky_layer.agsl', 'utf8'), land: fs.readFileSync(RAW + 'land_layer.agsl', 'utf8') };
   for (const sc of scenes) {

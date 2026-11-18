@@ -57,12 +57,11 @@ class LivingSkyTest {
      * and sunset, so it is symmetrical about the Sun's highest point and round at the top (in proportion to the
      * elevation it met itself at noon in a point).
      */
-    @Test fun theSunsPathIsOneEvenArchOverEveryScenery() = listOf(false, true).forEach { dial ->
-        // (0.23: the same with the sky dial, the arch standing on its baseline over the land.)
-        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = false, dial = dial)
+    @Test fun theSunsPathIsOneEvenArchOverEveryScenery() {
+        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = false)
         // The same path whatever the scenery: the geometry knows nothing of the land.
         for (t in Terrain.entries) {
-            val other = SkyGeometry(scene.copy(terrain = t), 1080f, 900f, 700f, 1100f, rtl = false, dial = dial)
+            val other = SkyGeometry(scene.copy(terrain = t), 1080f, 900f, 700f, 1100f, rtl = false)
             var f = 0.0
             while (f <= 1.0) { assertEquals(g.x(f), other.x(f), 0f); assertEquals(g.y(scene.elevationAt(f), f), other.y(scene.elevationAt(f), f), 0f); f += 0.05 }
         }

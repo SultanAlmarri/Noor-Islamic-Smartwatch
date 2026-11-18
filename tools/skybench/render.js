@@ -98,19 +98,13 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const refr = (el) => { const h = Math.max(el, -1.9); return 1.02 / Math.tan((h + 10.3 / (h + 5.11)) * DEG) / 60; };
     const hLift = (el) => { if (el >= -0.8333) return refr(el) * (0.5667 / refr(-0.8333)) + 0.2667; const t = Math.max(0, Math.min(1, (el + 4) / (4 - 0.8333))); return 0.8333 * t * t * (3 - 2 * t); };
     const app = (e) => e + hLift(e); const maxApp = app(maxEl);
-    // (0.20, SkyGeometry.y) The height in proportion to the sine of the apparent elevation; (0.23) the sky dial: on a
-    // baseline DIAL_LIFT of the way from the horizon to the top of the arch, its night a short dip under it.
-    const by = cfg.dial === false ? hy : hy - Math.max(0, Math.min(0.14 * W, 0.68 * (hy - arcTop))), sinMax = Math.sin(maxApp * DEG);
-    const dipD = by < hy - 0.5 ? 0.45 * (hy - by) : groundY - hy;
-    const yOf = (e0) => { const e = app(e0); return e >= 0 ? by - Math.sin(e * DEG) / sinMax * (by - arcTop) : by + (-e / -minEl) * dipD; };
+    const yOf = (e0) => { const e = app(e0); return e >= 0 ? hy - (e / maxApp) * (hy - arcTop) : hy + (-e / -minEl) * (groundY - hy); };
     const sunX = xOf(f), sunY = yOf(el);
     const altTop = 80, altPow = 1.25;
     const altAt = (y) => altTop * Math.pow(Math.max(0, Math.min(1, (hy - y) / hy)), altPow);
     const fov = Math.max(1.6, Math.min(2.6, cfg.wDp * 0.0051));
     const sunAz = (sunX / W - 0.5) * fov;
-    // (0.23, SkyLook.at) On the dial while it is up; as it goes under, its glow sinks to where it truly is.
-    const onDial = cfg.dial === false ? (el > 0 ? 1 : 0) : smooth(-3, -0.3, el);
-    const altDraw = el + (altAt(sunY) - el) * onDial;
+    const altDraw = el > 0 ? altAt(sunY) : el;
     const nx = 48, ny = 32, lutPow = 2;
     const fr = Atmo.frame({ sunEl: el, sunAz, sunAltDraw: altDraw * DEG, fov, apow: lutPow, nx, ny, capAlt: altAt(arcTop - 16 * dp) });
     const sd = Atmo.dir(sunAz, altDraw * DEG);
@@ -295,6 +289,15 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       window.LAST_CLOUDS = laid.draws;
     }
     const t4 = performance.now();
+    // Sun path above the horizon (behind the land): dashed, gold where the day has passed.
+    g.save(); g.beginPath(); g.rect(0, 0, W, hy); g.clip();
+    const path = new Path2D(); dd.samples.forEach(([fq, e], i) => { const x = xOf(fq), y = yOf(e); i ? path.lineTo(x, y) : path.moveTo(x, y); });
+    g.setLineDash([2 * dp, 5 * dp]); g.lineCap = 'round'; g.lineWidth = 1.3 * dp; g.strokeStyle = `rgba(255,255,255,${0.5 * pathA})`; g.stroke(path);
+    g.setLineDash([]);
+    g.save(); g.beginPath(); g.rect(0, 0, sunX, hy); g.clip();
+    g.lineWidth = 6.4 * dp; g.strokeStyle = `rgba(255,213,140,${0.20 * pathA})`; g.stroke(path);
+    g.lineWidth = 1.6 * dp; g.strokeStyle = `rgba(255,237,194,${0.95 * pathA})`; g.stroke(path);
+    g.restore(); g.restore();
     let landMs = 0;
     if (cfg.painted && window.PAINTED && window.PAINTED[cfg.painted]) {
       // (0.22, PaintedLand.weights) The two lights of the moment, one faded over the other; horizon on row 900 of 1080.
@@ -308,37 +311,13 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       g.globalAlpha = fade;
     } else g.drawImage(landC, 0, lift);
     Clouds.rain(g, W, H, wNow.rain, cfg.time || 0, dp, night);
-    // (0.20, LivingSky layer 4b) The Sun's path in front of the land; (0.23) on the sky dial, above its baseline.
-    g.save(); g.globalAlpha = 1; g.beginPath(); g.rect(0, 0, W, by); g.clip();
-    const path = new Path2D(); dd.samples.forEach(([fq, e], i) => { const x = xOf(fq), y = yOf(e); i ? path.lineTo(x, y) : path.moveTo(x, y); });
-    g.lineCap = 'round'; g.lineWidth = 3.8 * dp; g.strokeStyle = `rgba(0,0,0,${0.10 * pathA})`; g.stroke(path);
-    g.setLineDash([2 * dp, 5 * dp]); g.lineWidth = 1.3 * dp; g.strokeStyle = `rgba(255,255,255,${0.55 * pathA})`; g.stroke(path);
-    g.setLineDash([]);
-    g.save(); g.beginPath(); g.rect(0, 0, sunX, by); g.clip();
-    g.lineWidth = 6.4 * dp; g.strokeStyle = `rgba(255,213,140,${0.24 * pathA})`; g.stroke(path);
-    g.lineWidth = 1.6 * dp; g.strokeStyle = `rgba(255,237,194,${0.95 * pathA})`; g.stroke(path);
-    g.restore(); g.restore();
-    // (0.23, LivingSky.frontSun) Where the painted land stands in front of the Sun, the Sun is drawn in front of it.
-    const PS = cfg.painted && window.PAINTED && window.PAINTED[cfg.painted];
-    if (PS && PS.skyline && el > -1.1) {
-      const n = PS.skyline.length, k = Math.min(n - 1, Math.floor(Math.min(0.9999, Math.max(0, sunX / W)) * n));
-      const top = Math.min(hy, hy - PS.skyline[k] * W), disc = 7.5 * dp;
-      const hid = smooth(-disc * 0.6, disc * 1.2, sunY - top) * smooth(-1.1, -0.8, el);
-      if (hid > 0.01) {
-        const r = disc * 4.2, gr = g.createRadialGradient(sunX, sunY, 0, sunX, sunY, r);
-        gr.addColorStop(0, `rgba(255,213,140,${0.55 * hid})`); gr.addColorStop(0.35, `rgba(255,213,140,${0.22 * hid})`); gr.addColorStop(1, 'rgba(255,213,140,0)');
-        g.fillStyle = gr; g.beginPath(); g.arc(sunX, sunY, r, 0, 7); g.fill();
-        g.fillStyle = `rgba(255,237,194,${hid})`; g.beginPath(); g.arc(sunX, sunY, disc * 1.05, 0, 7); g.fill();
-        g.fillStyle = `rgba(255,255,255,${0.9 * hid})`; g.beginPath(); g.arc(sunX, sunY, disc * 0.6, 0, 7); g.fill();
-      }
-    }
     // Prayer marks: in the sky, or on the skyline when the Sun is down.
     const skyline = (x) => { let m = 1e9; for (let l = 0; l < 5; l++) { const h = rid[l][Math.round(Math.max(0, Math.min(1, x / W)) * (N - 1))]; m = Math.min(m, base[l] - amp[l] * h); } return m; };
     const next = cfg.next || 'ASR';
     g.globalAlpha = fade * marksA;
     for (const [p, fq] of Object.entries(dd.ev)) {
       const x = xOf(fq), y = yOf(dd.elAt(fq));
-      if (y > by + 2 * dp) { g.beginPath(); g.fillStyle = 'rgba(0,0,0,0.28)'; g.arc(x, y, 7 * dp, 0, 7); g.fill(); }
+      if (y > hy + 2 * dp) { g.beginPath(); g.fillStyle = 'rgba(0,0,0,0.28)'; g.arc(x, y, 7 * dp, 0, 7); g.fill(); }
       g.beginPath();
       if (p === next) { g.fillStyle = 'rgba(246,214,150,0.25)'; g.arc(x, y, 10.5 * dp, 0, 7); g.fill(); g.beginPath(); g.strokeStyle = '#F6D696'; g.lineWidth = 1.8 * dp; g.arc(x, y, 5.5 * dp, 0, 7); g.stroke(); }
       else if (fq <= f) { g.fillStyle = 'rgba(255,255,255,0.95)'; g.arc(x, y, 3 * dp, 0, 7); g.fill(); }

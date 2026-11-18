@@ -18,7 +18,7 @@ internal class SkyView(scene: SkyScene, val w: Float, val h: Float, val density:
     val horizonY = h * layout.horizon
     val arcTopY = h * layout.arcTop
     val cloudTopY = h * layout.cloudTop
-    val geometry = SkyGeometry(scene, w, horizonY, arcTopY, h * layout.ground, rtl, layout.dial)
+    val geometry = SkyGeometry(scene, w, horizonY, arcTopY, h * layout.ground, rtl)
     val fov: Double = (w / density * 0.0051).toDouble().coerceIn(1.6, 2.6)
     /** Where the Sun rises and sets on the horizon today, px (far off screen when it does not). */
     val sunrise: Pair<Float, Float> = sunriseSunsetX(scene, geometry)
@@ -180,8 +180,7 @@ internal class SkyLook(
             val g = view.geometry
             val el = scene.elevationAt(display)
             val sunX = g.x(display); val sunY = g.y(el, display)
-            // (0.23) On the sky dial the glow leaves the drawn Sun for its true place as it goes under (SkyGeometry.onDial).
-            val drawAlt = if (g.dial) el + (view.altitudeAt(sunY) - el) * SkyGeometry.onDial(el) else if (el > 0) view.altitudeAt(sunY) else el
+            val drawAlt = if (el > 0) view.altitudeAt(sunY) else el
             val night = Atmosphere.night(el).toFloat()
             // The moon rides the Sun's own path, as far behind it as it is old.
             val age = ((scene.hijriDay - 1).coerceIn(0, 29) + 0.5) / 29.53
