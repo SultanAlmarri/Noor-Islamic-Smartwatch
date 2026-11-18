@@ -184,8 +184,10 @@ data class SceneLayout(
     val arcTop: Float,
     /** Elevation zero. */
     val horizon: Float,
-    /** Where the deepest point of the night part of the path is drawn. */
+    /** Where the deepest point of the night part of the path is drawn (without [dial]). */
     val ground: Float,
+    /** (0.23) The home screen's sky dial: the path stands on a baseline over the land ([SkyGeometry.baseY]). */
+    val dial: Boolean = false,
 )
 
 /**
@@ -218,7 +220,20 @@ internal object SunLift {
 
 internal class SkyGeometry(
     scene: SkyScene, private val w: Float, val horizonY: Float, val arcTopY: Float, val groundY: Float, private val rtl: Boolean,
+    /** (0.23) The sky dial ([SceneLayout.dial]); without it the path stands on the true horizon (the widgets). */
+    val dial: Boolean = false,
 ) {
+    /**
+     * (0.23) Where the path's day begins and ends: the dial's baseline. The owner (18 November 2026): the path "mostly
+     * only appear[s] inside the terrain, and the sun is not really visible most of the time". Since 0.20 the arch stood
+     * on the true horizon, and the land of every scenery but the sea rises over it, so the low Sun and the low ends of
+     * the path were in the land. Now the arch stands on one baseline, the same over every scenery and level: [DIAL_BASE]
+     * of the width over the true horizon (the land's heights are in widths: there the painted land and the low
+     * pictures' land are below it), or [DIAL_SHARE] of the way up to the top of the arch on a short header, so the arch
+     * keeps some height. Its night part is a short dip under the baseline ([DIAL_DIP] of the way down to the horizon).
+     */
+    val baseY: Float = if (dial) horizonY - minOf(DIAL_BASE * w, DIAL_SHARE * (horizonY - arcTopY)).coerceAtLeast(0f) else horizonY
+    private val dip: Float = if (baseY < horizonY - 0.5f) DIAL_DIP * (horizonY - baseY) else groundY - horizonY
     private val maxEl = max(scene.path.maxElevation, 12.0)
     private val minEl = minOf(scene.path.minElevation, -24.0)
     private val warp: (Double) -> Double = timeWarp(scene)
@@ -247,8 +262,8 @@ internal class SkyGeometry(
      */
     fun y(el: Double): Float {
         val e = apparent(el)
-        return if (e >= 0) (horizonY - (sin(Math.toRadians(e)) / sinMax) * (horizonY - arcTopY)).toFloat()
-        else (horizonY + (-e / -minEl) * (groundY - horizonY)).toFloat()
+        return if (e >= 0) (baseY - (sin(Math.toRadians(e)) / sinMax) * (baseY - arcTopY)).toFloat()
+        else (baseY + (-e / -minEl) * dip).toFloat()
     }
 
     private fun apparent(el: Double): Double = el + horizonLift(el)
@@ -270,6 +285,20 @@ internal class SkyGeometry(
     }
 
     companion object {
+        /** (0.23) The dial's baseline over the true horizon, in widths of the screen (as the land's heights are). */
+        const val DIAL_BASE = 0.14f
+        /** (0.23) ...but never more than this share of the way from the horizon to the top of the arch. */
+        const val DIAL_SHARE = 0.68f
+        /** (0.23) How deep the night's dip goes, as a share of the way from the baseline down to the true horizon. */
+        const val DIAL_DIP = 0.45f
+
+        /**
+         * (0.23) How much the Sun the sky draws stands on the dial (1) rather than where it truly is (0): on it while it
+         * is up; as it goes under (its disc is gone at -1.1 degrees) its glow sinks to its true place by -3 degrees, so
+         * the dusk's glow lies on the true horizon, without a jump.
+         */
+        fun onDial(el: Double): Float { val t = ((el + 3.0) / 2.7).coerceIn(0.0, 1.0); return (t * t * (3 - 2 * t)).toFloat() }
+
         /**
          * Monotone cubic (Fritsch–Carlson) through Fajr−30 min, sunrise, sunset and Isha+30 min. 0.9.6: twilight gets
          * more of the width (8–22 % and 78–92 %, was 10–18 % and 82–90 %): the sky changes fastest then, and dragging
@@ -610,7 +639,7 @@ internal fun LivingSky(
         if (simple) SimpleSkyLayer(scene, layout, display, page, rtl, parallax, Modifier.fillMaxSize())
         if (real == null && shaders == null && !simple) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
             val w = size.width; val h = size.height
-            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, layout.dial)
             // The clock is read only when there is something to move, so a daytime sky is not redrawn for nothing.
             val time = if (light.night > 0f && live) now() else 0.13f
             val hy = h * layout.horizon
@@ -669,7 +698,7 @@ internal fun LivingSky(
                 Modifier.fillMaxSize().drawWithCache {
                     val w = size.width; val h = size.height
                     val hy = h * layout.horizon
-                    val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+                    val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl, layout.dial)
                     onDrawBehind {
                         val shownF = displayNow.value
                         val light = lightNow.value
@@ -710,7 +739,7 @@ internal fun LivingSky(
             val shapes = land.paths(w, h * layout.horizon, h, density)
 
             onDrawBehind {
-                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl, layout.dial)
                 drawLand(shapes, light, horizonColor, mid, zenith, page, soils, g.x(display), w)
             }
         })
@@ -719,21 +748,22 @@ internal fun LivingSky(
         if (real == null && !simple) RainLayer(gpuInputs, ambient)
 
         // 4b · The Sun's path (0.20): in front of the land, the same arch over every scenery and at every level. Until
-        // 0.19 the land hid it where it stood in front (the owner: "part of it gets hidden behind mountains"). Where the
-        // land stands in front of the Sun itself, a ring on the path shows where the Sun is, behind it.
-        // (The painted land's skyline is in the real sky's form: the ring shows where it hides the Sun.)
+        // 0.19 the land hid it where it stood in front (the owner: "part of it gets hidden behind mountains"). (0.23) On
+        // the sky dial (SkyGeometry.baseY) it stands over the land; where a high peak or a tall tree still stands in front
+        // of the Sun, the Sun itself is drawn in front of it ([frontSun]: until 0.22 a faint ring).
+        // (The painted land's skyline is in the real sky's form: it tells where the land hides the Sun.)
         landPainter?.version?.intValue
         val skyline = if (real != null) SunLift.skyline else if (painted) landPainter?.skyline else null
         val pathLayer = remember(scene, layout, rtl, real != null, simple, skyline) {
             Modifier.fillMaxSize().drawWithCache {
                 val w = size.width; val h = size.height
                 val hy = h * layout.horizon
-                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl, layout.dial)
                 val path = sunPath(scene, g)
                 // The land's top at x (px): the real sky's skyline; the 0.9 sky's ridges (LandProfile.skylineY);
                 // none for the simplest sky, which keeps its land under the path.
                 val landTop: ((Float) -> Float)? = when {
-                    real != null -> skyline?.let { sky -> { x -> SunLift.skylineY(sky, x, w, hy, rtl) } }
+                    real != null || painted -> skyline?.let { sky -> { x -> SunLift.skylineY(sky, x, w, hy, rtl) } }
                     simple -> null
                     else -> {
                         val geo = landProfile.geometry(hy, h, density)
@@ -747,11 +777,11 @@ internal fun LivingSky(
                 val dashShade = Stroke(stroke * 2.4f, cap = StrokeCap.Round)
                 val glowStroke = Stroke(stroke * 4f, cap = StrokeCap.Round)
                 val coreStroke = Stroke(stroke, cap = StrokeCap.Round)
-                val ringStroke = Stroke(1.6.dp.toPx())
                 // The Sun's disc as the renderer draws it (scene.frag: 0.0135 of the focal length), or the Canvas Sun.
                 val disc = if (real != null) 0.0135f * SunLift.FOCAL * w else 7.dp.toPx()
-                // (The path's own layer: from a little over the top of its arch down to the horizon, the width of the screen.)
-                val layerBounds = Rect(0f, (path.getBounds().top - stroke * 4f).coerceIn(0f, hy), w, hy)
+                // (The path's own layer: from a little over the top of its arch down to its baseline, the width of the screen.)
+                val base = g.baseY
+                val layerBounds = Rect(0f, (path.getBounds().top - stroke * 4f).coerceIn(0f, base), w, base)
                 onDrawBehind {
                     val shownF = displayNow.value
                     val light = lightNow.value
@@ -768,7 +798,7 @@ internal fun LivingSky(
                     // graphics, 0.18.0.)
                     val shade = Color.Black.copy(alpha = (0.07f + 0.08f * light.day) * pathAlpha)
                     drawContext.canvas.saveLayer(layerBounds, Paint())
-                    clipRect(0f, 0f, w, hy) {
+                    clipRect(0f, 0f, w, base) {
                         drawPath(path, shade, style = dashShade)
                         drawPath(path, Color.White.copy(alpha = 0.55f * pathAlpha), style = dashed)
                         val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
@@ -781,16 +811,12 @@ internal fun LivingSky(
                     drawCircle(Brush.radialGradient(0f to Color.Black, 0.24f to Color.Black, 0.62f to Color.Transparent, 1f to Color.Transparent, center = sun, radius = reach),
                         reach, sun, blendMode = BlendMode.DstOut)
                     drawContext.canvas.restore()
-                    // The Sun behind the land: a ring where it is, as bright as the land hides it.
+                    // The Sun behind the land (a high peak, a tall tree): the Sun itself in front of it, as much as the land
+                    // hides it, from Shuruq to Maghrib as the sky draws its disc.
                     val top = landTop?.invoke(sun.x)
-                    if (top != null && sunEl > -1.0) {
-                        val hidden = smoothstep(-disc * 0.6f, disc * 1.2f, sun.y - top) * smoothstep(-1.0f, -0.4f, sunEl.toFloat()) * pathAlpha
-                        if (hidden > 0.01f) {
-                            drawCircle(Color.Black.copy(alpha = 0.16f * hidden), disc * 1.9f, sun)
-                            drawCircle(light.sunGlow.copy(alpha = 0.30f * hidden), disc * 1.6f, sun)
-                            drawCircle(light.sunCore.copy(alpha = 0.95f * hidden), disc * 1.15f, sun, style = ringStroke)
-                            drawCircle(Color.White.copy(alpha = 0.85f * hidden), disc * 0.32f, sun)
-                        }
+                    if (top != null && sunEl > -1.1) {
+                        val hidden = smoothstep(-disc * 0.6f, disc * 1.2f, sun.y - top) * smoothstep(-1.1f, -0.8f, sunEl.toFloat()) * pathAlpha
+                        if (hidden > 0.01f) frontSun(sun, disc, hidden, light)
                     }
                 }
             }
@@ -803,7 +829,7 @@ internal fun LivingSky(
             Modifier.fillMaxSize().drawWithCache {
                 val w = size.width; val h = size.height
                 val hy = h * layout.horizon
-                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl, layout.dial)
                 // Each prayer at the Sun's real position at its moment: in the sky on the path, on the horizon at Shuruq
                 // and Maghrib, below it (in the land) at Fajr and Isha.
                 val marks = scene.events.map { (p, t) ->
@@ -819,8 +845,8 @@ internal fun LivingSky(
                     marks.forEach { (p, f, pt) ->
                         val passed = smoothstep(-1f, 1f, ((shownF - f) / soft).toFloat())
                         val dot = Color.White
-                        // Below the horizon a mark sits on the land: a soft shadow keeps it readable there.
-                        if (pt.y > hy + 2.dp.toPx()) drawCircle(Color.Black.copy(alpha = 0.28f * markAlpha), 7.dp.toPx(), pt)
+                        // Under the dial's baseline a mark may sit on the land: a soft shadow keeps it readable there.
+                        if (pt.y > g.baseY + 2.dp.toPx()) drawCircle(Color.Black.copy(alpha = 0.28f * markAlpha), 7.dp.toPx(), pt)
                         when {
                             p == scene.next -> {
                                 // The next prayer's ring breathes, slowly, while it waits.
@@ -846,6 +872,18 @@ internal fun LivingSky(
 }
 
 private const val CYCLE_SECONDS = 240.0
+
+/**
+ * (0.23) The Sun drawn in front of the land that stands before it (a high peak, a tall tree), [a] as much as the land
+ * hides it: its glow, its disc, a white heart, the same Sun the sky draws where nothing is in front of it. Until 0.22 a
+ * faint ring (the owner: "the sun is not really visible most of the time"). The bench draws the same (`frontSun`).
+ */
+internal fun DrawScope.frontSun(at: Offset, disc: Float, a: Float, light: Light) {
+    val r = disc * 4.2f
+    drawCircle(Brush.radialGradient(0f to light.sunGlow.copy(alpha = 0.55f * a), 0.35f to light.sunGlow.copy(alpha = 0.22f * a), 1f to Color.Transparent, center = at, radius = r), r, at)
+    drawCircle(light.sunCore.copy(alpha = a), disc * 1.05f, at)
+    drawCircle(Color.White.copy(alpha = 0.9f * a), disc * 0.6f, at)
+}
 
 /**
  * Where the Sun rises and sets, the land opens onto the true horizon (0.9.7): within about 34 dp of those points no

@@ -15,6 +15,8 @@ import kotlin.math.abs
 /**
  * The prayer marks on the sun path (0.9.7) are where the Sun really is at each prayer: Shuruq and Maghrib on the
  * horizon (0.20: the land is not opened there; the path, in front of it, shows a hidden Sun); Fajr and Isha below the horizon.
+ * (0.23) On the home screen's sky dial "the horizon" of the path is the dial's baseline over the land
+ * ([SkyGeometry.baseY]), and the night is a short dip under it that stays over the true horizon.
  * Checked for places from the equator to 64° N, both seasons, a large and a small phone, both renderers' land.
  */
 class SunMarkTest {
@@ -43,7 +45,8 @@ class SunMarkTest {
             val scene = SkyScene(path, events, events.first().second, Prayer.DHUHR, 10, pl.point.latitude < 0, pl.terrain, 1L, 77L)
             val d = sz[4]
             val w = sz[0] * d; val h = sz[1] * d; val hy = sz[2] * d; val arc = sz[3] * d
-            val g = SkyGeometry(scene, w, hy, arc, h - 6 * d, rtl = false)
+            val g = SkyGeometry(scene, w, hy, arc, h - 6 * d, rtl = false, dial = true)
+            val base = g.baseY
             val land = LandProfile.of(scene.landSeed, scene.terrain)
             val geo = land.geometry(hy, h, d)
             val label = "${pl.name} $date ${sz[0]}dp"
@@ -51,7 +54,7 @@ class SunMarkTest {
                 val m = prayerMark(scene, g, path.fraction(t))
                 when (p) {
                     Prayer.SHURUQ, Prayer.MAGHRIB -> {
-                        assertTrue("$label $p mark ${(m.y - hy) / d} dp from the horizon", abs(m.y - hy) <= 0.6f * d)
+                        assertTrue("$label $p mark ${(m.y - base) / d} dp from the baseline", abs(m.y - base) <= 0.6f * d)
                         // (0.20) The land is no longer opened for the Sun (the owner rejected cut-open skylines): where it
                         // stands above the horizon at the mark, the path, drawn in front of it, shows the Sun there with
                         // a ring (LivingSky). The land's top at the mark is the one the 0.9 sky draws.
@@ -60,7 +63,7 @@ class SunMarkTest {
                         // The path itself crosses the horizon at the mark (within the mark's own size).
                         var f = path.fraction(t); val step = 1.0 / 1440 / 4
                         val dir = if (p == Prayer.SHURUQ) 1 else -1
-                        while (g.y(scene.elevationAt(f)) > hy) f += dir * step
+                        while (g.y(scene.elevationAt(f)) > base) f += dir * step
                         assertTrue("$label $p path meets the horizon ${(g.x(f) - m.x) / d} dp from the mark", abs(g.x(f) - m.x) <= 1.2f * d)
                     }
                     // Below the horizon, at the Sun's actual depth (a few degrees in a high-latitude summer, where Fajr
@@ -69,11 +72,13 @@ class SunMarkTest {
                         // (Near midsummer far north, the high-latitude rule can put Isha minutes after sunset, with the
                         // Sun's top still on the horizon: the mark is then on the horizon, where the Sun is.)
                         val el = scene.elevationAt(path.fraction(t))
-                        if (el < -1.5) assertTrue("$label $p mark ${(m.y - hy) / d} dp below the horizon", m.y >= hy + 1f * d)
-                        if (el < -12.0) assertTrue("$label $p mark ${(m.y - hy) / d} dp below the horizon", m.y >= hy + 8f * d)
+                        if (el < -1.5) assertTrue("$label $p mark ${(m.y - base) / d} dp below the baseline", m.y > base + 0.1f)
+                        if (el < -12.0) assertTrue("$label $p mark ${(m.y - base) / d} dp below the baseline", m.y >= base + 1.5f * d)
+                        // (0.23) ...and never down in the land: over the true horizon.
+                        assertTrue("$label $p mark ${(hy - m.y) / d} dp over the horizon", m.y < hy - 1f * d)
                         assertTrue("$label $p mark at the Sun", abs(m.y - g.y(el)) < 0.01f)
                     }
-                    else -> assertTrue("$label $p mark in the sky", m.y < hy)
+                    else -> assertTrue("$label $p mark in the sky", m.y < base)
                 }
                 checked++
             }

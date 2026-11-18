@@ -440,7 +440,7 @@ private fun SkyHeader(
     val layout = remember(hero, height, textBottom) {
         val horizon = hero.horizon
         val arcTop = hero.arcTop(textBottom, horizon)
-        SceneLayout(cloudTop = (arcTop - 8.dp) / height, arcTop = arcTop / height, horizon = horizon / height, ground = hero.ground / height)
+        SceneLayout(cloudTop = (arcTop - 8.dp) / height, arcTop = arcTop / height, horizon = horizon / height, ground = hero.ground / height, dial = true)
     }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val ambient = LocalAmbientMotion.current
@@ -537,7 +537,7 @@ private fun SkyHeader(
     if (app.arriving && app.veil && headerWidth > 0) {
         val focus = remember(scene, layout, headerPx, headerWidth, rtl) {
             val w = headerWidth.toFloat()
-            val g = SkyGeometry(scene, w, headerPx * layout.horizon, headerPx * layout.arcTop, headerPx * layout.ground, rtl)
+            val g = SkyGeometry(scene, w, headerPx * layout.horizon, headerPx * layout.arcTop, headerPx * layout.ground, rtl, layout.dial)
             if (scene.sunElevation > 1.0) Offset(g.x(scene.nowFraction), g.y(scene.sunElevation, scene.nowFraction))
             else Offset(w / 2f, headerPx * (layout.arcTop + layout.horizon) / 2f)
         }

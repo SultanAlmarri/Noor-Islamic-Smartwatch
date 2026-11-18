@@ -140,6 +140,23 @@ The scene (0.9.6), far to near:
 6. **Over the land**: the sun path (behind the land, gold where the day has passed) and the prayers: on the path while
    the Sun is up, on the skyline at Fajr, Shuruq, Maghrib and Isha. The next prayer's ring breathes; a mark fills as
    the Sun passes it, over a few minutes rather than at once. Birds at dawn and dusk.
+   **(0.23) The sky dial.** The owner (18 November 2026): the path "mostly only appear[s] inside the terrain, and the
+   sun is not really visible most of the time". Since 0.20 the arch stood on the true horizon, and on a common phone the
+   space between the horizon and the countdown is only about 80 to 120 dp while the land rises 50 to 90 dp (Medium) and
+   up to 160 dp (High's firs and spires) over it. Now the arch stands on one baseline over the land, the same over every
+   scenery and level (`SkyGeometry.baseY`, `SceneLayout.dial`): 0.14 of the width over the true horizon (the land's
+   heights are in widths), at most 0.68 of the way up to the top of the arch, which stays where it was under the text.
+   Shuruq and Maghrib sit on the baseline; the night is a short dip under it (Fajr and Isha), which stays over the true
+   horizon. The Sun the sky draws (High's renderer, Medium's shader, the Canvas Sun, Low) stands on the dial while it is
+   up, its disc there from Shuruq to Maghrib; as it goes under, its glow sinks to its true place on the horizon by -3
+   degrees (`SkyGeometry.onDial`), so dawn and dusk still glow on the real horizon. Where a tall peak or tree still
+   stands in front (High's Pacific Northwest, Arctic and Red rock at the dial's low ends), the Sun itself is drawn in
+   front of it (`frontSun`; until 0.22 a faint ring). `SkyDialTest` locks it: on a common phone's header (411 x 457 dp) never in the land of
+   any Medium painted scenery or the layered land, nor of High's dunes, sea and hills; on shorter headers the space under
+   the countdown is smaller than the tallest painted land (Red rock's spire reaches 15 dp into the dial's low end on a
+   400 dp header, 50 dp into the old path), and High's Pacific Northwest and Arctic still hide the low Sun for about two
+   thirds as long as before (Red rock: a sixteenth). The cost: on short headers the arch is a shallow bow (about 26 dp
+   high on a 400 dp header). The widgets keep the path on the true horizon.
 
 **How it is drawn**: on Android 13 and later by two GPU shaders (`res/raw/*.agsl`, AGSL): the sky at about 1.5 pixels
 per dp in a cached layer scaled up (it is soft everywhere), the land at full resolution (the skyline must be crisp),
