@@ -72,7 +72,8 @@ in this file's history.
 
 - Not a developer. Explain results and instructions in plain, simple language, with exact steps.
 - Wants you to make technical and design decisions yourself. Ask only when a decision is genuinely theirs to make.
-- At the end of every report, always include both download links:
+- Give both download links only in the report that announces a new release (the owner, 18 November 2026: "only give me
+  the links once you release a new update"), not in progress reports:
   - Phone: https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/download/dev-latest/Noor-phone.apk
   - Watch: https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/download/dev-latest/Noor-watch.apk
 - Demands honesty: say exactly what was tested and how. Software renders and unit tests are not device tests. Never
