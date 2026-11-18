@@ -1710,7 +1710,8 @@ again (by helpers, in Python, in the cloud session: `/tmp/claude-0/medium_styles
 night, twilight, the low Sun at the left and at the right, day at the left and at the right, noon: land and water only,
 the sky transparent, 1080 x 1440 with the true horizon on row 900, the same framing in all seven. `tools/medium/pack.py`
 turns them into `assets/medium/<id>/<state>.webp` (2.3 MB for the five) and `meta.json` (the skyline, for the Sun's
-ring), and the Settings card `scenery_medium_<id>.webp`. The phone draws its own sky, Sun, moon and clouds (the real
+ring). The Settings cards (`scenery_medium_<id>.webp`, all six) are then made by the bench from these pictures under
+the app's own sky (`tools/skybench/cards.py`: run it after `pack.py`, which writes the painter's own card first). The phone draws its own sky, Sun, moon and clouds (the real
 sky's sets, `SetClouds`), then the two lights nearest the moment cross-faded by the Sun's height and side
 (`PaintedLand.weights`: smooth, the morning's light from the left, the evening's from the right; mirrored in Arabic),
 muted by an overcast sky (a colour filter). Pictures are decoded in the background at about the size they are shown,

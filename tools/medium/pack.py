@@ -6,7 +6,8 @@
 day_right, golden_right: 1080 x 1440 RGBA, the sky clear, the true horizon on row 900) and card.png (560 x 420). They
 become app/src/main/assets/medium/<id>/<state>.webp (lossy with alpha) and meta.json (the skyline: the top of the
 land in 270 strips across, as heights over the horizon in picture widths, for the Sun's ring), and
-app/src/main/res/drawable-nodpi/scenery_medium_<id>.webp (the Settings card). See PaintedLand.kt and HANDOVER.md
+app/src/main/res/drawable-nodpi/scenery_medium_<id>.webp (the Settings card, in the painter's own sky: then run
+tools/skybench/cards.py, which makes all six cards under the app's own sky, as the app draws them). See PaintedLand.kt and HANDOVER.md
 section 33 (the owner's choice of paintings)."""
 import json, os, sys
 import numpy as np

@@ -15,12 +15,14 @@ from PIL import Image
 CARDS = [("dunes", "dunes"), ("pnw", "forest"), ("arctic", "arctic"), ("ocean", "sea"), ("meadow", "hills"), ("canyon", "canyon")]
 DXB = {"lat": 25.2048, "lon": 55.2708, "tz": 4}
 DEN = 1.5
-W_DP, H_DP, HORIZON_DP = 412, 500, 380
+W_DP, H_DP, HORIZON_DP = 412, 560, 380   # (0.22: 560 tall, so the page's fade at the foot stays out of the card)
+# (0.22) The painted sceneries (PaintedLand.idOf): drawn from their pictures in assets/medium, as the app does.
+PAINTED = {"pnw": "pnw", "arctic": "arctic", "ocean": "ocean", "meadow": "meadow", "canyon": "canyon"}
 
 if sys.argv[1:2] == ["scenes"]:
     out = [dict(name=f"card_{cid}", place=DXB, date="2026-11-04", fraction=(15 * 60 + 40) / 1440, terrain=t, dunes=t == "dunes",
                 seed=5, landSeed=78, weatherType=1, density=DEN, skyScale=0.6, wDp=W_DP, hDp=H_DP, horizonDp=HORIZON_DP,
-                arcTopDp=150, topDp=40, time=40, hijriDay=14, pathAlpha=0, marksAlpha=0, text=False,
+                **({"painted": PAINTED[cid]} if cid in PAINTED else {}), arcTopDp=150, topDp=40, time=40, hijriDay=14, pathAlpha=0, marksAlpha=0, text=False,
                 # (0.20) A fair afternoon's clouds (the real sky's baked sets, as the app shows them: SetClouds).
                 legs=[dict(set="hi_wisps", offset=8, weight=1, turned=False), dict(set="lo_few", offset=-6, weight=1, turned=False)]) for cid, t in CARDS]
     json.dump(out, open("cards.json", "w"))
