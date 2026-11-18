@@ -53,7 +53,9 @@ class DayCache(private val tables: OfficialTimetables? = null, private val capac
 
     @Synchronized
     fun resolved(s: AppSettings, place: ResolvedPlace, profile: CalculationProfile, date: LocalDate): ResolvedDay {
-        val k = listOf(place, profile.id, s.asrSchool, s.highLatitudeRule, s.offsets, s.hijriAdjust, s.profileId)
+        // (0.21: and the timetables' version: a newer table downloaded while the app runs is used at once. Until 0.20 the
+        // days already worked out from the old one stayed until the settings changed or the app was closed.)
+        val k = listOf(place, profile.id, s.asrSchool, s.highLatitudeRule, s.offsets, s.hijriAdjust, s.profileId, tables?.version)
         if (k != key) { map.clear(); key = k }
         return map.getOrPut(date) { PrayerProvider.resolve(date, place, profile, s, tables) }
     }
