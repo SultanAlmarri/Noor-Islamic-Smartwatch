@@ -92,12 +92,13 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     // (0.23) The Sun's real path (panorama.js, a port of SunPanorama.kt and SkyGeometry): an equal-angle picture facing
     // the noon Sun, one scale across and up, never mirrored. (Until 0.22: an even arch in time, the pre-0.20 linear height here.)
     const SPT = SunPanorama.track(dd.start, cfg.place.lat, cfg.place.lon, dd.ev);
-    const G = SunPanorama.geometry(SPT, W, hy, arcTop, groundY);
+    // cfg.sunPath: 'simple' (the app's default) or 'real'.
+    const G = SunPanorama.geometry(SPT, W, hy, arcTop, groundY, cfg.sunPath || 'simple');
     const xOf = (fr) => G.x(fr);
     let f = cfg.fraction;
     const el = dd.elAt(f);
-    const yOf = (e0) => G.y(e0);
-    const sunX = xOf(f), sunY = yOf(el);
+    const yOf = (e0, fr) => G.y(e0, fr);
+    const sunX = xOf(f), sunY = yOf(el, f);
     const altTop = 80, altPow = 1.25;
     const altAt = (y) => altTop * Math.pow(Math.max(0, Math.min(1, (hy - y) / hy)), altPow);
     const fov = Math.max(1.6, Math.min(2.6, cfg.wDp * 0.0051));
@@ -124,7 +125,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const moonEl = dd.elAt(moonF);
     const moonVis = moonEl > 2 ? (0.35 + 0.65 * night) * smooth(2, 8, moonEl) : 0;
     const phase = 2 * Math.PI * (((hijriDay - 1) + 1) / 29.53);
-    const mx = xOf(moonF), my = yOf(moonEl);
+    const mx = xOf(moonF), my = yOf(moonEl, moonF);
     let lx = sunX - mx, ly = sunY - my; const ll = Math.hypot(lx, ly) || 1; lx /= ll; ly /= ll;
     const pa = Math.PI - phase; // phase angle
     const moonLight = [lx * Math.sin(pa), ly * Math.sin(pa), Math.cos(pa)];
@@ -317,7 +318,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const next = cfg.next || 'ASR';
     g.globalAlpha = fade * marksA;
     for (const [p, fq] of Object.entries(dd.ev)) {
-      const x = xOf(fq), y = yOf(dd.elAt(fq));
+      const x = xOf(fq), y = yOf(dd.elAt(fq), fq);
       if (y > hy + 2 * dp) { g.beginPath(); g.fillStyle = 'rgba(0,0,0,0.28)'; g.arc(x, y, 7 * dp, 0, 7); g.fill(); }
       g.beginPath();
       if (p === next) { g.fillStyle = 'rgba(246,214,150,0.25)'; g.arc(x, y, 10.5 * dp, 0, 7); g.fill(); g.beginPath(); g.strokeStyle = '#F6D696'; g.lineWidth = 1.8 * dp; g.arc(x, y, 5.5 * dp, 0, 7); g.stroke(); }

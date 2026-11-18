@@ -78,7 +78,7 @@ function fbo(...texs) {
 // ---- State -------------------------------------------------------------------------------------------------------
 
 const P = {
-  tod: 0.5, doy: 318, lat: 25.2, lon: 55.27, tz: 4, hijriDay: 5, rtl: false,   // (0.23) tod is local clock time; the scene is never mirrored in the app (rtl: old benches only)
+  tod: 0.5, doy: 318, lat: 25.2, lon: 55.27, tz: 4, hijriDay: 5, rtl: false, sunPath: 'simple',   // sunPath: 'simple' (the app's default) or 'real'   // (0.23) tod is local clock time; the scene is never mirrored in the app (rtl: old benches only)
   cover: 0.42, kind: 0.42, base: 1.4, density: 60, mid: 0.0, midForm: 0.3, cluster: 0.5, anvil: 1.0,
   cirrus: 0.35, veil: 0.0, showers: 0.0, seed: 3.0, haze: 1.0, time: 100, windLow: 0.012, windMid: 0.02,
   biome: 0, season: 0.3, snow: 0.0, wet: 0.0, mist: 0.0, rain: 0.0, windForce: 0.3, dust: 0.0,
@@ -136,14 +136,14 @@ function apparent(el) {
 // mirrored (panorama.js, a port of SunPanorama.kt). Until 0.22: an even arch in time, its height the sine of the elevation.
 let chartMemo = null;
 function chart() {
-  const key = [P.doy, P.lat, P.lon, P.tz, W, H, hz(), P.arcTop, P.ground].join();
+  const key = [P.doy, P.lat, P.lon, P.tz, W, H, hz(), P.arcTop, P.ground, P.sunPath].join();
   if (chartMemo && chartMemo.key === key) return chartMemo;
   const ok = (f, el) => (Math.abs(elevationAt(f) - el) < 0.3 ? f : undefined);
   const rise = ok(crossing(-0.833, true), -0.833), set = ok(crossing(-0.833, false), -0.833), fajr = ok(crossing(-18, true), -18), isha = ok(crossing(-18, false), -18);
   const SP = SunPanorama.track(dayStart(), P.lat, P.lon, { FAJR: fajr, SHURUQ: rise, MAGHRIB: set, ISHA: isha });
   const hy = hz() * H, at = P.arcTop * H, gy = P.ground * H;
-  const g = SunPanorama.geometry(SP, W, hy, at, gy);
-  chartMemo = { key, x: g.x, y: (el) => g.y(el), points: g.points, travel: g.travel, facingNorth: g.facingNorth, noonF: SP.noonF, start: SP.start, end: SP.end, rise, set, fajr, isha, k: g.k };
+  const g = SunPanorama.geometry(SP, W, hy, at, gy, P.sunPath);
+  chartMemo = { key, x: g.x, y: (el, f) => g.y(el, f), points: g.points, travel: g.travel, facingNorth: g.facingNorth, noonF: SP.noonF, start: SP.start, end: SP.end, rise, set, fajr, isha, k: g.k };
   return chartMemo;
 }
 function viewRay(px, py) {

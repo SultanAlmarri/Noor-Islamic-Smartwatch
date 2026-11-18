@@ -69,7 +69,7 @@
       let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (fr[m] <= f) lo = m; else hi = m; }
       return v[lo] + (v[hi] - v[lo]) * (f - fr[lo]) / (fr[hi] - fr[lo]);
     };
-    const T = { fr, el, across: acr, facingNorth, travel, start: s, end: e, noonF, acrossAt: f => lerp(acr, f), elAt: f => lerp(el, f) };
+    const T = { fr, el, across: acr, facingNorth, travel, start: s, end: e, noonF, events, maxEl: Math.max(...el), minEl: Math.min(...el), acrossAt: f => lerp(acr, f), elAt: f => lerp(el, f) };
     let a = Math.min(T.acrossAt(s), T.acrossAt(e)), b = Math.max(T.acrossAt(s), T.acrossAt(e));
     let hi = Math.max(T.elAt(s), T.elAt(e)), lo = Math.min(T.elAt(s), T.elAt(e));
     for (let i = 0; i < n; i++) if (fr[i] >= s && fr[i] <= e) { a = Math.min(a, acr[i]); b = Math.max(b, acr[i]); hi = Math.max(hi, el[i]); lo = Math.min(lo, el[i]); }
@@ -77,8 +77,64 @@
     return T;
   }
 
-  /** SkyGeometry: w (px), horizonY, arcTopY, groundY. Returns { k, x(f), y(el), fractions, travel }. */
-  function geometry(T, w, hy, arcTop, ground) {
+  // (0.23) SimpleArch.kt: the default path. One fixed half-sine arch to the arch's top, its ends where the Sun really
+  // rises and sets on a fixed scale (half the width = 135 degrees from the noon Sun), evenly in time; a fixed dip under the
+  // horizon to Fajr and Isha at their real azimuths and on to the edges; polar day and night fallbacks.
+  function simpleArch(T, w, hy, arcTop, ground) {
+    const HALF = 135, MARGIN = 0.03, EDGE = 0.04, GAP = 0.03;
+    const travel = T.travel, height = Math.max(hy - arcTop, 0);
+    const dip = ground - hy > 1 ? 0.5 * (ground - hy) : 0.3 * height;
+    const kA = 0.5 * w / HALF;
+    const X = (a) => Math.min((1 - MARGIN) * w, Math.max(MARGIN * w, w / 2 + kA * a));
+    const ev = T.events, noon = T.noonF, up = T.maxEl > -0.8333;
+    let r = ev.SHURUQ !== undefined && ev.SHURUQ < noon ? ev.SHURUQ : undefined;
+    let s = ev.MAGHRIB !== undefined && ev.MAGHRIB > noon ? ev.MAGHRIB : undefined;
+    const polar = up && r === undefined && s === undefined;
+    const polarDay = polar && T.minEl > -0.8333;
+    let rise, set, arch = true, xr, xs;
+    const start = travel > 0 ? MARGIN * w : (1 - MARGIN) * w, end = travel > 0 ? (1 - MARGIN) * w : MARGIN * w;
+    if (r !== undefined && s !== undefined) { rise = r; set = s; xr = X(T.acrossAt(r)); xs = X(T.acrossAt(s)); }
+    else if (r !== undefined) { rise = r; set = 2 * noon - r; xr = X(T.acrossAt(r)); xs = w - xr; }
+    else if (s !== undefined) { set = s; rise = 2 * noon - s; xs = X(T.acrossAt(s)); xr = w - xs; }
+    else if (polar) { rise = noon - 0.5; set = noon + 0.5; xr = start; xs = end; }
+    else { rise = noon; set = noon; arch = false; xr = w / 2; xs = w / 2; }
+    const from = travel > 0 ? -EDGE * w : (1 + EDGE) * w, to = travel > 0 ? (1 + EDGE) * w : -EDGE * w;
+    const outside = (x, f0, dir) => { const gap = GAP * w; const h = (x - f0) * dir < gap ? f0 + dir * gap : x; return Math.min(0.99 * w, Math.max(0.01 * w, h)); };
+    const curve = (pts) => {
+      const xs_ = pts.map(p => p[0]), ys = pts.map(p => travel * p[1]); const n = xs_.length;
+      const d = [], m = [];
+      for (let i = 0; i < n - 1; i++) d.push((ys[i + 1] - ys[i]) / (xs_[i + 1] - xs_[i]));
+      for (let i = 0; i < n; i++) m.push(i === 0 ? d[0] : i === n - 1 ? d[n - 2] : (d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2));
+      for (let i = 0; i < n - 1; i++) { if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; } const a = m[i] / d[i], b = m[i + 1] / d[i], q = a * a + b * b; if (q > 9) { const k = 3 / Math.sqrt(q); m[i] = k * a * d[i]; m[i + 1] = k * b * d[i]; } }
+      return (v) => { let i = 0; while (i < n - 2 && xs_[i + 1] <= v) i++; const h = xs_[i + 1] - xs_[i], t = Math.max(0, Math.min(1, (v - xs_[i]) / h)), t2 = t * t, t3 = t2 * t;
+        return travel * ((2 * t3 - 3 * t2 + 1) * ys[i] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * ys[i + 1] + (t3 - t2) * h * m[i + 1]); };
+    };
+    const fajr = ev.FAJR !== undefined && ev.FAJR < rise - 1e-4 ? ev.FAJR : undefined;
+    const isha = ev.ISHA !== undefined && ev.ISHA > set + 1e-4 ? ev.ISHA : undefined;
+    const xF = fajr !== undefined ? outside(X(T.acrossAt(Math.max(0, Math.min(1, fajr)))), xr, -travel) : undefined;
+    const xI = isha !== undefined ? outside(X(T.acrossAt(Math.max(0, Math.min(1, isha)))), xs, travel) : undefined;
+    const morning = rise > 1e-4 ? curve(fajr !== undefined && fajr <= 1e-4 ? [[0, xF], [rise, xr]] : [[0, from], ...(fajr !== undefined ? [[fajr, xF]] : []), [rise, xr]]) : null;
+    const evening = set < 1 - 1e-4 ? curve(isha !== undefined && isha >= 1 - 1e-4 ? [[set, xs], [1, xI]] : [[set, xs], ...(isha !== undefined ? [[isha, xI]] : []), [1, to]]) : null;
+    const x = (f0) => { const t = Math.max(0, Math.min(1, f0));
+      if (t < rise) return morning ? morning(t) : xr; if (t > set) return evening ? evening(t) : xs;
+      if (set - rise < 1e-9) return xr; return xr + (xs - xr) * (t - rise) / (set - rise); };
+    const y = (el, f0) => { const t = Math.max(0, Math.min(1, f0));
+      if (!arch) { const d = Math.min(1, Math.abs(x(t) - w / 2) / (0.5 * w)); return hy + dip * (1 / 3 + 2 / 3 * Math.sin(Math.PI / 2 * d)); }
+      if (t >= rise && t <= set) return hy - height * Math.sin(Math.PI * (t - rise) / (set - rise));
+      if (polarDay) return hy;
+      const [f1, edge] = t < rise ? [xr, from] : [xs, to];
+      const d = Math.min(1, Math.max(0, Math.abs(x(t) - f1) / Math.max(Math.abs(edge - f1), 1)));
+      return hy + dip * Math.sin(Math.PI / 2 * d); };
+    const fractions = []; for (let i = 0; i <= 480; i++) fractions.push(i / 480);
+    if (rise >= 0 && rise <= 1) fractions.push(rise); if (set >= 0 && set <= 1) fractions.push(set);
+    fractions.sort((a, b) => a - b);
+    const points = (f0 = 0, f1 = 1) => { const pts = [[x(f0), y(0, f0)]]; fractions.forEach(f => { if (f > f0 && f < f1) pts.push([x(f), y(0, f)]); }); pts.push([x(f1), y(0, f1)]); return pts; };
+    return { k: kA, x, y, fractions, points, travel, facingNorth: T.facingNorth, elAt: T.elAt, simple: true };
+  }
+
+  /** SkyGeometry: w (px), horizonY, arcTopY, groundY; mode 'simple' (the default) or 'real'. Returns { k, x(f), y(el, f), fractions, travel }. */
+  function geometry(T, w, hy, arcTop, ground, mode) {
+    if (mode !== 'real') return simpleArch(T, w, hy, arcTop, ground);
     const MARGIN = 0.07, EDGE = 0.04;
     const span = Math.max(T.acrossMax - T.acrossMin, 1);
     const kW = w * (1 - 2 * MARGIN) / span;
@@ -100,7 +156,7 @@
       if (f > T.end) return herm((f - T.end) / (1 - T.end), xe, to, me * (1 - T.end), to - xe);
       return tx(f);
     };
-    const y = (el) => hy - k * apparent(el);
+    const y = (el) => hy - k * apparent(el);   // (the real path: from the elevation alone)
     const fractions = [];
     if (T.start > 0) for (let i = 0; i < 48; i++) fractions.push(T.start * i / 48);
     fractions.push(T.start);
