@@ -380,6 +380,8 @@
     <string name="status_chip_desc">كالمؤقّت: يبقى الوقت المتبقّي للصلاة التالية أعلى الشاشة.</string>
     <string name="status_chip_needs_16">يتطلّب أندرويد 16 أو أحدث.</string>
     <string name="status_chip_blocked">موقوف لمنهاد في إعدادات أندرويد. اضغط للسماح به.</string>
+    <string name="status_chip_refused">لم يعرضه هاتفك في شريط الحالة، فبقي إشعار منهاد بعدّه التنازلي الكبير. بعض الهواتف لا تعرضه إلا للتطبيقات التي تختارها.</string>
+    <string name="status_chip_promoted">قبِله أندرويد لشريط الحالة: يظهر العدّ التنازلي هناك كمؤقّت.</string>
     <string name="status_setting_note">صامت، ولا يكاد يستهلك البطارية: أندرويد نفسه يعدّ الثواني، ومنهاد يحدّثه فقط عند كل صلاة وعند منتصف الليل. في أندرويد %1$s وما بعده يمكنك إزاحته، فيعود عند الصلاة التالية.</string>
     <string name="status_channel">أوقات الصلاة (ظاهرة دائمًا)</string>
     <string name="status_channel_desc">الصلاة القادمة وعدّها التنازلي، باقية في شريط الإشعارات. صامتة.</string>

@@ -111,16 +111,19 @@ object StatusNotification {
         val c = content(config, s, now, arabic)
         // (0.22) As a chip in the status bar (Android 16's Live Updates), Android's own chronometer counts, in the phone's
         // digits, as the chip and the Now Bar show them: Minhad does not draw it then.
-        val live = liveWanted(app, s)
-        val drawn = !live && !systemDigitsMatch(app, s.numerals)
-        android.util.Log.d("NoorStatus", "countdown digits: phone ${systemLocale(app).toLanguageTag()}, Noor ${s.numerals}: ${if (drawn) "drawn by Noor" else "Android's Chronometer"}")
+        // (0.22) Only while the phone really shows it there ([LivePromotion]): where it does not, Minhad's own notification,
+        // its large countdown in the app's digits.
+        val live = liveWanted(app, s) && !LivePromotion.refused(app)
+        val drawn = live || !systemDigitsMatch(app, s.numerals)
+        android.util.Log.d("NoorStatus", "countdown digits: phone ${systemLocale(app).toLanguageTag()}, Noor ${s.numerals}: ${if (drawn) "drawn by Noor" else "Android's Chronometer"}; live $live")
         val f = Formatter(arabic, s.numerals, s.timeFormat)
-        runCatching { nm.notify(ID, if (live) buildLive(ctx, app, c) else build(ctx, app, c, now, if (drawn) f else null)) }
+        runCatching { nm.notify(ID, if (live) buildLive(ctx, app, c, now, f) else build(ctx, app, c, now, if (drawn) f else null)) }
+        if (live) LivePromotion.check(app)
         if (drawn) {
             // Noor draws the seconds itself: every second while the screen is on, and at least every minute otherwise
             // (non-waking: an asleep phone is not woken; the update runs when it wakes).
             armRefresh(app, minOf(c.refreshAt, now.plusSeconds(60)))
-            StatusTicker.start(app, Ticking(ctx, app, c, f))
+            StatusTicker.start(app, Ticking(ctx, app, c, f, live))
         } else {
             armRefresh(app, c.refreshAt)
             StatusTicker.stop()
@@ -128,12 +131,12 @@ object StatusNotification {
     }
 
     /** What the ticker needs to redraw the notification each second without recomputing the day. */
-    internal class Ticking(val ctx: Context, val app: Context, val content: Content, val f: Formatter)
+    internal class Ticking(val ctx: Context, val app: Context, val content: Content, val f: Formatter, val live: Boolean = false)
 
     /** Redraws the notification with Noor's own digits; false once its content is due for a full rebuild. */
     internal fun tick(t: Ticking, now: Instant): Boolean {
         if (!now.isBefore(t.content.refreshAt)) return false
-        runCatching { NotificationManagerCompat.from(t.app).notify(ID, build(t.ctx, t.app, t.content, now, t.f)) }
+        runCatching { NotificationManagerCompat.from(t.app).notify(ID, if (t.live) buildLive(t.ctx, t.app, t.content, now, t.f) else build(t.ctx, t.app, t.content, now, t.f)) }
         return true
     }
 
@@ -174,8 +177,7 @@ object StatusNotification {
      */
     internal fun build(ctx: Context, app: Context, c: Content, now: Instant, drawn: Formatter? = null): android.app.Notification {
         val title = "${c.prayer}  ·  ${c.time}"
-        // Said once, in the header (0.9.8: the expanded view repeated it).
-        val caption = ctx.getString(when { !c.elapsed -> R.string.next_prayer; c.sunrise -> R.string.since_sunrise; else -> R.string.since_prayer })
+        // (0.22: no "Next prayer" in the header any more, the owner's word: the countdown's sign says it.)
         val small = RemoteViews(app.packageName, R.layout.notification_status)
         small.setTextViewText(R.id.status_prayer, title)
         // The date first: if a place name is too long even for the smallest size, only the place is shortened here.
@@ -201,7 +203,6 @@ object StatusNotification {
             // Also as plain text, for screen readers, the lock screen and watches that ignore custom views.
             .setContentTitle(title)
             .setContentText(c.line)
-            .setSubText(caption)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -230,27 +231,24 @@ object StatusNotification {
     internal const val EXTRA_REQUEST_PROMOTED = "android.requestPromotedOngoing"
 
     /**
-     * (0.22) The notification as a Live Update: Android's own template (Android promotes no custom view), the prayer and
-     * its time as the title, the place and the Hijri date below (whole in the expanded view), and Android's chronometer
-     * counting to the prayer (or from it, during its "since" period): the chip in the status bar shows that count.
+     * (0.22) The notification as a Live Update: Android's own template (Android promotes no custom view). Its title is
+     * the countdown, written by Minhad in the app's own digits (Android's chronometer writes the phone's: Arabic-Indic
+     * on the owner's Arabic Galaxy with Western digits chosen in Minhad, and small, in the card's header); the prayer
+     * and its time below, then the place and the Hijri date. The chip in the status bar shows the same countdown
+     * ([Notification.Builder.setShortCriticalText]); the ticker writes it again every second while the screen is on.
      */
-    internal fun buildLive(ctx: Context, app: Context, c: Content): android.app.Notification {
-        val title = "${c.prayer}  ·  ${c.time}"
-        val caption = ctx.getString(when { !c.elapsed -> R.string.next_prayer; c.sunrise -> R.string.since_sunrise; else -> R.string.since_prayer })
-        val text = listOfNotNull(c.hijri, c.place).joinToString("  ·  ")
+    internal fun buildLive(ctx: Context, app: Context, c: Content, now: Instant, f: Formatter): android.app.Notification {
+        val count = c.countdown(now, f)
+        val prayer = "${c.prayer}  ·  ${c.time}"
         val open = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = NotificationCompat.Builder(app, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFFB4883A.toInt())
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(listOfNotNull(c.place, c.hijri).joinToString("\n")))
-            .setSubText(caption)
-            .setUsesChronometer(true)
-            .setChronometerCountDown(!c.elapsed)
-            .setWhen(c.countAt.toEpochMilli())
-            .setShowWhen(true)
+            .setContentTitle(count)
+            .setContentText(prayer)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(listOfNotNull(prayer, c.place, c.hijri).joinToString("\n")))
+            .setShowWhen(false)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -261,12 +259,20 @@ object StatusNotification {
             .setLocalOnly(true)
             .build()
         // Asks Android to promote it, both ways Android 16 reads: the request in the extras (EXTRA_REQUEST_PROMOTED_ONGOING,
-        // later Android 16 releases), and the promoted flag (the first, which Android clears again if it does not promote
-        // the notification: the user's switch for Minhad in Android's settings, a template it does not promote).
+        // public since Android 16's 36.1), and the promoted flag (which Android clears again if it does not promote the
+        // notification: the user's switch for Minhad in Android's settings, a phone maker's own rules). The chip's text:
+        // the countdown without its minus sign (the chip is about what is coming), with its plus sign after a prayer.
         n.extras.putBoolean(EXTRA_REQUEST_PROMOTED, true)
-        if (android.os.Build.VERSION.SDK_INT >= 36) n.flags = n.flags or android.app.Notification.FLAG_PROMOTED_ONGOING
+        if (android.os.Build.VERSION.SDK_INT >= 36) {
+            n.flags = n.flags or android.app.Notification.FLAG_PROMOTED_ONGOING
+            return android.app.Notification.Builder.recoverBuilder(app, n).setShortCriticalText(chipText(count)).build()
+                .also { it.flags = it.flags or android.app.Notification.FLAG_PROMOTED_ONGOING; it.extras.putBoolean(EXTRA_REQUEST_PROMOTED, true) }
+        }
         return n
     }
+
+    /** The chip's text: the countdown without its minus sign ("1:03:32"), or with its plus after a prayer ("+15:21"). */
+    internal fun chipText(countdown: String): String = countdown.removePrefix(MINUS)
 
     /** A place's own name: the part before its first comma (Latin or Arabic), or the whole when it has none. */
     internal fun shortPlace(place: String): String = place.split(',', '\u060C').first().trim().ifEmpty { place }
@@ -348,6 +354,59 @@ class StatusRefreshReceiver : BroadcastReceiver() {
  * prayer, midnight or the end of a "+" period it asks for a full rebuild. It runs on a thread of its own (up to 0.18.1
  * it ran on the main thread, where building and posting the notification each second competed with the screen).
  */
+/**
+ * (0.22) Whether the phone really shows the countdown in the status bar. Android decides (the user can turn it off for
+ * Minhad; a phone maker may add rules of its own: on the owner's Galaxy the first 0.22 showed no chip at all), and says
+ * so in the notification it keeps: [android.app.Notification.FLAG_PROMOTED_ONGOING] stays only on a promoted one. A
+ * moment after each Live Update is posted, Minhad looks; where it was not promoted, Minhad's own notification comes
+ * back (its large countdown) and Live Updates are not tried again for a day, or until the user's switch, Android's
+ * permission for Minhad or the app's version changes. [state] tells Settings what happened.
+ */
+internal object LivePromotion {
+    enum class State { PROMOTED, NOT_ALLOWED, REFUSED }
+
+    /** What the last look found (null: not looked yet in this run of the app). */
+    val state = androidx.compose.runtime.mutableStateOf<State?>(null)
+    private const val PREFS = "noor_status_live"
+    private const val K_AT = "refused_at"
+    private const val K_KEY = "refused_key"
+    private const val RETRY_MS = 24 * 3600_000L
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** What a refusal is remembered against: a change of any of these tries again. */
+    private fun key(app: Context): String = "${StatusNotification.promotedAllowed(app)}|" + runCatching {
+        @Suppress("DEPRECATION") app.packageManager.getPackageInfo(app.packageName, 0).let { if (android.os.Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() }
+    }.getOrDefault(0L)
+
+    fun refused(app: Context): Boolean {
+        val p = app.getSharedPreferences(PREFS, 0)
+        val at = p.getLong(K_AT, 0L)
+        val r = at > 0 && System.currentTimeMillis() - at < RETRY_MS && p.getString(K_KEY, null) == key(app)
+        if (r && state.value == null) state.value = if (StatusNotification.promotedAllowed(app)) State.REFUSED else State.NOT_ALLOWED
+        return r
+    }
+
+    /** Forgets a refusal (the user turned the switch on again): the next update tries a Live Update again. */
+    fun retry(app: Context) { app.getSharedPreferences(PREFS, 0).edit().clear().apply(); state.value = null }
+
+    /** A moment after a Live Update was posted: was it promoted? If not, Minhad's own notification comes back. */
+    fun check(app: Context) {
+        if (android.os.Build.VERSION.SDK_INT < 36) return
+        handler.removeCallbacksAndMessages(null)
+        handler.postDelayed({
+            val nm = app.getSystemService(android.app.NotificationManager::class.java) ?: return@postDelayed
+            val n = runCatching { nm.activeNotifications.firstOrNull { it.id == StatusNotification.ID } }.getOrNull()?.notification ?: return@postDelayed
+            val promoted = n.flags and android.app.Notification.FLAG_PROMOTED_ONGOING != 0
+            android.util.Log.i("NoorStatus", "Live Update promoted: $promoted (allowed for Minhad: ${StatusNotification.promotedAllowed(app)}, " +
+                "promotable: ${runCatching { n.hasPromotableCharacteristics() }.getOrNull()})")
+            if (promoted) { state.value = State.PROMOTED; app.getSharedPreferences(PREFS, 0).edit().clear().apply(); return@postDelayed }
+            state.value = if (StatusNotification.promotedAllowed(app)) State.REFUSED else State.NOT_ALLOWED
+            app.getSharedPreferences(PREFS, 0).edit().putLong(K_AT, System.currentTimeMillis()).putString(K_KEY, key(app)).apply()
+            StatusNotification.refreshAsync(app)
+        }, 1500L)
+    }
+}
+
 internal object StatusTicker {
     private val handler = android.os.Handler(android.os.HandlerThread("NoorStatusTicker").apply { start() }.looper)
     @Volatile private var current: StatusNotification.Ticking? = null

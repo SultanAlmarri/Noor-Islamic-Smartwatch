@@ -234,8 +234,14 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         if (s.statusNotification) {
             val newEnough = Build.VERSION.SDK_INT >= 36
             val allowed = newEnough && com.noor.app.notify.StatusNotification.promotedAllowed(context)
+            // (What the phone did with it: Minhad looks after posting, LivePromotion.)
+            val seen = com.noor.app.notify.LivePromotion.state.value
             val openSettings = {
                 runCatching {
+                    context.startActivity(android.content.Intent(if (Build.VERSION.SDK_INT >= 36) android.provider.Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS
+                        else android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.recoverCatching {
                     context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                         .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
@@ -245,10 +251,12 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 stringResource(when {
                     !newEnough -> R.string.status_chip_needs_16
                     s.statusBarChip && !allowed -> R.string.status_chip_blocked
+                    s.statusBarChip && seen == com.noor.app.notify.LivePromotion.State.REFUSED -> R.string.status_chip_refused
+                    s.statusBarChip && seen == com.noor.app.notify.LivePromotion.State.PROMOTED -> R.string.status_chip_promoted
                     else -> R.string.status_chip_desc
                 }), stringResource(R.string.kw_status),
                 if (newEnough && s.statusBarChip && !allowed) openSettings else null,
-                toggle = if (newEnough) s.statusBarChip to { on -> vm.setStatusBarChip(on) } else null))
+                toggle = if (newEnough) s.statusBarChip to { on -> if (on) com.noor.app.notify.LivePromotion.retry(context); vm.setStatusBarChip(on) } else null))
         }
         add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }, listed = false))
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Brightness6, stringResource(R.string.theme), null, stringResource(R.string.kw_theme), { dialog = Dialog.THEME },
