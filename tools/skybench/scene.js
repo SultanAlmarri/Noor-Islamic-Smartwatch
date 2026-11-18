@@ -38,6 +38,9 @@
       FAJR: cross(-18.2, 0, noonF), SHURUQ: cross(-0.833, 0, noonF), DHUHR: noonF + 3 / 1440,
       ASR: cross(asrAlt, noonF, 1), MAGHRIB: cross(-0.833, noonF, 1), ISHA: cross(-18.2, noonF, 1),
     };
+    // (0.23) An event the Sun does not reach that day (no night in a high summer, no day in a polar winter) is absent.
+    const target = { FAJR: -18.2, SHURUQ: -0.833, ASR: asrAlt, MAGHRIB: -0.833, ISHA: -18.2 };
+    for (const k of Object.keys(target)) if (Math.abs(elAt(ev[k]) - target[k]) > 0.3) delete ev[k];
     const maxEl = Math.max(...samples.map(s => s[1])), minEl = Math.min(...samples.map(s => s[1]));
     return { samples, ev, elAt, noonF, maxEl, minEl, start };
   }

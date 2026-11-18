@@ -78,7 +78,7 @@ function fbo(...texs) {
 // ---- State -------------------------------------------------------------------------------------------------------
 
 const P = {
-  tod: 0.5, doy: 318, lat: 25.2, hijriDay: 5, rtl: false,
+  tod: 0.5, doy: 318, lat: 25.2, lon: 55.27, tz: 4, hijriDay: 5, rtl: false,   // (0.23) tod is local clock time; the scene is never mirrored in the app (rtl: old benches only)
   cover: 0.42, kind: 0.42, base: 1.4, density: 60, mid: 0.0, midForm: 0.3, cluster: 0.5, anvil: 1.0,
   cirrus: 0.35, veil: 0.0, showers: 0.0, seed: 3.0, haze: 1.0, time: 100, windLow: 0.012, windMid: 0.02,
   biome: 0, season: 0.3, snow: 0.0, wet: 0.0, mist: 0.0, rain: 0.0, windForce: 0.3, dust: 0.0,
@@ -113,13 +113,12 @@ const DEG = Math.PI / 180;
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const norm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
 
-function elevationAt(f) {
-  const decl = -23.44 * Math.cos(2 * Math.PI * (P.doy + 10) / 365) * DEG;
-  const phi = P.lat * DEG, h = (f - 0.5) * 2 * Math.PI;
-  return Math.asin(Math.sin(phi) * Math.sin(decl) + Math.cos(phi) * Math.cos(decl) * Math.cos(h)) / DEG;
-}
+// (0.23) The Sun where it truly is (panorama.js, the Almanac's formulas): local midnight of day P.doy of 2026 at P.tz.
+const dayStart = () => Date.UTC(2026, 0, 1) + (P.doy - 1) * 86400000 - P.tz * 3600000;
+function elevationAt(f) { return SunPanorama.sun(dayStart() + f * 86400000, P.lat, P.lon)[0]; }
 function crossing(el, rising) {      // fraction of the day when the Sun crosses elevation el
-  let lo = rising ? 0 : 0.5, hi = rising ? 0.5 : 1;
+  const noon = 0.5 - (P.lon / 15 - P.tz) / 24;
+  let lo = rising ? 0 : noon, hi = rising ? noon : 1;
   for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if ((elevationAt(m) < el) === rising) lo = m; else hi = m; }
   return (lo + hi) / 2;
 }
@@ -133,18 +132,19 @@ function apparent(el) {
   const t = Math.min(1, Math.max(0, (el + 4) / (4 - 0.8333)));
   return el + 0.8333 * t * t * (3 - 2 * t);
 }
+// (0.23, SkyGeometry) The Sun's real path: an equal-angle picture facing the noon Sun, one scale across and up, never
+// mirrored (panorama.js, a port of SunPanorama.kt). Until 0.22: an even arch in time, its height the sine of the elevation.
+let chartMemo = null;
 function chart() {
-  const rise = crossing(-0.833, true), set = crossing(-0.833, false), fajr = crossing(-18, true), isha = crossing(-18, false);
-  const half = 30 / 1440;
-  const xs = [0, fajr - half, rise, set, isha + half, 1], ys = [0, 0.08, 0.22, 0.78, 0.92, 1];
-  const warp = f => { for (let i = 1; i < xs.length; i++) if (f <= xs[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * (f - xs[i - 1]) / (xs[i] - xs[i - 1]); return 1; };
-  const maxEl = Math.max(elevationAt(0.5), 12), minEl = Math.min(elevationAt(0), -24);
+  const key = [P.doy, P.lat, P.lon, P.tz, W, H, hz(), P.arcTop, P.ground].join();
+  if (chartMemo && chartMemo.key === key) return chartMemo;
+  const ok = (f, el) => (Math.abs(elevationAt(f) - el) < 0.3 ? f : undefined);
+  const rise = ok(crossing(-0.833, true), -0.833), set = ok(crossing(-0.833, false), -0.833), fajr = ok(crossing(-18, true), -18), isha = ok(crossing(-18, false), -18);
+  const SP = SunPanorama.track(dayStart(), P.lat, P.lon, { FAJR: fajr, SHURUQ: rise, MAGHRIB: set, ISHA: isha });
   const hy = hz() * H, at = P.arcTop * H, gy = P.ground * H;
-  const x = f => { const uu = (-0.04 + 1.08 * warp(f)) * W; return P.rtl ? W - uu : uu; };
-  // (0.20, SkyGeometry.y) One arch over every scenery: the height in proportion to the sine of the apparent elevation.
-  const sinMax = Math.sin(apparent(maxEl) * Math.PI / 180);
-  const y = (el, f) => { const e = apparent(el); return e >= 0 ? hy - Math.sin(e * Math.PI / 180) / sinMax * (hy - at) : hy + (-e / -minEl) * (gy - hy); };
-  return { x, y, rise, set, fajr, isha };
+  const g = SunPanorama.geometry(SP, W, hy, at, gy);
+  chartMemo = { key, x: g.x, y: (el) => g.y(el), points: g.points, travel: g.travel, facingNorth: g.facingNorth, noonF: SP.noonF, start: SP.start, end: SP.end, rise, set, fajr, isha, k: g.k };
+  return chartMemo;
 }
 function viewRay(px, py) {
   let x = px - 0.5 * W; if (P.rtl) x = -x;
@@ -176,9 +176,10 @@ function updateUniforms() {
   const moonLight = el < -6;
   const lightEl = moonLight ? Math.max(mel, 0.7) : Math.max(el, 0.7);
   const lightF = moonLight ? mf : f;
-  const noonF = moonLight ? (0.5 + age) % 1 : 0.5;
+  const noonF = moonLight ? (ch.noonF + age) % 1 : ch.noonF;
   let dF = lightF - noonF; dF -= Math.round(dF);
-  const side = Math.max(-1, Math.min(1, dF / 0.07)) * (P.rtl ? -1 : 1);
+  // (0.23) The side of the sky the Sun is on: the afternoon's on the right where the Sun moves left to right.
+  const side = Math.max(-1, Math.min(1, dF / 0.07)) * ch.travel * (P.rtl ? -1 : 1);
   const lw = lightWeights(lightEl, side, false);
   // (Clouds are lit from under the horizon too, after sunset and before sunrise.)
   const cw = lightWeights(moonLight ? Math.max(mel, 0.7) : el, side, true);
@@ -358,11 +359,11 @@ function celestial() {
     const m = v => P.rtl ? [-v[0], v[1], v[2]] : v;
     return { uCelX: m(axis(0)), uCelY: m(axis(1)), uCelZ: m(axis(2)), uGalN: m(n), uGalC: m(c) };
   }
-  const lon = 55.3, lat = P.lat;
-  const utcHours = (P.tod * 24 - lon / 15 + 24) % 24;
+  const lon = P.lon, lat = P.lat;
+  const utcHours = (P.tod * 24 - P.tz + 24) % 24;
   const d = (Date.UTC(2026, 0, 1) / 86400000 + 2440587.5 - 2451545.0) + (P.doy - 1) + utcHours / 24;
   const lst = (((280.46061837 + 360.98564736629 * d) % 360) + 360) % 360 + lon;
-  const a0 = (P.rtl ? 0 : 180) * DEG, phi = lat * DEG;
+  const a0 = (chart().facingNorth !== P.rtl ? 0 : 180) * DEG, phi = lat * DEG;
   const view = (ra, dec) => {
     const h = (lst - ra) * DEG, dd = dec * DEG;
     const up = Math.sin(phi) * Math.sin(dd) + Math.cos(phi) * Math.cos(dd) * Math.cos(h);
@@ -555,9 +556,12 @@ const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), p
 const mixRgb = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const rgba = (c, a) => `rgba(${c.map(v => Math.round(v)).join(',')},${a})`;
 function prayerFractions() {
+  const ch = chart();
   const decl = -23.44 * Math.cos(2 * Math.PI * (P.doy + 10) / 365);
   const asrEl = Math.atan(1 / (1 + Math.tan(Math.abs(P.lat - decl) * DEG))) / DEG;
-  return { FAJR: crossing(-18, true), SHURUQ: crossing(-0.833, true), DHUHR: 0.5 + 2 / 1440, ASR: crossing(asrEl, false), MAGHRIB: crossing(-0.833, false), ISHA: crossing(-18, false) };
+  const out = { FAJR: ch.fajr, SHURUQ: ch.rise, DHUHR: ch.noonF + 2 / 1440, ASR: crossing(asrEl, false), MAGHRIB: ch.set, ISHA: ch.isha };
+  for (const k of Object.keys(out)) if (out[k] === undefined) delete out[k];
+  return out;
 }
 function overlay(g, ox = 0, oy = 0, s = 1) {
   if (!P.arc) return;
@@ -570,9 +574,10 @@ function overlay(g, ox = 0, oy = 0, s = 1) {
   const sunGlow = mixRgb(hexRgb('#FFD58C'), hexRgb('#FF9A62'), golden * 0.6);
   g.save();
   g.translate(ox, oy); g.scale(s, s);
-  const pts = [];
-  for (let i = 0; i <= 288; i++) { const ff = i / 288; pts.push([ch.x(ff), ch.y(elevationAt(ff), ff)]); }
-  const path = () => { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); };
+  const pts = ch.points();
+  const trace = (ps) => { g.beginPath(); ps.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); };
+  const path = () => trace(pts);
+  const passed = ch.points(0, f);
   const stroke = 1.6 * dp;
   const sx = ch.x(f), sy = ch.y(el, f);
   g.lineCap = 'round'; g.lineJoin = 'round';
@@ -598,9 +603,13 @@ function overlay(g, ox = 0, oy = 0, s = 1) {
     g.setLineDash([2 * dp, 5 * dp]);
     g.strokeStyle = meet('rgba(255,255,255,0.5)'); g.lineWidth = stroke * 0.8; path(); g.stroke();
     g.setLineDash([]);
-    g.beginPath(); g.rect(P.rtl ? sx : 0, 0, P.rtl ? W - sx : sx, H); g.clip();
-    g.strokeStyle = meet(rgba(sunGlow, 0.24)); g.lineWidth = stroke * 4; path(); g.stroke();
-    g.strokeStyle = meet(rgba(sunCore, 0.95)); g.lineWidth = stroke; path(); g.stroke();
+    // (0.23) The day so far, in gold: the path up to the Sun.
+    g.strokeStyle = meet(rgba(sunGlow, 0.24)); g.lineWidth = stroke * 4; trace(passed); g.stroke();
+    g.strokeStyle = meet(rgba(sunCore, 0.95)); g.lineWidth = stroke; trace(passed); g.stroke();
+    g.restore();
+    // (0.23) Under the horizon, Fajr to Isha: the path at the Sun's real depth, faint and dashed.
+    g.save(); g.beginPath(); g.rect(0, hy, W, H - hy); g.clip();
+    g.setLineDash([2 * dp, 5 * dp]); g.strokeStyle = 'rgba(255,255,255,0.30)'; g.lineWidth = stroke * 0.8; trace(ch.points(ch.start, ch.end)); g.stroke(); g.setLineDash([]);
     g.restore();
     // Where the land stands in front of the Sun, a ring on the path shows where it is (SunLift.skylineY in the app).
     if (sky && el > -1) {
