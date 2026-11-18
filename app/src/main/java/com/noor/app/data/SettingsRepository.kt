@@ -61,6 +61,7 @@ class SettingsRepository(
         val status = booleanPreferencesKey("status_notification")
         val statusChip = booleanPreferencesKey("status_bar_chip")
         val statusChipIcon = booleanPreferencesKey("status_chip_icon")
+        val statusChipSystem = booleanPreferencesKey("status_chip_system_timer")
         val elapsed = booleanPreferencesKey("elapsed_after_prayer")
         val scrubHint = booleanPreferencesKey("hint_scrub_done")
         val scenery = stringPreferencesKey("scenery")
@@ -104,6 +105,7 @@ class SettingsRepository(
             statusNotification = p[K.status] ?: true,
             statusBarChip = p[K.statusChip] ?: true,
             statusChipIcon = p[K.statusChipIcon] ?: false,
+            statusChipSystemTimer = p[K.statusChipSystem] ?: false,
             elapsedAfterPrayer = p[K.elapsed] ?: true,
             scrubHintDone = p[K.scrubHint] ?: false,
             scenery = p.enum(K.scenery, Scenery.AUTO),
@@ -146,6 +148,7 @@ class SettingsRepository(
     suspend fun setStatusNotification(on: Boolean) = context.dataStore.edit { it[K.status] = on }
     suspend fun setStatusBarChip(on: Boolean) = context.dataStore.edit { it[K.statusChip] = on }
     suspend fun setStatusChipIcon(on: Boolean) = context.dataStore.edit { it[K.statusChipIcon] = on }
+    suspend fun setStatusChipSystemTimer(on: Boolean) = context.dataStore.edit { it[K.statusChipSystem] = on }
     suspend fun setElapsedAfterPrayer(on: Boolean) = context.dataStore.edit { it[K.elapsed] = on }
     suspend fun setScrubHintDone() = context.dataStore.edit { it[K.scrubHint] = true }
     suspend fun setScenery(v: Scenery) = context.dataStore.edit { it[K.scenery] = v.name }

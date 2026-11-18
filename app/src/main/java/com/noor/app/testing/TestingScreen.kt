@@ -189,6 +189,42 @@ private fun NotificationTestCard() {
             Text("Close Minhad from the recent apps to check that it keeps ticking: the test stays until you leave this page or tap the Testing strip.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        TimerTiming()
+    }
+}
+
+/**
+ * (0.23.2) Fine-tuning the status-bar timer against the phone's clock: the phone's time to the second, drawn here on the
+ * instant each second begins, to compare with the timer at the top of the screen; and how early Minhad hands each second
+ * to Android (the shade takes a moment, which differs from phone to phone, to draw it).
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TimerTiming() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var early by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(com.noor.app.notify.StatusTicker.also { it.loadTiming(context.applicationContext) }.earlyMs) }
+    var now by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis() / 1000L) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            val ms = System.currentTimeMillis()
+            kotlinx.coroutines.delay(1000L - ms % 1000L)
+            // On the frame after the second begins.
+            androidx.compose.runtime.withFrameMillis { }
+            now = System.currentTimeMillis() / 1000L
+        }
+    }
+    val time = java.time.Instant.ofEpochSecond(now).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    Text("Timer timing", style = MaterialTheme.typography.titleSmall)
+    Text("The phone's clock, to the second:", style = MaterialTheme.typography.bodySmall)
+    Text("%02d:%02d:%02d".format(time.hour, time.minute, time.second), style = MaterialTheme.typography.displaySmall.copy(
+        fontFeatureSettings = "tnum"))
+    Text("Minhad hands each second to Android $early ms before it begins. If the timer at the top changes after the clock above, " +
+        "make it earlier; if before, later. It is kept for the real timer too.", style = MaterialTheme.typography.bodySmall)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(-50L to "50 ms later", -10L to "10 ms later", 10L to "10 ms earlier", 50L to "50 ms earlier").forEach { (d, label) ->
+            OutlinedButton(onClick = { com.noor.app.notify.StatusTicker.saveTiming(context.applicationContext, early + d); early = com.noor.app.notify.StatusTicker.earlyMs }) { Text(label) }
+        }
+        OutlinedButton(onClick = { com.noor.app.notify.StatusTicker.saveTiming(context.applicationContext, com.noor.app.notify.StatusTicker.EARLY_DEFAULT); early = com.noor.app.notify.StatusTicker.earlyMs }) { Text("Reset (${com.noor.app.notify.StatusTicker.EARLY_DEFAULT} ms)") }
     }
 }
 

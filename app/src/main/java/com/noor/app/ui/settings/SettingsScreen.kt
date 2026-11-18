@@ -266,6 +266,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             if (newEnough && s.statusBarChip) add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Timer, stringResource(R.string.status_chip_icon_setting),
                 stringResource(R.string.status_chip_icon_desc), stringResource(R.string.kw_status), null,
                 toggle = s.statusChipIcon to { on -> vm.setStatusChipIcon(on) }))
+            // (0.23.2) The timer counted by Android itself, on the phone's clock: exact, in the phone's digits, no sign.
+            if (newEnough && s.statusBarChip) add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Timer, stringResource(R.string.status_chip_system_setting),
+                stringResource(if (s.statusChipSystemTimer) R.string.status_chip_system_on else R.string.status_chip_system_off), stringResource(R.string.kw_status), null,
+                toggle = s.statusChipSystemTimer to { on -> vm.setStatusChipSystemTimer(on) }))
         }
         add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }, listed = false))
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Brightness6, stringResource(R.string.theme), null, stringResource(R.string.kw_theme), { dialog = Dialog.THEME },

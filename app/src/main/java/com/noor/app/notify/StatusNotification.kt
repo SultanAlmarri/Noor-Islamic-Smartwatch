@@ -126,6 +126,7 @@ object StatusNotification {
         // its large countdown in the app's digits.
         val live = liveWanted(app, s) && !LivePromotion.refused(app)
         chipIcon = s.statusChipIcon
+        systemTimer = s.statusChipSystemTimer
         show(app, ctx, c, Formatter(arabic, s.numerals, s.timeFormat), live, s.numerals, now)
     }
 
@@ -137,7 +138,8 @@ object StatusNotification {
                      shown: ((Shown) -> Unit)? = null) {
         val nm = NotificationManagerCompat.from(app)
         ensureChannel(ctx)
-        val drawn = live || !systemDigitsMatch(app, numerals)
+        // (0.23.2) A Live Update counted by Android itself needs nothing of Minhad's running: no ticker, no service.
+        val drawn = if (live) !systemTimer else !systemDigitsMatch(app, numerals)
         android.util.Log.d("NoorStatus", "countdown digits: phone ${systemLocale(app).toLanguageTag()}, Noor $numerals: ${if (drawn) "drawn by Noor" else "Android's Chronometer"}; live $live")
         val make = { seconds: Boolean -> if (live) buildLive(ctx, app, c, now, f, seconds) else build(ctx, app, c, now, if (drawn) f else null, seconds) }
         var n = make(true)
@@ -187,6 +189,9 @@ object StatusNotification {
      * status-bar chip shows the countdown alone. (The shade's card still names Minhad in its header.)
      */
     @Volatile internal var chipIcon = false
+
+    /** (0.23.2) Whether Android counts the Live Update's timer itself (AppSettings.statusChipSystemTimer). */
+    @Volatile internal var systemTimer = false
 
     /** The notification last built for the bar (what the service shows as it starts). */
     @Volatile internal var latest: android.app.Notification? = null
@@ -330,10 +335,17 @@ object StatusNotification {
             // (0.22.2, the owner: more compact) The prayer, its time and the countdown on one line, each kept whole
             // and in its own direction: in a right-to-left shade the prayer stands on the right, the countdown on the
             // left; in a left-to-right one the other way round. Then the place and the Hijri date.
-            .setContentTitle(fittedTitle(c.prayer, c.time, count, fits, seconds))
+            .setContentTitle(if (systemTimer) styled("\u2068${c.prayer} · ${c.time}\u2069") else fittedTitle(c.prayer, c.time, count, fits, seconds))
             .setContentText(listOfNotNull(c.place, c.hijri).joinToString("  ·  "))
             .setStyle(NotificationCompat.BigTextStyle().bigText(listOfNotNull(c.place, c.hijri).joinToString("\n")))
-            .setShowWhen(false)
+            .setShowWhen(systemTimer)
+            .apply {
+                // (0.23.2) Android's own timer: the chip and the card count on the phone's clock. Before the prayer it counts
+                // down to it, its "when" 999 ms later so that the time left reads rounded up, as Minhad counts
+                // (Countdowns.timeLeft); after it, up from it.
+                if (systemTimer) setUsesChronometer(true).setChronometerCountDown(!c.elapsed)
+                    .setWhen(c.countAt.toEpochMilli() + if (c.elapsed) 0L else 999L)
+            }
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -351,7 +363,9 @@ object StatusNotification {
         n.extras.putBoolean(EXTRA_REQUEST_PROMOTED, true)
         if (android.os.Build.VERSION.SDK_INT >= 36) {
             n.flags = n.flags or android.app.Notification.FLAG_PROMOTED_ONGOING
-            return android.app.Notification.Builder.recoverBuilder(app, n).setShortCriticalText(chipText(count)).build()
+            val b = android.app.Notification.Builder.recoverBuilder(app, n)
+            if (!systemTimer) b.setShortCriticalText(chipText(count))
+            return b.build()
                 .also { it.flags = it.flags or android.app.Notification.FLAG_PROMOTED_ONGOING; it.extras.putBoolean(EXTRA_REQUEST_PROMOTED, true) }
         }
         return n
@@ -665,11 +679,22 @@ internal object StatusTicker {
     }
 
     /** How long before the change the notification is built (it takes a few hundredths of a second). */
-    private const val LEAD_MS = 300L
-    /** How long before the change it is handed to Android: about a frame of the shade's drawing. */
-    private const val EARLY_MS = 12L
+    private val LEAD_MS get() = maxOf(300L, earlyMs + 250L)
+    /**
+     * How long before the change it is handed to Android, so that the shade, which takes a moment to draw it, shows it on
+     * the second (0.23.2: 80 ms by default; 0.23.1's 12 ms still showed it a little late on the owner's Galaxy). Fine-tuned
+     * on the phone in Testing → Notification tests (kept in the "noor_status_live" preferences).
+     */
+    @Volatile internal var earlyMs = 80L
+    @Volatile private var timingLoaded = false
+    private val EARLY_MS get() = earlyMs
+    internal const val EARLY_DEFAULT = 80L
+
+    fun loadTiming(app: Context) { earlyMs = app.getSharedPreferences("noor_status_live", 0).getLong("early_ms", EARLY_DEFAULT) }
+    fun saveTiming(app: Context, ms: Long) { earlyMs = ms.coerceIn(-200L, 400L); app.getSharedPreferences("noor_status_live", 0).edit().putLong("early_ms", earlyMs).apply() }
 
     fun start(app: Context, t: StatusNotification.Ticking) {
+        if (!timingLoaded) { timingLoaded = true; loadTiming(app) }
         handler.post {
             current = t
             handler.removeCallbacks(tick); handler.removeCallbacks(show); ready = null; scheduled = false

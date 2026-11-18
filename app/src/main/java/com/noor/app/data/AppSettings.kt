@@ -112,6 +112,12 @@ data class AppSettings(
      * so the chip shows the countdown alone (a phone may still keep a little room for the icon).
      */
     val statusChipIcon: Boolean = false,
+    /**
+     * (0.23.2) Who counts the status-bar timer. False (default): Minhad, in the app's digits with its sign, each second
+     * handed over just before it begins. True: Android itself, on the phone's own clock (exact by construction, nothing
+     * to keep running), in the phone's digits and without the sign (the owner: "maybe you should find a new approach").
+     */
+    val statusChipSystemTimer: Boolean = false,
     /** After a prayer's time: "+" time since it for a while (default), or straight to the next prayer's "−" (0.9.8). */
     val elapsedAfterPrayer: Boolean = true,
     /** The home screen's sky has been drawn along once: its hint ("Drag the sky...") is not shown again (0.15). */
