@@ -1935,9 +1935,33 @@ widgets are now also photographed as a real Android system draws them, on an emu
   pre-release `widgets-preview` (pictures, crops, the host's lines, `widgets_log.txt`: the host's, the app's process's
   and the widget service's lines, and the whole logcat gzipped).
 
-**To add a widget kind**: nothing, with `spec=auto`; for particular sizes or options, give `spec` (and `ON_BOUND`).
+**How to run it**: Actions → "Widgets on real Android (emulator)" → Run workflow on the branch (a push to `widgets/**`
+that changes the harness also runs it with the defaults). Then download
+`https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/download/widgets-preview/widgets-<branch with - for />-api<N>.zip`
+(curl works from a cloud session). A full run (3 passes × 2 themes × 2 backgrounds × 3 pages = 36 screens per Android
+version) takes about 12 minutes of emulator time after a 6-minute build; a page settles in 10–15 s.
+
+**To add a widget kind, size or option**: a new provider in the app's manifest is picked up by `spec=auto` with no
+change here. For chosen sizes: `spec`, e.g. `TodayWidget=270x110,320x160+style=ring;SkyWidget=380x200` (the
+`+key=value` pairs go into the options bundle and are printed under the widget). For options saved per widget id by the
+app itself, the workflow's `on_bound` (the script's `ON_BOUND`) runs a command for each bound widget with `$ID
+$PROVIDER $SIZE $OPTIONS` set, e.g. `adb shell am broadcast -a <a debug action> --ei id $ID ... -n
+com.noor.smartwatch/com.noor.app.debug.TestHookReceiver`; the host waits 15 s after binding before the page counts as
+ready, and the app must refresh that widget when its options change. The host does not open a widget's configuration
+activity (it logs a NOTE when one is declared).
+
+**First results (18 November 2026, Android 14, 15 and 16 emulators; nothing here was seen on a phone)**: every widget
+bound, updated through the app's own path and drawn without an error view, in all 36 screens per version. Phone in
+Arabic with Minhad in English: the countdown, times and dates in Western digits, the prayer names in English; Minhad in
+Arabic: Arabic names and Arabic-Indic digits throughout. What the pictures show that the Robolectric renders did not:
+at the providers' smallest resize sizes the content does not fit (NextPrayer 110×40 dp: the time cut to "…" and the
+countdown hidden; Today 180×110 dp: three of six prayers, cut to "…", the next rows cut off; Sky 180×90 dp: the
+prayer's name cut to "…"; Today 270×110 dp shows three prayers); the sky picture's rounded corners are a little smaller
+than the background's, so a thin blue or sand rim shows at some corners. The Android 16 image (API 36) ran reliably.
+
 **Limits**: an emulator's launcher is not Samsung's One UI: the host reproduces what Android itself does (binding,
 options, restricted inflation, the system's digits and fonts), not One UI's own cell sizes, padding, corner rounding or
-dimming of the wallpaper in dark mode. The pictures are the system's drawing with a software GPU (faithful, slow). The
-time is fixed per picture; the countdown's seconds wheel turns while the page settles, so seconds differ between
-pictures.
+dimming of the wallpaper in dark mode. The automatic sizes take a launcher cell as 90×110 dp, which is only roughly a
+phone's. The pictures are the system's drawing with a software GPU (faithful, slow). The clock is set to the same moment
+before every page, so the countdowns agree to a second or two. `widgets_log.txt` has "Widget host dead" errors from the
+widget service: the previous page's host was stopped while the app was still updating its widgets; harmless.

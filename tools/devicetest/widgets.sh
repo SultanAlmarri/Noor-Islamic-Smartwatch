@@ -116,7 +116,8 @@ on_bound() {
     OPTIONS=$(echo "$line" | grep -oE 'options=[^ ]+' | cut -d= -f2-)
     export ID PROVIDER SIZE OPTIONS
     log "on bound: id=$ID $PROVIDER $SIZE $OPTIONS"
-    eval "$ON_BOUND"
+    # (stdin closed: adb would otherwise read the rest of the list and end the loop after the first widget)
+    eval "$ON_BOUND" < /dev/null
   done
 }
 # Closes an "isn't responding" dialog if one is shown all the same (taps Wait), as phone_098.sh does.
@@ -148,6 +149,12 @@ shot() {
   log "shot $1 ($(stat -c %s "$OUT/$1.png") bytes)"
 }
 
+# A first launch, not photographed: the first picture of a run once caught the window still opening (scaled down).
+RUN="warmup$(date +%s)"
+adb shell "am start -W -n $HACT --es run $RUN --es spec '$SPEC' --ei page 0" >/dev/null
+log "warm-up: $(wait_page "$RUN" 160)"
+adb shell input keyevent KEYCODE_HOME; sleep 3
+
 for t in $TIMES; do
   when=${t%%:*}; tname=${t##*:}
   for pass in $PASSES; do
@@ -172,7 +179,7 @@ for t in $TIMES; do
           note_pid
           grep "NoorWidgetHost: $RUN " "$OUT/logcat.txt" | sed -E 's/^.*NoorWidgetHost: //' > "$OUT/$name.txt"
           if [ "$r" = NOPAGE ]; then rm -f "$OUT/$name.txt"; break; fi
-          sleep 2
+          sleep 3
           shot "$name"
           log "$name: $r; $(grep -c ' UPDATE ' "$OUT/$name.txt") updates, $(grep -c ' ERROR ' "$OUT/$name.txt") errors"
           if [ "$r" = NONE ]; then
