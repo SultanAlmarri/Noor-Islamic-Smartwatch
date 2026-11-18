@@ -148,7 +148,7 @@ class NoorApplication : Application(), AlertHost {
         // The persistent notification follows the same things, plus its own switch and the display choices.
         container.scope.launch {
             container.settings.settings
-                .map { s -> Triple(Triple(s.statusNotification, s.elapsedAfterPrayer, s.statusBarChip), WearSync.configFor(s, 0L, container.timetables), Triple(s.language, s.numerals, s.timeFormat)) }
+                .map { s -> Triple(Triple(s.statusNotification, s.elapsedAfterPrayer, s.statusBarChip to s.statusChipIcon), WearSync.configFor(s, 0L, container.timetables), Triple(s.language, s.numerals, s.timeFormat)) }
                 .distinctUntilChanged()
                 .debounce(300)
                 .collect { com.noor.app.notify.StatusNotification.refresh(this@NoorApplication) }

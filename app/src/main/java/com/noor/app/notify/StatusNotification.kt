@@ -125,6 +125,7 @@ object StatusNotification {
         // (0.22) Only while the phone really shows it there ([LivePromotion]): where it does not, Minhad's own notification,
         // its large countdown in the app's digits.
         val live = liveWanted(app, s) && !LivePromotion.refused(app)
+        chipIcon = s.statusChipIcon
         show(app, ctx, c, Formatter(arabic, s.numerals, s.timeFormat), live, s.numerals, now)
     }
 
@@ -180,6 +181,12 @@ object StatusNotification {
 
     /** (Testing only) The tester's notification test (testing/NotificationTests); null: the real notification. */
     @Volatile internal var test: TestSource? = null
+
+    /**
+     * (0.24) Whether the Live Update carries Minhad's icon (AppSettings.statusChipIcon). Off: a transparent one, so the
+     * status-bar chip shows the countdown alone. (The shade's card still names Minhad in its header.)
+     */
+    @Volatile internal var chipIcon = false
 
     /** The notification last built for the bar (what the service shows as it starts). */
     @Volatile internal var latest: android.app.Notification? = null
@@ -318,7 +325,7 @@ object StatusNotification {
         val open = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = NotificationCompat.Builder(app, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(if (chipIcon) R.drawable.ic_notification else R.drawable.ic_notification_clear)
             .setColor(0xFFB4883A.toInt())
             // (0.22.2, the owner: more compact) The prayer, its time and the countdown on one line, each kept whole
             // and in its own direction: in a right-to-left shade the prayer stands on the right, the countdown on the

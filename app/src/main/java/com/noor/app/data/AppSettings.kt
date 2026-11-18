@@ -106,6 +106,12 @@ data class AppSettings(
      * Updates: a promoted ongoing notification; Android's own look, not Minhad's custom one, which Android does not promote).
      */
     val statusBarChip: Boolean = true,
+    /**
+     * (0.24) Minhad's icon beside that countdown in the status bar. Off by default (the owner: "I don't want the app's
+     * logo to appear in the ... timer ... just keep the timer"): the notification then carries a transparent small icon,
+     * so the chip shows the countdown alone (a phone may still keep a little room for the icon).
+     */
+    val statusChipIcon: Boolean = false,
     /** After a prayer's time: "+" time since it for a while (default), or straight to the next prayer's "−" (0.9.8). */
     val elapsedAfterPrayer: Boolean = true,
     /** The home screen's sky has been drawn along once: its hint ("Drag the sky...") is not shown again (0.15). */

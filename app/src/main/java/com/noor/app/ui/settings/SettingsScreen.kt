@@ -262,6 +262,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 }), stringResource(R.string.kw_status),
                 when { newEnough && s.statusBarChip && !allowed -> openSettings; newEnough && s.statusBarChip && samsung -> { { dialog = Dialog.SAMSUNG_LIVE } }; else -> null },
                 toggle = if (newEnough) s.statusBarChip to { on -> if (on) com.noor.app.notify.LivePromotion.retry(context); vm.setStatusBarChip(on) } else null))
+            // (0.24, the owner) The timer in the status bar without Minhad's icon beside it (off by default).
+            if (newEnough && s.statusBarChip) add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Timer, stringResource(R.string.status_chip_icon_setting),
+                stringResource(R.string.status_chip_icon_desc), stringResource(R.string.kw_status), null,
+                toggle = s.statusChipIcon to { on -> vm.setStatusChipIcon(on) }))
         }
         add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }, listed = false))
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Brightness6, stringResource(R.string.theme), null, stringResource(R.string.kw_theme), { dialog = Dialog.THEME },

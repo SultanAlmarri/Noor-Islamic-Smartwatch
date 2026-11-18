@@ -376,6 +376,8 @@
     <string name="status_chip_blocked">Turned off for Minhad in Android’s settings. Tap to allow it.</string>
     <string name="status_chip_refused">Your phone did not show it in the status bar, so the notification keeps Minhad’s own large countdown. Some phones show it only for the apps they choose.</string>
     <string name="status_chip_promoted">Android accepted it for the status bar: the countdown shows there as a timer.</string>
+    <string name="status_chip_icon_setting">Minhad’s icon beside the timer</string>
+    <string name="status_chip_icon_desc">Off: the status bar shows the countdown alone.</string>
     <string name="status_chip_samsung">On Samsung phones it also needs one switch in Developer options. Tap for the steps.</string>
     <string name="samsung_live_title">Show the countdown in the status bar</string>
     <string name="samsung_live_steps">Samsung shows other apps’ countdowns at the top of the screen only when this switch is on:\n\n1. Open Settings → About phone → Software information.\n2. Tap “Build number” 7 times, until the phone says Developer options are on (it may ask for your PIN).\n3. Go back to Settings, open Developer options at the bottom of the list.\n4. Search for “Live notifications” and turn on “Live notifications for all apps”.\n5. Come back to Minhad: the countdown appears at the top of the screen.</string>
