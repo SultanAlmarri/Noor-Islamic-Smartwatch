@@ -144,14 +144,18 @@ for t in $TIMES; do
           extra=""; [ -n "$ON_BOUND" ] && extra="--el hold $HOLD"
           adb shell "am start -W -n $HACT --es run $RUN --es spec '$SPEC' --ei page $page --es bg $bg $extra" >/dev/null
           on_bound "$RUN"
-          r=$(wait_page "$RUN" 200)
+          r=$(wait_page "$RUN" 160)
           note_pid
           grep "NoorWidgetHost: $RUN " "$OUT/logcat.txt" | sed -E 's/^.*NoorWidgetHost: //' > "$OUT/$name.txt"
           if [ "$r" = NOPAGE ]; then rm -f "$OUT/$name.txt"; break; fi
           sleep 2
           shot "$name"
           log "$name: $r; $(grep -c ' UPDATE ' "$OUT/$name.txt") updates, $(grep -c ' ERROR ' "$OUT/$name.txt") errors"
-          [ "$r" = NONE ] && log "no answer from the host for $name"
+          if [ "$r" = NONE ]; then
+            log "no answer from the host for $name (it may have crashed: widgets_log.txt); the next background"
+            grep -E "AndroidRuntime|FATAL" "$OUT/logcat.txt" | tail -5 | tee -a "$OUT/steps.txt"
+            break
+          fi
           [ "$(adb get-state 2>/dev/null)" = "device" ] || { log "device gone"; break 5; }
           page=$((page + 1))
         done

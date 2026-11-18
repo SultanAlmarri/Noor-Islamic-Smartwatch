@@ -89,7 +89,7 @@ class HostActivity : Activity() {
         val wallpaper = (intent.getStringExtra("bg") ?: "wallpaper") != "neutral"
         val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
-        fullScreen(wallpaper)
+        if (wallpaper) window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
         host = object : AppWidgetHost(this, HOST_ID) {
             override fun onCreateView(context: Context, appWidgetId: Int, appWidget: AppWidgetProviderInfo?): AppWidgetHostView = HostView(context)
         }
@@ -137,6 +137,7 @@ class HostActivity : Activity() {
             if (!wallpaper) setBackgroundColor(if (night) 0xFF1F1F1F.toInt() else 0xFFE6E6E6.toInt())
             addView(root)
         })
+        fullScreen()
         started = SystemClock.uptimeMillis()
         handler.postDelayed(::check, 500)
     }
@@ -299,11 +300,11 @@ class HostActivity : Activity() {
         }
     }
 
-    private fun fullScreen(wallpaper: Boolean) {
-        if (wallpaper) window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+    /** The system bars hidden (after setContentView: the window's decor exists from then). */
+    private fun fullScreen() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (Build.VERSION.SDK_INT >= 30) {
-            window.setDecorFitsSystemWindows(false)
+            @Suppress("DEPRECATION") window.setDecorFitsSystemWindows(false)
             window.insetsController?.let {
                 it.hide(WindowInsets.Type.systemBars())
                 it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
