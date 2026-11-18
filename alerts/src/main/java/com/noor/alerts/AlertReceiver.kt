@@ -215,13 +215,16 @@ internal object AlertDispatcher {
         fun log(outcome: AlertOutcome, detail: String? = null): AlertRecord =
             recordFor(context, prayer, test, at.toEpochMilli(), firedAtMs, outcome, chosen, detail).also { AlertLog.add(context, it) }
         fun notes(vararg n: String?) = listOfNotNull(*n).joinToString("\n").ifEmpty { null }
+        // (0.22: the prayer's notification goes when the next prayer begins, at most 90 minutes; a test's stays 90.)
+        val nextAtMs = if (test) 0L else AlertNotifications.nextPrayerAt(config, at)?.toEpochMilli() ?: 0L
+        fun stays() = AlertNotifications.prayerNoteStays(nextAtMs)
 
         when (alert.mode) {
             AlertMode.NOTIFICATION -> {
-                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at, testNote); log(AlertOutcome.NOTIFICATION); return
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at, testNote, stays()); log(AlertOutcome.NOTIFICATION); return
             }
             AlertMode.SILENT -> {
-                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, at, testNote); log(AlertOutcome.SILENT); return
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, at, testNote, stays()); log(AlertOutcome.SILENT); return
             }
             else -> Unit
         }
@@ -242,7 +245,7 @@ internal object AlertDispatcher {
             val am = context.getSystemService(AudioManager::class.java)
             // Silent ringer still means "vibrate" when the user set the phone to vibrate and wants vibration.
             if (quiet == Quiet.RINGER_SILENT && alert.vibrate && am?.ringerMode == AudioManager.RINGER_MODE_VIBRATE) AdhanService.vibrate(context)
-            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, at, notes(text.string(note), testNote))
+            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, at, notes(text.string(note), testNote), stays())
             log(outcome); return
         }
 
@@ -253,10 +256,10 @@ internal object AlertDispatcher {
         if (resolved == null) {
             // No sound file at all on this device: the backup Adhan (played by Android) is still better than nothing.
             if (isAdhan) {
-                AlertNotifications.postBackup(context, id, title, body, at, notes(text.string(R.string.noor_alert_fallback_played), testNote))
+                AlertNotifications.postBackup(context, id, title, body, at, notes(text.string(R.string.noor_alert_fallback_played), testNote), stays())
                 log(AlertOutcome.BACKUP_SOUND, "no sound file")
             } else {
-                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at, notes(text.string(R.string.noor_alert_failed), testNote))
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at, notes(text.string(R.string.noor_alert_failed), testNote), stays())
                 log(AlertOutcome.FAILED, "no sound file")
             }
             return
@@ -268,7 +271,8 @@ internal object AlertDispatcher {
         val req = PlayRequest(id, title, body, at.toEpochMilli(), detail, text.string(R.string.noor_alert_stop), resolved.source,
             alert.volumePercent, alerts.gradualSeconds, alert.maxSeconds, alert.vibrate, keepNotification = true,
             logId = record.id, fallback = library.emergencySource(resolved.source),
-            fallbackNote = text.string(R.string.noor_alert_fallback_played), failedNote = text.string(R.string.noor_alert_failed))
+            fallbackNote = text.string(R.string.noor_alert_fallback_played), failedNote = text.string(R.string.noor_alert_failed),
+            nextPrayerAtMs = nextAtMs)
         try {
             AdhanService.start(context, req)
         } catch (e: Exception) {
@@ -277,11 +281,11 @@ internal object AlertDispatcher {
             val why = "${e.javaClass.simpleName}: ${e.message}"
             if (isAdhan) {
                 // Android itself plays the short Adhan of the backup channel, which needs no permission to start.
-                AlertNotifications.postBackup(context, id, title, body, at, notes(text.string(R.string.noor_alert_backup_played), testNote))
+                AlertNotifications.postBackup(context, id, title, body, at, notes(text.string(R.string.noor_alert_backup_played), testNote), stays())
                 AlertLog.update(context, record.id) { it.copy(outcome = AlertOutcome.BACKUP_SOUND, detail = why) }
             } else {
                 AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, at,
-                    notes(if (blocked) text.string(R.string.noor_alert_blocked_background) else text.string(R.string.noor_alert_failed), testNote))
+                    notes(if (blocked) text.string(R.string.noor_alert_blocked_background) else text.string(R.string.noor_alert_failed), testNote), stays())
                 AlertLog.update(context, record.id) { it.copy(outcome = AlertOutcome.FAILED, detail = why) }
             }
         }
@@ -313,11 +317,13 @@ internal object AlarmDispatcher {
         val title = text.alarmTitle(a, p.date)
         val body = text.alarmBody(a, p.date, p.prayerAt)
         val id = AlertNotifications.alarmId(a.id)
-        if (a.sound == AlarmSound.NOTIFICATION) { AlertNotifications.postAlarmNote(context, a.id, title, body, p.at, noteStays(p, tried != null)); return }
+        // (0.22: every note of an alarm before a prayer goes when the prayer begins, not only a notification-only one's.)
+        val stays = noteStays(p, tried != null)
+        if (a.sound == AlarmSound.NOTIFICATION) { AlertNotifications.postAlarmNote(context, a.id, title, body, p.at, stays); return }
 
         // An Adhan sounding now is never cut short by an alarm: the alarm comes as a notification with the phone's sound.
         if (AdhanService.nowPlaying.value?.let { it.alarmId == 0 } == true) {
-            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at); return
+            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, timeoutMs = stays); return
         }
         // The Adhan's rules, as an alarm clock has them: never during a call, never without a notification to stop it,
         // not when Do Not Disturb blocks alarms; but the phone on vibrate or silent does not stop it (the Adhan's
@@ -334,7 +340,7 @@ internal object AlarmDispatcher {
                     AlertDispatcher.Quiet.IN_CALL -> R.string.noor_alert_quiet_call
                     else -> R.string.noor_alert_dnd_blocks_alarms
                 }
-                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, p.at, text.string(note))
+                AlertNotifications.post(context, id, AlertNotifications.CHANNEL_SILENT, title, body, p.at, text.string(note), stays)
                 return
             }
         }
@@ -353,19 +359,19 @@ internal object AlarmDispatcher {
         val source: SoundSource? = chosen ?: phone
         val fallback: SoundSource? = if (chosen != null) phone else SoundSource.System(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI.toString()).takeIf { it != source }
         if (source == null) {
-            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, text.string(R.string.noor_alarm_failed)); return
+            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, text.string(R.string.noor_alarm_failed), stays); return
         }
         val req = PlayRequest(id, title, body, p.at.toEpochMilli(), null, text.string(R.string.noor_alert_stop), source,
             volumePercent = 100, gradualSeconds = alerts.gradualSeconds, maxSeconds = RING_SECONDS, vibrate = a.vibrate, keepNotification = false,
             fallback = fallback, failedNote = text.string(R.string.noor_alarm_failed),
             alarmId = a.id, snoozeMinutes = a.snoozeMinutes, loop = true, alarmDate = p.date.toString(),
             snoozeLabel = if (a.snoozeMinutes > 0) text.string(R.string.noor_alarm_snooze, text.number(a.snoozeMinutes)) else null,
-            alarmText = tried)
+            alarmText = tried, nextPrayerAtMs = if (a.after || tried != null) 0L else p.prayerAt.toEpochMilli())
         try {
             AdhanService.start(context, req)
         } catch (e: Exception) {
             Log.e("NoorAlert", "Alarm could not ring", e)
-            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, text.string(R.string.noor_alarm_failed))
+            AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, text.string(R.string.noor_alarm_failed), stays)
         }
     }
 

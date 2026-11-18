@@ -40,7 +40,9 @@ wear          AlertSection (permissions on the watch), ReceivedSounds
   permission is granted.
 - **Firing.** The receiver re-checks the alarm against current times and choices: on time → alert; more than 10 minutes
   late (device off or in deep sleep) → a quiet "the time began at …" notification instead of a late Adhan; moved,
-  turned off or moved to the other device → nothing.
+  turned off or moved to the other device → nothing. A prayer's notification (and the one left after its Adhan) goes
+  when the next prayer begins, at most 90 minutes later (0.22: it always stayed 90 minutes, so Maghrib's was still
+  shown at Isha, and Fajr's after sunrise); so does every note of an alarm set before a prayer.
 - **Reminders (0.9.12).** `AlertPlanner.reminders` gives each alerting prayer's next reminder; `AlertScheduler` arms
   one plain exact alarm per prayer for it (not an alarm-clock alarm, so Android's "next alarm" stays the Adhan; inexact
   without the exact-alarm permission), re-armed with the prayer alarms. A reminder that would come before the previous

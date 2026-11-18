@@ -196,4 +196,54 @@ class AlertSchedulerTest {
         assertEquals("حان وقت صلاة العصر", s.extras.getString("android.title"))
         assertTrue(s.extras.getString("android.text")!!.contains('٣')) // Arabic-Indic digits as chosen
     }
+
+    /**
+     * 0.22: a prayer's notification goes when the next prayer begins. Until 0.21 it stayed 90 minutes whatever came
+     * next: in Dubai Maghrib's "Time for Maghrib" was still in the shade at Isha (about 80 minutes later), beside Isha's,
+     * and Fajr's after sunrise, when Fajr's time had ended.
+     */
+    @Test fun aPrayersNotificationLeavesWhenTheNextPrayerBegins() {
+        // Dubai, 4 November 2026: Maghrib to Isha is less than 90 minutes; Fajr to sunrise too.
+        val date = LocalDate.of(2026, 11, 4)
+        val d = dubai.day(date)
+        val maghrib = d.instant(Prayer.MAGHRIB)!!; val isha = d.instant(Prayer.ISHA)!!
+        val fajr = d.instant(Prayer.FAJR)!!; val sunrise = d.instant(Prayer.SHURUQ)!!
+        assertTrue(java.time.Duration.between(maghrib, isha) < java.time.Duration.ofMinutes(90))
+        assertEquals(isha, AlertNotifications.nextPrayerAt(dubai, maghrib))
+        assertEquals(sunrise, AlertNotifications.nextPrayerAt(dubai, fajr))
+        assertEquals(isha.toEpochMilli() - maghrib.toEpochMilli(),
+            AlertNotifications.prayerNoteStays(isha.toEpochMilli(), nowMs = maghrib.toEpochMilli()))
+        assertEquals(sunrise.toEpochMilli() - fajr.toEpochMilli(), AlertNotifications.prayerNoteStays(sunrise.toEpochMilli(), nowMs = fajr.toEpochMilli()))
+        // Isha to the next Fajr is long: it stays its 90 minutes, as before. Unknown next prayer: 90 minutes; a minute at least.
+        val nextFajr = AlertNotifications.nextPrayerAt(dubai, isha)!!
+        assertEquals(dubai.day(date.plusDays(1)).instant(Prayer.FAJR), nextFajr)
+        assertEquals(AlertNotifications.PRAYER_NOTE_MS, AlertNotifications.prayerNoteStays(nextFajr.toEpochMilli(), nowMs = isha.toEpochMilli()))
+        assertEquals(AlertNotifications.PRAYER_NOTE_MS, AlertNotifications.prayerNoteStays(0L))
+        assertEquals(60_000L, AlertNotifications.prayerNoteStays(isha.toEpochMilli(), nowMs = isha.toEpochMilli() + 1_000))
+
+        // The real path: a notification-only Maghrib, with Isha 80 minutes after it, as the times of a day around now
+        // (a place whose clock reads about noon now, so the day's times stay in order).
+        val now = System.currentTimeMillis()
+        val utc = Instant.ofEpochMilli(now).atZone(java.time.ZoneOffset.UTC)
+        val zone = java.time.ZoneOffset.ofHours(12 - utc.hour)
+        val local = Instant.ofEpochMilli(now).atZone(zone)
+        val m = local.hour * 60 + local.minute
+        val today = local.toLocalDate()
+        val table = com.noor.prayer.authority.Timetable("test", mapOf(today to intArrayOf(300, 400, 500, 600, m, m + 80)))
+        val config = dubai.copy(zoneId = zone.id, official = table)
+        val at = config.day(today).instant(Prayer.MAGHRIB)!!
+        val ishaAt = config.day(today).instant(Prayer.ISHA)!!
+        val settings = AlertSettings(enabled = true)
+        val nm = shadowOf(app.getSystemService(NotificationManager::class.java))
+        AlertDispatcher.dispatch(app, config, settings, Prayer.MAGHRIB, today, at,
+            settings.alert(Prayer.MAGHRIB).copy(mode = com.noor.prayer.alerts.AlertMode.NOTIFICATION), test = false)
+        val n = nm.allNotifications.single()
+        val expected = ishaAt.toEpochMilli() - now
+        assertTrue("timeout ${n.timeoutAfter} ms, expected about $expected", kotlin.math.abs(n.timeoutAfter - expected) < 5_000)
+        app.getSystemService(NotificationManager::class.java).cancelAll()
+        // The Adhan's own notification, left when the sound ends, carries the same end.
+        val req = PlayRequest(AlertNotifications.idFor(Prayer.MAGHRIB), "t", "b", at.toEpochMilli(), null, "Stop", SoundSource.Asset("x.ogg"),
+            80, 0, 0, false, keepNotification = true, nextPrayerAtMs = ishaAt.toEpochMilli())
+        assertEquals(ishaAt.toEpochMilli(), PlayRequest.from(req.toIntent(app))!!.nextPrayerAtMs)
+    }
 }
