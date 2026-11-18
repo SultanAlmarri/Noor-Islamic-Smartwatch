@@ -1902,3 +1902,58 @@ on his 411 dp Galaxy, less 3 %) says it fits; only where nothing fits (360 dp at
 360–448 dp): all fit with their seconds from 411 dp at up to 1.15×; every real case fits from 384 dp; three real lines are
 too long at 360 dp and 1.3× (reported). The place line now has its city (`withCity`, as the widgets: "Madinat Al Mataar,
 Dubai"). Not yet seen on the phone.
+
+## 37. The countdown keeps ticking when Minhad is closed (0.22.4 work, 18 November 2026, a helper on `fix/live-ticker`)
+
+**What the owner said** (Galaxy, One UI 8 / Android 16, the phone in Arabic with Arabic-Indic digits, Minhad in English
+with Western digits): the status-bar countdown "works well. But ... sometimes it doesn't work when I close the application
+totally ... the countdown timer freezes ... I want it to always work no matter what."
+
+**Why it froze.** Where Minhad writes the countdown itself (the phone's digits differ from the app's, his case, and
+always for the Live Update, whose title and chip are Minhad's), `StatusTicker` rewrote it every second inside the app's
+process. Swiped away (or put to sleep by One UI), the process ended and nothing rewrote it until the next minute alarm,
+which a closed or restricted app may not get promptly.
+
+**What was done.**
+- `notify/StatusCountdownService`: a foreground service of the documented "special use" type (Android 14+:
+  `FOREGROUND_SERVICE_SPECIAL_USE`, the manifest's `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` gives the reason), `stopWithTask`
+  false, `START_STICKY`. It holds the status notification (same id, 4600) only while Minhad writes the countdown; it stops
+  (and gives the notification back to the ordinary path, `STOP_FOREGROUND_DETACH`) when Android's Chronometer can tick it,
+  and takes it away when the notification is turned off. The notifications ask to be shown at once
+  (`FOREGROUND_SERVICE_IMMEDIATE`).
+- Battery: no wakelock, no waking alarm. The ticker runs only while the screen is interactive; the service's own
+  SCREEN_ON / USER_PRESENT receiver rebuilds and restarts it the moment the screen comes on, SCREEN_OFF stops it.
+  Nothing runs while the notification is off or ticked by Android.
+- `StatusNotification.refresh` → `StatusCountdownService.keep`. **Where Android lets it start** (Android 12+ forbids a
+  foreground service from the background except in documented cases): Minhad on screen (the settings flow, and
+  `MainActivity.onStart` rebuilds it if the service is gone); `BOOT_COMPLETED` and `MY_PACKAGE_REPLACED`
+  (`StatusRefreshReceiver`); `TIME_SET`, `TIMEZONE_CHANGED`, `LOCALE_CHANGED` (same receiver; listed exemptions); a
+  prayer alarm (`onPrayerAlarm`: the prayer alarms are alarm-clock alarms when the exact-alarm permission is granted,
+  which Android exempts; without that permission they are inexact and this path falls back); any time where the user
+  turned battery optimisation off for Minhad; always below Android 12. **Where it is refused**: the non-waking minute
+  alarm alone, the service's own restart by Android after it ended the process (`START_STICKY` with no intent: it tries
+  `startForeground` and stops if refused), any other background rebuild while the service is not running (one already
+  running is kept: nothing needs starting).
+- **The fallback** (never a crash, never a loop): `ForegroundServiceStartNotAllowedException` is caught; the countdown is
+  then written **to the minute** (h:mm, `Widgets.minuteCountdown`, ticked as its minute changes, `Ticking.seconds`
+  false), so it is never seen frozen on a second; the non-waking alarm is armed at the countdown's next minute
+  (`Widgets.nextMinute`) as the safety net. If the service itself fails to go foreground after a start it stops, says so
+  in the log, and is not started again for 15 minutes (`brokenUntil`).
+- **The tester's Notification tests** (the owner: "a way for me to test the notifications ... the longest possible
+  combination"): Settings → Testing → Notification tests (`testing/NotificationTests`). Presets (Longest English
+  "Jumu'ah · 12:07 PM −10:27:15, Mohammed Bin Rashid Al Maktoum City, Dubai", Longest Arabic, Arabic-Indic digits, After a
+  prayer +29:5x, Ten hours to Fajr, Maghrib late at 10:45 PM, Just before the Adhan −00:05 then +, Sunrise), switches
+  (Live Update or Minhad's own, digits, 12/24 h, language), and a line saying what was posted (Live Update or own; drawn by
+  Minhad or Android's Chronometer; held by the service or to the minute; which spacing `fitTitle` chose and whether the
+  seconds were kept) and what Android did with the chip (`LivePromotion`). It goes through the same `show` as the real
+  notification (`StatusNotification.test`), the same id, service and ticker. "Back to the real notification", leaving the
+  Testing page or the Testing strip gives the real one back; Minhad being swiped away does not (so the test can be seen
+  ticking with the app closed), and the strip says "notification test" on every page meanwhile.
+- Tests: `StatusCountdownServiceTest` (the start, foreground with the special-use type, the app's digits on a phone in
+  Arabic and the other way round, the sign first, survives `onTaskRemoved`, ticks only while interactive and resumes on
+  SCREEN_ON, the refused start falls back to the minute with the alarm armed, no service when the digits match, stops and
+  removes the notification when turned off) and `NotificationTestsTest` (every preset as a Live Update and as Minhad's own,
+  12 and 24 h: posted under the real id, the first line fits at 411 dp and keeps the prayer, its time and the whole
+  countdown). Robolectric, Android 14: **not seen on a phone**. Whether One UI keeps the service through "Close all", its
+  "Sleeping apps" / "Deep sleeping apps" lists or a force stop is seen only on the phone (a force stop ends every app's
+  services and alarms until it is opened again; that is Android's rule, not bypassed).

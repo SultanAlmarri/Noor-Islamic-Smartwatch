@@ -158,6 +158,11 @@ with Android's Chronometer counting down or up) use it, in the same format (`For
   a little late and the countdown can briefly show a negative time until it does.
 - Tested by `StatusNotificationTest` (content at fixed moments, Friday, Arabic, channel, ongoing, next update armed,
   turning off); render `55_status_notification_en.png`.
+- (0.9.8 to 0.22) Where the phone's digits differ from the app's, and for the Live Update (0.22), Minhad writes the
+  countdown itself (`StatusTicker`, each second while the screen is on). (0.22.4) Then `StatusCountdownService`, a
+  "special use" foreground service, holds the notification so it keeps ticking with the app closed; where Android
+  refuses to start it from the background, the countdown is written to the minute. HANDOVER.md section 37;
+  `StatusCountdownServiceTest`. The tester's Notification tests: `testing/NotificationTests`, `NotificationTestsTest`.
 
 ## Design system
 
