@@ -18,3 +18,7 @@ __pycache__/
 .kotlin/
 tools/sky3d/out/
 .claude/launch.json
+
+# The bench's working output (cards.py writes the finished cards into the app)
+tools/skybench/cards_out/
+tools/skybench/cards.json
