@@ -88,17 +88,15 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const s = cfg.skyScale;
     const SW = Math.round(W * s), SH = Math.round(H * s);
     const dd = Scene.day(cfg.place, cfg.date);
-    const warpF = Scene.warp(dd, cfg.anchors || [0.08, 0.22, 0.78, 0.92]);
-    const xOf = (fr) => (-0.04 + 1.08 * warpF(Math.max(0, Math.min(1, fr)))) * W;
-    let f = cfg.fraction;
-    if (cfg.xFrac !== undefined) { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (xOf(m) < cfg.xFrac * W) lo = m; else hi = m; } f = (lo + hi) / 2; }
-    const el = dd.elAt(f);
     const hy = cfg.horizonDp * dp, arcTop = cfg.arcTopDp * dp, groundY = (cfg.hDp - 6) * dp;
-    const maxEl = Math.max(dd.maxEl, 12), minEl = Math.min(dd.minEl, -24);
-    const refr = (el) => { const h = Math.max(el, -1.9); return 1.02 / Math.tan((h + 10.3 / (h + 5.11)) * DEG) / 60; };
-    const hLift = (el) => { if (el >= -0.8333) return refr(el) * (0.5667 / refr(-0.8333)) + 0.2667; const t = Math.max(0, Math.min(1, (el + 4) / (4 - 0.8333))); return 0.8333 * t * t * (3 - 2 * t); };
-    const app = (e) => e + hLift(e); const maxApp = app(maxEl);
-    const yOf = (e0) => { const e = app(e0); return e >= 0 ? hy - (e / maxApp) * (hy - arcTop) : hy + (-e / -minEl) * (groundY - hy); };
+    // (0.23) The Sun's real path (panorama.js, a port of SunPanorama.kt and SkyGeometry): an equal-angle picture facing
+    // the noon Sun, one scale across and up, never mirrored. (Until 0.22: an even arch in time, the pre-0.20 linear height here.)
+    const SPT = SunPanorama.track(dd.start, cfg.place.lat, cfg.place.lon, dd.ev);
+    const G = SunPanorama.geometry(SPT, W, hy, arcTop, groundY);
+    const xOf = (fr) => G.x(fr);
+    let f = cfg.fraction;
+    const el = dd.elAt(f);
+    const yOf = (e0) => G.y(e0);
     const sunX = xOf(f), sunY = yOf(el);
     const altTop = 80, altPow = 1.25;
     const altAt = (y) => altTop * Math.pow(Math.max(0, Math.min(1, (hy - y) / hy)), altPow);
@@ -144,7 +142,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const atMs = Date.UTC(yy, mm - 1, ddn) + (f * 24 - cfg.place.tz) * 3600e3;
     const jd = atMs / 86400000 + 2440587.5, dd0 = jd - 2451545, T = dd0 / 36525;
     const gmst = ((280.46061837 + 360.98564736629 * dd0 + 0.000387933 * T * T - T * T * T / 38710000) % 360 + 360) % 360;
-    const lst = gmst + cfg.place.lon, lat = cfg.place.lat, a0 = cfg.rtl ? 0 : 180;
+    const lst = gmst + cfg.place.lon, lat = cfg.place.lat, a0 = G.facingNorth ? 0 : 180;
     const view = (ra, dec) => { const h = (lst - ra) * D2R, d = dec * D2R, phi = lat * D2R;
       const up = Math.sin(phi) * Math.sin(d) + Math.cos(phi) * Math.cos(d) * Math.cos(h);
       const north = Math.cos(phi) * Math.sin(d) - Math.sin(phi) * Math.cos(d) * Math.cos(h);
@@ -203,7 +201,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const landU = Object.assign({}, common, { uWeather: [wNow.cumulus * (1 - wNow.overcast), wNow.cirrus, weather[2], weather[3]] }, {
       uSize: [W, H], uDp: dp, uHorizon: hy, uBaseA: base.slice(0, 4), uBaseB: base[4], uAmpA: amp.slice(0, 4), uAmpB: amp[4],
       uDistA: dists.slice(0, 4), uDistB: dists[4], uRidgeN: N, uDunes: dunes ? 1 : 0, uSunPos: [sunX, sunY],
-      uPage: page, uMist: mist, uSeed: (cfg.landSeed || 7) % 97, uSunrise: [xOf(dd.ev.SHURUQ), xOf(dd.ev.MAGHRIB)],
+      uPage: page, uMist: mist, uSeed: (cfg.landSeed || 7) % 97, uSunrise: [dd.ev.SHURUQ !== undefined ? xOf(dd.ev.SHURUQ) : -1e5, dd.ev.MAGHRIB !== undefined ? xOf(dd.ev.MAGHRIB) : -1e5],
       uTerrain: { dunes: 0, hills: 1, mountains: 2, sea: 3, forest: 4, arctic: 5, canyon: 6 }[terrain], uAltTop: altTop, uAltPow: altPow,
       uMoonL: [mx, my, moonVis, (1 - Math.cos(phase)) / 2],
     });
@@ -254,7 +252,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       const mk = cfg.moonK ?? 0.9;
       const L = {
         el, sunAz: (sunX - W / 2) / F, sunElSeen: el > 0 ? Math.atan((hy - sunY) / F) / DEG : el,
-        side: moonLight ? Math.max(-1, Math.min(1, (mx - W / 2) / (0.2 * W))) : Math.max(-1, Math.min(1, (f - dd.noonF) / 0.07)) * (cfg.rtl ? -1 : 1),
+        side: moonLight ? Math.max(-1, Math.min(1, (mx - W / 2) / (0.2 * W))) : Math.max(-1, Math.min(1, (f - dd.noonF) / 0.07)) * G.travel,
         moonLight, moonEl: Math.max(0.7, Math.atan((hy - my) / F) / DEG), glow: smooth(0, 1, (12 - el) / 10),
         moonW, moon: [0.050, 0.062, 0.095].map(x => x * mk * illum * moonVis),
         sunlight: fr.sunlight, ambTop: common.uAmbTop, ambLow: common.uAmbLow, sunGround: fr.sunGround, glowCol: fr.glow,
@@ -262,7 +260,7 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
         sunX, sunY, dp, glare: (cfg.glare ?? 0.8) * smooth(-5, 0.5, el), glareCol: Atmo.tone(fr.sunGlow.slice(), [0, 0, 0]),
         textY: arcTop - 16 * dp - 0.085 * H, textR: 0.125 * H, textCap: cfg.textCap ?? 0.34, debug: !!cfg.debug,
       };
-      const V = { W, hy, F, rtl: !!cfg.rtl };
+      const V = { W, hy, F, rtl: false };
       const cc = document.createElement('canvas'); cc.width = W; cc.height = H;
       const cg = cc.getContext('2d'); cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
       const tc = performance.now();
@@ -291,17 +289,20 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
     const t4 = performance.now();
     // Sun path above the horizon (behind the land): dashed, gold where the day has passed.
     g.save(); g.beginPath(); g.rect(0, 0, W, hy); g.clip();
-    const path = new Path2D(); dd.samples.forEach(([fq, e], i) => { const x = xOf(fq), y = yOf(e); i ? path.lineTo(x, y) : path.moveTo(x, y); });
+    const toPath = (pts) => { const p = new Path2D(); pts.forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y))); return p; };
+    const path = toPath(G.points());
     g.setLineDash([2 * dp, 5 * dp]); g.lineCap = 'round'; g.lineWidth = 1.3 * dp; g.strokeStyle = `rgba(255,255,255,${0.5 * pathA})`; g.stroke(path);
     g.setLineDash([]);
-    g.save(); g.beginPath(); g.rect(0, 0, sunX, hy); g.clip();
-    g.lineWidth = 6.4 * dp; g.strokeStyle = `rgba(255,213,140,${0.20 * pathA})`; g.stroke(path);
-    g.lineWidth = 1.6 * dp; g.strokeStyle = `rgba(255,237,194,${0.95 * pathA})`; g.stroke(path);
-    g.restore(); g.restore();
+    // The day so far, in gold: the path up to the Sun.
+    const passed = toPath(G.points(0, f));
+    g.lineWidth = 6.4 * dp; g.strokeStyle = `rgba(255,213,140,${0.20 * pathA})`; g.stroke(passed);
+    g.lineWidth = 1.6 * dp; g.strokeStyle = `rgba(255,237,194,${0.95 * pathA})`; g.stroke(passed);
+    g.restore();
     let landMs = 0;
     if (cfg.painted && window.PAINTED && window.PAINTED[cfg.painted]) {
       // (0.22, PaintedLand.weights) The two lights of the moment, one faded over the other; horizon on row 900 of 1080.
-      const P = window.PAINTED[cfg.painted], ev = f > dd.noonF;
+      // (0.23) The light from the side the Sun is on (the painting's "evening" side is its right).
+      const P = window.PAINTED[cfg.painted], ev = (f > dd.noonF) === (G.travel > 0);
       const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
       const gold = ev ? 'golden_right' : 'golden_left', day = ev ? 'day_right' : 'day_left';
       const [A, B, t] = el < -3 ? ['night', 'twilight', sm(-11, -3, el)] : el < 3 ? ['twilight', gold, sm(-3, 3, el)] : el < 15 ? [gold, day, sm(3, 15, el)] : [day, 'noon', sm(22, 50, el)];
@@ -324,6 +325,22 @@ in vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
       else { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1.2 * dp; g.arc(x, y, 3.4 * dp, 0, 7); g.stroke(); }
     }
     g.restore();
+    // (0.23) Under the horizon, Fajr to Isha: the path at the Sun's real depth, faint and dashed (in front of the land).
+    g.save(); g.globalAlpha = fade; g.beginPath(); g.rect(0, hy, W, H - hy); g.clip();
+    g.setLineDash([2 * dp, 5 * dp]); g.lineCap = 'round'; g.lineWidth = 1.3 * dp; g.strokeStyle = `rgba(255,255,255,${0.30 * pathA})`;
+    g.stroke(toPath(G.points(SPT.start, SPT.end))); g.setLineDash([]); g.restore();
+    // (0.23) Where the land stands in front of the Sun, a ring on the path shows where it is (painted skyline or ridges).
+    if (el > -1 && (!cfg.painted || cfg.paintedSkyline)) {
+      let top;
+      if (cfg.painted) { const sk = cfg.paintedSkyline, n = sk.length, u = Math.max(0, Math.min(0.9999, sunX / W)); top = hy - sk[Math.floor(u * n)] * W; }
+      else top = skyline(sunX) + lift;
+      const disc = 7 * dp, hid = smooth(-disc * 0.6, disc * 1.2, sunY - top) * smooth(-1, -0.4, el);
+      if (hid > 0.01) {
+        const ring = (r, c, fill, wd) => { g.beginPath(); g.arc(sunX, sunY, r, 0, 7); if (fill) { g.fillStyle = c; g.fill(); } else { g.strokeStyle = c; g.lineWidth = wd; g.stroke(); } };
+        ring(disc * 1.9, `rgba(0,0,0,${0.16 * hid})`, true); ring(disc * 1.6, `rgba(255,213,140,${0.30 * hid})`, true);
+        ring(disc * 1.15, `rgba(255,237,194,${0.95 * hid})`, false, 1.6 * dp); ring(disc * 0.32, `rgba(255,255,255,${0.85 * hid})`, true);
+      }
+    }
     // Text, roughly as the app sets it.
     if (cfg.scrub) {
       const mins = Math.round(f * 1440); const hh = Math.floor(mins / 60) % 24, mm = mins % 60;

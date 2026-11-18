@@ -210,10 +210,15 @@ phone) as bland and fake: never call a render beautiful on your own judgment; pu
 - Rules a scenery must keep: nature only; every source and licence written down in `tools/scenery/sources/`;
   built from real-world data (scans, elevation models) wherever such data exists, not from formulas; and a natural
   skyline: never cut a range or a treeline open so the Sun rises and sets on level ground (the owner rejected that;
-  the Sun may rise over a mountain). The Sun's path (0.20) is the same arch over every scenery and level, on the
-  level horizon, drawn in front of the land, its height in proportion to the sine of the Sun's elevation
-  (`SkyGeometry.y`); where the land hides the Sun a ring on the path shows where it is (`SunLift.skylineY` from
-  `land.json`'s `skyline`, `LandProfile.skylineAt`). The owner rejected the path hidden behind mountains and different
+  the Sun may rise over a mountain). The Sun's path (0.23) is the Sun's real path, the same over every scenery and level
+  (it depends on the place and the day only), on the level horizon, drawn in front of the land: an equal-angle picture
+  facing the noon Sun, the azimuth from the noon Sun's across and the apparent elevation up, ONE scale for both
+  (`SunPanorama`, `SkyGeometry`: px per degree `k`, the largest at which Fajr..Isha fits the width and noon fits under
+  the arch's top), from the SPA engine (`SunPath.track`). The Sun moves left to right facing south, right to left facing
+  north (southern hemisphere, the tropics' poleward-noon days). The sky scene is never mirrored in Arabic (the owner,
+  18 November 2026). Do not distort one axis against the other (`SunPathRealTest` checks every angle against an
+  independent almanac). The Sun is hidden behind land that stands in front of it, as in real life; a ring on the path
+  shows where it is (`sunHidden`, `SunLift.skylineY` from `land.json`'s `skyline`, `LandProfile.skylineAt`). The owner rejected the path hidden behind mountains and different
   over each scenery (0.11 to 0.19 lifted it onto each skyline; `lift` in `land.json` is no longer read).
   `bake.skyline_limit` is only advice against hiding the Sun's whole day.
 - The data the sceneries and clouds are built from lives outside the repository, in `NoorToolsssets\<source>`:

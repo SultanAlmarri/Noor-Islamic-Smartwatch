@@ -288,7 +288,7 @@ internal class StarShaderCache(private val res: Resources) {
         if (i.look.night <= 0f) return empty
         val v = i.view
         val step = Math.floorDiv(i.shownAt.epochSecond, 120L)
-        val k = listOf(step, w, h, i.scene.latitude, i.scene.longitude, v.horizonY * s, v.fov, v.rtl)
+        val k = listOf(step, w, h, i.scene.latitude, i.scene.longitude, v.horizonY * s, v.fov, v.facingNorth)
         val r = ready
         val now = android.os.SystemClock.uptimeMillis()
         if (r?.first != k && !drawing && now - askedAt >= 250) {
@@ -296,7 +296,7 @@ internal class StarShaderCache(private val res: Resources) {
             // Three bitmaps in turn: the one shown, the one the GPU may still be reading, the one being drawn.
             turn = (turn + 1) % 3
             val bmp = pool[turn]?.takeIf { it.width == w && it.height == h } ?: Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { pool[turn] = it }
-            val lat = i.scene.latitude; val lon = i.scene.longitude; val hy = v.horizonY * s; val fov = v.fov; val dp = v.density * s; val rtl = v.rtl
+            val lat = i.scene.latitude; val lon = i.scene.longitude; val hy = v.horizonY * s; val fov = v.fov; val dp = v.density * s; val rtl = v.facingNorth
             STARS.execute {
                 runCatching {
                     NightSky.drawStars(bmp, NightSky.stars(res), java.time.Instant.ofEpochSecond(step * 120L + 60L), lat, lon, hy, fov, SkyView.ALT_TOP, SkyView.ALT_POW, dp, rtl)
