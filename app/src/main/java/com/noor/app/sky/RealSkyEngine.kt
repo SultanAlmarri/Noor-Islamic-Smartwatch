@@ -1078,6 +1078,13 @@ internal class RealSkyEngine(private val app: Context) : Runnable {
         }
         while (running) {
             val f: RealSkyFrame?
+            // (0.21) The surface is (re)bound holding the lock that the main thread takes to hand over each frame
+            // (submit, attach, setVisible). Switching the context's surface can wait for the GPU to finish what was sent
+            // to it: on a software GPU the first pictures take tens of seconds, and the main thread would wait all that
+            // time (a likely cause of "Minhad isn't responding" just after the first frame on the emulators' High
+            // graphics; not confirmed on a device). The GPU's work is finished here, without the lock, so the binding
+            // under it is quick.
+            if (surfaceChanged && context != EGL14.EGL_NO_CONTEXT) runCatching { GLES30.glFinish() }
             synchronized(lock) {
                 if (surfaceChanged) { surfaceChanged = false; runCatching { bindSurface() }; lock.notifyAll() }
                 releaseRetired()
