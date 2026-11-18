@@ -245,9 +245,12 @@ object StatusNotification {
         val n = NotificationCompat.Builder(app, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFFB4883A.toInt())
-            .setContentTitle(count)
-            .setContentText(prayer)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(listOfNotNull(prayer, c.place, c.hijri).joinToString("\n")))
+            // (0.22.2, the owner: more compact) The prayer, its time and the countdown on one line, each kept whole
+            // and in its own direction: in a right-to-left shade the prayer stands on the right, the countdown on the
+            // left; in a left-to-right one the other way round. Then the place and the Hijri date.
+            .setContentTitle(titleLine(prayer, count))
+            .setContentText(listOfNotNull(c.place, c.hijri).joinToString("  ·  "))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(listOfNotNull(c.place, c.hijri).joinToString("\n")))
             .setShowWhen(false)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -272,7 +275,18 @@ object StatusNotification {
     }
 
     /** The chip's text: the countdown without its minus sign ("1:03:32"), or with its plus after a prayer ("+15:21"). */
-    internal fun chipText(countdown: String): String = countdown.removePrefix(MINUS)
+    internal fun chipText(countdown: String): String = ltr(countdown.removePrefix(MINUS))
+
+    /**
+     * (0.22.2) A countdown kept left to right inside right-to-left text: the owner's Galaxy, its system in Arabic, wrote
+     * "2:08:17−" (the shade lays a notification out right to left, and the sign went to the far end). Isolated (LRI ..
+     * PDI, with a left-to-right mark inside for text engines that skip isolates), the sign stays before the digits and
+     * the line keeps the shade's own direction and alignment.
+     */
+    internal fun ltr(text: String): String = "\u2066\u200E$text\u2069"
+
+    /** The Live Update's first line: the prayer and its time, a wide gap, the countdown (each isolated, [ltr]). */
+    internal fun titleLine(prayer: String, countdown: String): String = "\u2068$prayer\u2069\u2003\u2003${ltr(countdown)}"
 
     /** A place's own name: the part before its first comma (Latin or Arabic), or the whole when it has none. */
     internal fun shortPlace(place: String): String = place.split(',', '\u060C').first().trim().ifEmpty { place }

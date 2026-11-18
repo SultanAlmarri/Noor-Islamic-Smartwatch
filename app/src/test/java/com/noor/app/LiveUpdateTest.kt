@@ -25,6 +25,7 @@ import java.time.ZonedDateTime
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
+@org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class LiveUpdateTest {
     @Test fun theCountdownCanBeAChipInTheStatusBar() {
         val app = RuntimeEnvironment.getApplication() as NoorApplication
@@ -44,25 +45,45 @@ class LiveUpdateTest {
         assertNull(n.bigContentView)
         // (0.22, the owner: the countdown was small, in the header, and in the phone's Arabic-Indic digits.) The title is
         // the countdown, written by Minhad in the app's digits; no chronometer of Android's, no "Next prayer".
-        assertEquals("\u22122:27:44", n.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
-        assertEquals("Dhuhr  ·  12:05 PM", n.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals("\u2068Dhuhr  ·  12:05 PM\u2069\u2003\u2003\u2066\u200E\u22122:27:44\u2069", n.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        assertTrue(n.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("Jumada"))
         assertFalse(n.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
         assertNull(n.extras.getCharSequence(Notification.EXTRA_SUB_TEXT))
         assertTrue(n.flags and Notification.FLAG_ONGOING_EVENT != 0)
         assertTrue("asks to be promoted", n.extras.getBoolean(StatusNotification.EXTRA_REQUEST_PROMOTED))
         assertTrue(n.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString().contains("Jumada"))
-        assertEquals("2:27:44", StatusNotification.chipText(c.countdown(before, f)))
+        assertEquals("\u2066\u200E2:27:44\u2069", StatusNotification.chipText(c.countdown(before, f)))
         // With Arabic-Indic digits chosen in the app, the countdown is in them, whatever the phone's language.
         val ai = com.noor.app.util.Formatter(false, com.noor.app.data.Numerals.ARABIC_INDIC, s.timeFormat)
-        assertEquals("\u2212\u0662:\u0662\u0667:\u0664\u0664", StatusNotification.buildLive(app, app, c, before, ai).extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        assertTrue(StatusNotification.buildLive(app, app, c, before, ai).extras.getCharSequence(Notification.EXTRA_TITLE).toString().endsWith("\u2066\u200E\u2212\u0662:\u0662\u0667:\u0664\u0664\u2069"))
 
         // After the prayer, during its "since" period: "+" and the time since it.
         val after = ZonedDateTime.of(2026, 11, 4, 12, 20, 0, 0, dubai).toInstant()
         val a = StatusNotification.content(config, s, after, arabic = false)
         val m = StatusNotification.buildLive(app, app, a, after, f)
         assertTrue(a.elapsed)
-        assertEquals("+15:00", m.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
-        assertEquals("+15:00", StatusNotification.chipText("+15:00"))
+        assertTrue(m.extras.getCharSequence(Notification.EXTRA_TITLE).toString().endsWith("\u2066\u200E+15:00\u2069"))
+        assertEquals("\u2066\u200E+15:00\u2069", StatusNotification.chipText("+15:00"))
+
+        // (0.22.2) Laid out right to left, as the shade of a phone whose system is in Arabic lays it out (the owner's Galaxy
+        // wrote "2:08:17−"): the sign stays before the digits, "−" and "+" alike.
+        for (txt in listOf(StatusNotification.ltr("\u22122:08:17"), StatusNotification.ltr("+15:21"))) {
+            val paint = android.text.TextPaint().apply { textSize = 40f }
+            val lay = android.text.StaticLayout.Builder.obtain(txt, 0, txt.length, paint, 1000)
+                .setTextDirection(android.text.TextDirectionHeuristics.RTL).build()
+            val sign = txt.indexOfFirst { it == '\u2212' || it == '+' }
+            val digit = txt.indexOfFirst { it.isDigit() }
+            assertTrue("$txt: the sign is drawn after the digits", lay.getPrimaryHorizontal(sign) < lay.getPrimaryHorizontal(digit))
+        }
+        // The whole first line in a right-to-left shade: the countdown on the left (its sign first), the prayer on the right.
+        run {
+            val line = StatusNotification.titleLine("Asr  ·  3:10 PM", "\u22122:08:17")
+            val lay = android.text.StaticLayout.Builder.obtain(line, 0, line.length, android.text.TextPaint().apply { textSize = 40f }, 2000)
+                .setTextDirection(android.text.TextDirectionHeuristics.RTL).build()
+            val x = { ch: Char -> lay.getPrimaryHorizontal(line.indexOf(ch)) }
+            assertTrue("countdown left of the prayer", x('\u2212') < x('A'))
+            assertTrue("sign before the digits", x('\u2212') < lay.getPrimaryHorizontal(line.indexOf("2:08")))
+        }
 
         // Minhad's own notification says no "Next prayer" either (its header showed it).
         assertNull(StatusNotification.build(app, app, c, before, f).extras.getCharSequence(Notification.EXTRA_SUB_TEXT))
