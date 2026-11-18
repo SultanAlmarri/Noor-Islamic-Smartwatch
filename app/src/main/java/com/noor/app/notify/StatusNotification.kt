@@ -18,6 +18,7 @@ import com.noor.app.NoorApplication
 import com.noor.app.R
 import com.noor.app.data.AppSettings
 import com.noor.app.data.Language
+import com.noor.app.data.PrayerProvider
 import com.noor.app.data.WearSync
 import com.noor.app.util.Formatter
 import com.noor.prayer.Countdowns
@@ -111,7 +112,7 @@ object StatusNotification {
         val arabic = ctx.resources.configuration.locales[0].language == "ar"
         ensureChannel(ctx)
         val now = Instant.now()
-        val c = content(config, s, now, arabic)
+        val c = content(config, s, now, arabic).let { k -> k.copy(place = withCity(k.place, PrayerProvider.place(s), arabic)) }
         // (0.22) As a chip in the status bar (Android 16's Live Updates), Android's own chronometer counts, in the phone's
         // digits, as the chip and the Now Bar show them: Minhad does not draw it then.
         // (0.22) Only while the phone really shows it there ([LivePromotion]): where it does not, Minhad's own notification,
@@ -243,6 +244,7 @@ object StatusNotification {
     internal fun buildLive(ctx: Context, app: Context, c: Content, now: Instant, f: Formatter): android.app.Notification {
         val count = c.countdown(now, f)
         val prayer = "${c.prayer}  ·  ${c.time}"
+        val fits = titleFits(ctx)
         val open = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = NotificationCompat.Builder(app, CHANNEL)
@@ -251,7 +253,7 @@ object StatusNotification {
             // (0.22.2, the owner: more compact) The prayer, its time and the countdown on one line, each kept whole
             // and in its own direction: in a right-to-left shade the prayer stands on the right, the countdown on the
             // left; in a left-to-right one the other way round. Then the place and the Hijri date.
-            .setContentTitle(titleLine(prayer, count))
+            .setContentTitle(fittedTitle(c.prayer, c.time, count, fits))
             .setContentText(listOfNotNull(c.place, c.hijri).joinToString("  ·  "))
             .setStyle(NotificationCompat.BigTextStyle().bigText(listOfNotNull(c.place, c.hijri).joinToString("\n")))
             .setShowWhen(false)
@@ -293,6 +295,81 @@ object StatusNotification {
 
     /** The Live Update's first line: the prayer and its time, a wide gap, the countdown (each isolated, [ltr]). */
     internal fun titleLine(prayer: String, countdown: String): String = "\u2068$prayer\u2069\u2003\u2003${ltr(countdown)}"
+
+    /**
+     * (0.22.3) The Live Update's first line, made to fit (the owner's Galaxy cut "Maghrib · 5:34 PM  −1:46:17" to
+     * "−1:…": a notification's title is one line and Android ends it with dots). Nothing is taken out and the order stays
+     * (the prayer, its time, the countdown): only the spacing tightens, step by step, until [fits] says the line fits:
+     * the roomy form; one gap; no dot between the name and the time; narrow spaces. Only where none fits (a very
+     * large font on a narrow phone) the seconds go, so the countdown is never cut.
+     */
+    internal fun fittedTitle(name: String, time: String, countdown: String, fits: (CharSequence) -> Boolean): CharSequence {
+        val nb = time.replace(' ', '\u202F')
+        val forms = listOf(
+            "\u2068$name · $time\u2069\u2003${ltr(countdown)}",
+            "\u2068$name · $time\u2069\u2002${ltr(countdown)}",
+            "\u2068$name $time\u2069\u2002${ltr(countdown)}",
+            "\u2068$name\u2009$nb\u2069\u2009\u2009${ltr(countdown)}",
+        ).map(::styled)
+        forms.firstOrNull(fits)?.let { return it }
+        val noSeconds = countdown.substringBeforeLast(':').takeIf { countdown.count { it == ':' } >= 2 } ?: countdown
+        return styled("\u2068$name\u2009$nb\u2069\u2009\u2009${ltr(noSeconds)}")
+    }
+
+    /**
+     * The title as the home screen writes a countdown and a time: the AM/PM mark a little smaller, the seconds a little
+     * smaller and quieter; everything else as Android's title. (It also gives the line room: 0.22.3.)
+     */
+    private fun styled(text: String): CharSequence {
+        val sb = android.text.SpannableStringBuilder(text)
+        // AM/PM (and the Arabic ص/م) after a time's digits.
+        Regex("(?<=[\\d\\u0660-\\u0669])[\\u0020\\u202F](AM|PM|\u0635|\u0645)").findAll(text).forEach { m ->
+            sb.setSpan(android.text.style.RelativeSizeSpan(0.8f), m.range.first, m.range.last + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        // The countdown's seconds: the last ":ss" of the countdown (after the second colon of h:mm:ss, or of m:ss).
+        val iso = text.lastIndexOf('\u2066')
+        if (iso >= 0) {
+            val cd = text.substring(iso)
+            val colon = cd.lastIndexOf(':')
+            if (colon > 0 && cd.count { it == ':' } >= 1 && cd.length - colon >= 3) {
+                val start = iso + colon
+                val end = text.lastIndexOf('\u2069').takeIf { it > start } ?: text.length
+                sb.setSpan(android.text.style.RelativeSizeSpan(0.86f), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        return sb
+    }
+
+    /**
+     * Whether a title line fits on one line of the shade, measured as the shade draws a notification's title: its own
+     * text appearance (size with the phone's font scale), in bold to be safe, across the width the card leaves it
+     * (the screen less the shade's margins, the card's padding and the app's icon, as measured on the owner's Galaxy),
+     * with a 3 % margin for the maker's own font.
+     */
+    internal fun titleFits(ctx: Context, screenWidthPx: Int = ctx.resources.displayMetrics.widthPixels): (CharSequence) -> Boolean {
+        val dm = ctx.resources.displayMetrics
+        val a = ctx.obtainStyledAttributes(android.R.style.TextAppearance_Material_Notification_Title, intArrayOf(android.R.attr.textSize))
+        val size = a.getDimension(0, 16f * dm.scaledDensity).let { maxOf(it, 16f * dm.scaledDensity) }
+        a.recycle()
+        val paint = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = size; typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        }
+        // (Measured on the owner's Galaxy, 411 dp wide: the title had 278 dp, the screen less 133 dp.)
+        val avail = (screenWidthPx - 133f * dm.density) * 0.97f
+        return { text -> android.text.Layout.getDesiredWidth(text, paint) <= avail }
+    }
+
+    /**
+     * (0.22.3) The place with its city, as the widgets write it: "Madinat Al Mataar, Dubai" (the owner). The city is the
+     * first part of the place's context that is not the area itself, in the app's language; nothing is added where the
+     * name already holds a comma or there is no context.
+     */
+    internal fun withCity(area: String?, place: com.noor.app.data.ResolvedPlace?, arabic: Boolean): String? {
+        if (area == null || area.contains(',') || area.contains('\u060C')) return area
+        val context = (if (arabic) place?.contextAr ?: place?.contextEn else place?.contextEn) ?: return area
+        val city = context.split(',', '\u060C').map { it.trim() }.firstOrNull { it.isNotEmpty() && it != area } ?: return area
+        return area + (if (arabic) "\u060C " else ", ") + city
+    }
 
     /** A place's own name: the part before its first comma (Latin or Arabic), or the whole when it has none. */
     internal fun shortPlace(place: String): String = place.split(',', '\u060C').first().trim().ifEmpty { place }
