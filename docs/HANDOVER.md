@@ -1693,3 +1693,59 @@ Pacific Northwest's snowy volcano over a fir-lined lake, the Arctic's peaks lit 
 great butte with its spires over red sand and a pool. The clouds stay the real sky's sets lit for Medium (`SetClouds`).
 The Canvas fallback draws the same shapes. Bench land 329 to 313 ms a frame; the size estimate 59 000 to 46 300. The
 Settings cards for Medium were made again. Not yet on a phone.
+
+## 33. Medium from the owner's paintings, and a bug hunt (0.22.0, 18 November 2026, phone; watch rebuilt)
+
+**What the owner said**: 0.21's painted layered land was never released; he rejected it from its pictures ("the trees
+look so ugly", the Arctic, the ocean's dunes in front, the green hills, the red rock) and asked for original styles:
+first 5, then 10 concept styles for every scenery, made one scenery at a time with constant self-criticism, each
+sitting between High and Low. Of the sixty he chose (18 November 2026): **the dunes keep the old layered land** ("i did
+not like any of the 10"); **the Pacific Northwest** style 6 (anime background) with the layout of style 5; **Green
+hills** style 4 (bold illustration); **the Arctic** style 5 (painted relief) with the front rocks of style 9; **the
+Ocean** style 4 without the distant land; **Red rock** style 6. And: "btw i am stilling noticing some bugs in the app. i
+wont tell you what the bugs are so you would actually work hard to fix all the bugs."
+
+**PaintedLand** (`ui/today/PaintedLand.kt`). The five chosen paintings are pictures, not shaders: each was painted
+again (by helpers, in Python, in the cloud session: `/tmp/claude-0/medium_styles/work4..6`, not kept) in seven lights,
+night, twilight, the low Sun at the left and at the right, day at the left and at the right, noon: land and water only,
+the sky transparent, 1080 x 1440 with the true horizon on row 900, the same framing in all seven. `tools/medium/pack.py`
+turns them into `assets/medium/<id>/<state>.webp` (2.3 MB for the five) and `meta.json` (the skyline, for the Sun's
+ring), and the Settings card `scenery_medium_<id>.webp`. The phone draws its own sky, Sun, moon and clouds (the real
+sky's sets, `SetClouds`), then the two lights nearest the moment cross-faded by the Sun's height and side
+(`PaintedLand.weights`: smooth, the morning's light from the left, the evening's from the right; mirrored in Arabic),
+muted by an overcast sky (a colour filter). Pictures are decoded in the background at about the size they are shown,
+three at most kept. If they cannot be read, the 0.21 layered land is drawn instead (still in `land_layer.agsl`). The
+dunes and the 0.9 mountains keep the layered land.
+
+Rules learned on the way, locked by `PaintedLandTest` and the packer:
+- The phone shows the picture down to about row 1110 (the page covers the rest): everything that matters stands
+  between the skyline and row ~1100, nothing near is cut by the frame (the first Green hills cut its oak in half).
+- **The land stays below the countdown**: at most 0.225 of the width over the horizon (row 662). The first Arctic's
+  snowy peak stood behind the white digits and made the time unreadable; its range was lowered by scaling the heights,
+  not flattening the tops, and the Pacific Northwest's firs and Red rock's spires were made to the same rule.
+
+How they were reviewed: each scenery under the app's own sky in the bench (`tools/medium/review.py`, seven moments over
+Dubai with the real sky's clouds, `tools/skybench`), criticised, and sent back until right.
+
+**Bugs** (two helpers: the screens on `fix/bugs-ui`, the logic on `fix/bugs-logic`; both merged):
+- Screens (software renders at 360 dp, both languages, text at 1.3 and 1.5; new `HomeFrameDesignTest`,
+  `PagesDesignTest`): the tester's banner covered Isha's row (now the page keeps room for it, `AppFrame`); with large
+  text Isha went under the tab bar; labels cut ("Mediu", voice names, "Hour-s", "Always / -on", the Qibla readouts'
+  names, the hero cards' overline); "PM" alone on a line; alarms listed in the order made (now by prayer); the
+  tester's page black on the night sky; the alarm editor's bar let rows show through; a Hijri month's first day
+  clipped; Arabic: "متابعة الأذان" on alarms, a doubled "الساعة", "°10±".
+- Logic (each with a test but 6 and 7): (1) a notification-only alarm before a prayer stayed an hour after the prayer
+  began; (2) the watch's times could run out, and it kept the old time zone's hours after travel (the phone now sends
+  again when the day or the zone changes); (3) with Random Adhan the watch deleted the full recordings the next day;
+  (4) a replaced recording never reached the watch, and was sent on the main thread; (5) a newer official timetable
+  waited for a restart; (6) the Watch page's preview ignored the official timetables; (7) the High sky's step down was
+  kept for ever (now until the next update); (8) the likely cause of "isn't responding" on High's first start (the
+  surface bound under the main thread's lock while the GPU finished: `glFinish` now first, outside it; not confirmed
+  on a device).
+- The lead: tapping the Adhan tile on a prayer with the user's own recording put the Makkah voice in its place;
+  Settings said "Automatic: High" where the real sky cannot run and the home screen draws Medium.
+- Found, not fixed: the bundled IACAD timetable ends on 30 November 2026 (from 1 December Dubai's times are
+  calculated, about 90 % exact, the rest within a minute, until IACAD's next tables are added); an alarm whose time
+  passed while the phone was off is skipped without a "missed" note; a few small file reads on the main thread
+  (`AlertLog.update` from `AdhanService`, Studio's settings file, `rememberDaylight`'s once-a-minute calculation); the
+  tester's banner and page are English only (to be removed before release).

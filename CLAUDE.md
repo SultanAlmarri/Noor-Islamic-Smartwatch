@@ -20,8 +20,8 @@ Minhad, while package ids (`com.noor.smartwatch`), code packages (`com.noor.*`),
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.21.0** (versionCode 39), watch **0.21.0** (versionCode 25); 0.9.7, 0.9.9–0.9.11,
-0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone (0.16.0 to 0.21.0 rebuilt the watch with the shared alert
+Current version: phone **0.22.0** (versionCode 40), watch **0.22.0** (versionCode 26); 0.9.7, 0.9.9–0.9.11,
+0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone (0.16.0 to 0.22.0 rebuilt the watch with the shared alert
 engine and, in 0.18, its new sounds; the alarms ring on the phone only). Everything is on `main`. The merged work
 branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
 branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
@@ -114,7 +114,7 @@ in this file's history.
 | Path | What |
 |---|---|
 | `core/prayer` | Prayer engine (NREL SPA port), 12 calculation profiles, Hijri date, schedule, `WatchConfig`/`WatchReport` (phone↔watch formats), `LocalSetup` (watch's own setup), Qibla geodesy, tasbih, Islamic calendar, flags |
-| `app` | Phone app (Jetpack Compose, Material 3). Home = `ui/today/` (`TodayScreen.kt`, `LivingSky.kt`, `HomeSky.kt`); its scene since 0.10 = `sky/` (the real sky's renderer) with shaders and baked pictures in `app/src/main/assets/sky2` |
+| `app` | Phone app (Jetpack Compose, Material 3). Home = `ui/today/` (`TodayScreen.kt`, `LivingSky.kt`, `HomeSky.kt`); its scene since 0.10 = `sky/` (the real sky's renderer) with shaders and baked pictures in `app/src/main/assets/sky2`; Medium's painted land (0.22) = `PaintedLand.kt`, seven lights per scenery in `assets/medium` (`tools/medium/pack.py`; the land stays below the countdown) |
 | `wear` | Watch app (Compose for Wear OS M3, tiles, complications, Watch Face Push) |
 | `alerts`, `shared` | Android libraries used by both apps |
 | `face` | 0.18: the Minhad Studio watch face's renderer (plain Canvas), shared by the phone's editor and the watch's face, so the preview is the face; the design format is `core/prayer/.../face/FaceDesign` |
