@@ -95,26 +95,37 @@ class SkyDialTest {
         assertEquals(900f, plain.baseY, 0f)
     }
 
-    /** The low Sun and the low ends of the path are over the land of every Medium scenery, in both reading directions. */
+    /**
+     * The low Sun and the low ends of the path are over the land of every Medium scenery and the layered land, in both
+     * reading directions, on a common phone's header (411 x 457 dp, the bench's). On shorter headers the space between
+     * the horizon and the countdown is smaller than the tallest painted land (Red rock's spires stand 0.19 of the width
+     * over the horizon, 79 dp, on a header whose arch has 81 dp): there a spire or a fir still reaches into the dial's
+     * low ends (the Sun is then drawn in front of it), but much less than into the path of 0.20 to 0.22. The figures are
+     * printed (the deepest the land reaches into the arch, dp).
+     */
     @Test fun theDayArchIsOverTheLandOfEveryMediumScenery() {
         val lands = listOf("pnw", "meadow", "arctic", "ocean", "canyon").associateWith { painted(it) }
-        // The deepest the land comes into the arch (dp; negative: the arch is over it), for each land and header.
-        val worst = LinkedHashMap<String, Float>()
-        fun note(key: String, v: Float) { worst[key] = maxOf(worst[key] ?: -1e9f, v) }
+        val worst = LinkedHashMap<String, FloatArray>()     // (on the dial, on the old path)
+        fun note(key: String, k: Int, v: Float) { val a = worst.getOrPut(key) { floatArrayOf(-1e9f, -1e9f) }; a[k] = maxOf(a[k], v) }
         for (sz in sizes) for (s in scenes) for (rtl in listOf(false, true)) {
             val w = sz[0] * d; val hy = sz[2] * d
-            val g = SkyGeometry(s, w, hy, sz[3] * d, sz[1] * d - 6 * d, rtl, dial = true)
-            val arch = dayArch(s, g)
-            for ((id, sky) in lands) for ((x, y) in arch) note("$id ${sz[0].toInt()}x${sz[1].toInt()}", (y - SunLift.skylineY(sky, x, w, hy, rtl)) / d)
-            // The layered land (the dunes, the mountains, and the fallbacks of the others).
-            for (t in Terrain.entries) {
-                val lp = LandProfile.of(77L, t)
-                val geo = lp.geometry(hy, sz[1] * d, d)
-                for ((x, y) in arch) note("layered $t ${sz[0].toInt()}x${sz[1].toInt()}", (y - lp.skylineY(x, w, geo)) / d)
+            val size = "${sz[0].toInt()}x${sz[1].toInt()}"
+            for ((k, dial) in listOf(0 to true, 1 to false)) {
+                val g = SkyGeometry(s, w, hy, sz[3] * d, sz[1] * d - 6 * d, rtl, dial = dial)
+                val arch = dayArch(s, g)
+                for ((id, sky) in lands) for ((x, y) in arch) note("$id $size", k, (y - SunLift.skylineY(sky, x, w, hy, rtl)) / d)
+                for (t in Terrain.entries) {
+                    val lp = LandProfile.of(77L, t)
+                    val geo = lp.geometry(hy, sz[1] * d, d)
+                    for ((x, y) in arch) note("layered $t $size", k, (y - lp.skylineY(x, w, geo)) / d)
+                }
             }
         }
-        worst.forEach { (k, v) -> println("$k: the land comes ${"%.1f".format(v)} dp into the arch at most") }
-        worst.forEach { (k, v) -> assertTrue("$k: ${"%.1f".format(v)} dp", v <= 0.5f) }
+        worst.forEach { (k, v) -> println("$k: the land reaches ${"%.1f".format(v[0])} dp into the dial (${"%.1f".format(v[1])} dp into the old path)") }
+        worst.forEach { (k, v) ->
+            if (k.endsWith("411x457")) assertTrue("$k: ${v[0]} dp", v[0] <= 0.5f)
+            else assertTrue("$k: ${v[0]} dp into the dial, ${v[1]} before", v[0] <= 0.5f || v[0] < v[1] - 15f)
+        }
     }
 
     /**
