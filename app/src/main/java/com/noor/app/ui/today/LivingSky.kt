@@ -532,6 +532,10 @@ internal fun LivingSky(
     // (0.19.1: for the medium graphics, the director's: the shaders draw no clouds of their own any more.)
     val weatherNow = skyState?.let { Weather.State(0f, 0f, 0f, 0f, it.overcast, it.storm, it.rain, 0f, 0f, (display * 24).toFloat()) } ?: weather.at(display)
     val landProfile by remember(scene.landSeed, scene.terrain) { lazy(LazyThreadSafetyMode.NONE) { LandProfile.of(scene.landSeed, scene.terrain) } }
+    // (0.22) The medium graphics' painted sceneries, chosen by the owner (PaintedLand); the dunes keep the layered land.
+    val paintedId = if (medium) PaintedLand.idOf(scene.terrain) else null
+    val landPainter = remember(paintedId) { paintedId?.let { PaintedLandPainter(context.assets, it) } }
+    val painted = landPainter != null && !landPainter.failed.value
     // The layers' own clocks (seconds), each layer redrawn only when its clock moves: the clouds' about 15 times a
     // second (they move less than a fifth of a dp per tick, so it looks continuous); the GPU sky's as often at night
     // (twinkling stars) but once a second by day (only the high cirrus drifts, far too slowly to see a step: 0.9.8
@@ -546,7 +550,7 @@ internal fun LivingSky(
     val decked = rememberUpdatedState(weatherNow.overcast > 0.03f || weatherNow.layer > 0.08f)
     // (0.19.1) The medium land moves only where it has water or mist (its cloud shadows are gone): a dry, clear land is
     // drawn again only when the moment shown changes, not four times a second.
-    val landMoves = rememberUpdatedState(scene.terrain == Terrain.SEA || scene.terrain == Terrain.FOREST || scene.terrain == Terrain.ARCTIC || (look?.mist ?: 0f) > 0.001f || real != null || !medium)
+    val landMoves = rememberUpdatedState(!painted && (scene.terrain == Terrain.SEA || scene.terrain == Terrain.FOREST || scene.terrain == Terrain.ARCTIC || (look?.mist ?: 0f) > 0.001f || real != null || !medium))
     // (0.18.2) Only for the 0.9 sky: under the real sky nothing reads these clocks, and until 0.18.1 they still asked
     // for a frame fifteen times a second.
     if (ambient && real == null) LaunchedEffect(Unit) {
@@ -698,6 +702,7 @@ internal fun LivingSky(
 
         // 4 · The land: far ridges pale with distance, near ones darker, the nearest one the page itself.
         if (real != null || simple) Unit
+        else if (painted) PaintedLandLayer(landPainter!!, gpuInputs, { displayNow.value }, landLift, page)
         else if (shaders != null && Build.VERSION.SDK_INT >= 33) GpuLandLayer(shaders as SkyShaders, gpuInputs, landLift, quality) { landSeconds.floatValue + OpeningSky.cloudLapse(opening()) }
         else Box(Modifier.fillMaxSize().graphicsLayer { translationY = landLift() }.drawWithCache {
             val w = size.width; val h = size.height
@@ -716,7 +721,9 @@ internal fun LivingSky(
         // 4b · The Sun's path (0.20): in front of the land, the same arch over every scenery and at every level. Until
         // 0.19 the land hid it where it stood in front (the owner: "part of it gets hidden behind mountains"). Where the
         // land stands in front of the Sun itself, a ring on the path shows where the Sun is, behind it.
-        val skyline = if (real != null) SunLift.skyline else null
+        // (The painted land's skyline is in the real sky's form: the ring shows where it hides the Sun.)
+        landPainter?.version?.intValue
+        val skyline = if (real != null) SunLift.skyline else if (painted) landPainter?.skyline else null
         val pathLayer = remember(scene, layout, rtl, real != null, simple, skyline) {
             Modifier.fillMaxSize().drawWithCache {
                 val w = size.width; val h = size.height
