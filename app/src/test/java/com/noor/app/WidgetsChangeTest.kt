@@ -43,7 +43,9 @@ class WidgetsChangeTest {
         val app = RuntimeEnvironment.getApplication() as NoorApplication
         val istanbul = ZoneId.of("Europe/Istanbul")
         val start = ZonedDateTime.of(2026, 11, 4, 14, 0, 0, 0, istanbul).toInstant()
-        Widgets.clock = { start }
+        // Noor's own updates (after a change of settings) are for the moment the test is at.
+        var moment = start
+        Widgets.clock = { moment }
         Widgets.wheelSupported = { true }
         val repo = app.container.settings
         repo.setOnboardingDone(); repo.setLocationMode(LocationMode.MANUAL); repo.setManualCity("ist")
@@ -67,6 +69,7 @@ class WidgetsChangeTest {
                 val a = alarm()
                 val at = Instant.ofEpochMilli(a.triggerAtTime)
                 if (at.isAfter(until)) return
+                moment = at
                 Widgets.refresh(app, at, minuteOnly = shadowOf(a.operation).savedIntent.getBooleanExtra(Widgets.EXTRA_MINUTE, false))
             }
         }
@@ -76,7 +79,8 @@ class WidgetsChangeTest {
 
         // Asr's "+" period: built half a minute before it ends.
         val asr = content(start).countAt
-        Widgets.refresh(app, asr.plusSeconds(29 * 60 + 30))
+        moment = asr.plusSeconds(29 * 60 + 30)
+        Widgets.refresh(app, moment)
         assertEquals("Asr", text(next, R.id.widget_prayer))
         assertEquals(3, marked())
         // Its end, and a minute more: the widgets now count to Maghrib, and say so.
@@ -90,10 +94,11 @@ class WidgetsChangeTest {
         assertEquals("Maghrib marked", 4, marked())
 
         // The "+" period turned off: at Maghrib's time, straight to Isha.
+        val maghrib = c.countAt
+        moment = maghrib.minusSeconds(30)
         repo.setElapsedAfterPrayer(false)
         Thread.sleep(1500)
-        val maghrib = c.countAt
-        Widgets.refresh(app, maghrib.minusSeconds(30))
+        Widgets.refresh(app, moment)
         assertEquals("Maghrib", text(next, R.id.widget_prayer))
         runUntil(maghrib.plusSeconds(60))
         assertEquals("Isha", text(next, R.id.widget_prayer))
@@ -102,7 +107,8 @@ class WidgetsChangeTest {
 
         // Midnight: the new day's Hijri date on the widgets.
         val midnight = ZonedDateTime.of(2026, 11, 5, 0, 0, 0, 0, istanbul).toInstant()
-        Widgets.refresh(app, midnight.minusSeconds(90))
+        moment = midnight.minusSeconds(90)
+        Widgets.refresh(app, moment)
         runUntil(midnight.plusSeconds(60))
         val hijri = content(midnight.plusSeconds(60)).hijri
         assertTrue("${text(today, R.id.widget_place)} has $hijri", text(today, R.id.widget_place).endsWith(hijri))
