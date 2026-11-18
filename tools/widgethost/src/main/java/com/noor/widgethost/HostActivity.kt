@@ -248,7 +248,7 @@ class HostActivity : Activity() {
      * launchers differ: give exact sizes in the spec where it matters).
      */
     private fun autoSizes(info: AppWidgetProviderInfo): List<Pair<Int, Int>> {
-        fun dp(px: Int) = (px / density).toInt()
+        fun dp(px: Int) = (px / density + 0.5f).toInt()
         val minW = dp(info.minWidth); val minH = dp(info.minHeight)
         val rw = info.minResizeWidth.takeIf { it > 0 }?.let(::dp) ?: minW
         val rh = info.minResizeHeight.takeIf { it > 0 }?.let(::dp) ?: minH

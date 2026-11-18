@@ -80,6 +80,11 @@ adb shell pm grant $PKG android.permission.CHANGE_CONFIGURATION 2>&1 | tee -a "$
 adb shell appops set $PKG WRITE_SETTINGS allow 2>&1 | tee -a "$OUT/steps.txt"
 adb shell settings put global hidden_api_policy 1
 for k in animator_duration_scale transition_animation_scale window_animation_scale; do adb shell settings put global $k 0; done
+# Nothing over the widgets: no "Viewing full screen" hint (the host hides the system bars), no "isn't responding"
+# dialogs (the emulator's own launcher is slow just after boot).
+adb shell settings put secure immersive_mode_confirmations confirmed
+adb shell settings put global hide_error_dialogs 1
+adb shell settings put secure anr_show_background 0
 adb logcat -c
 timeout 5000 "$(type -P adb)" logcat -v threadtime > "$OUT/logcat.txt" 2>&1 &
 
@@ -114,8 +119,27 @@ on_bound() {
     eval "$ON_BOUND"
   done
 }
+# Closes an "isn't responding" dialog if one is shown all the same (taps Wait), as phone_098.sh does.
+no_anr() {
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/ui.xml" >/dev/null 2>&1
+  if grep -q "isn't responding\|لا يستجيب" "$OUT/ui.xml" 2>/dev/null; then
+    local xy; xy=$(python3 - "$OUT/ui.xml" <<'PY'
+import re, sys
+x = open(sys.argv[1], encoding='utf-8').read()
+for m in re.finditer(r'<node[^>]*>', x):
+    n = m.group(0)
+    if re.search(r'text="(Wait|انتظار)"', n):
+        b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
+        x1, y1, x2, y2 = map(int, b.groups()); print((x1 + x2) // 2, (y1 + y2) // 2); break
+PY
+)
+    [ -n "$xy" ] && adb shell input tap $xy && log "closed an 'isn't responding' dialog"; sleep 2
+  fi
+  rm -f "$OUT/ui.xml"
+}
 shot() {
   local i
+  no_anr
   for i in 1 2 3; do
     adb exec-out screencap -p > "$OUT/$1.png"
     [ "$(stat -c %s "$OUT/$1.png")" -gt 20000 ] && break
