@@ -20,8 +20,8 @@ Minhad, while package ids (`com.noor.smartwatch`), code packages (`com.noor.*`),
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.22.4** (versionCode 44), watch **0.22.4** (versionCode 30); 0.9.7, 0.9.9–0.9.11,
-0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone (0.16.0 to 0.22.4 rebuilt the watch with the shared alert
+Current version: phone **0.23.0** (versionCode 45), watch **0.23.0** (versionCode 31); 0.9.7, 0.9.9–0.9.11,
+0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone (0.16.0 to 0.23.0 rebuilt the watch with the shared alert
 engine and, in 0.18, its new sounds; the alarms ring on the phone only). Everything is on `main`. The merged work
 branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
 branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
@@ -124,7 +124,7 @@ in this file's history.
 | `tools/` | Watch-face packaging and validation, sound pipeline, gazetteer, world places and time-zone map builders (`tools/geo`), SPA table generators, device tests, verification |
 | `accuracy/` | Official IACAD datasets, research tools, the blind test (scored monthly by a GitHub workflow) |
 | `docs/` | `HANDOVER.md`, `ARCHITECTURE.md`, `DESIGN.md`, `WATCH.md`, `ALERTS.md`, `SOUNDS.md`, `AUTHORITIES.md`, `PRAYER_ACCURACY.md`, `INSTALL.md` |
-| `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `device-alerts.yml` (the real alarm → Adhan path on Android 14/15 emulators), `real-sky.yml` (the real sky on an Android 14 emulator), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` (verified Adhan downloads), `discover-sounds.yml` (Commons research list) |
+| `.github/workflows/` | `android.yml` (tests, builds, publishes the `dev-latest` release), `device-alerts.yml` (the real alarm → Adhan path on Android 14/15 emulators), `real-sky.yml` (the real sky on an Android 14 emulator), `widgets.yml` (every widget bound and photographed by a stand-in launcher, `tools/widgethost`, on Android 14/15/16 emulators; pictures in the `widgets-preview` pre-release), `iacad-monthly.yml` (blind test), `fetch-sounds.yml` (verified Adhan downloads), `discover-sounds.yml` (Commons research list) |
 
 ## Build and test
 

@@ -1958,7 +1958,7 @@ which a closed or restricted app may not get promptly.
   "Sleeping apps" / "Deep sleeping apps" lists or a force stop is seen only on the phone (a force stop ends every app's
   services and alarms until it is opened again; that is Android's rule, not bypassed).
 
-## 38. The widgets redone (0.23 work on `widgets/v2`, 18 November 2026, phone only; not released)
+## 38. The widgets redone (0.23.0, 18 November 2026, phone; watch rebuilt; a helper on `widgets/v2`)
 
 The owner: "totally improve the widgets. The next update will be totally about widgets... a lot of options" and, of
 the first renders, "it's better to have the prayer Adhan time next to the prayer name, and display the area name next to
@@ -1997,7 +1997,7 @@ prayer never beside a new countdown. `WidgetSettingsDesignTest`: the settings pa
 settings entry in the widget's long-press menu, the partial updates of the new kinds, `setViewLayoutWidth` on the
 wheel, the system corner radius, Material You colours.
 
-## 39. Widgets on a real system (draft, 18 November 2026; a helper on `widgets/harness`; testing only, nothing for users)
+## 39. Widgets on a real system (0.23.0, 18 November 2026; a helper on `widgets/harness`; testing only, nothing for users)
 
 **Why**: Robolectric's renders of the widgets have differed from the owner's Samsung phone more than once (sections 16
 and 18: a home screen inflates a widget in a restricted context in which a TextView ignores an app's fonts). So the
