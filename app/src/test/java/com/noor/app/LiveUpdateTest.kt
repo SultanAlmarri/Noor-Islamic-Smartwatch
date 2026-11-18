@@ -69,6 +69,10 @@ class LiveUpdateTest {
             assertEquals("\u2068Dhuhr · 12:05 PM\u2069", sys.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
         }
         StatusNotification.systemTimer = false
+        // (0.23.2) The icon slot filled with the coming prayer's symbol, the owner's last resort.
+        StatusNotification.slotMode = StatusNotification.SLOT_PRAYER
+        assertEquals(R.drawable.ic_prayer_dhuhr, StatusNotification.buildLive(app, app, c, before, f).smallIcon.resId)
+        StatusNotification.slotMode = StatusNotification.SLOT_BOTH
         // (0.22, the owner: the countdown was small, in the header, and in the phone's Arabic-Indic digits.) The title is
         // the countdown, written by Minhad in the app's digits; no chronometer of Android's, no "Next prayer".
         assertEquals("\u2068Dhuhr · 12:05 PM\u2069\u2003\u2066\u200E\u22122:27:44\u2069", n.extras.getCharSequence(Notification.EXTRA_TITLE).toString())

@@ -214,6 +214,15 @@ private fun TimerTiming() {
         }
     }
     val time = java.time.Instant.ofEpochSecond(now).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    // (0.23.2) The icon slot: which way leaves no gap on this phone (StatusNotification.slotMode).
+    var slot by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(com.noor.app.notify.StatusNotification.slotMode) }
+    Text("The timer's icon slot", style = MaterialTheme.typography.titleSmall)
+    Text("Your phone keeps a place for an icon beside the timer. Try each way and keep the one that leaves no gap " +
+        "(Minhad's icon must be off in Settings). Tap \"Show again\" above, or wait for the next second.", style = MaterialTheme.typography.bodySmall)
+    Chips(listOf("Transparent icon" to 0, "One pixel wide" to 1, "Samsung chip icon" to 2, "Both (default)" to 3, "Prayer's symbol" to 4), selected = { it == slot }) { m ->
+        slot = m; com.noor.app.notify.StatusNotification.saveSlot(context.applicationContext, m)
+        com.noor.app.notify.StatusNotification.refreshAsync(context.applicationContext)
+    }
     Text("Timer timing", style = MaterialTheme.typography.titleSmall)
     Text("The phone's clock, to the second:", style = MaterialTheme.typography.bodySmall)
     Text("%02d:%02d:%02d".format(time.hour, time.minute, time.second), style = MaterialTheme.typography.displaySmall.copy(

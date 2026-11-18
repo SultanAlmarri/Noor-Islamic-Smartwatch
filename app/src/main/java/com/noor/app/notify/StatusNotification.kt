@@ -126,6 +126,7 @@ object StatusNotification {
         // its large countdown in the app's digits.
         val live = liveWanted(app, s) && !LivePromotion.refused(app)
         chipIcon = s.statusChipIcon
+        if (!slotLoaded) { slotLoaded = true; loadSlot(app) }
         systemTimer = s.statusChipSystemTimer
         show(app, ctx, c, Formatter(arabic, s.numerals, s.timeFormat), live, s.numerals, now)
     }
@@ -189,6 +190,36 @@ object StatusNotification {
      * status-bar chip shows the countdown alone. (The shade's card still names Minhad in its header.)
      */
     @Volatile internal var chipIcon = false
+
+    /**
+     * (0.23.2) What fills the status-bar timer's icon slot when Minhad's icon is off. Android and One UI always keep a slot
+     * for an icon in the chip (Android's documentation: "the status chip always includes an icon"); the owner wants neither
+     * icon nor gap, so these are tried on his phone (Testing → Notification tests): 0, the crescent transparent (0.23.1:
+     * the slot stays, empty); 1, a transparent icon one pixel wide (in case the slot takes the icon's own width); 2, the
+     * same given to One UI as its chip icon (android.ongoingActivityNoti.chipIcon, which One UI uses in place of the small
+     * icon); 3, both (the default); 4, the coming prayer's own symbol, the last resort the owner named.
+     */
+    @Volatile internal var slotMode = SLOT_BOTH
+    @Volatile private var slotLoaded = false
+    const val SLOT_CLEAR = 0; const val SLOT_NARROW = 1; const val SLOT_SAMSUNG = 2; const val SLOT_BOTH = 3; const val SLOT_PRAYER = 4
+
+    internal fun loadSlot(app: Context) { slotMode = app.getSharedPreferences("noor_status_live", 0).getInt("slot_mode", SLOT_BOTH) }
+    internal fun saveSlot(app: Context, mode: Int) { slotMode = mode; app.getSharedPreferences("noor_status_live", 0).edit().putInt("slot_mode", mode).apply() }
+
+    /** A fully transparent icon one pixel wide and as tall as an icon (48 px). */
+    private val narrowIcon: android.graphics.drawable.Icon by lazy {
+        android.graphics.drawable.Icon.createWithBitmap(android.graphics.Bitmap.createBitmap(1, 48, android.graphics.Bitmap.Config.ARGB_8888))
+    }
+
+    private fun prayerIcon(c: Content): Int = when (c.event) {
+        com.noor.prayer.Prayer.FAJR -> R.drawable.ic_prayer_fajr
+        com.noor.prayer.Prayer.SHURUQ -> R.drawable.ic_prayer_sunrise
+        com.noor.prayer.Prayer.DHUHR -> R.drawable.ic_prayer_dhuhr
+        com.noor.prayer.Prayer.ASR -> R.drawable.ic_prayer_asr
+        com.noor.prayer.Prayer.MAGHRIB -> R.drawable.ic_prayer_maghrib
+        com.noor.prayer.Prayer.ISHA -> R.drawable.ic_prayer_isha
+        else -> R.drawable.ic_notification_clear
+    }
 
     /** (0.23.2) Whether Android counts the Live Update's timer itself (AppSettings.statusChipSystemTimer). */
     @Volatile internal var systemTimer = false
@@ -330,7 +361,7 @@ object StatusNotification {
         val open = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = NotificationCompat.Builder(app, CHANNEL)
-            .setSmallIcon(if (chipIcon) R.drawable.ic_notification else R.drawable.ic_notification_clear)
+            .setSmallIcon(when { chipIcon -> R.drawable.ic_notification; slotMode == SLOT_PRAYER -> prayerIcon(c); else -> R.drawable.ic_notification_clear })
             .setColor(0xFFB4883A.toInt())
             // (0.22.2, the owner: more compact) The prayer, its time and the countdown on one line, each kept whole
             // and in its own direction: in a right-to-left shade the prayer stands on the right, the countdown on the
@@ -365,6 +396,8 @@ object StatusNotification {
             n.flags = n.flags or android.app.Notification.FLAG_PROMOTED_ONGOING
             val b = android.app.Notification.Builder.recoverBuilder(app, n)
             if (!systemTimer) b.setShortCriticalText(chipText(count))
+            if (!chipIcon && (slotMode == SLOT_NARROW || slotMode == SLOT_BOTH)) b.setSmallIcon(narrowIcon)
+            if (!chipIcon && (slotMode == SLOT_SAMSUNG || slotMode == SLOT_BOTH)) b.extras.putParcelable("android.ongoingActivityNoti.chipIcon", narrowIcon)
             return b.build()
                 .also { it.flags = it.flags or android.app.Notification.FLAG_PROMOTED_ONGOING; it.extras.putBoolean(EXTRA_REQUEST_PROMOTED, true) }
         }

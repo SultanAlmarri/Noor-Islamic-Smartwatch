@@ -2091,3 +2091,13 @@ the chip one second behind the widget), and "I don't want the app's logo to appe
   by default). The shade's card still names Minhad in its header. Whether One UI keeps an empty gap for the icon is seen
   only on the phone.
 
+**0.23.2 (18 November 2026).** The owner (screenshot): the timer still "a few milliseconds off", and a gap where the
+icon was ("there absolutely is a way to get rid of the space ... only after you have exhausted every single method ...
+make the space the prayer's symbol"). Android's documentation says the chip always includes an icon, and One UI's Live
+Notifications take a chip icon (`android.ongoingActivityNoti.chipIcon`) in place of the small icon; whether either
+slot takes the icon's own width is seen only on the phone. So `StatusNotification.slotMode` (Testing → Notification
+tests, default 3): 0 the transparent crescent, 1 a transparent icon 1 × 48 px, 2 that given as One UI's chip icon, 3
+both, 4 the coming prayer's symbol. Timing: each second is handed over 80 ms ahead (`StatusTicker.earlyMs`, tuned there
+against the phone's clock drawn to the second), and "Timer counted by the phone itself" (`statusChipSystemTimer`)
+gives the Live Update Android's chronometer instead (exact on the phone's clock, in its digits, without the sign).
+
