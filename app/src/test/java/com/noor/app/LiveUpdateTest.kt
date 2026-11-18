@@ -52,7 +52,18 @@ class LiveUpdateTest {
         assertTrue(n.flags and Notification.FLAG_ONGOING_EVENT != 0)
         assertTrue("asks to be promoted", n.extras.getBoolean(StatusNotification.EXTRA_REQUEST_PROMOTED))
         assertTrue(n.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString().contains("Jumada"))
-        assertEquals("\u2066\u200E2:27:44\u2069", StatusNotification.chipText(c.countdown(before, f)))
+        assertEquals("\u2066\u200E\u22122:27:44\u2069", StatusNotification.chipText(c.countdown(before, f)))
+        // (0.22.2) The chip in the app's digits whatever the phone's language: with the phone in Arabic, Western digits
+        // chosen in Minhad stay Western (and Arabic-Indic chosen stay Arabic-Indic).
+        val phoneLocale = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("ar-AE"))
+            android.os.LocaleList.setDefault(android.os.LocaleList(java.util.Locale.forLanguageTag("ar-AE")))
+            val w = com.noor.app.util.Formatter(false, com.noor.app.data.Numerals.WESTERN, s.timeFormat)
+            assertEquals("\u2066\u200E\u22122:27:44\u2069", StatusNotification.chipText(c.countdown(before, w)))
+            val ai = com.noor.app.util.Formatter(false, com.noor.app.data.Numerals.ARABIC_INDIC, s.timeFormat)
+            assertEquals("\u2066\u200E\u2212\u0662:\u0662\u0667:\u0664\u0664\u2069", StatusNotification.chipText(c.countdown(before, ai)))
+        } finally { java.util.Locale.setDefault(phoneLocale) }
         // With Arabic-Indic digits chosen in the app, the countdown is in them, whatever the phone's language.
         val ai = com.noor.app.util.Formatter(false, com.noor.app.data.Numerals.ARABIC_INDIC, s.timeFormat)
         assertTrue(StatusNotification.buildLive(app, app, c, before, ai).extras.getCharSequence(Notification.EXTRA_TITLE).toString().endsWith("\u2066\u200E\u2212\u0662:\u0662\u0667:\u0664\u0664\u2069"))

@@ -264,7 +264,7 @@ object StatusNotification {
         // Asks Android to promote it, both ways Android 16 reads: the request in the extras (EXTRA_REQUEST_PROMOTED_ONGOING,
         // public since Android 16's 36.1), and the promoted flag (which Android clears again if it does not promote the
         // notification: the user's switch for Minhad in Android's settings, a phone maker's own rules). The chip's text:
-        // the countdown without its minus sign (the chip is about what is coming), with its plus sign after a prayer.
+        // the countdown with its sign (chipText).
         n.extras.putBoolean(EXTRA_REQUEST_PROMOTED, true)
         if (android.os.Build.VERSION.SDK_INT >= 36) {
             n.flags = n.flags or android.app.Notification.FLAG_PROMOTED_ONGOING
@@ -274,8 +274,11 @@ object StatusNotification {
         return n
     }
 
-    /** The chip's text: the countdown without its minus sign ("1:03:32"), or with its plus after a prayer ("+15:21"). */
-    internal fun chipText(countdown: String): String = ltr(countdown.removePrefix(MINUS))
+    /**
+     * The chip's text: the countdown with its sign, "−1:03:32" before a prayer and "+15:21" after it (0.22.2, the owner:
+     * 0.22.1 left the minus out), in the app's own digits whatever the phone's language, kept left to right ([ltr]).
+     */
+    internal fun chipText(countdown: String): String = ltr(countdown)
 
     /**
      * (0.22.2) A countdown kept left to right inside right-to-left text: the owner's Galaxy, its system in Arabic, wrote
