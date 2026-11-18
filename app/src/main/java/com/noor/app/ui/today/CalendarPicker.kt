@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -376,10 +378,11 @@ private fun DayCell(
     val hijriLabel = if (hijri.day == 1) (if (f.arabic) hijri.monthNameAr else hijri.monthNameEn).split(' ', '-').first().take(5) else f.number(hijri.day)
     // 0.15: the year's great days (Ramadan's first, the two Eids, Arafah, the new year, Ashura) carry a gold dot.
     val occasion = occasionOf(hijri)
-    Box {
-    Column(
+    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+    // The circle (chosen, today, the touch) under the day's two numbers.
+    Box(
         Modifier
-            .size(44.dp)
+            .fillMaxSize()
             .clip(CircleShape)
             .then(if (isSelected) Modifier.background(c.gold) else Modifier)
             .then(if (isToday && !isSelected) Modifier.border(1.2.dp, c.gold, CircleShape) else Modifier)
@@ -388,6 +391,11 @@ private fun DayCell(
                 this.selected = isSelected
                 contentDescription = f.weekday(date) + " " + f.gregorianDate(date) + ", " + f.hijri(hijri) + (occasion?.let { ", " + if (f.arabic) it.ar else it.en } ?: "")
             },
+    )
+    // (0.21) The numbers are not cut to the circle: a month's name under its first day ("10 December" in Arabic, in
+    // the Hijri view) is wider than the circle and was cut off. It runs a little past it, into the gap between days.
+    Column(
+        Modifier.wrapContentWidth(unbounded = true),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -396,7 +404,7 @@ private fun DayCell(
         val accent = if (secondary != null) secondaryAccent else hijri.day == 1
         Text(secondary ?: hijriLabel, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 10.sp, letterSpacing = 0.sp),
             color = when { isSelected -> c.onGold.copy(alpha = 0.75f); accent -> c.goldText; else -> c.textMuted },
-            maxLines = 1)
+            maxLines = 1, softWrap = false)
     }
     if (occasion != null) Box(Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 3.dp).size(6.dp).clip(CircleShape).background(if (isSelected) c.onGold else c.gold))
     }

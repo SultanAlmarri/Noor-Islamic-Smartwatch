@@ -283,3 +283,11 @@ fun NoorSheet(onDismiss: () -> Unit, state: SheetState, content: @Composable Col
         content = content,
     )
 }
+
+/**
+ * (0.21) For a label that must keep to one line in a narrow place of fixed width (a segment, a tile, a wheel's name):
+ * the factor that lets it grow with the phone's text size up to [max] times its size, no further. Beyond it, at the
+ * larger font sizes Samsung offers, such labels were cut ("Mediu") or broke inside a word ("Minut-es").
+ */
+@Composable
+fun limitedGrowth(max: Float = 1.15f): Float = LocalDensity.current.fontScale.let { if (it > max) max / it else 1f }

@@ -188,6 +188,8 @@ class StatusNotificationTest {
             val n = StatusNotification.build(ctx, app, lc, asr)
             for ((kind, view, maxDp) in listOf(Triple("collapsed", n.contentView, 48), Triple("expanded", n.bigContentView, 252))) {
                 val v = view.apply(ctx, parent)
+                // (0.21) In Arabic the notification shade lays a notification out right to left; this render did not.
+                v.layoutDirection = if (arabic) android.view.View.LAYOUT_DIRECTION_RTL else android.view.View.LAYOUT_DIRECTION_LTR
                 val d = app.resources.displayMetrics
                 val w = (270 * d.density).toInt()
                 // Twice, as Android does when the text shrinks to fit and asks for a new layout.

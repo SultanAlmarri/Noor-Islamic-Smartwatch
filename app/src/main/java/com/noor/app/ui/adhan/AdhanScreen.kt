@@ -198,7 +198,8 @@ fun AdhanScreen(
             HeroCard(
                 icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.NotificationsActive),
                 overline = if (n != null) stringResource(R.string.adhan_hero_next) else null,
-                title = if (n != null) f.prayerName(n.planned.prayer, n.planned.date) + "  " + f.timeAt(n.planned.at, n.zone) else stringResource(R.string.adhan_master),
+                // (0.21: the time and its AM or PM kept together: on a 360 dp phone "PM" went down a line by itself.)
+                title = if (n != null) f.prayerName(n.planned.prayer, n.planned.date) + "  " + f.timeAt(n.planned.at, n.zone).replace(' ', '\u00A0') else stringResource(R.string.adhan_master),
                 subtitle = status, subtitleColor = if (blocked) NoorTheme.colors.danger else null,
                 modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(30.dp)).toggleable(a.enabled, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = toggle),
                 // (0.18: the switch alone; the button under it that did the same was one thing too many.)

@@ -119,16 +119,37 @@ fun SettingsItem(
     ) {
         IconTile(icon, tint)
         Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
-            val under = listOfNotNull(value, detail.takeIf { !roomy }).joinToString("\n").ifEmpty { null }
-            if (under != null) Text(under, style = FootnoteStyle, color = c.textSecondary)
+        val head: @Composable () -> Unit = {
+            Column {
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
+                val under = listOfNotNull(value, detail.takeIf { !roomy }).joinToString("\n").ifEmpty { null }
+                if (under != null) Text(under, style = FootnoteStyle, color = c.textSecondary)
+            }
         }
         if (detail != null && roomy) {
-            Spacer(Modifier.width(12.dp))
-            Text(detail, style = MaterialTheme.typography.bodyLarge, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 150.dp))
-        }
+            // (0.21) The choice takes the room the title leaves it (the title keeps at least half the row): at a fixed
+            // 150 dp, "Phone's alarm sound" was cut beside the short "Sound" on a 360 dp phone.
+            androidx.compose.ui.layout.Layout(
+                content = {
+                    head()
+                    Text(detail, style = MaterialTheme.typography.bodyLarge, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+                },
+                modifier = Modifier.weight(1f),
+            ) { parts, cs ->
+                val gap = 12.dp.roundToPx()
+                val room = cs.maxWidth
+                val titleWants = parts[0].maxIntrinsicWidth(androidx.compose.ui.unit.Constraints.Infinity)
+                val detailWants = parts[1].maxIntrinsicWidth(androidx.compose.ui.unit.Constraints.Infinity)
+                val detailW = minOf(detailWants, (room - gap - minOf(titleWants, room / 2)).coerceAtLeast(0))
+                val t = parts[0].measure(androidx.compose.ui.unit.Constraints(maxWidth = (room - gap - detailW).coerceAtLeast(0)))
+                val d = parts[1].measure(androidx.compose.ui.unit.Constraints(maxWidth = detailW))
+                val h = maxOf(t.height, d.height, cs.minHeight)
+                layout(room, h) {
+                    t.placeRelative(0, (h - t.height) / 2)
+                    d.placeRelative(room - d.width, (h - d.height) / 2)
+                }
+            }
+        } else Box(Modifier.weight(1f)) { head() }
         when {
             trailing != null -> { Spacer(Modifier.width(8.dp)); trailing() }
             onClick != null -> Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted.copy(alpha = 0.7f), modifier = Modifier.padding(start = 4.dp).size(22.dp))

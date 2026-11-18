@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -177,7 +178,7 @@ fun QiblaContent(
 
         // Readings, side by side: where the Qibla is, where the phone points, and the difference (two decimals each).
         GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
-            Row(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+            Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Readout(stringResource(R.string.qibla_bearing), f.degrees(q.bearingDeg), c.goldText, Modifier.weight(1f))
                 VerticalHairline()
                 Readout(stringResource(R.string.qibla_heading), reading?.let { f.degrees(it.trueHeadingDeg) } ?: "—", c.textPrimary, Modifier.weight(1f))
@@ -203,8 +204,10 @@ fun QiblaContent(
 @Composable
 private fun Readout(label: String, value: String, color: Color, modifier: Modifier) {
     val c = NoorTheme.colors
-    Column(modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = c.textMuted, maxLines = 1, textAlign = TextAlign.Center)
+    // (0.21) A name may take two lines (with large text "Qibla direction" lost its second word, "Difference" its last
+    // letter); the three values stay on one line with each other, at the foot.
+    Column(modifier.fillMaxHeight().padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = c.textMuted, maxLines = 2, textAlign = TextAlign.Center)
         Spacer(Modifier.height(4.dp))
         Text(value, style = MaterialTheme.typography.titleLarge.merge(Tabular).copy(fontSize = 19.sp), color = color, fontWeight = FontWeight.Medium, maxLines = 1)
     }

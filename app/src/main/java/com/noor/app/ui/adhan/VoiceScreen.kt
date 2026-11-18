@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -169,8 +170,12 @@ internal fun VoiceCard(a: AlertSettings, vm: AdhanViewModel, custom: List<Custom
                                     id == null -> Icon(Icons.Rounded.Add, null, tint = c.textSecondary, modifier = Modifier.size(15.dp).padding(end = 2.dp))
                                     preview?.id == id -> Icon(Icons.Rounded.GraphicEq, null, tint = c.gold, modifier = Modifier.size(15.dp).padding(end = 2.dp))
                                 }
-                                Text(title, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium),
-                                    color = if (on) c.goldText else if (id == null) c.textSecondary else c.textPrimary, maxLines = 1, textAlign = TextAlign.Center)
+                                // (0.21) A third of the width each: the names follow the phone's text size up to 15% larger,
+                                // no further (with large text "Madinah", "Al-Quds" and "Random" were cut).
+                                val grow = com.noor.app.ui.components.limitedGrowth()
+                                Text(title, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp * grow, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium),
+                                    color = if (on) c.goldText else if (id == null) c.textSecondary else c.textPrimary, maxLines = 1, softWrap = false,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                             }
                         }
                     }
@@ -189,8 +194,9 @@ internal fun VoiceCard(a: AlertSettings, vm: AdhanViewModel, custom: List<Custom
                 onValueChangeFinished = { vm.setVolumeAll(vol.toInt()) },
                 colors = SliderDefaults.colors(thumbColor = c.gold, activeTrackColor = c.gold, inactiveTrackColor = c.textMuted.copy(alpha = 0.25f)))
             Spacer(Modifier.width(10.dp))
+            // (0.21: on one line; with large text "80%" broke into "80" over "%".)
             Text(f.number(vol.toInt()) + if (f.arabic) "٪" else "%", style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
-                modifier = Modifier.width(44.dp), textAlign = TextAlign.End)
+                modifier = Modifier.widthIn(min = 44.dp), textAlign = TextAlign.End, maxLines = 1, softWrap = false)
         }
     }
 }
