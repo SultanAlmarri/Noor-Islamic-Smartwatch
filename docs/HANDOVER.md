@@ -1813,7 +1813,7 @@ tilting in 3D as it travels the figure (the owner's reference video; the first v
 stood upright, or turned along the line, and none looked like a phone in a hand), a fading gold trail, one line of text.
 Its own perspective (Robolectric ignores `android.graphics.Camera`). `QiblaCalibrateDesignTest`.
 
-## 35. The Sun's real path (0.23 work, 18 November 2026, a helper on `sun/real`)
+## 35. The Sun's real path (0.22.2, 18 November 2026, phone; watch rebuilt; a helper on `sun/real`)
 
 **What the owner asked**: "i want the most accurate and exactly like real life sun path", "exactly like real life
 anywhere in the world", "regardless of app language setting"; and, shown how tall the land is on the path's true scale,
