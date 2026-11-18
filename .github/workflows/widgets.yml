@@ -29,6 +29,9 @@ on:
       spec:
         description: Widgets and sizes (auto, or Provider=WxH,WxH;Provider=WxH in dp)
         default: auto
+      on_bound:
+        description: A shell command run for each bound widget ($ID $PROVIDER $SIZE $OPTIONS), e.g. a debug broadcast that saves its options
+        default: ''
 
 permissions:
   contents: write
@@ -86,6 +89,7 @@ jobs:
           BGS: ${{ inputs.backgrounds || 'wallpaper neutral' }}
           TIMES: ${{ inputs.times || '11180700:day' }}
           SPEC: ${{ inputs.spec || 'auto' }}
+          ON_BOUND: ${{ inputs.on_bound }}
         with:
           api-level: ${{ matrix.api }}
           target: google_apis

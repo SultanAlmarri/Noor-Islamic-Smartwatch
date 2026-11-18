@@ -113,17 +113,23 @@ class HostActivity : Activity() {
             val p = dp(PAD); setPadding(p, p, p, p)
         }
         val labelColor = if (wallpaper) Color.WHITE else if (night) 0xFFCCCCCC.toInt() else 0xFF333333.toInt()
+        fun label(t: String) = TextView(this).apply {
+            text = t; maxLines = 1
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f); setTextColor(labelColor)
+            if (wallpaper) setShadowLayer(3f, 0f, 1f, 0xAA000000.toInt())
+            textDirection = View.TEXT_DIRECTION_LTR
+        }
+        // What the page shows: the widget, the phone's language and theme, the Android version.
+        root.addView(label("${page.first().first().name} · phone ${resources.configuration.locales[0].toLanguageTag()} · " +
+            "${if (night) "dark" else "light"} · Android ${Build.VERSION.RELEASE} (${pageNo + 1}/${pages.size})"),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(TITLE)))
         for (row in page) {
             val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.BOTTOM }
             for ((i, item) in row.withIndex()) {
                 val cell = bind(manager, item) ?: continue
                 val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                box.addView(TextView(this).apply {
-                    text = "${item.name}  ${item.wDp}×${item.hDp} dp"
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f); setTextColor(labelColor)
-                    if (wallpaper) setShadowLayer(3f, 0f, 1f, 0xAA000000.toInt())
-                    textDirection = View.TEXT_DIRECTION_LTR
-                }, LinearLayout.LayoutParams(dp(item.wDp), dp(LABEL)))
+                box.addView(label("${item.wDp}×${item.hDp} dp" + item.extras.entries.joinToString("") { " ${it.key}=${it.value}" }),
+                    LinearLayout.LayoutParams(dp(item.wDp), dp(LABEL)))
                 box.addView(cell.view, LinearLayout.LayoutParams(dp(item.wDp), dp(item.hDp)))
                 line.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     if (i > 0) marginStart = dp(GAP)
@@ -270,7 +276,7 @@ class HostActivity : Activity() {
     /** Rows that fit the screen's width, and pages of rows that fit its height; each provider starts a new page. */
     private fun paginate(groups: List<List<Item>>): List<List<List<Item>>> {
         val screen = screenDp()
-        val width = screen.first - 2 * PAD; val height = screen.second - 2 * PAD
+        val width = screen.first - 2 * PAD; val height = screen.second - 2 * PAD - TITLE
         val pages = mutableListOf<List<List<Item>>>()
         for (group in groups) {
             val rows = mutableListOf<MutableList<Item>>()
@@ -347,6 +353,7 @@ class HostActivity : Activity() {
         const val PAD = 12
         const val GAP = 12
         const val LABEL = 16
+        const val TITLE = 20
         const val CELL_W = 90
         const val CELL_H = 110
         const val CELL_GAP = 8
