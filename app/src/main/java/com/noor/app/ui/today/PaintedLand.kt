@@ -35,8 +35,8 @@ import kotlin.math.max
  * The phone draws the sky, the Sun, the moon and the clouds itself, and over them the land: the two lights nearest the
  * moment, one faded over the other ([weights]), muted under an overcast sky. Two pictures decoded at a time, in the
  * background; nothing is computed per pixel. So it is lighter than the layered land, on every phone (it is a bitmap:
- * the Canvas path below Android 13 draws it too). In Arabic the scene is mirrored, as the Sun's path is: the morning
- * light then comes from the right.
+ * the Canvas path below Android 13 draws it too). (0.23) The scene is never mirrored; the low Sun's light
+ * comes from the side the Sun is on (the right in the morning in the southern hemisphere).
  */
 internal object PaintedLand {
     const val WIDTH = 1080
@@ -209,7 +209,10 @@ internal fun PaintedLandLayer(painter: PaintedLandPainter, inputs: () -> GpuSkyI
         // (The same overcast the medium sky's other layers read: the weather of the moment.)
         val overcast = i.state.overcast.coerceIn(0f, 1f)
         var drawn = false
-        drawIntoCanvas { drawn = painter.draw(it.nativeCanvas, size.width, hy, i.scene.elevationAt(d), i.scene.eveningAt(d), overcast, i.view.rtl, SkyCompute.synchronous) }
+        // (0.23) The light from the side the Sun is on: the right in the afternoon where it moves left to right, the
+        // left in the afternoon in the southern hemisphere (the painting's "evening" side is its right).
+        val sunRight = i.scene.eveningAt(d) == (i.view.geometry.travel > 0)
+        drawIntoCanvas { drawn = painter.draw(it.nativeCanvas, size.width, hy, i.scene.elevationAt(d), sunRight, overcast, i.view.rtl, SkyCompute.synchronous) }
         if (drawn) {
             val fade = 28.dp.toPx()
             drawRect(Brush.verticalGradient(listOf(page.copy(alpha = 0f), page), startY = size.height - fade, endY = size.height),

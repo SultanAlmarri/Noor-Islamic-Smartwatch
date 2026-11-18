@@ -398,7 +398,7 @@ internal object SetClouds {
             sunAz = ((look.sunX - v.w / 2) / focal).toDouble(),
             sunElSeen = if (el > 0) Math.toDegrees(atan(((v.horizonY - look.sunY) / focal).toDouble())) else el,
             side = if (moonLight) ((look.moonX - v.w / 2) / (0.2f * v.w)).toDouble().coerceIn(-1.0, 1.0)
-            else ((display - i.scene.noonFraction) / 0.07).coerceIn(-1.0, 1.0) * (if (v.rtl) -1 else 1),
+            else ((display - i.scene.noonFraction) / 0.07).coerceIn(-1.0, 1.0) * v.geometry.travel * (if (v.rtl) -1 else 1),
             moonLight = moonLight, moonEl = max(0.7, Math.toDegrees(atan(((v.horizonY - look.moonY) / focal).toDouble()))),
             moonW = smooth(-6.0, -10.0, el), moon = doubleArrayOf(0.050 * mk, 0.062 * mk, 0.095 * mk),
             glow = smooth(0.0, 1.0, (12 - el) / 10),

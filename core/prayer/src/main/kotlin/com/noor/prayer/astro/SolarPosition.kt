@@ -118,6 +118,26 @@ object SolarPosition {
     }
 
     /**
+     * (0.23) Topocentric elevation (without refraction) and azimuth of the Sun's centre, degrees: [elevation, azimuth],
+     * the azimuth from north towards east (0..360), SPA's equations 41 to 46. The elevation is computed exactly as
+     * [elevation] computes it (the prayer times use that one, which is left as it was).
+     */
+    fun horizontal(unixSeconds: Double, lat: Double, lon: Double, elevationM: Double, deltaT: Double): DoubleArray {
+        val g = geocentric(unixSeconds, deltaT)
+        val h = mod(g.nu + lon - g.alpha, 360.0)
+        val xi = 8.794 / (3600.0 * g.radius)
+        val uu = atan(0.99664719 * tan(rad(lat)))
+        val x = cos(uu) + elevationM / 6378140.0 * cos(rad(lat))
+        val y = 0.99664719 * sin(uu) + elevationM / 6378140.0 * sin(rad(lat))
+        val dAlpha = deg(atan2(-x * sin(rad(xi)) * sin(rad(h)), cos(rad(g.delta)) - x * sin(rad(xi)) * cos(rad(h))))
+        val deltaP = deg(atan2((sin(rad(g.delta)) - y * sin(rad(xi))) * cos(rad(dAlpha)), cos(rad(g.delta)) - x * sin(rad(xi)) * cos(rad(h))))
+        val hP = h - dAlpha
+        val el = deg(asin(sin(rad(lat)) * sin(rad(deltaP)) + cos(rad(lat)) * cos(rad(deltaP)) * cos(rad(hP))))
+        val gamma = deg(atan2(sin(rad(hP)), cos(rad(hP)) * sin(rad(lat)) - tan(rad(deltaP)) * cos(rad(lat))))
+        return doubleArrayOf(el, mod(gamma + 180.0, 360.0))
+    }
+
+    /**
      * Meridian transit (local apparent noon) for the UT day starting at [utDayStart] (unix seconds,
      * a multiple of 86400), following SPA appendix A.2 exactly as pvlib implements it.
      * Returns unix seconds.

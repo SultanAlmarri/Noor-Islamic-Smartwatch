@@ -443,6 +443,7 @@ private fun SkyHeader(
         SceneLayout(cloudTop = (arcTop - 8.dp) / height, arcTop = arcTop / height, horizon = horizon / height, ground = hero.ground / height)
     }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val currentLayout by rememberUpdatedState(layout)
     val ambient = LocalAmbientMotion.current
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -513,8 +514,12 @@ private fun SkyHeader(
     val follow = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 3800f)
     fun scrubTo(x: Float, width: Float) {
         val s = current
-        val g = SkyGeometry(s, width, 0f, 0f, 0f, rtl)
-        val d = SkyDetent.of(s.events.map { it to g.x(s.path.fraction(it.second)) }, x, catchPx)
+        // (0.23) The geometry the sky is drawn with (its scale depends on the header's heights), never mirrored; the
+        // finger follows the Sun the way it really moves (right to left in the southern hemisphere).
+        val hp = with(density) { height.toPx() }
+        val l = currentLayout
+        val g = SkyGeometry(s, width, hp * l.horizon, hp * l.arcTop, hp * l.ground)
+        val d = SkyDetent.of(s.events.map { it to g.dragX(s.path.fraction(it.second)) }, x, catchPx)
         if (d.caught?.first != caught?.first) {
             caught = d.caught
             if (d.caught != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -537,7 +542,7 @@ private fun SkyHeader(
     if (app.arriving && app.veil && headerWidth > 0) {
         val focus = remember(scene, layout, headerPx, headerWidth, rtl) {
             val w = headerWidth.toFloat()
-            val g = SkyGeometry(scene, w, headerPx * layout.horizon, headerPx * layout.arcTop, headerPx * layout.ground, rtl)
+            val g = SkyGeometry(scene, w, headerPx * layout.horizon, headerPx * layout.arcTop, headerPx * layout.ground)
             if (scene.sunElevation > 1.0) Offset(g.x(scene.nowFraction), g.y(scene.sunElevation, scene.nowFraction))
             else Offset(w / 2f, headerPx * (layout.arcTop + layout.horizon) / 2f)
         }

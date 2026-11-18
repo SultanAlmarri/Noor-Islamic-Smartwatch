@@ -70,7 +70,8 @@ internal object WidgetSky {
         val r = 22f * density
         c.clipPath(Path().apply { addRoundRect(RectF(0f, 0f, wf, hf), r, r, Path.Direction.CW) })
         val layout = SceneLayout(cloudTop = 0f, arcTop = o.arcTop, horizon = if (o.land) o.horizon else 0.97f, ground = 1f)
-        val view = SkyView(ws.scene, wf, hf, density, layout, rtl)
+        // (0.23) The scene is never mirrored, whatever the language (as the home screen's).
+        val view = SkyView(ws.scene, wf, hf, density, layout, false)
         val fraction = ws.scene.nowFraction
         val look = SkyLook.at(ws.scene, view, fraction)
         val light = SkyLight.compute(SkyLight.key(look, view, 90.0))
@@ -217,8 +218,7 @@ internal object WidgetSky {
         val scene = ws.scene
         val hy = view.horizonY
         val path = Path(); var first = true
-        for (i in 0..240) {
-            val fr = i / 240.0
+        for (fr in geo.pathFractions) {
             val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr))
             if (first) { path.moveTo(x, y); first = false } else path.lineTo(x, y)
         }
@@ -229,7 +229,7 @@ internal object WidgetSky {
         // The day so far, in gold.
         val sunX = geo.x(scene.nowFraction)
         c.save()
-        if (view.rtl) c.clipRect(sunX, 0f, w, hy) else c.clipRect(0f, 0f, sunX, hy)
+        if (geo.travel < 0) c.clipRect(sunX, 0f, w, hy) else c.clipRect(0f, 0f, sunX, hy)
         p.color = argb(0.28f, 1.0, 0.84, 0.55); p.strokeWidth = 4.5f * density; c.drawPath(path, p)
         p.color = argb(0.95f, 1.0, 0.93, 0.76); p.strokeWidth = 1.4f * density; c.drawPath(path, p)
         c.restore(); c.restore()

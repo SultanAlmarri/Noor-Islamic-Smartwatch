@@ -943,7 +943,7 @@ internal class RealSkyFrame(
             // night the Moon lights the scene the same way, from where it stands.
             val moonLight = el < -6.0
             val side = if (moonLight) ((look.moonX - 0.5f * w) / (0.2f * w)).toDouble().coerceIn(-1.0, 1.0)
-            else ((display - scene.noonFraction) / 0.07).coerceIn(-1.0, 1.0) * (if (flip) -1 else 1)
+            else ((display - scene.noonFraction) / 0.07).coerceIn(-1.0, 1.0) * view.geometry.travel * (if (flip) -1 else 1)
             val moonEl = max(asin(moonDir[1].toDouble().coerceIn(-1.0, 1.0)) / DEG, 0.7)
             val glow = (((12.0 - el) / 10.0).coerceIn(0.0, 1.0)).let { it * it * (3 - 2 * it) }.toFloat()
             var lw = LightWeights.of(if (moonLight) moonEl else max(el, 0.7), side, false, glow)
@@ -966,7 +966,7 @@ internal class RealSkyFrame(
             fun m(v: FloatArray) = if (flip) floatArrayOf(-v[0], v[1], v[2]) else v
             // Where the heavens stand: truly, for the place and the moment, if that is asked for in Settings; otherwise
             // as the finest night shows them (the owner's rule: by default, the most beautiful view the app has).
-            val cel = if (trueStars) NightSky.frame(shownAt, scene.latitude, scene.longitude, flip).let { arrayOf(it.celX, it.celY, it.celZ, it.galN, it.galC) }
+            val cel = if (trueStars) NightSky.frame(shownAt, scene.latitude, scene.longitude, view.facingNorth != flip).let { arrayOf(it.celX, it.celY, it.celZ, it.galN, it.galC) }
             else showcaseSky((display * 24).toFloat(), if (moonUp) (Math.toDegrees(atan2(moonDir[0].toDouble(), moonDir[2].toDouble())) * (if (flip) -1 else 1)).toFloat() else Float.NaN)
             return RealSkyFrame(
                 biome, state, focalPx, horizon, flip, sunDir, light, dirAzEl(az, el * DEG), el.toFloat(), lw, cw,

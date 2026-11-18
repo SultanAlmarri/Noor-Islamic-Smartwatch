@@ -173,6 +173,8 @@ data class SkyScene(
     fun instantAt(fraction: Double): Instant =
         path.start.plusMillis(((path.end.toEpochMilli() - path.start.toEpochMilli()) * fraction.coerceIn(0.0, 1.0)).toLong())
     fun eveningAt(fraction: Double): Boolean = fraction > noonFraction
+    /** (0.23) The Sun's real path across the sky that day, as seen facing the noon Sun ([SkyGeometry]). */
+    internal val panorama: SunPanorama by lazy { SunPanorama.of(this) }
 }
 
 /** Heights in the scene, as fractions of its height. */
@@ -216,107 +218,154 @@ internal object SunLift {
     }
 }
 
+/**
+ * Where the Sun is drawn on the home screen (0.23): the Sun's real path ([SunPanorama]) in an equal-angle picture, one
+ * scale for both directions ([k], px per degree), so that every angle on the screen is the angle in the sky. The
+ * picture faces the Sun at noon; it is never mirrored, whatever the app's language.
+ *
+ * The scale is the largest at which the part of the day shown exactly (Fajr to Isha, [SunPanorama.start]..[end]) fits
+ * the width with a margin at each side, the noon Sun fits between the horizon ([horizonY]) and the top of the arch
+ * ([arcTopY], under the countdown), and the Sun at Fajr and Isha stays above [groundY]; it is centred across. So the path
+ * depends on the place and the day only, the same over every scenery and at every level. Before Fajr and after Isha
+ * (deep night, under the land) the moment is carried on, smoothly, to the edges of the screen, the side the Sun comes
+ * from and the side it goes to, so that dragging runs through the whole day.
+ *
+ * Until 0.22 (0.20) the height was in proportion to the sine of the elevation and the time ran evenly across the width:
+ * a round arch everywhere and in every season, but not the Sun's real path (the owner: "i want the most accurate and
+ * exactly like real life sun path").
+ */
 internal class SkyGeometry(
-    scene: SkyScene, private val w: Float, val horizonY: Float, val arcTopY: Float, val groundY: Float, private val rtl: Boolean,
+    scene: SkyScene, private val w: Float, val horizonY: Float, val arcTopY: Float, val groundY: Float,
 ) {
-    private val maxEl = max(scene.path.maxElevation, 12.0)
-    private val minEl = minOf(scene.path.minElevation, -24.0)
-    private val warp: (Double) -> Double = timeWarp(scene)
+    private val p = scene.panorama
+    /** +1: the Sun moves from left to right on the screen that day; -1: right to left (the southern hemisphere). */
+    val travel: Int = p.travel
+    val facingNorth: Boolean = p.facingNorth
 
-    fun x(fraction: Double): Float {
-        val u = (-0.04 + 1.08 * warp(fraction.coerceIn(0.0, 1.0))).toFloat() * w
-        return if (rtl) w - u else u
+    /** Pixels per degree, the same across and up. */
+    val k: Float
+    private val cx: Float
+    init {
+        val span = max(p.acrossMax - p.acrossMin, 1.0)
+        val kW = w * (1 - 2 * MARGIN) / span
+        val room = horizonY - arcTopY
+        val kV = if (room > 1f) room / max(apparent(p.highest), 1.0) else Double.MAX_VALUE
+        val deep = groundY - horizonY
+        val kG = if (deep > 1f && apparent(p.lowest) < -1.0) deep / -apparent(p.lowest) else Double.MAX_VALUE
+        k = minOf(kW, kV, kG).toFloat()
+        cx = (w / 2 - k * (p.acrossMin + p.acrossMax) / 2).toFloat()
     }
 
-    private val maxApp = apparent(maxEl)
-    private val sinMax = sin(Math.toRadians(maxApp))
+    private fun trueX(f: Double): Float = (cx + k * p.acrossAt(f)).toFloat()
+    private val edgeFrom = if (travel > 0) -EDGE * w else (1 + EDGE) * w
+    private val edgeTo = if (travel > 0) (1 + EDGE) * w else -EDGE * w
+    private val xStart = trueX(p.start); private val xEnd = trueX(p.end)
+    /** The path's own slope (px per fraction of the day) where the night's part joins it, held to the travel's sense. */
+    private fun slope(f: Double, secant: Float): Float {
+        val d = 1.0 / 1440
+        val s = ((trueX(f + d) - trueX(f - d)) / (2 * d)).toFloat()
+        val m = if (s * travel > 0) s else 0f
+        return if (abs(m) > 3 * abs(secant)) 3 * secant else m
+    }
+    private val mStart = if (p.start > 0) slope(p.start, (xStart - edgeFrom) / p.start.toFloat()) else 0f
+    private val mEnd = if (p.end < 1) slope(p.end, (edgeTo - xEnd) / (1 - p.end).toFloat()) else 0f
+
+    /** Screen x (px) of the Sun at [fraction] of the day. */
+    fun x(fraction: Double): Float {
+        val f = fraction.coerceIn(0.0, 1.0)
+        return when {
+            f < p.start -> hermite(f / p.start, edgeFrom, xStart, ((xStart - edgeFrom)), mStart * p.start.toFloat())
+            f > p.end -> hermite((f - p.end) / (1 - p.end), xEnd, edgeTo, mEnd * (1 - p.end).toFloat(), (edgeTo - xEnd))
+            else -> trueX(f)
+        }
+    }
 
     /**
-     * Height on screen of the Sun at true elevation [el] (degrees), as it is seen (0.9.7). Shuruq and Maghrib are the
-     * moments the Sun's upper edge touches the horizon, with the air lifting it near the horizon (refraction): 50' in
-     * all, by the standard definition the prayer times use. So the path is drawn as the Sun's visible upper edge: it
-     * meets the horizon line exactly at Shuruq and at Maghrib, where their marks are. The lift fades out a few degrees
-     * below the horizon, where nothing is seen.
-     *
-     * (0.20) Above the horizon the height is in proportion to the sine of the elevation, the Sun's height on the sky's
-     * dome, and no longer to the elevation itself. Through a day the sine of the Sun's elevation is a cosine of the
-     * time (sin el = sin φ sin δ + cos φ cos δ cos H), and the time runs evenly across the day's width ([timeWarp]):
-     * so the path is a smooth, even arch everywhere and in every season. Drawn in proportion to the elevation it rose
-     * almost straight up from the horizon near the tropics and met itself at noon in a point (the owner: it did not
-     * look nice). And it is the same arch over every scenery (0.20: no longer lifted onto each scenery's skyline).
+     * Height on screen of the Sun at true elevation [el] (degrees), as it is seen (0.9.7): the Sun's visible upper edge,
+     * lifted by the air near the horizon ([horizonLift]), so that the path meets the horizon line exactly at Shuruq and at
+     * Maghrib, where their marks are. On the one scale [k], above the horizon and below it.
      */
-    fun y(el: Double): Float {
-        val e = apparent(el)
-        return if (e >= 0) (horizonY - (sin(Math.toRadians(e)) / sinMax) * (horizonY - arcTopY)).toFloat()
-        else (horizonY + (-e / -minEl) * (groundY - horizonY)).toFloat()
-    }
-
-    private fun apparent(el: Double): Double = el + horizonLift(el)
+    fun y(el: Double): Float = (horizonY - k * apparent(el)).toFloat()
 
     /** Height on screen of the Sun at true elevation [el] at [fraction] of the day: [y] (the same over every scenery). */
     @Suppress("UNUSED_PARAMETER")
     fun y(el: Double, fraction: Double): Float = y(el)
 
-    /** The fraction of the day drawn at [px] (inverse of [x]). */
-    fun fractionAt(px: Float): Double {
-        var lo = 0.0; var hi = 1.0
-        val target = if (rtl) w - px else px
-        repeat(40) {
-            val m = (lo + hi) / 2
-            val u = (-0.04 + 1.08 * warp(m)).toFloat() * w
-            if (u < target) lo = m else hi = m
+    /**
+     * The fractions of the day the path is drawn through: the track (every six minutes, every minute near a high noon)
+     * and the night's parts out to the edges.
+     */
+    val pathFractions: DoubleArray
+    /** The dragging axis: x made to run one way through the day (see [dragX]). */
+    private val dragU: DoubleArray
+    init {
+        val fs = ArrayList<Double>()
+        if (p.start > 0) for (i in 0 until 48) fs += p.start * i / 48
+        fs += p.start
+        for (f in p.fractions) if (f > p.start && f < p.end) fs += f
+        fs += p.end
+        if (p.end < 1) for (i in 1..48) fs += p.end + (1 - p.end) * i / 48
+        pathFractions = fs.toDoubleArray()
+        val n = pathFractions.size
+        val u = DoubleArray(n) { travel * x(pathFractions[it]).toDouble() }
+        // Where the true path turns back on itself (in the tropics, on the days the noon Sun is on the poleward side, the
+        // Sun's azimuth first moves away from noon's after sunrise), the axis goes straight on in time across the turn:
+        // between the last point before it and the first after it that the path never comes back across.
+        val fwd = DoubleArray(n); val bwd = DoubleArray(n)
+        for (i in 0 until n) fwd[i] = if (i == 0) u[0] else max(fwd[i - 1], u[i])
+        for (i in n - 1 downTo 0) bwd[i] = if (i == n - 1) u[i] else min(bwd[i + 1], u[i])
+        val d = u.copyOf()
+        var i = 0
+        while (i < n) {
+            if (fwd[i] - bwd[i] > 1e-3) {
+                val a = max(i - 1, 0); var b = i
+                while (b < n - 1 && fwd[b] - bwd[b] > 1e-3) b++
+                for (j in a + 1 until b) d[j] = u[a] + (u[b] - u[a]) * (pathFractions[j] - pathFractions[a]) / (pathFractions[b] - pathFractions[a])
+                i = b
+            } else i++
         }
-        return (lo + hi) / 2
+        for (j in 1 until n) if (d[j] <= d[j - 1]) d[j] = d[j - 1] + 1e-4
+        dragU = d
+    }
+
+    /**
+     * The x the finger takes the Sun to [fraction] of the day at: [x] itself wherever the path runs one way (every day
+     * outside the tropics, and there whenever the noon Sun is on the equator's side); across a turn of the path, straight
+     * on in time (see above), so that the day can still be dragged through in one sweep.
+     */
+    fun dragX(fraction: Double): Float {
+        val f = fraction.coerceIn(0.0, 1.0)
+        val n = pathFractions.size
+        var lo = 0; var hi = n - 1
+        if (f <= pathFractions[0]) return (travel * dragU[0]).toFloat()
+        if (f >= pathFractions[n - 1]) return (travel * dragU[n - 1]).toFloat()
+        while (hi - lo > 1) { val m = (lo + hi) ushr 1; if (pathFractions[m] <= f) lo = m else hi = m }
+        val t = (f - pathFractions[lo]) / (pathFractions[hi] - pathFractions[lo])
+        return (travel * (dragU[lo] + (dragU[hi] - dragU[lo]) * t)).toFloat()
+    }
+
+    /** The fraction of the day the finger at [px] takes the Sun to (inverse of [dragX]). */
+    fun fractionAt(px: Float): Double {
+        val u = travel * px.toDouble()
+        val n = dragU.size
+        if (u <= dragU[0]) return pathFractions[0]
+        if (u >= dragU[n - 1]) return pathFractions[n - 1]
+        var lo = 0; var hi = n - 1
+        while (hi - lo > 1) { val m = (lo + hi) ushr 1; if (dragU[m] <= u) lo = m else hi = m }
+        val t = (u - dragU[lo]) / (dragU[hi] - dragU[lo])
+        return pathFractions[lo] + (pathFractions[hi] - pathFractions[lo]) * t
     }
 
     companion object {
-        /**
-         * Monotone cubic (Fritsch–Carlson) through Fajr−30 min, sunrise, sunset and Isha+30 min. 0.9.6: twilight gets
-         * more of the width (8–22 % and 78–92 %, was 10–18 % and 82–90 %): the sky changes fastest then, and dragging
-         * the Sun through dawn and dusk changed the colours up to nine times faster per pixel than at midday; now about
-         * a third less, with the four prayers of twilight further apart.
-         */
-        fun timeWarp(scene: SkyScene): (Double) -> Double {
-            val f = scene.events.associate { (p, t) -> p to scene.path.fraction(t) }
-            val fajr = f[Prayer.FAJR]; val rise = f[Prayer.SHURUQ]; val set = f[Prayer.MAGHRIB]; val isha = f[Prayer.ISHA]
-            if (rise == null || set == null) return { it }
-            val half = 30.0 / (24 * 60)
-            val xs = mutableListOf(0.0); val ys = mutableListOf(0.0)
-            fun add(x: Double, y: Double) { if (x > xs.last() + 1e-4 && x < 1 - 1e-4 && y > ys.last()) { xs += x; ys += y } }
-            fajr?.let { add(it - half, 0.08) }
-            add(rise, 0.22); add(set, 0.78)
-            isha?.let { add(it + half, 0.92) }
-            xs += 1.0; ys += 1.0
-            // (0.20) Between sunrise and sunset the time runs evenly across the width, so the path is a true arch (y).
-            val day = xs.indexOf(rise).takeIf { it >= 0 && it + 1 < xs.size && xs[it + 1] == set } ?: -1
-            return monotoneCubic(xs.toDoubleArray(), ys.toDoubleArray(), day)
-        }
-
-        /** Through ([x], [y]); segment [linear] (if not -1) a straight line, as far as the curve stays monotone. */
-        fun monotoneCubic(x: DoubleArray, y: DoubleArray, linear: Int = -1): (Double) -> Double {
-            val n = x.size
-            val d = DoubleArray(n - 1) { (y[it + 1] - y[it]) / (x[it + 1] - x[it]) }
-            val m = DoubleArray(n) { i ->
-                when (i) { 0 -> d[0]; n - 1 -> d[n - 2]; else -> if (d[i - 1] * d[i] <= 0) 0.0 else (d[i - 1] + d[i]) / 2 }
-            }
-            for (i in 0 until n - 1) {
-                if (d[i] == 0.0) { m[i] = 0.0; m[i + 1] = 0.0; continue }
-                val a = m[i] / d[i]; val b = m[i + 1] / d[i]
-                val s = a * a + b * b
-                if (s > 9) { val t = 3 / kotlin.math.sqrt(s); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i] }
-            }
-            if (linear in 0 until n - 1) {
-                val k = d[linear]
-                // (Its ends take its own slope; held within three times the neighbours' slopes, the curve's monotone limit.)
-                m[linear] = if (linear > 0) minOf(k, 3 * d[linear - 1]) else k
-                m[linear + 1] = if (linear + 1 < n - 1) minOf(k, 3 * d[linear + 1]) else k
-            }
-            return { v ->
-                val i = (x.indexOfLast { it <= v }).coerceIn(0, n - 2)
-                val h = x[i + 1] - x[i]; val t = ((v - x[i]) / h).coerceIn(0.0, 1.0)
-                val t2 = t * t; val t3 = t2 * t
-                (2 * t3 - 3 * t2 + 1) * y[i] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * y[i + 1] + (t3 - t2) * h * m[i + 1]
-            }
+        /** The margin at each side of the shown day (of the width): room for a prayer's ring. */
+        const val MARGIN = 0.07f
+        /** How far past the screen's edges the night's part of the path runs at midnight (of the width). */
+        const val EDGE = 0.04f
+        fun apparent(el: Double): Double = el + horizonLift(el)
+        /** Cubic Hermite from [a] to [b] over t in 0..1 with end slopes [ma], [mb] (per unit t). */
+        private fun hermite(t: Double, a: Float, b: Float, ma: Float, mb: Float): Float {
+            val t2 = t * t; val t3 = t2 * t
+            return ((2 * t3 - 3 * t2 + 1) * a + (t3 - 2 * t2 + t) * ma + (-2 * t3 + 3 * t2) * b + (t3 - t2) * mb).toFloat()
         }
     }
 }
@@ -412,7 +461,10 @@ internal fun LivingSky(
     // (Testing only, to be removed before release: the tester's options may set the moment shown. See Tester.)
     @Suppress("NAME_SHADOWING") val display = if (scrubbing) display else com.noor.app.testing.Tester.shown(display)
     @Suppress("NAME_SHADOWING") val scrubbing = scrubbing || com.noor.app.testing.Tester.moving
-    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    // (0.23) The scene is never mirrored, whatever the app's language: the Sun's path and everything in the sky and on the
+    // land are where they are in real life (the owner, 18 November 2026: "make sure the sunpath reflects real life exactly
+    // (regardless of app language setting)"). Until 0.22 the whole scene was mirrored in Arabic. Text is not part of it.
+    val rtl = false
     // (0.19: under the low graphics nothing moves by itself: the clocks, the breathing ring and the birds rest.)
     val ambient = LocalAmbientMotion.current && !simple
     val light = lightAt(scene.elevationAt(display), scene.eveningAt(display))
@@ -610,7 +662,7 @@ internal fun LivingSky(
         if (simple) SimpleSkyLayer(scene, layout, display, page, rtl, parallax, Modifier.fillMaxSize())
         if (real == null && shaders == null && !simple) Canvas(Modifier.fillMaxSize().graphicsLayer { translationY = parallax() * 0.5f }) {
             val w = size.width; val h = size.height
-            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+            val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground)
             // The clock is read only when there is something to move, so a daytime sky is not redrawn for nothing.
             val time = if (light.night > 0f && live) now() else 0.13f
             val hy = h * layout.horizon
@@ -669,7 +721,7 @@ internal fun LivingSky(
                 Modifier.fillMaxSize().drawWithCache {
                     val w = size.width; val h = size.height
                     val hy = h * layout.horizon
-                    val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+                    val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground)
                     onDrawBehind {
                         val shownF = displayNow.value
                         val light = lightNow.value
@@ -710,7 +762,7 @@ internal fun LivingSky(
             val shapes = land.paths(w, h * layout.horizon, h, density)
 
             onDrawBehind {
-                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground, rtl)
+                val g = SkyGeometry(scene, w, h * layout.horizon, h * layout.arcTop, h * layout.ground)
                 drawLand(shapes, light, horizonColor, mid, zenith, page, soils, g.x(display), w)
             }
         })
@@ -728,8 +780,10 @@ internal fun LivingSky(
             Modifier.fillMaxSize().drawWithCache {
                 val w = size.width; val h = size.height
                 val hy = h * layout.horizon
-                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground)
                 val path = sunPath(scene, g)
+                val passed = Path()
+                val night = sunPath(scene, g, from = scene.panorama.start, upTo = scene.panorama.end)
                 // The land's top at x (px): the real sky's skyline; the 0.9 sky's ridges (LandProfile.skylineY);
                 // none for the simplest sky, which keeps its land under the path.
                 val landTop: ((Float) -> Float)? = when {
@@ -771,20 +825,25 @@ internal fun LivingSky(
                     clipRect(0f, 0f, w, hy) {
                         drawPath(path, shade, style = dashShade)
                         drawPath(path, Color.White.copy(alpha = 0.55f * pathAlpha), style = dashed)
-                        val left = if (rtl) sun.x else 0f; val right = if (rtl) w else sun.x
-                        clipRect(left, 0f, right, h) {
-                            drawPath(path, light.sunGlow.copy(alpha = 0.24f), style = glowStroke)
-                            drawPath(path, light.sunCore.copy(alpha = 0.95f), style = coreStroke)
-                        }
+                        // (0.23) The day so far, in gold: the path up to the Sun (not a side of the screen: the real path
+                        // can turn back on itself in the tropics, and runs right to left in the southern hemisphere).
+                        sunPath(scene, g, shownF, passed)
+                        drawPath(passed, light.sunGlow.copy(alpha = 0.24f), style = glowStroke)
+                        drawPath(passed, light.sunCore.copy(alpha = 0.95f), style = coreStroke)
                     }
                     // (What is left of the line: nothing within 0.24 of the reach, all of it from 0.62 on.)
                     drawCircle(Brush.radialGradient(0f to Color.Black, 0.24f to Color.Black, 0.62f to Color.Transparent, 1f to Color.Transparent, center = sun, radius = reach),
                         reach, sun, blendMode = BlendMode.DstOut)
                     drawContext.canvas.restore()
+                    // (0.23) Under the horizon, from Fajr to sunrise and from sunset to Isha, the path goes on at the Sun's
+                    // real depth, faint and dashed, to the marks of Fajr and Isha.
+                    clipRect(0f, hy, w, h) {
+                        drawPath(night, Color.White.copy(alpha = 0.30f * pathAlpha), style = dashed)
+                    }
                     // The Sun behind the land: a ring where it is, as bright as the land hides it.
                     val top = landTop?.invoke(sun.x)
                     if (top != null && sunEl > -1.0) {
-                        val hidden = smoothstep(-disc * 0.6f, disc * 1.2f, sun.y - top) * smoothstep(-1.0f, -0.4f, sunEl.toFloat()) * pathAlpha
+                        val hidden = sunHidden(sun.y, top, disc, sunEl) * pathAlpha
                         if (hidden > 0.01f) {
                             drawCircle(Color.Black.copy(alpha = 0.16f * hidden), disc * 1.9f, sun)
                             drawCircle(light.sunGlow.copy(alpha = 0.30f * hidden), disc * 1.6f, sun)
@@ -803,7 +862,7 @@ internal fun LivingSky(
             Modifier.fillMaxSize().drawWithCache {
                 val w = size.width; val h = size.height
                 val hy = h * layout.horizon
-                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground, rtl)
+                val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground)
                 // Each prayer at the Sun's real position at its moment: in the sky on the path, on the horizon at Shuruq
                 // and Maghrib, below it (in the land) at Fajr and Isha.
                 val marks = scene.events.map { (p, t) ->
@@ -858,6 +917,15 @@ private const val CYCLE_SECONDS = 240.0
  * (16') plus refraction, scaled so that at the standard sunrise and sunset elevation (−50') the edge is exactly on the
  * horizon, and fading out between there and 4° below, where nothing is seen.
  */
+/**
+ * (0.20; 0.23) How much the land hides the Sun's disc (0 seen .. 1 hidden): the Sun at [sunY] (px, its centre), the land's
+ * top at its x [landTop], the disc's radius [disc], its true elevation [el]. The Sun itself is drawn behind the land at
+ * every level (hidden as in real life, the owner's choice, 18 November 2026); this says how strongly the ring on the path
+ * shows where it is: softly, over a little more than the disc's height as it goes behind the skyline, never at a stroke.
+ */
+internal fun sunHidden(sunY: Float, landTop: Float, disc: Float, el: Double): Float =
+    smoothstep(-disc * 0.6f, disc * 1.2f, sunY - landTop) * smoothstep(-1.0f, -0.4f, el.toFloat())
+
 internal fun horizonLift(el: Double): Double {
     val r0 = Atmosphere.refraction(-0.8333)
     if (el >= -0.8333) return Atmosphere.refraction(el) * (0.5667 / r0) + 0.2667
@@ -934,8 +1002,14 @@ internal fun interpolate(samples: List<Pair<Double, Double>>, f: Double): Double
     return if (f1 == f0) e0 else e0 + (e1 - e0) * ((f - f0) / (f1 - f0))
 }
 
-private fun sunPath(scene: SkyScene, g: SkyGeometry): Path = Path().apply {
-    scene.samples.forEachIndexed { i, (f, el) -> if (i == 0) moveTo(g.x(f), g.y(el, f)) else lineTo(g.x(f), g.y(el, f)) }
+/** The Sun's path from [from] to [upTo] (fractions of the day), through the geometry's own points, into [into]. */
+private fun sunPath(scene: SkyScene, g: SkyGeometry, upTo: Double = 1.0, into: Path = Path(), from: Double = 0.0): Path = into.apply {
+    rewind()
+    var first = true
+    fun to(f: Double) { val x = g.x(f); val y = g.y(scene.elevationAt(f), f); if (first) { moveTo(x, y); first = false } else lineTo(x, y) }
+    to(from)
+    for (f in g.pathFractions) { if (f >= upTo) break; if (f > from) to(f) }
+    to(upTo)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -18,7 +18,9 @@ internal class SkyView(scene: SkyScene, val w: Float, val h: Float, val density:
     val horizonY = h * layout.horizon
     val arcTopY = h * layout.arcTop
     val cloudTopY = h * layout.cloudTop
-    val geometry = SkyGeometry(scene, w, horizonY, arcTopY, h * layout.ground, rtl)
+    val geometry = SkyGeometry(scene, w, horizonY, arcTopY, h * layout.ground)
+    /** (0.23) The view faces north (the noon Sun is on the north side): the stars are seen that way too. */
+    val facingNorth: Boolean get() = geometry.facingNorth
     val fov: Double = (w / density * 0.0051).toDouble().coerceIn(1.6, 2.6)
     /** Where the Sun rises and sets on the horizon today, px (far off screen when it does not). */
     val sunrise: Pair<Float, Float> = sunriseSunsetX(scene, geometry)

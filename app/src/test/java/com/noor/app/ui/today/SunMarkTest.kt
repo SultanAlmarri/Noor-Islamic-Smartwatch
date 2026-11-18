@@ -43,7 +43,7 @@ class SunMarkTest {
             val scene = SkyScene(path, events, events.first().second, Prayer.DHUHR, 10, pl.point.latitude < 0, pl.terrain, 1L, 77L)
             val d = sz[4]
             val w = sz[0] * d; val h = sz[1] * d; val hy = sz[2] * d; val arc = sz[3] * d
-            val g = SkyGeometry(scene, w, hy, arc, h - 6 * d, rtl = false)
+            val g = SkyGeometry(scene, w, hy, arc, h - 6 * d)
             val land = LandProfile.of(scene.landSeed, scene.terrain)
             val geo = land.geometry(hy, h, d)
             val label = "${pl.name} $date ${sz[0]}dp"

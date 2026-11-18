@@ -31,56 +31,52 @@ class LivingSkyTest {
         assertEquals(Terrain.HILLS, Terrain.of(null))
     }
 
-    /** Dragging finds the moment under the finger: the inverse of the time axis, in both reading directions. */
-    @Test fun fractionAtInvertsTheTimeAxis() {
-        for (rtl in listOf(false, true)) {
-            val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl)
-            var f = 0.02
-            while (f < 0.98) {
-                assertEquals("rtl=$rtl f=$f", f, g.fractionAt(g.x(f)), 1e-4)
-                f += 0.01
-            }
+    /** Dragging finds the moment under the finger: the inverse of the dragging axis (0.23: never mirrored). */
+    @Test fun fractionAtInvertsTheDraggingAxis() {
+        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f)
+        var f = 0.02
+        while (f < 0.98) {
+            assertEquals("f=$f", f, g.fractionAt(g.dragX(f)), 1e-4)
+            // (Outside the tropics' poleward-noon days the dragging axis is the path itself.)
+            assertEquals("f=$f", g.x(f), g.dragX(f), 0.5f)
+            f += 0.01
         }
     }
 
-    @Test fun timeAxisRunsInTheReadingDirection() {
-        val ltr = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = false)
-        val rtl = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = true)
-        assertTrue(ltr.x(0.3) < ltr.x(0.7))
-        assertTrue(rtl.x(0.3) > rtl.x(0.7))
+    /** (0.23) The Sun moves left to right in Dubai (facing south), whatever the app's language: the scene has none. */
+    @Test fun timeRunsTheWayTheSunMoves() {
+        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f)
+        assertEquals(1, g.travel)
+        assertTrue(g.x(0.3) < g.x(0.7))
     }
 
     /**
-     * (0.20) The Sun's path is one even arch, the same over every scenery (the owner, 17 November 2026: part of it
-     * hidden behind mountains and no consistency between the sceneries; until 0.19 it was lifted onto each scenery's
-     * skyline). Its height is in proportion to the sine of the Sun's elevation and the time runs evenly between sunrise
-     * and sunset, so it is symmetrical about the Sun's highest point and round at the top (in proportion to the
-     * elevation it met itself at noon in a point).
+     * (0.23) The Sun's path is its real path, the same over every scenery (0.20: no lift onto each skyline). Nearly
+     * symmetrical about noon (the Sun's declination changes a little through the day), rising all morning and falling
+     * all afternoon. (0.20's rules, an even arch in time and a round top, are gone with the sine arch.)
      */
-    @Test fun theSunsPathIsOneEvenArchOverEveryScenery() {
-        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = false)
-        // The same path whatever the scenery: the geometry knows nothing of the land.
+    @Test fun theSunsPathIsTheSameOverEveryScenery() {
+        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f)
         for (t in Terrain.entries) {
-            val other = SkyGeometry(scene.copy(terrain = t), 1080f, 900f, 700f, 1100f, rtl = false)
+            val other = SkyGeometry(scene.copy(terrain = t), 1080f, 900f, 700f, 1100f)
             var f = 0.0
             while (f <= 1.0) { assertEquals(g.x(f), other.x(f), 0f); assertEquals(g.y(scene.elevationAt(f), f), other.y(scene.elevationAt(f), f), 0f); f += 0.05 }
         }
         val rise = path.fraction(at(6, 25)); val set = path.fraction(at(17, 40))
-        val noon = (rise + set) / 2
+        // Noon: the Sun on the meridian (its azimuth that of the noon Sun), found between the track's samples.
+        var lo = rise; var hi = set
+        repeat(50) { val m = (lo + hi) / 2; if (scene.panorama.acrossAt(m) < 0) lo = m else hi = m }
+        val noon = (lo + hi) / 2
         fun pt(f: Double) = g.x(f) to g.y(scene.elevationAt(f), f)
         val top = pt(noon)
-        // Symmetrical about the middle of the day, in height and in width.
         var dt = 0.01
         while (noon - dt > rise) {
             val (xa, ya) = pt(noon - dt); val (xb, yb) = pt(noon + dt)
-            assertEquals("height at ±$dt", ya, yb, 2.5f)
-            assertEquals("width at ±$dt", top.first - xa, xb - top.first, 2.5f)
+            // (Within half a degree: the declination moves a little through the day.)
+            assertEquals("height at ±$dt", ya, yb, 0.5f * g.k)
+            assertEquals("width at ±$dt", top.first - xa, xb - top.first, 0.5f * g.k)
             dt += 0.02
         }
-        // Round at the top: a quarter of an hour either side of noon it has come down less than 1 % of its height.
-        val (_, yq) = pt(noon + 15.0 / 1440)
-        assertTrue("${yq - top.second} px", yq - top.second < 0.01f * 200f)
-        // Rising all morning and falling all afternoon, smoothly (no step larger than a few pixels in five minutes).
         var f = rise; var last = pt(f).second
         while (f < set) {
             val y = pt(f).second
@@ -102,14 +98,14 @@ class LivingSkyTest {
         assertEquals(500f, SunLift.skylineY(null, 300f, 1000f, 500f, rtl = false), 0f)
     }
 
-    /** Sunrise and sunset sit on the horizon line; noon is the highest point drawn. */
+    /** Sunrise and sunset sit on the horizon line; noon is the highest point drawn (here the height sets the scale). */
     @Test fun elevationScalePutsTheHorizonWhereTheSunRisesAndSets() {
-        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f, rtl = false)
+        val g = SkyGeometry(scene, 1080f, 900f, 700f, 1100f)
         val rise = path.fraction(at(6, 25))
         assertTrue(abs(g.y(scene.elevationAt(rise)) - 900f) < 12f)
         val noon = scene.noonFraction
         assertTrue(g.y(scene.elevationAt(noon)) <= g.y(scene.elevationAt(0.4)))
-        assertEquals(700f, g.y(path.maxElevation.coerceAtLeast(12.0)), 0.5f)
+        assertEquals(700f, g.y(path.maxElevation), 0.5f)
     }
 
     /** The binary search used while drawing gives the same curve as reading the samples one by one. */
