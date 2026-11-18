@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -524,8 +525,8 @@ private fun FigureEightCanvas(phase: () -> Float, rtl: Boolean, modifier: Modifi
 }
 
 /**
- * A lemniscate of Bernoulli (made a little fuller), drawn as a faint line; a phone glides along it, leaning as a wrist
- * turns, with a trail that fades behind it. Strokes in plain colours, faded with alpha (a gradient brush on a stroke
+ * A lemniscate of Bernoulli (made a little fuller), drawn as a faint line; a phone glides along it upright, twisting a
+ * little as a wrist turns, with a trail that fades behind it. Strokes in plain colours, faded with alpha (a gradient brush on a stroke
  * stops the emulator's graphics: HANDOVER.md section 28).
  */
 private fun DrawScope.nudgeFigure(phase: Float, rtl: Boolean, trail: Color, track: Color, body: Color, screen: Color) {
@@ -555,13 +556,14 @@ private fun DrawScope.nudgeFigure(phase: Float, rtl: Boolean, trail: Color, trac
             cap = StrokeCap.Round, blendMode = androidx.compose.ui.graphics.BlendMode.Src)
     }
     drawContext.canvas.restore()
-    // The phone, leaning with the turn of the wrist (smoothly, the same way each loop).
+    // The phone, held upright as it is in the hand (the owner: leaning sideways along the curve looked wrong); the turn
+    // of the wrist shows as a gentle twist about its own upright axis, the phone narrowing a little as it turns.
     val p = pt(t0)
-    val lean = (22.0 * cos(t0) * dir).toFloat()
+    val twist = (0.80 + 0.20 * abs(cos(t0))).toFloat()
     // A soft glow under the phone (a filled circle: a gradient on a fill is safe, only on a stroke it is not).
     val glow = 24.dp.toPx()
     drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(trail.copy(alpha = 0.30f), trail.copy(alpha = 0f)), p, glow), glow, p)
-    rotate(lean, p) {
+    scale(twist, 1f, p) {
         drawRoundRect(body, Offset(p.x - phoneW / 2, p.y - phoneH / 2), androidx.compose.ui.geometry.Size(phoneW, phoneH),
             androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))
         val inset = 1.7.dp.toPx()
