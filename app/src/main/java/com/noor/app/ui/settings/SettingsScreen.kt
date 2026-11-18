@@ -83,7 +83,7 @@ import com.noor.prayer.Prayer
 import com.noor.prayer.Profiles
 import kotlinx.coroutines.launch
 
-private enum class Dialog { NONE, AUTHORITY, ASR, HIGH_LAT, OFFSETS, LANGUAGE, NUMERALS, TIME, THEME, BACKGROUND }
+private enum class Dialog { NONE, AUTHORITY, ASR, HIGH_LAT, OFFSETS, LANGUAGE, NUMERALS, TIME, THEME, BACKGROUND, SAMSUNG_LIVE }
 
 /**
  * One row of Settings: a link (a chevron), a choice (its value at the end of the row), a switch (the whole row
@@ -236,6 +236,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             val allowed = newEnough && com.noor.app.notify.StatusNotification.promotedAllowed(context)
             // (What the phone did with it: Minhad looks after posting, LivePromotion.)
             val seen = com.noor.app.notify.LivePromotion.state.value
+            val samsung = Build.MANUFACTURER.equals("samsung", ignoreCase = true) && seen != com.noor.app.notify.LivePromotion.State.REFUSED
             val openSettings = {
                 runCatching {
                     context.startActivity(android.content.Intent(if (Build.VERSION.SDK_INT >= 36) android.provider.Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS
@@ -252,10 +253,14 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                     !newEnough -> R.string.status_chip_needs_16
                     s.statusBarChip && !allowed -> R.string.status_chip_blocked
                     s.statusBarChip && seen == com.noor.app.notify.LivePromotion.State.REFUSED -> R.string.status_chip_refused
+                    // (0.22.2) Android accepts it, but a Samsung phone shows other apps' countdowns in the status bar
+                    // only with Developer options → "Live notifications for all apps" on (the owner found it so):
+                    // say so, and the steps are one tap away.
+                    s.statusBarChip && samsung -> R.string.status_chip_samsung
                     s.statusBarChip && seen == com.noor.app.notify.LivePromotion.State.PROMOTED -> R.string.status_chip_promoted
                     else -> R.string.status_chip_desc
                 }), stringResource(R.string.kw_status),
-                if (newEnough && s.statusBarChip && !allowed) openSettings else null,
+                when { newEnough && s.statusBarChip && !allowed -> openSettings; newEnough && s.statusBarChip && samsung -> { { dialog = Dialog.SAMSUNG_LIVE } }; else -> null },
                 toggle = if (newEnough) s.statusBarChip to { on -> if (on) com.noor.app.notify.LivePromotion.retry(context); vm.setStatusBarChip(on) } else null))
         }
         add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }, listed = false))
@@ -442,6 +447,23 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             onSelect = { vm.setTheme(it) }, onDismiss = { dialog = Dialog.NONE },
         )
         Dialog.OFFSETS -> OffsetsSheet(s.offsets, f, onSet = { p, m -> vm.setOffset(p, m) }, onReset = { vm.resetOffsets() }, onDismiss = { dialog = Dialog.NONE })
+        Dialog.SAMSUNG_LIVE -> AlertDialog(
+            onDismissRequest = { dialog = Dialog.NONE },
+            containerColor = c.surface, titleContentColor = c.textPrimary, textContentColor = c.textSecondary,
+            title = { Text(stringResource(R.string.samsung_live_title)) },
+            text = { Text(stringResource(R.string.samsung_live_steps)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    dialog = Dialog.NONE
+                    // Developer options if they are on; otherwise "About phone", where they are turned on (step 1).
+                    val dev = android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1
+                    val action = if (dev) android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS else android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS
+                    runCatching { context.startActivity(android.content.Intent(action).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        .recoverCatching { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }) { Text(stringResource(R.string.samsung_live_open), color = c.goldText) }
+            },
+            dismissButton = { TextButton(onClick = { dialog = Dialog.NONE }) { Text(stringResource(R.string.samsung_live_done), color = c.textSecondary) } },
+        )
         Dialog.BACKGROUND -> AlertDialog(
             onDismissRequest = { dialog = Dialog.NONE },
             containerColor = c.surface, titleContentColor = c.textPrimary, textContentColor = c.textSecondary,

@@ -1883,3 +1883,11 @@ polar day never under the horizon and polar night never over it, dragging monoto
 
 **Weakness**: with a fixed height and real ends, a short winter day far north is a narrow, tall hump (Oslo 21 December:
 121 dp wide, 81 dp tall).
+
+**The status-bar countdown on Samsung (confirmed on the owner's phone, 18 November 2026).** With 0.22.1 Settings said
+"Android accepted it" but no chip showed; the owner then turned on Developer options → "Live notifications for all apps"
+and the countdown appeared in the status bar. So on One UI (8) Android promotes Minhad's Live Update and Samsung shows
+it only with that developer switch. 0.22.2: on Samsung phones the setting says so and opens the steps (and Developer
+options, or "About phone" where they are turned on). The countdown's sign was drawn after the digits in a right-to-left
+shade ("2:08:17−"): it is now kept left to right (LRI + LRM, `StatusNotification.ltr`; Robolectric's text engine needs
+the mark); and the Live Update is one line shorter: the prayer and the countdown on its first line (`titleLine`).
