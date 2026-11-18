@@ -158,8 +158,11 @@ class WidgetsTest {
             val best = scores.indices.minByOrNull { scores[it] }!!
             // The window shows one label clearly: almost exactly (a few levels of 255 on average, from smoothing), and
             // better than any other (one that shares a digit, or differs only by a thin stroke, can come within 1.5 times).
+            // (0.23: the wheel is drawn smaller by the widget's scale, in Plex Medium, whose heavier strokes leave more
+            // smoothing at their edges than 0.9.14's Light: up to 8 levels on average, and at least twice as close as
+            // the next best label, where 0.9.14 asked 6 and 1.1 times.)
             val perChannel = scores[best].toDouble() / (r.width() * r.height() * 3)
-            assertTrue("a clear label (${scores.sorted().take(3)}, $perChannel per channel)", perChannel < 6 && scores.sorted()[1] > 1.1 * scores[best])
+            assertTrue("a clear label (${scores.sorted().take(3)}, $perChannel per channel)", perChannel < 8 && scores.sorted()[1] > 2.0 * scores[best])
             return best
         }
         /** What the wheel must show at the real time [now] (the clock it turns on is the real one). */

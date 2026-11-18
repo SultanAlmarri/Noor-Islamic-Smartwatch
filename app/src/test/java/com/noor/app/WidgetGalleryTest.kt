@@ -53,12 +53,13 @@ class WidgetGalleryTest {
 
     /** The sizes each kind is drawn at, in dp (portrait width × height), as phones' home screens give them. */
     private val sizes = mapOf(
-        WidgetKind.NEXT to listOf(150 to 64, 170 to 84, 250 to 84, 170 to 170, 250 to 180),
-        WidgetKind.TODAY to listOf(340 to 84, 300 to 64, 340 to 180, 300 to 130, 170 to 280, 170 to 380, 340 to 280, 340 to 380, 170 to 170),
-        WidgetKind.SKY to listOf(340 to 180, 340 to 280, 250 to 120),
-        WidgetKind.RING to listOf(150 to 150, 170 to 185, 250 to 250),
-        WidgetKind.STRIP to listOf(340 to 84, 300 to 64, 420 to 84),
-        WidgetKind.DATE to listOf(150 to 64, 170 to 84, 340 to 84, 170 to 170, 340 to 180),
+        // (The first of each list: the smallest a launcher may resize it to, minResizeWidth x minResizeHeight.)
+        WidgetKind.NEXT to listOf(110 to 40, 150 to 64, 170 to 84, 250 to 84, 170 to 170, 250 to 180),
+        WidgetKind.TODAY to listOf(110 to 40, 340 to 84, 300 to 64, 340 to 180, 300 to 130, 170 to 280, 170 to 380, 340 to 280, 340 to 380, 170 to 170, 180 to 110),
+        WidgetKind.SKY to listOf(180 to 90, 340 to 180, 340 to 280, 250 to 120),
+        WidgetKind.RING to listOf(110 to 110, 150 to 150, 170 to 185, 250 to 250),
+        WidgetKind.STRIP to listOf(250 to 40, 340 to 84, 300 to 64, 420 to 84),
+        WidgetKind.DATE to listOf(110 to 40, 150 to 64, 170 to 84, 340 to 84, 170 to 170, 340 to 180),
     )
 
     @Test fun everyWidgetAtEverySize() = runBlocking {
@@ -128,7 +129,7 @@ class WidgetGalleryTest {
         repo.setLanguage(Language.ENGLISH)
         val after = ZonedDateTime.of(2026, 11, 4, 15, 50, 0, 0, dubai).toInstant()
         for (kind in WidgetKind.entries) {
-            val (w, h) = sizes[kind]!![if (kind == WidgetKind.TODAY) 2 else 1]
+            val (w, h) = sizes[kind]!![if (kind == WidgetKind.TODAY) 3 else 2]
             val tag = "${kind.name.lowercase()}_${w}x${h}"
             shoot("${tag}_en_dark_teal", kind, WidgetOptions(background = WidgetBackground.DARK, opacity = 100, accent = WidgetAccent.TEAL), w, h)
             shoot("${tag}_en_clear_large", kind, WidgetOptions(background = WidgetBackground.CLEAR, textSize = WidgetTextSize.LARGE), w, h)
@@ -139,14 +140,14 @@ class WidgetGalleryTest {
         // The owner's phone: the phone in Arabic, Minhad in English with Western digits.
         val arabicPhone = app.createConfigurationContext(Configuration(app.resources.configuration).apply { setLocale(Locale("ar")); setLayoutDirection(Locale("ar")) })
         for (kind in WidgetKind.entries) {
-            val (w, h) = sizes[kind]!![if (kind == WidgetKind.TODAY) 2 else 1]
+            val (w, h) = sizes[kind]!![if (kind == WidgetKind.TODAY) 3 else 2]
             shoot("${kind.name.lowercase()}_${w}x${h}_en_arabicphone", kind, kind.defaults, w, h, host = arabicPhone)
         }
         // Arabic-Indic digits and 24 hours; then the largest font size, both languages.
         repo.setLanguage(Language.ARABIC); repo.setNumerals(Numerals.ARABIC_INDIC); repo.setTimeFormat(TimeFormat.H24)
         indic = true
         for (kind in WidgetKind.entries) {
-            val (w, h) = sizes[kind]!![if (kind == WidgetKind.TODAY) 2 else 1]
+            val (w, h) = sizes[kind]!![if (kind == WidgetKind.TODAY) 3 else 2]
             shoot("${kind.name.lowercase()}_${w}x${h}_ar_indic24", kind, kind.defaults, w, h)
         }
         repo.setNumerals(Numerals.WESTERN); repo.setTimeFormat(TimeFormat.H12)

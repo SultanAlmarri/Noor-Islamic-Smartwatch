@@ -125,7 +125,7 @@ LAYOUTS = {
         row([col([title_row, tv("widget_then", "Small", extra='android:layout_marginTop="4dp"'), tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')],
                  w="0dp", extra='android:layout_weight="1"'),
              count('android:layout_marginStart="12dp"')],
-            h="match_parent", extra=f'android:gravity="center_vertical" {PAD}')),
+            h="match_parent", extra=f'android:id="@+id/widget_content" android:gravity="center_vertical" {PAD}')),
     # Next prayer, 2x2 and larger: a calm column, the countdown large at the foot.
     "widget_next_tall": ("the next prayer, its time and the countdown (tall sizes).",
         col([row([tv("widget_prayer", "Display"), tv("widget_time", "Body", extra='android:layout_marginStart="8dp"')],
@@ -201,7 +201,7 @@ LAYOUTS = {
         col([row([tv("widget_prayer", "Title"), tv("widget_time", "Small", extra='android:layout_marginStart="6dp"'), space(weight=1), count()],
                  extra='android:id="@+id/widget_header" android:gravity="center_vertical" android:baselineAligned="false"'),
              cells(h="0dp", extra='android:layout_weight="1"')],
-            h="match_parent", extra=PAD.replace("widget_pad_v", "widget_pad_row"))),
+            h="match_parent", extra='android:id="@+id/widget_content" ' + PAD.replace("widget_pad_v", "widget_pad_row"))),
 }
 
 

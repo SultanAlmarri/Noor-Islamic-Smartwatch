@@ -444,7 +444,15 @@ internal object WidgetRender {
         // The phone's Arabic face has no medium weight (sans-serif-medium falls back to its regular): bold, so an Arabic
         // name stands as firmly as an English one.
         val shown: CharSequence = if (r.f.arabic) SpannableString(name).apply { setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) } else name
-        text(v, R.id.widget_prayer, shown, Fit.size(listOf(name), if (r.f.arabic) Fit.BOLD else Fit.MEDIUM, want, availDp - tw), prayerColor)
+        val family = if (r.f.arabic) Fit.BOLD else Fit.MEDIUM
+        val withTime = Fit.size(listOf(name), family, want, availDp - tw)
+        // On the smallest widgets the time gives way before the name would go under the floor (never a name cut short).
+        if (withTime < FLOOR_TIME || timeDp < FLOOR_NAME) {
+            text(v, R.id.widget_prayer, shown, Fit.size(listOf(name), family, want, availDp).coerceAtLeast(FLOOR_NAME), prayerColor)
+            gone(v, R.id.widget_time)
+            return
+        }
+        text(v, R.id.widget_prayer, shown, withTime, prayerColor)
         text(v, R.id.widget_time, t, timeDp, r.pal.secondary)
     }
 
@@ -453,7 +461,7 @@ internal object WidgetRender {
     /** Next prayer: 2×1 compact (the prayer and time on a line, the countdown under), 2×2 and larger a calm column. */
     private fun next(r: WidgetCtx, built: (Built) -> Unit): RemoteViews {
         val tall = r.hDp >= 118
-        val wide = !tall && r.wDp >= 230
+        val wide = !tall && (r.wDp >= 230 || r.hDp < 58)
         val layout = pick(if (tall) NEXT_TALL else if (wide) NEXT_WIDE else NEXT, r)
         val v = RemoteViews(r.app.packageName, layout)
         background(v, r, skyOptions(r, horizon = if (tall) 0.90f else 0.95f), R.drawable.widget_scrim_even)
@@ -482,13 +490,15 @@ internal object WidgetRender {
         } else if (wide) {
             // The prayer and its time (and the place, when there is room) on the reading side; the countdown, as large
             // as the height allows, on the other.
-            val countWant = minOf(36f * k, (inner - 4f) / 0.842f)
+            // The smallest widgets (40 dp tall) take less margin above and below.
+            val innerW = if (r.hDp < 58) { val px = (6f * r.density).toInt(); val ph = (PAD * r.density).toInt(); v.setViewPadding(R.id.widget_content, ph, px, ph, px); r.hDp - 12f } else inner
+            val countWant = minOf(36f * k, (innerW - 4f) / 0.842f)
             scale = countScale(r, countWant, avail * 0.56f)
             val countW = if (r.o.countdown) CountPicture.widthDp(r.app, leading(r), scale, r.o.seconds && r.mode == Widgets.CountMode.WHEEL) + 12f else 0f
             val side = avail - countW
-            titleRow(v, r, side, 17f * k, 13f * k, r.pal.text)
+            titleRow(v, r, side, minOf(17f * k, (innerW - 2f) / r.lineK), 13f * k, r.pal.text)
             // Under the prayer, as the height allows: the prayer after it, then the place.
-            var room = inner - 17f * k * r.lineK
+            var room = innerW - 17f * k * r.lineK
             val line = 11.5f * k * r.lineK + 2f
             // The place first (the same in both languages), then the prayer after it if there is still room.
             if (r.o.place && room >= line) { place(v, r, side, 11.5f * k, 9.5f, r.pal.secondary, hijri = false); room -= line } else gone(v, R.id.widget_place)
@@ -586,11 +596,26 @@ internal object WidgetRender {
                 } else {
                     // The cells take what the header leaves, up to a calm 60 dp, the text growing with them.
                     val free = r.hDp - 2 * PAD_V - 17f * k * 1.25f - 11.5f * k * 1.3f - 13f
-                    val cellH = (free * 0.62f).coerceIn(44f, 60f)
+                    val cellH0 = (free * 0.62f).coerceIn(44f, 60f)
+                    val grow = if (android.os.Build.VERSION.SDK_INT >= 31) cellH0 / 44f else 1f
+                    val nameWant = minOf(11.5f * grow, 13f) * k
+                    val timeWant = minOf(14.5f * grow, 17.5f) * k
+                    // Never shorter than a name over the marked prayer's time in this script, with the pill's padding; where
+                    // that leaves too little height (large text, Arabic, a short 4x2), the place line goes, then the
+                    // sizes come down towards the floor.
+                    var cellH = maxOf(cellH0, (nameWant + maxOf(timeWant, FLOOR_MARKED)) * r.lineK + 14f)
+                    val header = 17f * k * r.lineK + 12f
+                    val placeH = 11.5f * k * r.lineK + 2f
+                    var room = r.hDp - 2 * PAD_V - header - placeH
+                    if (room < cellH) { gone(v, R.id.widget_place); room += placeH }
+                    var nw = nameWant; var tw = timeWant
+                    if (room < cellH) {
+                        val f = ((room - 14f) / r.lineK / (nameWant + maxOf(timeWant, FLOOR_MARKED))).coerceAtMost(1f)
+                        nw = maxOf(FLOOR_NAME, nameWant * f); tw = maxOf(FLOOR_TIME, timeWant * f)
+                        cellH = maxOf(room, (nw + maxOf(tw, FLOOR_MARKED)) * r.lineK + 12f)
+                    }
                     if (android.os.Build.VERSION.SDK_INT >= 31) for (id in CELLS) v.setViewLayoutHeight(id, cellH, TypedValue.COMPLEX_UNIT_DIP)
-                    val grow = if (android.os.Build.VERSION.SDK_INT >= 31) cellH / 44f else 1f
-                    val cell = avail / n - 14f
-                    rowCells(v, r, shown, avail, minOf(11.5f * grow, 13f) * k, minOf(14.5f * grow, 17.5f) * k)
+                    rowCells(v, r, shown, avail, nw, tw)
                 }
             }
         }
@@ -677,9 +702,16 @@ internal object WidgetRender {
             gone(v, R.id.widget_header)
             val cell = avail / n - 14f
             val cellRoom = (inner - 13f) / r.lineK
+            // Under 56 dp (a launcher's smallest 4x1): the times alone, one line; the marked one still on its pill.
+            val namesToo = r.hDp >= 56
+            if (!namesToo) {
+                for (id in NAMES) v.setViewVisibility(id, View.GONE)
+                val px = (3f * r.density).toInt(); val ph = (PAD * r.density).toInt(); v.setViewPadding(R.id.widget_content, ph, px, ph, px)
+            }
             val times = shown.map { time(r, ws.day.instant(it)) }
             val names = shown.map { r.name(it) }
-            shown = rowCells(v, r, shown, avail, minOf(12f * k, cellRoom * 0.44f), minOf(15f * k, cellRoom * 0.56f))
+            shown = rowCells(v, r, shown, avail, minOf(12f * k, cellRoom * 0.44f), minOf(15f * k, if (namesToo) cellRoom * 0.56f else cellRoom * 0.95f))
+            if (!namesToo) for (id in NAMES) v.setViewVisibility(id, View.GONE)
             val marked = r.marked?.let { shown.indexOf(it) }?.takeIf { it >= 0 }
             var minuteCell = -1
             if (marked != null && r.o.countdown) {

@@ -143,8 +143,10 @@ object Widgets {
     }
 
     internal fun ctxFor(fr: Frame, kind: WidgetKind, o: WidgetOptions, wDp: Int, hDp: Int): WidgetCtx {
-        // The sky widget is always over the sky.
-        val opts = if (kind == WidgetKind.SKY) o.copy(background = WidgetBackground.SKY) else o
+        // The sky widget is always over the sky. On the smallest sizes a launcher allows (a 2x1 resized to 110x40 dp) the
+        // countdown keeps its hours and minutes and lets the seconds go, so the prayer stays beside it uncut.
+        val tiny = wDp < 200 && hDp < 58
+        val opts = (if (kind == WidgetKind.SKY) o.copy(background = WidgetBackground.SKY) else o).let { if (tiny) it.copy(seconds = false) else it }
         return WidgetCtx(kind, fr.ctx, fr.app, fr.s, fr.f, fr.rtl, fr.c, fr.now, fr.mode, fr.ws, fr.zone, wDp, hDp, opts, WidgetPalette.of(fr.ctx, opts))
     }
 
