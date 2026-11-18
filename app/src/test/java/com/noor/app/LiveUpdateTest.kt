@@ -43,6 +43,36 @@ class LiveUpdateTest {
         val n = StatusNotification.buildLive(app, app, c, before, f)
         assertNull("a custom view is never promoted", n.contentView)
         assertNull(n.bigContentView)
+        // (0.24, the owner) By default the chip shows the countdown alone: the small icon is Minhad's crescent, transparent
+        // (every pixel of it); with the setting on, the crescent itself.
+        assertFalse(AppSettings().statusChipIcon)
+        StatusNotification.chipIcon = false
+        val clear = StatusNotification.buildLive(app, app, c, before, f).smallIcon
+        assertEquals(R.drawable.ic_notification_clear, clear.resId)
+        run {
+            val bm = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
+            clear.loadDrawable(app)!!.apply { setBounds(0, 0, 96, 96) }.draw(android.graphics.Canvas(bm))
+            for (y in 0 until 96) for (x in 0 until 96) assertEquals("pixel $x,$y", 0, android.graphics.Color.alpha(bm.getPixel(x, y)))
+        }
+        StatusNotification.chipIcon = true
+        assertEquals(R.drawable.ic_notification, StatusNotification.buildLive(app, app, c, before, f).smallIcon.resId)
+        StatusNotification.chipIcon = false
+        // (0.23.2) Counted by the phone itself: a chronometer to the prayer on Android's clock (999 ms later, so the time left
+        // reads rounded up as Minhad counts), no countdown of Minhad's in the title; off by default.
+        assertFalse(AppSettings().statusChipSystemTimer)
+        StatusNotification.systemTimer = true
+        run {
+            val sys = StatusNotification.buildLive(app, app, c, before, f)
+            assertTrue(sys.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
+            assertTrue(sys.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
+            assertEquals(c.countAt.toEpochMilli() + 999L, sys.`when`)
+            assertEquals("\u2068Dhuhr · 12:05 PM\u2069", sys.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        }
+        StatusNotification.systemTimer = false
+        // (0.23.2) The icon slot filled with the coming prayer's symbol, the owner's last resort.
+        StatusNotification.slotMode = StatusNotification.SLOT_PRAYER
+        assertEquals(R.drawable.ic_prayer_dhuhr, StatusNotification.buildLive(app, app, c, before, f).smallIcon.resId)
+        StatusNotification.slotMode = StatusNotification.SLOT_BOTH
         // (0.22, the owner: the countdown was small, in the header, and in the phone's Arabic-Indic digits.) The title is
         // the countdown, written by Minhad in the app's digits; no chronometer of Android's, no "Next prayer".
         assertEquals("\u2068Dhuhr · 12:05 PM\u2069\u2003\u2066\u200E\u22122:27:44\u2069", n.extras.getCharSequence(Notification.EXTRA_TITLE).toString())

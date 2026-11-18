@@ -2071,7 +2071,37 @@ phone's. The pictures are the system's drawing with a software GPU (faithful, sl
 before every page, so the countdowns agree to a second or two. `widgets_log.txt` has "Widget host dead" errors from the
 widget service: the previous page's host was stopped while the app was still updating its widgets; harmless.
 
-## 40. The widgets redesigned (0.24 work on `widgets/v3`, 18 November 2026, phone only; not released)
+## 40. The countdown exact against the clock, the timer without the icon (0.23.1, 18 November 2026, phone; watch rebuilt)
+
+**The owner:** the status-bar timer was "a bit off from my phone's actual time. I want it to be exact" (his screenshots:
+the chip one second behind the widget), and "I don't want the app's logo to appear in the Samsung clock style timer".
+
+- **Rounding.** The time left was rounded down: at 20:27:52 it read 8:50:07 to a 05:18:00 Fajr, one second short of
+  the clock's own reckoning. `Countdowns.timeLeft` (core) rounds it up, so the countdown is the prayer's time less the
+  time the clock shows, and reaches 0 on the Adhan; the time since stays rounded down (+00:52 at 05:18:52). Followed by
+  `Content.countdown`, the widgets (`Widgets.elapsedSeconds`, the wheel's shift −p, `nextMinute` one second after a
+  whole minute), Android's Chronometer in the notification (base 999 ms later before a prayer) and the watch preview.
+- **Latency.** The notification's next second was built only once that second had begun; `StatusTicker` now builds it
+  300 ms ahead for the instant just after the change (`nextChange`) and posts it 12 ms before it. The home screen's
+  ticker gives each second 110 ms ahead (0 without animations), so its digits' 320 ms roll is half done on the second.
+  `StatusTickerTimingTest`. On the phone, the shade and the launcher still take a frame or so to draw.
+- **The icon.** Android draws a Live Update's chip from the notification's small icon and its short text, with no API to
+  leave the icon out; at the owner's word the Live Update now carries the crescent made transparent
+  (`ic_notification_clear`), unless Settings → "Minhad's icon beside the timer" is on (`AppSettings.statusChipIcon`, off
+  by default). The shade's card still names Minhad in its header. Whether One UI keeps an empty gap for the icon is seen
+  only on the phone.
+
+**0.23.2 (18 November 2026).** The owner (screenshot): the timer still "a few milliseconds off", and a gap where the
+icon was ("there absolutely is a way to get rid of the space ... only after you have exhausted every single method ...
+make the space the prayer's symbol"). Android's documentation says the chip always includes an icon, and One UI's Live
+Notifications take a chip icon (`android.ongoingActivityNoti.chipIcon`) in place of the small icon; whether either
+slot takes the icon's own width is seen only on the phone. So `StatusNotification.slotMode` (Testing → Notification
+tests, default 3): 0 the transparent crescent, 1 a transparent icon 1 × 48 px, 2 that given as One UI's chip icon, 3
+both, 4 the coming prayer's symbol. Timing: each second is handed over 80 ms ahead (`StatusTicker.earlyMs`, tuned there
+against the phone's clock drawn to the second), and "Timer counted by the phone itself" (`statusChipSystemTimer`)
+gives the Live Update Android's chronometer instead (exact on the phone's clock, in its digits, without the sign).
+
+## 41. The widgets redesigned (0.24 work on `widgets/v3`, 18 November 2026, phone only; not released)
 
 The owner installed 0.23 and was "very disappointed": small, hard to read, not Apple-like. His Galaxy photos showed
 two real bugs: a second, smaller corner inside Samsung's clip (our background drew its own rounded card and outline)

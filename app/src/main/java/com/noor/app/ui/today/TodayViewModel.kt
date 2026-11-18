@@ -91,7 +91,24 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
     private val lastRefresh = MutableStateFlow<LocationRepository.Result?>(null)
     private val cache = DayCache(container.timetables)
 
-    private val ticker = flow { while (true) { emit(Instant.now()); delay(1000L - System.currentTimeMillis() % 1000L) } }
+    /**
+     * The moment, each second. (0.24, the owner: the countdown must change exactly with the phone's clock.) Each second is
+     * given a little ahead of its start ([TICK_LEAD_MS]), as the instant just after it: the countdown's digits roll into
+     * place (NoorMotion.Standard), and the roll, begun that much early, is half done, the new digit read, on the second.
+     */
+    private val ticker = flow {
+        emit(Instant.now())
+        var last = System.currentTimeMillis() / 1000L * 1000L
+        while (true) {
+            val now = System.currentTimeMillis()
+            val next = maxOf((now / 1000L + 1) * 1000L, last + 1000L)
+            // (Without animations the digits change at once: on the second itself.)
+            val lead = if (com.noor.app.ui.components.animationsOn(getApplication())) TICK_LEAD_MS else 0L
+            delay(maxOf(0L, next - lead - now))
+            last = next
+            emit(Instant.ofEpochMilli(next + 1))
+        }
+    }
 
     val ui: StateFlow<TodayUi?> = combine(container.settings.settings, ticker, refreshing, lastRefresh) { s, now, r, lr ->
         val place = PrayerProvider.place(s) ?: return@combine TodayUi(s, null, null, null, now, null, null, r, lr)
@@ -150,3 +167,6 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
         refreshing.value = false
     }
 }
+
+/** How long before each second the home screen is given it (TodayViewModel's ticker): about the countdown roll's first half. */
+internal const val TICK_LEAD_MS = 110L
