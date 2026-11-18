@@ -337,7 +337,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
             is ImportResult.Ok -> {
                 if (forPrayer != null) setPrayer(forPrayer) { it.copy(enabled = true, mode = AlertMode.CUSTOM, soundId = result.sound.id) }
                 // A replaced file has to reach the watch again.
-                if (replaceId != null) container.watchSounds.syncIfNeeded(repo.current().alerts)
+                if (replaceId != null) container.watchSounds.syncIfNeeded(repo.current().alerts, resend = setOf(replaceId))
                 ctx.getString(com.noor.app.R.string.adhan_import_ok, result.sound.name)
             }
             is ImportResult.Rejected -> ctx.getString(when (result.reason) {
