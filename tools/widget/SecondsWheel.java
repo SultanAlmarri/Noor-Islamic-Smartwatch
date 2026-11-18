@@ -26,7 +26,7 @@ import java.util.Locale;
  *     java tools/widget/SecondsWheel.java
  */
 public class SecondsWheel {
-    static final float FONT_DP = 28f;        // the countdown's size in the widgets
+    static final float FONT_DP = 40f;        // the countdown's largest size in the widgets (0.23: drawn smaller by scaling the clock down)
     static final float PAD_EM = 0.06f;       // above the tallest and below the lowest digit
     static final float GAP_EM = 0.32f;       // between two labels on the wheel (keeps the neighbours out of the window)
     static final String QUIET = "#80FFFFFF"; // the seconds are quieter, as on the home screen
@@ -93,8 +93,10 @@ public class SecondsWheel {
                     + "). Turned by an AnalogClock as its second hand; label n stands upright at the top when the clock's\n"
                     + "     second is " + ("up".equals(dir) ? "n" : "(60 - n) mod 60") + ". -->\n"
                     + "<layer-list xmlns:android=\"http://schemas.android.com/apk/res/android\">\n"
-                    + "    <item>\n        <shape android:shape=\"rectangle\">\n            <size android:width=\"" + dp(wheel)
-                    + "dp\" android:height=\"" + dp(wheel) + "dp\" />\n        </shape>\n    </item>\n");
+                    // (0.23) The wheel's size, as a transparent colour (not an empty shape: the widgets tint the wheel, and a
+                    // tinted shape with no colour of its own is filled with the tint).
+                    + "    <item android:width=\"" + dp(wheel) + "dp\" android:height=\"" + dp(wheel)
+                    + "dp\" android:drawable=\"@android:color/transparent\" />\n");
                 for (int n = 0; n < 60; n++) {
                     // The clock turns the wheel clockwise by 6 degrees a second; a label at angle a (clockwise from the
                     // top) is at the top when the clock's second is -a/6.

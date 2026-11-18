@@ -41,7 +41,7 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
     val today = now.atZone(zone).toLocalDate()!!
     val day = config.day(today)
     val state = config.state(now)
-    val scene: SkyScene = run {
+    val scene: SkyScene by lazy {
         val events = Prayer.entries.mapNotNull { p -> day.instant(p)?.let { p to it } }
         val landSeed = place.nameEn.hashCode().toLong() * 7919L + (place.point.latitude * 100).toLong()
         SkyScene(
@@ -52,7 +52,7 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
             realPath = settings.sunPath == com.noor.app.data.SunPathMode.REAL,
         )
     }
-    val weather: Weather = Weather.of(scene.seed, scene.terrain)
+    val weather: Weather by lazy { Weather.of(scene.seed, scene.terrain) }
 }
 
 /**
@@ -62,13 +62,15 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
  * Drawn with the ordinary Canvas, off the main thread, a few times an hour; rounded at the corners.
  */
 internal object WidgetSky {
-    class Options(val land: Boolean = true, val path: Boolean = false, val horizon: Float = 0.74f, val arcTop: Float = 0.30f)
+    class Options(val land: Boolean = true, val path: Boolean = false, val horizon: Float = 0.74f, val arcTop: Float = 0.30f,
+                  /** The corners, in dp (0.23: the system's widget corner). */
+                  val radius: Float = 22f)
 
     fun picture(res: Resources, ws: WidgetScene, w: Int, h: Int, density: Float, rtl: Boolean, o: Options): Bitmap {
         val bmp = Bitmap.createBitmap(w.coerceAtLeast(8), h.coerceAtLeast(8), Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val wf = bmp.width.toFloat(); val hf = bmp.height.toFloat()
-        val r = 22f * density
+        val r = o.radius * density
         c.clipPath(Path().apply { addRoundRect(RectF(0f, 0f, wf, hf), r, r, Path.Direction.CW) })
         val layout = SceneLayout(cloudTop = 0f, arcTop = o.arcTop, horizon = if (o.land) o.horizon else 0.97f, ground = 1f)
         // (0.23) The scene is never mirrored, whatever the language (as the home screen's).

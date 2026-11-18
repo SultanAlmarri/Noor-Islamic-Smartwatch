@@ -132,6 +132,14 @@ class MainActivity : AppCompatActivity() {
     /** The settings as first read: with them the first real frame can be drawn, and the launch screen let go. */
     private var first by mutableStateOf<AppSettings?>(null)
     private var stoppedAt = 0L
+    /** (0.23) The page a home-screen widget's tap asks for (a [com.noor.app.widget.WidgetTap]'s name), until it is opened. */
+    private var widgetOpen by mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra(com.noor.app.widget.Widgets.EXTRA_OPEN)?.let { widgetOpen = it }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -140,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as NoorApplication).container
         val settingsFlow = container.settings.settings
+        widgetOpen = intent?.getStringExtra(com.noor.app.widget.Widgets.EXTRA_OPEN)
 
         // The launch screen stays until the first real frame is there (no blank page in between), and then hands over
         // to the opening's veil, which draws the same dusk and the same mark where the launch screen had it.
@@ -170,7 +179,7 @@ class MainActivity : AppCompatActivity() {
             NoorTheme(s.theme, daylight, rememberSun(s)) {
                 CompositionLocalProvider(LocalAmbientMotion provides systemAllowsAmbientMotion(), LocalOpening provides opening) {
                     NoorBackground {
-                        if (settings != null) NoorRoot(s, opening, startRoute())
+                        if (settings != null) NoorRoot(s, opening, startRoute(), widgetOpen) { widgetOpen = null }
                         OpeningVeil(opening)
                     }
                 }
@@ -298,7 +307,7 @@ private val popExit: Scope.() -> ExitTransition = {
 }
 
 @Composable
-private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?) {
+private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?, widgetOpen: String? = null, onWidgetOpened: () -> Unit = {}) {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     // Where the app starts is decided once. (Were it read from the settings each time, finishing the welcome page
@@ -339,6 +348,16 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
             launchSingleTop = true
             restoreState = true
         }
+    }
+
+    // (0.23) A widget's tap: its page, as a tab (not before the welcome page is done).
+    LaunchedEffect(widgetOpen) {
+        val open = widgetOpen ?: return@LaunchedEffect
+        if (s.onboardingDone) {
+            val r = when (open) { "QIBLA" -> Routes.QIBLA; "ADHAN" -> Routes.ADHAN; else -> Routes.PRAYERS }
+            runCatching { openTab(r) }
+        }
+        onWidgetOpened()
     }
 
     // 0.15: the tab bar floats over the page (a capsule of glass, as on iOS 26), and the pages run on under it: their

@@ -93,6 +93,27 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_sky_info" />
         </receiver>
+        <receiver android:name=".widget.RingWidget" android:exported="true" android:label="@string/widget_ring_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ring_info" />
+        </receiver>
+        <receiver android:name=".widget.StripWidget" android:exported="true" android:label="@string/widget_strip_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_strip_info" />
+        </receiver>
+        <receiver android:name=".widget.DateWidget" android:exported="true" android:label="@string/widget_date_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_date_info" />
+        </receiver>
+        <!-- (0.23) A widget's settings: opened by the home screen (placing or long-pressing a widget). -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Noor">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
         <!-- The widgets' own update times, restarts, app updates, clock, zone and language. -->
         <receiver android:name=".widget.WidgetRefreshReceiver" android:exported="false">
             <intent-filter>
