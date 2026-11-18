@@ -122,9 +122,9 @@ LAYOUTS = {
             h="match_parent", extra=f'android:id="@+id/widget_content" android:gravity="center_vertical|start" {PAD}')),
     # Next prayer, 3x1 and wider short sizes: the prayer on the reading side, the countdown balanced on the other.
     "widget_next_wide": ("the next prayer and its time on one side, the countdown on the other (wide short sizes).",
-        row([col([title_row, tv("widget_then", "Small", extra='android:layout_marginTop="4dp"'), tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')],
-                 w="0dp", extra='android:layout_weight="1"'),
-             count('android:layout_marginStart="12dp"')],
+        col([row([col([title_row, tv("widget_then", "Small", extra='android:layout_marginTop="4dp"')], w="0dp", extra='android:layout_weight="1"'),
+                  count('android:layout_marginStart="12dp"')], extra='android:gravity="center_vertical"'),
+             tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')],
             h="match_parent", extra=f'android:id="@+id/widget_content" android:gravity="center_vertical" {PAD}')),
     # Next prayer, 2x2 and larger: a calm column, the countdown large at the foot.
     "widget_next_tall": ("the next prayer, its time and the countdown (tall sizes).",

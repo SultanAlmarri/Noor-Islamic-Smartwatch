@@ -173,7 +173,7 @@ class WidgetGalleryTest {
             "next_170x84_en" to "widget_next", "next_150x64_en" to "widget_next", "next_250x84_en" to "widget_next_wide",
             "next_170x170_en" to "widget_next_tall", "next_250x180_en_light" to "widget_next_tall_plain",
             "ring_150x150_en" to "widget_ring", "strip_340x84_en" to "widget_strip", "sky_340x180_en" to "widget_sky",
-            "date_170x84_en" to "widget_date", "date_340x84_en" to "widget_date_wide", "date_340x180_en" to "widget_date_tall",
+            "date_170x84_en" to "widget_date", "date_340x84_en" to "widget_date_wide", "date_340x180_en" to "widget_date_wide",
             "date_170x170_en" to "widget_date_tall", "sky_250x120_en" to "widget_next_tall", "sky_340x280_en" to "widget_sky",
         )
         for ((n, l) in expected) assertEquals(n, l, layouts[n])
