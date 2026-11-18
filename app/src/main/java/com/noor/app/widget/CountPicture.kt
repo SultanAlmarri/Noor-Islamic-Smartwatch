@@ -19,7 +19,7 @@ import com.noor.app.R
 internal object CountPicture {
     private const val BRIGHT = 0xFFFFFFFF.toInt()
     /** The seconds' colour on the wheel, as on the home screen. */
-    private const val QUIET = 0x80FFFFFF.toInt()
+    private const val QUIET = 0xB3FFFFFF.toInt()
     /** As the widgets' other text (Widget.Noor.Text). */
     private const val SHADOW = 0x73000000
 
@@ -32,9 +32,37 @@ internal object CountPicture {
 
     @Volatile private var plex: Typeface? = null
 
+    /** (0.23) Plex Medium (Light was too thin at a widget's size on the sky), the seconds wheel's font. */
     private fun paint(context: Context, scale: Float): Paint {
-        val face = plex ?: (runCatching { ResourcesCompat.getFont(context, R.font.plex_arabic_light) }.getOrNull() ?: Typeface.DEFAULT).also { plex = it }
+        val face = plex ?: (runCatching { ResourcesCompat.getFont(context, R.font.plex_arabic_medium) }.getOrNull() ?: Typeface.DEFAULT).also { plex = it }
         return Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = face; textSize = context.resources.getDimension(R.dimen.noor_count_text) * scale }
+    }
+
+    /** Arabic-Indic digits are smaller than Western ones in Plex: drawn this much larger, as on the seconds wheel. */
+    const val ARABIC_SCALE = 1.15f
+    /** The sign, quieter than the digits, and a hair's space after it. */
+    private const val SIGN_ALPHA = 0.62f
+    private const val SIGN_GAP_EM = 0.06f
+
+    private fun isSign(ch: Char) = ch == '\u2212' || ch == '+' || ch == '-'
+    private fun isArabicDigit(ch: Char) = ch in '\u0660'..'\u0669'
+
+    /**
+     * The glyphs of [text] laid left to right, one by one (never reordered: "−١:٠٤" keeps its sign first), with their x
+     * positions and sizes; returns the total advance.
+     */
+    private fun layout(text: String, base: Paint, each: (ch: Char, x: Float, size: Float) -> Unit): Float {
+        var x = 0f
+        val size = base.textSize
+        for (ch in text) {
+            val sz = if (isArabicDigit(ch)) size * ARABIC_SCALE else size
+            base.textSize = sz
+            each(ch, x, sz)
+            x += base.measureText(ch.toString())
+            if (isSign(ch)) x += size * SIGN_GAP_EM
+            base.textSize = size
+        }
+        return x
     }
 
     fun draw(context: Context, leading: String): Bitmap = draw(context, Spec(leading))
@@ -44,30 +72,36 @@ internal object CountPicture {
         val paint = paint(context, spec.scale)
         if (spec.shadow) paint.setShadowLayer(6f * spec.scale, 0f, 1f, SHADOW)
         val colon = if (spec.colon) ":" else ""
-        val lead = paint.measureText(spec.leading)
+        val lead = layout(spec.leading, Paint(paint)) { _, _, _ -> }
         val w = maxOf(1, kotlin.math.ceil(lead + paint.measureText(colon) + (if (spec.colon) 0f else 2f * spec.scale)).toInt())
         val h = maxOf(1, kotlin.math.ceil(r.getDimension(R.dimen.noor_count_height) * spec.scale).toInt())
         val baseline = r.getDimension(R.dimen.noor_count_ascent) * spec.scale
         return Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bmp ->
             bmp.density = r.displayMetrics.densityDpi
             val canvas = Canvas(bmp)
-            paint.color = spec.color
-            canvas.drawText(spec.leading, 0f, baseline, paint)
+            val sign = (spec.color and 0x00FFFFFF) or ((((spec.color ushr 24) * SIGN_ALPHA).toInt()) shl 24)
+            val p = Paint(paint)
+            layout(spec.leading, Paint(paint)) { ch, x, size ->
+                p.textSize = size
+                p.color = if (isSign(ch)) sign else spec.color
+                canvas.drawText(ch.toString(), x, baseline, p)
+            }
             if (spec.colon) {
-                paint.color = spec.quiet
-                paint.clearShadowLayer()
-                canvas.drawText(colon, lead, baseline, paint)
+                p.textSize = paint.textSize
+                p.color = spec.quiet
+                p.clearShadowLayer()
+                canvas.drawText(colon, lead, baseline, p)
             }
         }
     }
 
     /** How wide the countdown is, in dp, at [scale]: the picture of [leading] and, with [seconds], the wheel's window. */
-    fun widthDp(context: Context, leading: String, scale: Float, seconds: Boolean): Float {
+    fun widthDp(context: Context, leading: String, scale: Float, seconds: Boolean, arabicDigits: Boolean = leading.any { isArabicDigit(it) }): Float {
         val r = context.resources
         val d = r.displayMetrics.density
         val p = paint(context, scale)
-        val lead = (p.measureText(leading) + (if (seconds) p.measureText(":") else 0f)) / d
-        return lead + if (seconds) r.getDimension(R.dimen.noor_count_window) * scale / d else 0f
+        val lead = (layout(leading, p) { _, _, _ -> } + (if (seconds) p.measureText(":") else 0f)) / d
+        return lead + if (seconds) r.getDimension(if (arabicDigits) R.dimen.noor_count_window_arabic else R.dimen.noor_count_window_latin) * scale / d else 0f
     }
 
     /** How high the countdown is, in dp, at [scale]. */

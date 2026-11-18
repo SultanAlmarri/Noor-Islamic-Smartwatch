@@ -569,6 +569,8 @@
     <string name="widget_date_desc">The Hijri date, the Gregorian date and the days until the next Islamic occasion</string>
     <string name="widget_since_adhan">Since the Adhan</string>
     <string name="widget_since_sunrise">Since sunrise</string>
+    <string name="widget_then">Then %1$s  %2$s</string>
+    <string name="widget_after">Next %1$s  %2$s</string>
     <string name="widget_cd_before">%1$s at %2$s, in %3$s</string>
     <string name="widget_cd_after">%1$s at %2$s, %3$s ago</string>
     <string name="widget_occasion_today">Today</string>

@@ -135,6 +135,20 @@ class WidgetOptionsTest {
         assertTrue(Color.alpha(empty.getPixel(c + 60, c - r.toInt())) < 0x60)
     }
 
+    @Test fun theCountdownsSignComesFirstInEveryDigits() {
+        // "−١:٠٤" (Arabic-Indic digits, which are right-to-left numbers to Android's text layout): drawn as one
+        // left-to-right run, the minus first, on the left, as "−1:04" is; never "١:٠٤−".
+        for (text in listOf("\u22121:04", "\u2212\u0661:\u0660\u0664", "+\u0661\u0663")) {
+            val bmp = com.noor.app.widget.CountPicture.draw(app, com.noor.app.widget.CountPicture.Spec(text, 1f, shadow = false, colon = false))
+            // The first column with ink, and the rows inked in the next few columns: a sign is a short mark in the middle
+            // of the line (the minus a bar, the plus a cross), a digit runs most of its height.
+            val first = (0 until bmp.width).first { x -> (0 until bmp.height).any { y -> Color.alpha(bmp.getPixel(x, y)) > 128 } }
+            val cols = first until minOf(bmp.width, first + 4)
+            val rows = (0 until bmp.height).filter { y -> cols.any { x -> Color.alpha(bmp.getPixel(x, y)) > 128 } }
+            assertTrue("$text: a sign first (ink in ${rows.size} of ${bmp.height} rows)", rows.size < bmp.height * 0.35)
+        }
+    }
+
     @Test fun theNextOccasionAndItsDays() {
         // 4 November 2026 (24 Jumada al-Ula 1448): Ramadan begins on 1 Ramadan 1448, the White Days (13–15 Jumada
         // al-Akhirah) are further than two days and are not shown in its place.

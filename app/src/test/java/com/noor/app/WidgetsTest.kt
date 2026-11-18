@@ -81,7 +81,7 @@ class WidgetsTest {
         for (id in listOf(next, today, sky)) {
             val v = shadow.getViewFor(id)
             assertTrue("prayer: ${text(v, R.id.widget_prayer)}", text(v, R.id.widget_prayer) in names)
-            assertTrue(text(v, R.id.widget_time).matches(Regex("\\d{1,2}:\\d{2} [AP]M")))
+            assertTrue(text(v, R.id.widget_time).matches(Regex("\\d{1,2}:\\d{2}[ \u2009][AP]M")))
             // The countdown: Noor's picture of "+13" and ":", then the seconds wheel; not Android's digital countdown.
             assertTrue(visible(v, R.id.widget_count_row))
             assertTrue(!visible(v, R.id.widget_countdown) && !visible(v, R.id.widget_countdown_text))
@@ -140,11 +140,13 @@ class WidgetsTest {
             fun diff(n: Int): Long {
                 val c = bare.copy(Bitmap.Config.ARGB_8888, true)
                 val label = app.getDrawable(app.resources.getIdentifier("noor_sec_${set}_%02d".format(n), "drawable", app.packageName))!!
-                // (0.23) The wheel is drawn smaller by the widget's scale (its clock made smaller).
+                // (0.23) The wheel is drawn smaller by the widget's scale: its clock is made smaller, and Android scales
+                // the canvas about the clock's centre, the label at its intrinsic size; the same here, about the top.
                 val k = Widgets.builtFor(id)!!.countScale
-                val lw = (label.intrinsicWidth * k).toInt(); val lh = (label.intrinsicHeight * k).toInt()
+                val lw = label.intrinsicWidth; val lh = label.intrinsicHeight
                 val canvas = Canvas(c); canvas.clipRect(r)
-                label.setBounds(r.centerX() - lw / 2, r.top, r.centerX() - lw / 2 + lw, r.top + lh); label.draw(canvas)
+                canvas.scale(k, k, r.exactCenterX(), r.top.toFloat())
+                label.setBounds((r.exactCenterX() - lw / 2f).toInt(), r.top, (r.exactCenterX() - lw / 2f).toInt() + lw, r.top + lh); label.draw(canvas)
                 var sum = 0L
                 for (y in r.top until r.bottom) for (x in r.left until r.right) {
                     val a = full.getPixel(x, y); val b = c.getPixel(x, y)

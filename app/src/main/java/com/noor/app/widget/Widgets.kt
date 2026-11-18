@@ -219,7 +219,7 @@ object Widgets {
     private fun needsMinute(kind: WidgetKind, o: WidgetOptions, mode: CountMode, b: Built?): Boolean {
         if (!kind.prayers) return false
         val count = o.countdown && (mode != CountMode.TICK || !o.seconds) && (b == null || b.countScale > 0f)
-        val art = if (b != null) b.ringPx > 0 || b.barPx > 0 else kind == WidgetKind.RING || kind == WidgetKind.TODAY
+        val art = if (b != null) b.ringPx > 0 || b.barPx > 0 || b.minuteCell >= 0 else kind == WidgetKind.RING || kind == WidgetKind.TODAY || kind == WidgetKind.STRIP
         return count || art
     }
 
@@ -247,7 +247,8 @@ object Widgets {
     /** Never larger than needed for a sharp picture (widgets' pictures travel to the launcher in memory). */
     internal fun pictureSize(app: Context, wDp: Int, hDp: Int): Size {
         val d = app.resources.displayMetrics.density
-        val k = minOf(1f, 900f / (wDp * d), 600f / (hDp * d))
+        // (0.23) At the widget's real size, so the sky is sharp (up to 1440 px a side: a phone's screen width).
+        val k = minOf(1f, 1440f / (wDp * d), 1440f / (hDp * d))
         return Size((wDp * d * k).toInt().coerceAtLeast(40), (hDp * d * k).toInt().coerceAtLeast(30), d * k)
     }
 

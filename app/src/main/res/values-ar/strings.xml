@@ -574,6 +574,8 @@
     <string name="widget_date_desc">التاريخ الهجري والميلادي، والأيام الباقية حتى المناسبة الإسلامية التالية</string>
     <string name="widget_since_adhan">منذ الأذان</string>
     <string name="widget_since_sunrise">منذ الشروق</string>
+    <string name="widget_then">ثم %1$s  %2$s</string>
+    <string name="widget_after">التالية %1$s  %2$s</string>
     <string name="widget_cd_before">%1$s الساعة %2$s، بعد %3$s</string>
     <string name="widget_cd_after">%1$s الساعة %2$s، منذ %3$s</string>
     <string name="widget_occasion_today">اليوم</string>

@@ -100,11 +100,14 @@ internal class CloudPainter {
      * Lays out and draws the clouds of [f]. Where a cloud crosses [fadeTop]…[fadeBottom] (px) it fades from nothing at
      * [fadeTop] to full at [fadeBottom].
      */
-    fun draw(canvas: Canvas, atlas: CloudAtlas.Loaded, f: CloudField.Frame, fadeTop: Float, fadeBottom: Float, lightning: Boolean = true) {
+    fun draw(canvas: Canvas, atlas: CloudAtlas.Loaded, f: CloudField.Frame, fadeTop: Float, fadeBottom: Float, lightning: Boolean = true,
+             /** (0.23, the widgets) Clouds narrower than this (px) are left out: in a small picture they read as specks. */
+             minWidth: Float = 0f) {
         val n = CloudField.layout(atlas.table, f, clouds, bolt, lightning)
         for (i in 0 until n) {
             val c = clouds[i]
             if (c.shaft) { drawShaft(canvas, c); continue }
+            if (c.right - c.left < minWidth) continue
             src.set(c.src[0], c.src[1], c.src[0] + c.src[2], c.src[1] + c.src[3])
             dst.set(c.left, c.top, c.right, c.bottom)
             paint.colorFilter = ColorMatrixColorFilter(c.matrix)

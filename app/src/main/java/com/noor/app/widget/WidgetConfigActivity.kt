@@ -12,6 +12,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -50,20 +55,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.noor.app.NoorApplication
 import com.noor.app.R
 import com.noor.app.data.AppSettings
 import com.noor.app.rememberDaylight
 import com.noor.app.rememberSun
 import com.noor.app.ui.components.ButtonKind
-import com.noor.app.ui.components.ChoiceChips
 import com.noor.app.ui.components.NoorBackground
 import com.noor.app.ui.components.NoorButton
 import com.noor.app.ui.components.NoorPage
@@ -128,7 +131,7 @@ internal fun WidgetSettings(kind: WidgetKind, initial: WidgetOptions, sizeDp: Pa
                     if (WidgetOption.BACKGROUND in has) {
                         Label(stringResource(R.string.widget_opt_background))
                         val bgs = WidgetBackground.entries.filter { it != WidgetBackground.YOU || android.os.Build.VERSION.SDK_INT >= 31 }
-                        ChoiceChips(bgs.map { it to stringResource(backgroundName(it)) }, o.background, { set(o.copy(background = it)) })
+                        Chips(bgs.map { it to stringResource(backgroundName(it)) }, o.background) { set(o.copy(background = it)) }
                         if (o.background == WidgetBackground.GLASS || o.background == WidgetBackground.DARK || o.background == WidgetBackground.LIGHT) {
                             Label(stringResource(R.string.widget_opt_opacity))
                             Slider(o.opacity / 100f, { set(o.copy(opacity = (it * 100).toInt())) }, valueRange = 0.2f..1f,
@@ -139,12 +142,12 @@ internal fun WidgetSettings(kind: WidgetKind, initial: WidgetOptions, sizeDp: Pa
                     if (WidgetOption.ACCENT in has) {
                         Label(stringResource(R.string.widget_opt_accent))
                         val accents = WidgetAccent.entries.filter { it != WidgetAccent.YOU || android.os.Build.VERSION.SDK_INT >= 31 }
-                        ChoiceChips(accents.map { it to stringResource(accentName(it)) }, o.accent, { set(o.copy(accent = it)) })
+                        Swatches(accents, o.accent) { set(o.copy(accent = it)) }
                     }
                     if (WidgetOption.TEXT_SIZE in has) {
                         Label(stringResource(R.string.widget_opt_text))
-                        ChoiceChips(listOf(WidgetTextSize.SMALL to stringResource(R.string.widget_ts_small), WidgetTextSize.NORMAL to stringResource(R.string.widget_ts_normal),
-                            WidgetTextSize.LARGE to stringResource(R.string.widget_ts_large)), o.textSize, { set(o.copy(textSize = it)) })
+                        Chips(listOf(WidgetTextSize.SMALL to stringResource(R.string.widget_ts_small), WidgetTextSize.NORMAL to stringResource(R.string.widget_ts_normal),
+                            WidgetTextSize.LARGE to stringResource(R.string.widget_ts_large)), o.textSize) { set(o.copy(textSize = it)) }
                     }
                 }
             }
@@ -176,11 +179,51 @@ internal fun WidgetSettings(kind: WidgetKind, initial: WidgetOptions, sizeDp: Pa
         }
         if (WidgetOption.TAP in has) SettingsSection(stringResource(R.string.widget_opt_tap)) {
             Box(Modifier.padding(vertical = 10.dp)) {
-                ChoiceChips(listOf(WidgetTap.HOME to stringResource(R.string.widget_tap_home), WidgetTap.QIBLA to stringResource(R.string.widget_tap_qibla),
-                    WidgetTap.ADHAN to stringResource(R.string.widget_tap_adhan)), o.tap, { set(o.copy(tap = it)) })
+                Chips(listOf(WidgetTap.HOME to stringResource(R.string.widget_tap_home), WidgetTap.QIBLA to stringResource(R.string.widget_tap_qibla),
+                    WidgetTap.ADHAN to stringResource(R.string.widget_tap_adhan)), o.tap) { set(o.copy(tap = it)) }
             }
         }
         NoorButton(stringResource(R.string.widget_done), onDone, Modifier.fillMaxWidth(), kind = ButtonKind.Filled)
+    }
+}
+
+/** A single choice as chips that wrap onto a second line inside their card (never cut at its edge). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun <T> Chips(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
+    val c = NoorTheme.colors
+    androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEach { (value, label) ->
+            val on = value == selected
+            Text(label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp), maxLines = 1,
+                color = if (on) c.onGold else c.textSecondary,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) c.gold else c.glassRaised)
+                    .selectable(on, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = com.noor.app.ui.components.withTick { onSelect(value) })
+                    .heightIn(min = 40.dp).padding(horizontal = 16.dp, vertical = 10.dp))
+        }
+    }
+}
+
+/** The accent colours as round swatches, the chosen one ringed; each is named for TalkBack. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun Swatches(accents: List<WidgetAccent>, selected: WidgetAccent, onSelect: (WidgetAccent) -> Unit) {
+    val c = NoorTheme.colors
+    val context = LocalContext.current
+    androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        accents.forEach { a ->
+            val on = a == selected
+            val name = stringResource(accentName(a))
+            val fill = if (a == WidgetAccent.YOU) Brush.sweepGradient(listOf(Color(WidgetPalette.accentOn(a, false, context)), Color(0xFF7FA7E0), Color(0xFFE0A0B8), Color(WidgetPalette.accentOn(a, false, context))))
+                else androidx.compose.ui.graphics.SolidColor(Color(WidgetPalette.accentOn(a, false, null)))
+            Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                .then(if (on) Modifier.border(2.dp, c.textPrimary, androidx.compose.foundation.shape.CircleShape) else Modifier)
+                .selectable(on, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = com.noor.app.ui.components.withTick { onSelect(a) })
+                .semantics { contentDescription = name }
+                .padding(if (on) 6.dp else 3.dp).clip(androidx.compose.foundation.shape.CircleShape).background(fill))
+        }
     }
 }
 
@@ -196,12 +239,16 @@ private fun Label(text: String) {
 @Composable
 private fun WidgetPreview(kind: WidgetKind, o: WidgetOptions, sizeDp: Pair<Int, Int>, preview: (suspend (Context, WidgetOptions) -> RemoteViews?)?) {
     val context = LocalContext.current
-    var views by remember { mutableStateOf<RemoteViews?>(null) }
+    var picture by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     LaunchedEffect(o) {
         delay(60)
-        views = withContext(Dispatchers.Default) {
-            runCatching { preview?.invoke(context, o) ?: Widgets.preview(context, kind, o, sizeDp.first, sizeDp.second) }.getOrNull()
+        val views = withContext(Dispatchers.Default) {
+            try { preview?.invoke(context, o) ?: Widgets.preview(context, kind, o, sizeDp.first, sizeDp.second) }
+            catch (e: Exception) { android.util.Log.w("MinhadWidget", "preview", e); null }
         }
+        // The home screen's views, laid out at the widget's size and drawn, here on the main thread, as a picture (the
+        // countdown's seconds stand still in it; on the home screen they turn).
+        picture = views?.let { v -> runCatching { draw(context, v, sizeDp) }.onFailure { android.util.Log.w("MinhadWidget", "preview draw", it) }.getOrNull() }
     }
     val wall = Brush.linearGradient(listOf(Color(0xFF3B4C6B), Color(0xFF6E5A7E), Color(0xFFB98A6B)))
     Column {
@@ -209,20 +256,25 @@ private fun WidgetPreview(kind: WidgetKind, o: WidgetOptions, sizeDp: Pair<Int, 
             val room = maxWidth - 32.dp
             val scale = minOf(1f, room.value / sizeDp.first)
             Box(Modifier.width(room).height((sizeDp.second * scale).dp), contentAlignment = Alignment.Center) {
-                AndroidView(
-                    factory = { FrameLayout(it) },
-                    update = { frame ->
-                        val v = views
-                        frame.removeAllViews()
-                        if (v != null) runCatching { frame.addView(v.apply(frame.context, frame), ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)) }
-                    },
-                    modifier = Modifier.requiredSize(sizeDp.first.dp, sizeDp.second.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-                        .semantics { contentDescription = "" },
-                )
+                picture?.let { bmp ->
+                    androidx.compose.foundation.Image(bmp.asImageBitmap(), contentDescription = null,
+                        modifier = Modifier.size((sizeDp.first * scale).dp, (sizeDp.second * scale).dp))
+                }
             }
         }
         SectionFooter(stringResource(R.string.widget_preview_note))
     }
+}
+
+/** [views] applied, laid out at [sizeDp] and drawn into a picture. */
+private fun draw(context: Context, views: RemoteViews, sizeDp: Pair<Int, Int>): android.graphics.Bitmap {
+    val d = context.resources.displayMetrics.density
+    val w = (sizeDp.first * d).toInt(); val h = (sizeDp.second * d).toInt()
+    val frame = FrameLayout(context)
+    frame.addView(views.apply(context, frame), FrameLayout.LayoutParams(w, h))
+    frame.measure(android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(h, android.view.View.MeasureSpec.EXACTLY))
+    frame.layout(0, 0, w, h)
+    return android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888).also { frame.draw(android.graphics.Canvas(it)) }
 }
 
 private fun backgroundName(b: WidgetBackground) = when (b) {

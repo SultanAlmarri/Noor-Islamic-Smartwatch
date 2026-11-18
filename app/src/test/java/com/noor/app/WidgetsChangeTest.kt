@@ -56,7 +56,8 @@ class WidgetsChangeTest {
         Widgets.partialUpdate = { _, id, views -> views.reapply(app, shadow.getViewFor(id)) }
         Thread.sleep(1500)   // Noor's own update after the settings above is done first
 
-        fun text(id: Int, view: Int) = shadow.getViewFor(id).findViewById<TextView>(view).text.toString()
+        // (0.23: AM/PM after a thin space, smaller) The words as said.
+        fun text(id: Int, view: Int) = shadow.getViewFor(id).findViewById<TextView>(view).text.toString().replace('\u2009', ' ')
         fun content(now: Instant) = runBlocking {
             val s = repo.current()
             StatusNotification.content(WearSync.configFor(s, now.toEpochMilli(), app.container.timetables)!!, s, now, false)
@@ -90,7 +91,8 @@ class WidgetsChangeTest {
         assertEquals("Maghrib", c.prayer)
         assertEquals(c.prayer, text(next, R.id.widget_prayer))
         assertEquals(c.time, text(next, R.id.widget_time))
-        assertEquals(app.getString(R.string.next_prayer), text(next, R.id.widget_caption))
+        // (0.23: no caption line on the small widget) What it says to a screen reader: the time left to Maghrib.
+        assertTrue(shadow.getViewFor(next).contentDescription.toString().startsWith("Maghrib at ${c.time}, in "))
         assertEquals("Maghrib marked", 4, marked())
 
         // The "+" period turned off: at Maghrib's time, straight to Isha.

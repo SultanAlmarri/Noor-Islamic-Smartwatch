@@ -70,7 +70,11 @@ internal object WidgetSky {
                    * the sky widget draws the Sun on its path), where a bright disc would sit under the text; the
                    * sky's colours and a softer glow still say where the light is.
                    */
-                  val bodies: Boolean = true)
+                  val bodies: Boolean = true,
+                  /** (0.23) Darkened by this much all over (0..1), so white text reads on it (sampled 4.5:1 in WidgetGalleryTest). */
+                  val dim: Float = 0f) {
+        fun with(radius: Float) = Options(land, path, horizon, arcTop, radius, bodies, dim)
+    }
 
     fun picture(res: Resources, ws: WidgetScene, w: Int, h: Int, density: Float, rtl: Boolean, o: Options): Bitmap {
         val bmp = Bitmap.createBitmap(w.coerceAtLeast(8), h.coerceAtLeast(8), Bitmap.Config.ARGB_8888)
@@ -137,14 +141,25 @@ internal object WidgetSky {
             c.drawRect(0f, 0f, wf, hy, p)
         }
         // The clouds of the moment.
-        CloudAtlas.preload(res)
-        CloudAtlas.get(res)?.let { atlas ->
+        // (0.23) Behind widgets that write over the whole picture, no clouds (the sky's colours, an overcast and rain
+        // still say the weather); on the sky widget, none so small it reads as a speck.
+        if (o.bodies) CloudAtlas.preload(res)
+        if (o.bodies) CloudAtlas.get(res)?.let { atlas ->
             val f = CloudField.Frame(wf, hf, hy, density, view.fov, 40f, ws.weather, state, look.sunAzimuth, look.elevation, light.light, light.lut,
                 look.night, look.moonVisibility * look.moonIllumination * look.night)
-            CloudPainter().draw(c, atlas, f, -1e6f, -1e6f + 1f, lightning = false)
+            CloudPainter().draw(c, atlas, f, -1e6f, -1e6f + 1f, lightning = false, minWidth = 36f * density)
         }
         if (o.land) drawLand(c, ws, view, light, look, wf, hf, density)
         if (o.path) drawPath(c, ws, view, look, wf, density)
+        if (o.dim > 0f) c.drawColor(argb(o.dim, 0.0, 0.0, 0.0))
+        // (0.23) The Sun on the sky widget: a warm core and two soft glows over the dimming, so it reads as the Sun (a
+        // flat grey disc read as the Moon), unless an overcast hides it.
+        if (o.bodies && look.elevation > -0.5 && look.sunY < hy && state.overcast < 0.35f) {
+            val sp = Paint(Paint.ANTI_ALIAS_FLAG)
+            sp.color = 0x1FFFD9A0; c.drawCircle(look.sunX, look.sunY, 28f * density, sp)
+            sp.color = 0x59FFD9A0; c.drawCircle(look.sunX, look.sunY, 12f * density, sp)
+            sp.color = 0xFFFFF4DC.toInt(); c.drawCircle(look.sunX, look.sunY, 5f * density, sp)
+        }
         // Rain falling here.
         if (state.rain > 0.02f) {
             val rnd = java.util.Random(77)
@@ -236,7 +251,7 @@ internal object WidgetSky {
         }
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
         c.save(); c.clipRect(0f, 0f, w, hy)
-        p.color = argb(0.55f, 1.0, 1.0, 1.0); p.strokeWidth = 1.1f * density; p.pathEffect = DashPathEffect(floatArrayOf(2 * density, 4.5f * density), 0f)
+        p.color = argb(0.7f, 1.0, 1.0, 1.0); p.strokeWidth = 1.2f * density; p.pathEffect = DashPathEffect(floatArrayOf(3 * density, 4f * density), 0f)
         c.drawPath(path, p); p.pathEffect = null
         // The day so far, in gold.
         val sunX = geo.x(scene.nowFraction)
@@ -248,6 +263,9 @@ internal object WidgetSky {
         // The prayers on the path (on the horizon while the Sun is below it).
         val fill = Paint(Paint.ANTI_ALIAS_FLAG)
         for ((prayer, at) in scene.events) {
+            // (0.23) Fajr and Isha, with the Sun under the horizon, would stand on the horizon beside Shuruq and
+            // Maghrib as two specks: they are left out (the widget's times say them).
+            if (prayer == Prayer.FAJR || prayer == Prayer.ISHA) continue
             val fr = scene.path.fraction(at)
             val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr), fr).coerceAtMost(hy)
             val passed = !at.isAfter(ws.now)
@@ -255,9 +273,9 @@ internal object WidgetSky {
                 fill.color = argb(0.25f, 0.96, 0.84, 0.59); c.drawCircle(x, y, 7.5f * density, fill)
                 p.color = argb(1f, 0.96, 0.84, 0.59); p.strokeWidth = 1.5f * density; c.drawCircle(x, y, 4f * density, p)
             } else if (passed) {
-                fill.color = argb(0.95f, 1.0, 1.0, 1.0); c.drawCircle(x, y, 2.3f * density, fill)
+                fill.color = argb(0.95f, 1.0, 1.0, 1.0); c.drawCircle(x, y, 3f * density, fill)
             } else {
-                p.color = argb(0.8f, 1.0, 1.0, 1.0); p.strokeWidth = 1f * density; c.drawCircle(x, y, 2.6f * density, p)
+                fill.color = argb(0.55f, 1.0, 1.0, 1.0); c.drawCircle(x, y, 3f * density, fill)
             }
         }
     }

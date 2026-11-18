@@ -29,7 +29,7 @@ internal class WidgetPalette(
 ) {
     val plain: Boolean get() = light
     /** The countdown's seconds and ":", quieter than its hours and minutes. */
-    val quiet: Int get() = (text and 0x00FFFFFF) or (if (light) 0x8C shl 24 else 0x80 shl 24)
+    val quiet: Int get() = (text and 0x00FFFFFF) or (if (light) 0x9E shl 24 else 0xB3 shl 24)
 
     companion object {
         // Text over dark: white, as the app's night text; over light: the app's day ink (DESIGN.md "Colour").
@@ -70,11 +70,12 @@ internal class WidgetPalette(
                 else if (light) INK else WHITE
             val secondary = if (light) 0xFF4A505C.toInt() else 0xE6FFFFFF.toInt()
             // Over the sky and the wallpaper, past prayers are quieter but still clear; over ink, quieter still.
-            val muted = when { light -> 0xFF636976.toInt(); bg == WidgetBackground.SKY || bg == WidgetBackground.CLEAR -> 0xD0FFFFFF.toInt(); else -> 0xB8FFFFFF.toInt() }
+            // Past prayers: clearly quieter (60 % on ink), still 4.5:1; over pictures less quiet, for they vary.
+            val muted = when { light -> 0xFF5A5F69.toInt(); bg == WidgetBackground.SKY || bg == WidgetBackground.CLEAR -> 0xC7FFFFFF.toInt(); else -> 0x99FFFFFF.toInt() }
             val accent = if (o.accent == WidgetAccent.YOU || bg != WidgetBackground.YOU) accentOn(o.accent, light, context)
                 else accentOn(WidgetAccent.YOU, light, context)
             val pill = (accent and 0x00FFFFFF) or ((if (light) 0x26 else 0x2E) shl 24)
-            val track = (text and 0x00FFFFFF) or ((if (light) 0x24 else 0x33) shl 24)
+            val track = (text and 0x00FFFFFF) or ((if (light) 0x1F else 0x2B) shl 24)
             return WidgetPalette(bg, fill, alpha, light, text, secondary, muted, accent, pill, track)
         }
     }
@@ -94,8 +95,38 @@ internal object Fit {
         textSize = size
     }
 
-    /** The width of [text] at [size] (in the same unit). */
-    fun width(text: CharSequence, family: String, size: Float): Float = paint(family, size).measureText(text.toString())
+    /**
+     * The phone's Arabic font draws Arabic-Indic digits smaller than Western ones (a time looked about a third smaller):
+     * they are set this much larger ([digitsSized]), so a time reads alike in either set.
+     */
+    const val ARABIC_DIGITS = 1.16f
+
+    private fun isArabicDigit(ch: Char) = ch in '\u0660'..'\u0669'
+
+    /** [t] with its Arabic-Indic digits [ARABIC_DIGITS] larger (spans a home screen keeps). */
+    fun digitsSized(t: CharSequence): CharSequence {
+        if (t.none { isArabicDigit(it) }) return t
+        val out = android.text.SpannableString(t)
+        var i = 0
+        while (i < t.length) {
+            if (!isArabicDigit(t[i])) { i++; continue }
+            var j = i
+            // A run of digits and the separators between them ("١٢:٠٥").
+            while (j < t.length && (isArabicDigit(t[j]) || ((t[j] == ':' || t[j] == '\u066B' || t[j] == '\u066C') && j + 1 < t.length && isArabicDigit(t[j + 1])))) j++
+            out.setSpan(android.text.style.RelativeSizeSpan(ARABIC_DIGITS), i, j, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            i = j
+        }
+        return out
+    }
+
+    /** The width of [text] at [size] (in the same unit), its Arabic-Indic digits as [digitsSized] sets them. */
+    fun width(text: CharSequence, family: String, size: Float): Float {
+        val s = text.toString()
+        if (s.none { isArabicDigit(it) }) return paint(family, size).measureText(s)
+        val rest = s.filterNot { isArabicDigit(it) }
+        val digits = s.filter { isArabicDigit(it) }
+        return paint(family, size).measureText(rest) + paint(family, size * ARABIC_DIGITS).measureText(digits)
+    }
 
     /** The size, at most [want] and at least [min], at which every one of [texts] fits [avail]. */
     fun size(texts: List<CharSequence>, family: String, want: Float, avail: Float, min: Float = 7f): Float {
