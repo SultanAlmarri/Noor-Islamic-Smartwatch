@@ -153,7 +153,11 @@ import kotlin.math.roundToInt
 @Composable
 fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpenSource: () -> Unit, vm: TodayViewModel = viewModel(), onOpenPrayer: (Prayer) -> Unit = {}) {
     val ui by vm.ui.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.refreshIfStale(); vm.refreshTimetables() }
+    LaunchedEffect(Unit) { vm.refreshTimetables() }
+    // (0.22) Each time the app comes back to the front, not only when the home screen is first composed: until 0.22 an
+    // app left in the background (Android keeps it for hours) came back with the place where it was opened first, the
+    // name and the times of where the user had been, until it was closed or the background updates' six hours.
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { vm.refreshIfStale(); onPauseOrDispose { } }
     val notifications = com.noor.app.ui.components.rememberNotificationRequest()
     val u = ui ?: return Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = NoorTheme.colors.gold, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
