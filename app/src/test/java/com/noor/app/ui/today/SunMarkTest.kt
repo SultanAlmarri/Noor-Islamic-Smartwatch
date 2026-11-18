@@ -40,7 +40,7 @@ class SunMarkTest {
             val day = config.day(date)
             val events = Prayer.entries.mapNotNull { p -> day.instant(p)?.let { p to it } }
             val path = SunPath.of(date, pl.point, zone)
-            val scene = SkyScene(path, events, events.first().second, Prayer.DHUHR, 10, pl.point.latitude < 0, pl.terrain, 1L, 77L)
+            val scene = SkyScene(path, events, events.first().second, Prayer.DHUHR, 10, pl.point.latitude < 0, pl.terrain, 1L, 77L, realPath = true)
             val d = sz[4]
             val w = sz[0] * d; val h = sz[1] * d; val hy = sz[2] * d; val arc = sz[3] * d
             val g = SkyGeometry(scene, w, hy, arc, h - 6 * d)

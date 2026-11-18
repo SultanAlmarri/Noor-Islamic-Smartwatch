@@ -42,6 +42,13 @@ enum class SkyGraphics {
     }
 }
 
+/**
+ * (0.23) How the home screen draws the Sun's path. SIMPLE (the default, the owner's word, 18 November 2026): the same arch
+ * everywhere and every day, the Sun rising on the left at sunrise and setting on the right at sunset. REAL: the Sun's true
+ * path for the place and the date ([com.noor.app.ui.today.SunPanorama]).
+ */
+enum class SunPathMode { SIMPLE, REAL }
+
 /** The last position the app knows about (or the city chosen by hand). Kept so the app works offline and after restarts. */
 data class KnownLocation(
     val point: GeoPoint,
@@ -105,6 +112,8 @@ data class AppSettings(
     val scrubHintDone: Boolean = false,
     val scenery: Scenery = Scenery.AUTO,
     val skyGraphics: SkyGraphics = SkyGraphics.AUTO,
+    /** (0.23) The Sun's path on the home screen: the same arch everywhere (default), or the real one. */
+    val sunPath: SunPathMode = SunPathMode.SIMPLE,
     /** The scenery follows the real season of the place (snow in winter...). Off: its best look all year (0.11). */
     val seasons: Boolean = false,
     /** The stars and the Milky Way stand where they truly are for the place and time. Off: the finest night sky (0.11). */

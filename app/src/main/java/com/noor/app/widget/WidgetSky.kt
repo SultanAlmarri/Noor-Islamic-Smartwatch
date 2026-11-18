@@ -49,6 +49,7 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
             hijriDay = HijriDate.of(today, settings.hijriAdjust).day, southernHemisphere = place.point.latitude < 0,
             terrain = terrainFor(settings.scenery, place.countryCode, place.point.elevationM, place.point.latitude), seed = landSeed * 1_000_003L + today.toEpochDay(),
             landSeed = landSeed, latitude = place.point.latitude, longitude = place.point.longitude,
+            realPath = settings.sunPath == com.noor.app.data.SunPathMode.REAL,
         )
     }
     val weather: Weather = Weather.of(scene.seed, scene.terrain)
@@ -219,7 +220,7 @@ internal object WidgetSky {
         val hy = view.horizonY
         val path = Path(); var first = true
         for (fr in geo.pathFractions) {
-            val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr))
+            val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr), fr)
             if (first) { path.moveTo(x, y); first = false } else path.lineTo(x, y)
         }
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
@@ -237,7 +238,7 @@ internal object WidgetSky {
         val fill = Paint(Paint.ANTI_ALIAS_FLAG)
         for ((prayer, at) in scene.events) {
             val fr = scene.path.fraction(at)
-            val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr)).coerceAtMost(hy)
+            val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr), fr).coerceAtMost(hy)
             val passed = !at.isAfter(ws.now)
             if (prayer == scene.next) {
                 fill.color = argb(0.25f, 0.96, 0.84, 0.59); c.drawCircle(x, y, 7.5f * density, fill)

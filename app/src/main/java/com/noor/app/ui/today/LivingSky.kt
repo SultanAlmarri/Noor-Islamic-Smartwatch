@@ -158,6 +158,8 @@ data class SkyScene(
     /** Where the user is (degrees): the night sky shows the stars as they stand there. */
     val latitude: Double = if (southernHemisphere) -30.0 else 30.0,
     val longitude: Double = 0.0,
+    /** (0.23) The Sun's real path ([SunPathMode.REAL]); false: the same arch every day (the default, [SkyGeometry]). */
+    val realPath: Boolean = false,
 ) {
     /** (fraction of the day, elevation) pairs, computed once. */
     val samples: List<Pair<Double, Double>> = path.samples
@@ -238,6 +240,11 @@ internal class SkyGeometry(
     scene: SkyScene, private val w: Float, val horizonY: Float, val arcTopY: Float, val groundY: Float,
 ) {
     private val p = scene.panorama
+    /** (0.23) The default path, the same arch every day with its ends where the Sun really rises and sets ([SimpleArch]); null: the real path. */
+    private val simple: SimpleArch? = if (scene.realPath) null else SimpleArch(scene, w, horizonY, arcTopY, groundY)
+    /** The part of the day shown exactly (Fajr..Isha, see [SunPanorama.start]): the path under the horizon is drawn there. */
+    val windowStart: Double get() = p.start
+    val windowEnd: Double get() = p.end
     /** +1: the Sun moves from left to right on the screen that day; -1: right to left (the southern hemisphere). */
     val travel: Int = p.travel
     val facingNorth: Boolean = p.facingNorth
@@ -272,6 +279,7 @@ internal class SkyGeometry(
 
     /** Screen x (px) of the Sun at [fraction] of the day. */
     fun x(fraction: Double): Float {
+        simple?.let { return it.x(fraction) }
         val f = fraction.coerceIn(0.0, 1.0)
         return when {
             f < p.start -> hermite(f / p.start, edgeFrom, xStart, ((xStart - edgeFrom)), mStart * p.start.toFloat())
@@ -287,9 +295,12 @@ internal class SkyGeometry(
      */
     fun y(el: Double): Float = (horizonY - k * apparent(el)).toFloat()
 
-    /** Height on screen of the Sun at true elevation [el] at [fraction] of the day: [y] (the same over every scenery). */
-    @Suppress("UNUSED_PARAMETER")
-    fun y(el: Double, fraction: Double): Float = y(el)
+    /**
+     * Height on screen of the Sun at true elevation [el] at [fraction] of the day (the same over every scenery): the real
+     * path's [y]; the simple path's arch and dip ([SimpleArch.y], from the time alone). Everything that draws the Sun or
+     * the path uses this one.
+     */
+    fun y(el: Double, fraction: Double): Float = simple?.y(fraction) ?: y(el)
 
     /**
      * The fractions of the day the path is drawn through: the track (every six minutes, every minute near a high noon)
@@ -300,12 +311,20 @@ internal class SkyGeometry(
     private val dragU: DoubleArray
     init {
         val fs = ArrayList<Double>()
+        if (simple != null) {
+            // The simple path: every three minutes, and at sunrise and sunset exactly.
+            for (i in 0..480) fs += i / 480.0
+            if (simple.rise in 0.0..1.0) fs += simple.rise
+            if (simple.set in 0.0..1.0) fs += simple.set
+            fs.sort()
+        } else {
         if (p.start > 0) for (i in 0 until 48) fs += p.start * i / 48
         fs += p.start
         for (f in p.fractions) if (f > p.start && f < p.end) fs += f
         fs += p.end
         if (p.end < 1) for (i in 1..48) fs += p.end + (1 - p.end) * i / 48
-        pathFractions = fs.toDoubleArray()
+        }
+        pathFractions = fs.distinct().toDoubleArray()
         val n = pathFractions.size
         val u = DoubleArray(n) { travel * x(pathFractions[it]).toDouble() }
         // Where the true path turns back on itself (in the tropics, on the days the noon Sun is on the poleward side, the
@@ -783,7 +802,7 @@ internal fun LivingSky(
                 val g = SkyGeometry(scene, w, hy, h * layout.arcTop, h * layout.ground)
                 val path = sunPath(scene, g)
                 val passed = Path()
-                val night = sunPath(scene, g, from = scene.panorama.start, upTo = scene.panorama.end)
+                val night = sunPath(scene, g, from = g.windowStart, upTo = g.windowEnd)
                 // The land's top at x (px): the real sky's skyline; the 0.9 sky's ridges (LandProfile.skylineY);
                 // none for the simplest sky, which keeps its land under the path.
                 val landTop: ((Float) -> Float)? = when {

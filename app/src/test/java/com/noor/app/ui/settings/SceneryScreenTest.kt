@@ -53,6 +53,9 @@ class SceneryScreenTest {
         rule.setContent { NoorTheme(com.noor.app.data.ThemeMode.DARK) { com.noor.app.ui.components.NoorBackground { SceneryScreen(PaddingValues(), onBack = {}) } } }
         rule.waitUntil(10_000) { rule.onAllNodesWithText("Automatic").fetchSemanticsNodes().isNotEmpty() }
         rule.onAllNodesWithText("Dunes, for Dubai", substring = true).onFirst().assertExists()
+        // (0.23) The Sun's path: Simple by default (the owner's word), described under the choice.
+        assertEquals(com.noor.app.data.SunPathMode.SIMPLE, runBlocking { app.container.settings.current().sunPath })
+        rule.onAllNodesWithText("The same arc every day").onFirst().assertExists()
         shot("75_scenery_en")
         // 0.10: the six sceneries of the real sky.
         assertEquals(com.noor.app.sky.Biome.DUNES, com.noor.app.sky.Biome.of(Scenery.AUTO, "AE", 5.0, 25.2))
@@ -79,6 +82,15 @@ class SceneryScreenTest {
         assertEquals(com.noor.app.data.SkyGraphics.LOW, runBlocking { app.container.settings.current().skyGraphics })
         rule.onAllNodesWithText("The simplest sky", substring = true).onFirst().assertExists()
         shot("76b_scenery_low_en")
+        // (0.23) The real Sun's path, chosen and kept.
+        rule.onAllNodesWithText("Real sky").onFirst().performClick()
+        for (i in 0 until 200) {
+            if (runBlocking { app.container.settings.current().sunPath } == com.noor.app.data.SunPathMode.REAL) break
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(25)
+        }
+        assertEquals(com.noor.app.data.SunPathMode.REAL, runBlocking { app.container.settings.current().sunPath })
+        rule.onAllNodesWithText("The Sun's true path for your place and date").onFirst().assertExists()
+        shot("76c_scenery_sun_real_en")
     }
 
     private fun shot(name: String) {

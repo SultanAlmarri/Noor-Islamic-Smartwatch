@@ -423,11 +423,12 @@ private fun SkyHeader(
     val next = st.next.prayer.takeIf { st.next.date == today }
     val hijriDay = HijriDate.of(today, u.settings.hijriAdjust).day
     val landSeed = remember(place.nameEn, place.point) { place.nameEn.hashCode().toLong() * 7919L + (place.point.latitude * 100).toLong() }
-    val scene = remember(path, events, minute, next, hijriDay, landSeed, u.settings.scenery) {
+    val scene = remember(path, events, minute, next, hijriDay, landSeed, u.settings.scenery, u.settings.sunPath) {
         SkyScene(
             path, events, minute, next, hijriDay = hijriDay, southernHemisphere = place.point.latitude < 0,
             terrain = terrainFor(u.settings.scenery, place.countryCode, place.point.elevationM, place.point.latitude), seed = landSeed * 1_000_003L + today.toEpochDay(), landSeed = landSeed,
             latitude = place.point.latitude, longitude = place.point.longitude,
+            realPath = u.settings.sunPath == com.noor.app.data.SunPathMode.REAL,
         )
     }
     val current by rememberUpdatedState(scene)

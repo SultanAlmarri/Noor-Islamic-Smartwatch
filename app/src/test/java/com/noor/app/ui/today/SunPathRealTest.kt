@@ -63,7 +63,7 @@ class SunPathRealTest {
         val events = Prayer.entries.mapNotNull { p -> day.instant(p)?.let { p to it } }
         val path = SunPath.of(c.date, c.point, ZoneId.of(c.zone))
         return SkyScene(path, events, path.start.plusSeconds(12 * 3600), Prayer.DHUHR, 10, c.point.latitude < 0, Terrain.HILLS, 1L, 7L,
-            latitude = c.point.latitude, longitude = c.point.longitude)
+            latitude = c.point.latitude, longitude = c.point.longitude, realPath = true)
     }
 
     /** The Astronomical Almanac's low-precision Sun (about 0.01° from 1950 to 2050): [elevation, azimuth from north]. */

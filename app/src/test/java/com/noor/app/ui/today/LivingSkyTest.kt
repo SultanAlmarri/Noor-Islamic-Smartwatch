@@ -22,7 +22,7 @@ class LivingSkyTest {
     private val scene = SkyScene(
         path,
         events = listOf(Prayer.FAJR to at(5, 9), Prayer.SHURUQ to at(6, 25), Prayer.DHUHR to at(12, 5), Prayer.ASR to at(15, 14), Prayer.MAGHRIB to at(17, 40), Prayer.ISHA to at(18, 55)),
-        now = at(15, 29), next = Prayer.MAGHRIB, hijriDay = 24, southernHemisphere = false, terrain = Terrain.DUNES,
+        now = at(15, 29), next = Prayer.MAGHRIB, hijriDay = 24, southernHemisphere = false, terrain = Terrain.DUNES, realPath = true,
     )
 
     @Test fun aridCountriesGetDunesAndOthersHills() {

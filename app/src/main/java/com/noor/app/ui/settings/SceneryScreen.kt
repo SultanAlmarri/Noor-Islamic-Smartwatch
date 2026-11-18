@@ -152,6 +152,8 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
             modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 12.dp))
         GraphicsPicker(s.skyGraphics, level, autoLevel) { vm.setSkyGraphics(it) }
         Spacer(Modifier.height(16.dp))
+        SunPathPicker(s.sunPath) { vm.setSunPath(it) }
+        Spacer(Modifier.height(16.dp))
         SceneryCard(
             image = sceneryImage(auto, level), title = stringResource(R.string.scenery_auto),
             subtitle = stringResource(R.string.scenery_auto_now, stringResource(sceneryName(auto)), placeName ?: "—"),
@@ -236,6 +238,47 @@ private fun GraphicsPicker(choice: SkyGraphics, level: SkyLevel, autoLevel: SkyL
     }
     Text(stringResource(R.string.sky_graphics_note), style = FootnoteStyle, color = c.textMuted,
         modifier = Modifier.padding(horizontal = 4.dp).padding(top = 4.dp))
+}
+
+/**
+ * (0.23) The Sun's path on the home screen, as two segments in the same glass capsule as the graphics level: Simple (the
+ * default: the same arch every day, everywhere) or Real sky (the Sun's true path for the place and the date). Under it,
+ * one line saying what the choice draws.
+ */
+@Composable
+private fun SunPathPicker(choice: com.noor.app.data.SunPathMode, onChoose: (com.noor.app.data.SunPathMode) -> Unit) {
+    val c = NoorTheme.colors
+    Text(stringResource(R.string.sun_path_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary,
+        modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 8.dp))
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(c.glass)
+            .border(0.75.dp, c.glassEdge.copy(alpha = c.glassEdge.alpha * 0.6f), shape).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        com.noor.app.data.SunPathMode.entries.forEach { m ->
+            val on = m == choice
+            val bg by androidx.compose.animation.animateColorAsState(if (on) c.gold else Color.Transparent, label = "segment")
+            val fg by androidx.compose.animation.animateColorAsState(if (on) c.onGold else c.textPrimary, label = "segmentText")
+            Box(
+                Modifier.weight(1f).heightIn(min = 40.dp).clip(RoundedCornerShape(12.dp)).background(bg)
+                    .semantics { role = Role.RadioButton; selected = on }
+                    .clickable(onClick = com.noor.app.ui.components.withTick { onChoose(m) }),
+                contentAlignment = Alignment.Center,
+            ) {
+                val grow = com.noor.app.ui.components.limitedGrowth(1.2f)
+                val label = MaterialTheme.typography.labelLarge
+                Text(stringResource(if (m == com.noor.app.data.SunPathMode.SIMPLE) R.string.sun_path_simple else R.string.sun_path_real),
+                    style = label.copy(fontSize = label.fontSize * grow), color = fg, maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp))
+            }
+        }
+    }
+    val what = stringResource(if (choice == com.noor.app.data.SunPathMode.SIMPLE) R.string.sun_path_simple_desc else R.string.sun_path_real_desc)
+    androidx.compose.animation.AnimatedContent(what, label = "sunPathWhat") { t ->
+        Text(t, style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp).padding(top = 8.dp))
+    }
 }
 
 @Composable

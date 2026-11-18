@@ -513,6 +513,11 @@
     <string name="scenery_seasons_note">اتبع الفصل الحقيقي حيث أنت.</string>
     <string name="scenery_stars_title">النجوم الحقيقية</string>
     <string name="scenery_stars_note">النجوم في مواضعها الحقيقية الليلة.</string>
+    <string name="sun_path_title">مسار الشمس</string>
+    <string name="sun_path_simple">بسيط</string>
+    <string name="sun_path_real">السماء الحقيقية</string>
+    <string name="sun_path_simple_desc">القوس نفسه كل يوم</string>
+    <string name="sun_path_real_desc">مسار الشمس الحقيقي لمكانك وتاريخك</string>
     <string name="sky_graphics_title">الرسومات</string>
     <string name="sky_graphics_note">الرسومات الأعلى تستهلك بطارية أكثر. يختار الوضع التلقائي ما يناسب هاتفك، وينخفض من تلقاء نفسه إن ثقلت على هاتفك.</string>
     <string name="sky_graphics_auto">تلقائي</string>
