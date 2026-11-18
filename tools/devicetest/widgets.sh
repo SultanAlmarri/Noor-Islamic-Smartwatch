@@ -4,7 +4,7 @@
 #   tools/devicetest/widgets.sh <app debug apk> <widget host apk> <output dir>
 #
 # Robolectric's renders of the widgets have differed from the owner's phone more than once: a home screen inflates a
-# widget in a restricted mode that ignores an app's fonts (docs/HANDOVER.md sections 16, 18, 36). Here the widgets are
+# widget in a restricted mode that ignores an app's fonts (docs/HANDOVER.md sections 16, 18, 39). Here the widgets are
 # shown by a separate host app (tools/widgethost, package com.noor.widgethost) exactly as a launcher shows them: it binds
 # real widget ids to Minhad's widget providers (allowed by `appwidget grantbind`, the documented developer path), gives
 # each its size, and Android sends the providers their own updates (the app's real onUpdate → Widgets.refresh). Each page
