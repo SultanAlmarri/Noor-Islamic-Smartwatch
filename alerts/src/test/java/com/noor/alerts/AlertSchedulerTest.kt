@@ -198,6 +198,52 @@ class AlertSchedulerTest {
     }
 
     /**
+     * 0.22: what is armed is remembered (outside credential storage). One whose time has come but which Android has
+     * not delivered yet is armed again at its own time (delivered at once) instead of being replaced by the next day's;
+     * once its prayer has been dealt with, it is never armed again. The copy of the times for Direct Boot is kept.
+     */
+    @Test fun aDueAlarmIsNeverLostAndAHandledPrayerNeverComesTwice() = runBlocking {
+        AlertStore.clearForTests(app)
+        val am = shadowOf(app.getSystemService(AlarmManager::class.java))
+        // A day around now at a place whose clock reads about noon: Dhuhr began four minutes ago.
+        val now = System.currentTimeMillis()
+        val zone = java.time.ZoneOffset.ofHours(12 - Instant.ofEpochMilli(now).atZone(java.time.ZoneOffset.UTC).hour)
+        val local = Instant.ofEpochMilli(now).atZone(zone)
+        val m = local.hour * 60 + local.minute
+        val today = local.toLocalDate()
+        val table = com.noor.prayer.authority.Timetable("test", mapOf(today to intArrayOf(m - 300, m - 200, m - 4, m + 100, m + 200, m + 300)))
+        val config = dubai.copy(zoneId = zone.id, official = table, alerts = AlertSettings(enabled = true))
+        app.config = config
+        val dhuhr = config.day(today).instant(Prayer.DHUHR)!!
+        // As if Dhuhr's alarm had been armed before its time and not delivered yet (a late inexact alarm, the app
+        // starting at that moment).
+        AlertStore.setArmed(app, listOf(com.noor.prayer.alerts.PlannedAlert(Prayer.DHUHR, today, dhuhr, config.alerts!!.alert(Prayer.DHUHR))))
+        AlertScheduler.reschedule(app)
+        val dhuhrAlarm = { am.scheduledAlarms.single { a -> shadowOf(a.operation).savedIntent.let { it.action == AlertScheduler.ACTION_FIRE && it.getStringExtra(AlertScheduler.EXTRA_PRAYER) == "DHUHR" } }.triggerAtTime }
+        // Up to 0.21 this was tomorrow's Dhuhr: today's was lost, with no note and nothing in the history.
+        assertEquals(dhuhr.toEpochMilli(), dhuhrAlarm())
+        assertEquals(today, AlertStore.armed(app)[Prayer.DHUHR]!!.date)
+        // Being delivered right now (marked by the receiver): not armed again.
+        AlertStore.begin(Prayer.DHUHR, today)
+        AlertScheduler.reschedule(app)
+        assertTrue(dhuhrAlarm() > now)
+        AlertStore.end(Prayer.DHUHR, today)
+        // Delivered and dealt with: never armed again for today, whatever the clock does.
+        AlertStore.setArmed(app, listOf(com.noor.prayer.alerts.PlannedAlert(Prayer.DHUHR, today, dhuhr, config.alerts!!.alert(Prayer.DHUHR))))
+        AlertStore.markHandled(app, Prayer.DHUHR, today)
+        AlertScheduler.reschedule(app)
+        assertTrue(dhuhrAlarm() > now)
+        assertTrue(AlertStore.isHandled(app, Prayer.DHUHR, today))
+        // Only the last few days are kept.
+        for (k in 1..10L) AlertStore.markHandled(app, Prayer.FAJR, today.minusDays(k))
+        assertFalse(AlertStore.isHandled(app, Prayer.FAJR, today.minusDays(10)))
+        assertTrue(AlertStore.isHandled(app, Prayer.FAJR, today.minusDays(1)))
+        // The copy for Direct Boot is what the alarms were planned from.
+        assertEquals(config.alerts, AlertStore.snapshot(app)?.alerts)
+        assertEquals(dhuhr, AlertStore.snapshot(app)?.day(today)?.instant(Prayer.DHUHR))
+    }
+
+    /**
      * 0.22: a prayer's notification goes when the next prayer begins. Until 0.21 it stayed 90 minutes whatever came
      * next: in Dubai Maghrib's "Time for Maghrib" was still in the shade at Isha (about 80 minutes later), beside Isha's,
      * and Fajr's after sunrise, when Fajr's time had ended.

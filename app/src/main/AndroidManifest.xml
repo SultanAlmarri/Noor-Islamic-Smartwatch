@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Location. Android lets the user choose precise or approximate; Noor works with either. Precise gives the
          neighbourhood name and the best Qibla bearing; approximate names the town. -->
@@ -43,6 +44,18 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:theme="@style/Theme.Noor" />
+
+        <!-- 0.22, Direct Boot: the prayer alarms work after a restart before the phone is first unlocked (Samsung phones
+             restart themselves at night). Only the alarm path runs then: the boot receiver (LOCKED_BOOT_COMPLETED), the
+             alarm receiver and the Adhan service, from the copy of the times kept in device-protected storage
+             (docs/ALERTS.md, "Never twice, never lost, and before the first unlock"). The watch's manifest is unchanged. -->
+        <receiver android:name="com.noor.alerts.SystemEventsReceiver" android:directBootAware="true" tools:node="merge">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name="com.noor.alerts.AlertReceiver" android:directBootAware="true" tools:node="merge" />
+        <service android:name="com.noor.alerts.AdhanService" android:directBootAware="true" tools:node="merge" />
 
         <!-- Recalculate for the new zone when the user travels or changes the clock. -->
         <receiver android:name=".data.TimeChangeReceiver" android:exported="false">

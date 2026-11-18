@@ -100,7 +100,18 @@ object AlertLog {
     private val lock = Any()
     private const val FILE = "alert_history.json"
 
-    private fun file(context: Context) = File(context.applicationContext.noBackupFilesDir, FILE)
+    /**
+     * 0.22: in device-protected storage, so an alert before the first unlock after a restart is recorded too. The
+     * history kept by earlier versions (in the app's credential-protected files) is moved there once, after unlock.
+     */
+    private fun file(context: Context): File {
+        val f = File(AlertStore.deviceContext(context).noBackupFilesDir, FILE)
+        if (!f.exists() && AlertStore.unlocked(context)) runCatching {
+            val old = File(context.applicationContext.noBackupFilesDir, FILE)
+            if (old.exists() && old.absolutePath != f.absolutePath) { old.copyTo(f, overwrite = false); old.delete() }
+        }
+        return f
+    }
 
     fun all(context: Context): List<AlertRecord> = synchronized(lock) { read(file(context)) }
 

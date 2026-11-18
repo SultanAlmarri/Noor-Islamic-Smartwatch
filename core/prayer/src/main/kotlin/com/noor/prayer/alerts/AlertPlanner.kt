@@ -6,6 +6,9 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 
+/** 0.22: a prayer alarm as armed: the prayer's [date] and its time [at]. */
+data class Armed(val date: LocalDate, val at: Instant)
+
 /** One alert to schedule: the next occurrence of [prayer] on this device. */
 data class PlannedAlert(val prayer: Prayer, val date: LocalDate, val at: Instant, val alert: PrayerAlert)
 
@@ -72,13 +75,27 @@ object AlertPlanner {
     /** A firing alarm whose prayer time moved by more than this is stale. */
     val TOLERANCE: Duration = Duration.ofSeconds(90)
 
-    /** The next occurrence of every prayer that alerts on [device], strictly after [now], soonest first. */
-    fun plan(config: WatchConfig, alerts: AlertSettings, device: AlertDevice, now: Instant): List<PlannedAlert> {
+    /** An alarm more than this late is not even reported: it is skipped. */
+    val LATE_LIMIT: Duration = Duration.ofHours(3)
+
+    /**
+     * The next occurrence of every prayer that alerts on [device], strictly after [now], soonest first.
+     *
+     * 0.22: [handled] says which prayers of which day have already been dealt with (alerted, or reported late): those are
+     * never planned again, so a clock moved back, or an alarm that came a little early, cannot call the same Adhan twice.
+     * [pending] is what is armed and not yet delivered, by prayer: one whose time has come (within [LATE_LIMIT]) and is
+     * not handled stays planned as it is (armed again at its own time, so Android delivers it at once and the firing
+     * rules decide: on time, late note, or nothing), instead of being silently replaced by the next day's.
+     */
+    fun plan(config: WatchConfig, alerts: AlertSettings, device: AlertDevice, now: Instant,
+             handled: (Prayer, LocalDate) -> Boolean = { _, _ -> false }, pending: Map<Prayer, Armed> = emptyMap()): List<PlannedAlert> {
         if (!alerts.enabled || !alerts.device.includes(device)) return emptyList()
         // (A week and a day ahead: a prayer on one day of the week only still finds its next day.)
         val upcoming = config.events(now, DAYS_AHEAD).filter { it.at.isAfter(now) }
         return Prayer.entries.filter { alerts.alertsOn(it, device) }.mapNotNull { p ->
-            upcoming.firstOrNull { it.prayer == p && alerts.alert(p).on(it.date.dayOfWeek) }?.let { PlannedAlert(p, it.date, it.at, alerts.alert(p)) }
+            pending[p]?.takeIf { a -> !a.at.isAfter(now) && Duration.between(a.at, now) <= LATE_LIMIT && !handled(p, a.date) && alerts.alertsOn(p, device, a.date) }
+                ?.let { a -> return@mapNotNull PlannedAlert(p, a.date, a.at, alerts.alert(p)) }
+            upcoming.firstOrNull { it.prayer == p && alerts.alert(p).on(it.date.dayOfWeek) && !handled(p, it.date) }?.let { PlannedAlert(p, it.date, it.at, alerts.alert(p)) }
         }.sortedBy { it.at }
     }
 
@@ -123,7 +140,7 @@ object AlertPlanner {
         val delta = Duration.between(at, now)
         return when {
             delta < TOLERANCE.negated() -> FireDecision.Skip           // fired far too early: the time has moved later
-            delta > MAX_LATENESS -> if (delta > Duration.ofHours(3)) FireDecision.Skip else FireDecision.Late(prayer, date, at, delta)
+            delta > MAX_LATENESS -> if (delta > LATE_LIMIT) FireDecision.Skip else FireDecision.Late(prayer, date, at, delta)
             else -> FireDecision.Alert(prayer, date, at, alerts.alert(prayer))
         }
     }

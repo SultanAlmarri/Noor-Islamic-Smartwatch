@@ -37,6 +37,10 @@ class AlertReceiver : BroadcastReceiver() {
         // (0.17: the user's alarms are neither a prayer alert nor in its history, like the reminders.)
         val alarm = intent.action == AlertScheduler.ACTION_ALARM || intent.action == AlertScheduler.ACTION_ALARM_DISMISS
         val reminder = intent.action == AlertScheduler.ACTION_REMIND || alarm
+        // (0.22: a prayer alarm being delivered is marked at once, before anything else can run, so a reschedule meanwhile
+        // (the app starting, a setting saved) neither arms it again nor counts it as lost.)
+        val firing = if (intent.action == AlertScheduler.ACTION_FIRE) prayerOf(intent)?.let { p -> dateOf(intent)?.let { p to it } } else null
+        firing?.let { (p, d) -> AlertStore.begin(p, d) }
         alertScope.launch {
             try {
                 when (intent.action) {
@@ -50,6 +54,7 @@ class AlertReceiver : BroadcastReceiver() {
                 // A reminder is only a notification; the alert history is for the prayer alerts themselves.
                 if (!reminder) runCatching { AlertDispatcher.record(app, intent, firedAt, AlertOutcome.FAILED, detail = "${e.javaClass.simpleName}: ${e.message}") }
             } finally {
+                firing?.let { (p, d) -> AlertStore.end(p, d) }
                 runCatching { AlertScheduler.reschedule(app) }
                 if (!reminder) runCatching { app.alertHost?.onPrayerAlarm(app) }
                 pending.finish()
@@ -62,7 +67,7 @@ class AlertReceiver : BroadcastReceiver() {
         val prayer = intent.getStringExtra(AlertScheduler.EXTRA_PRAYER)?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: return
         val date = intent.getStringExtra(AlertScheduler.EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return
         val host = context.alertHost ?: return
-        val config = host.alertConfig() ?: return
+        val config = AlertScheduler.configFor(context) ?: return
         val alerts = config.alerts ?: return
         // 0.16: or a reminder after it (the iqamah).
         val due = if (intent.getBooleanExtra(AlertScheduler.EXTRA_AFTER, false))
@@ -79,7 +84,7 @@ class AlertReceiver : BroadcastReceiver() {
         val id = intent.getIntExtra(AlertScheduler.EXTRA_ALARM, 0)
         val date = intent.getStringExtra(AlertScheduler.EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return
         val host = context.alertHost ?: return
-        val config = host.alertConfig() ?: return
+        val config = AlertScheduler.configFor(context) ?: return
         val alerts = config.alerts ?: AlertSettings()
         val now = Instant.ofEpochMilli(firedAt)
         val text = intent.getStringExtra(AlertScheduler.EXTRA_ALARM_TEXT)
@@ -93,6 +98,8 @@ class AlertReceiver : BroadcastReceiver() {
             if (firedAt - due > AlarmPlanner.MAX_LATENESS.toMillis()) return
         }
         val planned = when {
+            // (0.22: tried today at the place, not on the phone's own date.)
+            tried != null && !snoozed -> now.atZone(config.zone).toLocalDate().let { d -> PlannedAlarm(tried, d, config.day(d).instant(tried.prayer) ?: now, now) }
             tried != null -> PlannedAlarm(tried, date, config.day(date).instant(tried.prayer) ?: now, now)
             // (Snoozed: it rings again unless it was turned off or deleted meanwhile.)
             snoozed -> alerts.alarms.firstOrNull { it.id == id && it.enabled }?.let { a -> PlannedAlarm(a, date, config.day(date).instant(a.prayer) ?: now, now) }
@@ -102,31 +109,44 @@ class AlertReceiver : BroadcastReceiver() {
     }
 
     private suspend fun handle(context: Context, intent: Intent, firedAt: Long) {
-        val prayer = intent.getStringExtra(AlertScheduler.EXTRA_PRAYER)?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: return
-        val date = intent.getStringExtra(AlertScheduler.EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return
+        val prayer = prayerOf(intent) ?: return
+        val date0 = dateOf(intent) ?: return
         val host = context.alertHost
-        val config = host?.alertConfig()
+        val config = AlertScheduler.configFor(context)
         val alerts = config?.alerts
         if (host == null || config == null || alerts == null) {
             AlertDispatcher.record(context, intent, firedAt, AlertOutcome.NO_SETTINGS); return
         }
         if (intent.action == AlertScheduler.ACTION_TEST) {
             val at = Instant.ofEpochMilli(intent.getLongExtra(AlertScheduler.EXTRA_AT, firedAt))
+            // (0.22: the place's date, not the phone's: Jumu'ah, and the voice of the day, are the place's.)
+            val date = at.atZone(config.zone).toLocalDate()
             AlertDispatcher.dispatch(context, config, alerts, prayer, date, at, alerts.alert(prayer).copy(enabled = true), test = true, firedAtMs = firedAt)
             return
         }
-        when (val d = AlertPlanner.onFire(config, alerts, host.alertDevice, prayer, date, Instant.ofEpochMilli(firedAt))) {
-            is FireDecision.Alert -> AlertDispatcher.dispatch(context, config, alerts, d.prayer, d.date, d.at, d.alert, test = false, firedAtMs = firedAt)
+        // 0.22: a prayer of a day already dealt with is never called again (the clock put back, an alarm armed twice).
+        if (AlertStore.isHandled(context, prayer, date0)) return
+        when (val d = AlertPlanner.onFire(config, alerts, host.alertDevice, prayer, date0, Instant.ofEpochMilli(firedAt))) {
+            is FireDecision.Alert -> {
+                AlertStore.markHandled(context, d.prayer, d.date)
+                AlertDispatcher.dispatch(context, config, alerts, d.prayer, d.date, d.at, d.alert, test = false, firedAtMs = firedAt)
+            }
             is FireDecision.Late -> {
+                AlertStore.markHandled(context, d.prayer, d.date)
                 AlertNotifications.postLate(context, config, d.prayer, d.date, d.at)
                 AlertDispatcher.record(context, intent, firedAt, AlertOutcome.LATE, dueAtMs = d.at.toEpochMilli())
             }
             // Moved, turned off or moved to the other device since the alarm was armed: nothing is due, nothing to record.
-            FireDecision.Skip -> Unit
+            // (Its alarm is done with: the next reschedule plans afresh, at the new time if it moved later.)
+            FireDecision.Skip -> AlertStore.clearArmed(context, prayer, date0)
         }
     }
 
-    private companion object { const val TAG = "NoorAlert" }
+    private companion object {
+        const val TAG = "NoorAlert"
+        fun prayerOf(intent: Intent): Prayer? = intent.getStringExtra(AlertScheduler.EXTRA_PRAYER)?.let { n -> Prayer.entries.firstOrNull { it.name == n } }
+        fun dateOf(intent: Intent): LocalDate? = intent.getStringExtra(AlertScheduler.EXTRA_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    }
 }
 
 /** Restart, app update, clock or time-zone change, or exact-alarm permission granted: re-arm everything. */
@@ -251,7 +271,12 @@ internal object AlertDispatcher {
 
         val custom = CustomSounds(context)
         val library = SoundLibrary.get(context)
-        val resolved = library.resolve(prayer, alert, custom, alerts.favourites, date)
+        // 0.22: before the first unlock after a restart the user's own recordings (in the app's credential-protected files)
+        // cannot be read: the default Adhan of the prayer plays, and the notification and the history say why.
+        val locked = alert.mode == AlertMode.CUSTOM && !AlertStore.unlocked(context)
+        val lockedNote = if (locked) text.string(R.string.noor_alert_sub_locked) else null
+        val resolved = library.resolve(prayer, if (locked) alert.copy(mode = if (prayer == Prayer.SHURUQ) AlertMode.SOUND else AlertMode.ADHAN, soundId = null) else alert,
+            custom, alerts.favourites, date)
         val isAdhan = alert.mode == AlertMode.ADHAN || alert.mode == AlertMode.ADHAN_SHORT
         if (resolved == null) {
             // No sound file at all on this device: the backup Adhan (played by Android) is still better than nothing.
@@ -264,9 +289,9 @@ internal object AlertDispatcher {
             }
             return
         }
-        val detail = notes(describe(text, resolved), substitutionNote(text, resolved.substitution), testNote)
+        val detail = notes(describe(text, resolved), substitutionNote(text, resolved.substitution), lockedNote, testNote)
         // For "Random from favourites", the history names the recording that actually plays.
-        val record = log(AlertOutcome.STARTING).let { r -> resolved.entry?.id?.takeIf { alert.soundId == com.noor.prayer.alerts.SoundIds.RANDOM }
+        val record = log(AlertOutcome.STARTING, if (locked) "before the first unlock: own recording unreadable, the default Adhan played" else null).let { r -> resolved.entry?.id?.takeIf { alert.soundId == com.noor.prayer.alerts.SoundIds.RANDOM }
             ?.let { picked -> r.copy(sound = picked).also { AlertLog.add(context, it) } } ?: r }
         val req = PlayRequest(id, title, body, at.toEpochMilli(), detail, text.string(R.string.noor_alert_stop), resolved.source,
             alert.volumePercent, alerts.gradualSeconds, alert.maxSeconds, alert.vibrate, keepNotification = true,
