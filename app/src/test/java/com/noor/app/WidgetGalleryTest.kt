@@ -198,6 +198,15 @@ class WidgetGalleryTest {
             val slack = 1
             if (r.left < -slack || r.top < -slack || r.right > w + slack || r.bottom > h + slack) out += "$name: $idName outside the widget ($r in ${w}x$h)"
             if (v is TextView && other.containsMatchIn(v.text)) out += "$name: $idName has the other digits: \"${v.text}\""
+            // The readability floor of the day's times: names 10 dp, times 11 dp, the marked prayer's time 12 dp.
+            if (v is TextView && v.text.isNotEmpty() && (idName.startsWith("widget_name_") || idName.startsWith("widget_time_"))) {
+                val dp = v.textSize / v.resources.displayMetrics.density
+                val cell = v.parent?.parent as? View
+                val marked = (cell?.parent as? ViewGroup)?.let { g -> (0 until g.childCount).map { g.getChildAt(it) }.any { c -> c is ImageView && c.visibility == View.VISIBLE &&
+                    runCatching { c.resources.getResourceEntryName(c.id) }.getOrDefault("").startsWith("widget_pill_") } } ?: false
+                val floor = when { idName.startsWith("widget_name_") -> 10f; marked -> 12f; else -> 11f }
+                if (dp < floor - 0.05f) out += "$name: $idName under the floor (%.1f < %.0f dp): \"${v.text}\"".format(dp, floor)
+            }
             if (v is TextView && v.text.isNotEmpty()) {
                 val l = v.layout
                 if (l != null) {

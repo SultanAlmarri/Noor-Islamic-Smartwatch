@@ -72,15 +72,15 @@ def count(extra=""):
 
 def cell(i, icon=False, vertical=True, h="match_parent"):
     """A prayer's cell: its name over its time (or beside it, in a column). The one counted to or from stands on a pill
-    that wraps its text with the same padding on every side (widget_cell_pad), centred in the cell, so every cell's text
+    that wraps its text (widget_cell_pad above and below, widget_cell_pad_h at the sides, so six columns keep readable text), centred in the cell, so every cell's text
     is at the same height whether marked or not. (Both children match their wrapping parent: a FrameLayout sizes a
     match_parent child to itself only when it has two or more.)"""
     pill = image(f"widget_pill_{i}", "match_parent", "match_parent", 'android:scaleType="fitXY" android:src="@drawable/widget_pill" android:visibility="gone"')
     if vertical:
         inner = col(([image(f"widget_icon_{i}", "@dimen/widget_icon", "@dimen/widget_icon", 'android:layout_marginBottom="4dp"')] if icon else [])
-                    + [tv(f"widget_name_{i}", "Small"), tv(f"widget_time_{i}", "Time", extra='android:layout_marginTop="1dp"')],
+                    + [tv(f"widget_name_{i}", "Small"), tv(f"widget_time_{i}", "Time", extra='android:layout_marginTop="2dp"')],
                     w="match_parent", h="match_parent",
-                    extra='android:gravity="center" android:padding="@dimen/widget_cell_pad"')
+                    extra='android:gravity="center" android:paddingStart="@dimen/widget_cell_pad_h" android:paddingEnd="@dimen/widget_cell_pad_h" android:paddingTop="@dimen/widget_cell_pad" android:paddingBottom="@dimen/widget_cell_pad"')
         return (f'<FrameLayout android:id="@+id/widget_cell_{i}" android:layout_width="0dp" android:layout_height="{h}" android:layout_weight="1">'
                 + '<FrameLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center">'
                 + pill + inner + "</FrameLayout></FrameLayout>")
@@ -118,11 +118,11 @@ title_row = row([tv("widget_prayer", "Title"), tv("widget_time", "Body", extra='
 LAYOUTS = {
     # Next prayer, 2x1 and other short sizes: the prayer and its time, the countdown, the place when there is room.
     "widget_next": ("the next prayer, its time and the countdown (short sizes).",
-        col([title_row, count('android:layout_marginTop="1dp"'), tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')],
+        col([title_row, count('android:layout_marginTop="2dp"'), tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')],
             h="match_parent", extra=f'android:id="@+id/widget_content" android:gravity="center_vertical|start" {PAD}')),
     # Next prayer, 3x1 and wider short sizes: the prayer on the reading side, the countdown balanced on the other.
     "widget_next_wide": ("the next prayer and its time on one side, the countdown on the other (wide short sizes).",
-        row([col([title_row, tv("widget_then", "Small", extra='android:layout_marginTop="3dp"'), tv("widget_place", "Small", extra='android:layout_marginTop="1dp"')],
+        row([col([title_row, tv("widget_then", "Small", extra='android:layout_marginTop="4dp"'), tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')],
                  w="0dp", extra='android:layout_weight="1"'),
              count('android:layout_marginStart="12dp"')],
             h="match_parent", extra=f'android:gravity="center_vertical" {PAD}')),
@@ -137,7 +137,7 @@ LAYOUTS = {
     "widget_today": ("today's prayers: the next one and the countdown, the place and the Hijri date, the progress to the next, the six times.",
         col([row([col([title_row, tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')], w="0dp", extra='android:layout_weight="1"'),
                   count('android:layout_marginStart="10dp"')], extra='android:gravity="top"'),
-             progress('android:layout_marginTop="8dp"'), space(h="0dp", weight=1), cells(cell_h="@dimen/widget_cell")],
+             space(h="0dp", weight=1), progress('android:layout_marginBottom="4dp"'), cells(cell_h="@dimen/widget_cell")],
             h="match_parent", extra=PAD)),
     # Today's prayers, 4x1: the six times in one row.
     "widget_today_row": ("today's prayers in one row, the next one marked.",
@@ -174,15 +174,15 @@ LAYOUTS = {
               h="match_parent", extra='android:gravity="center"')),
     # Date, 2x1 and other narrow sizes: the Hijri date, the Gregorian date, the next occasion.
     "widget_date": ("the Hijri date, the Gregorian date and weekday, and the next Islamic occasion (narrow sizes).",
-        col([tv("widget_hijri_day", "Display"), tv("widget_hijri_year", "Small", extra='android:layout_marginTop="1dp"'),
-             tv("widget_gregorian", "Small", extra='android:layout_marginTop="1dp"'),
+        col([tv("widget_hijri_day", "Display"), tv("widget_hijri_year", "Small", extra='android:layout_marginTop="2dp"'),
+             tv("widget_gregorian", "Small", extra='android:layout_marginTop="2dp"'),
              tv("widget_occasion", "Small", extra='android:layout_marginTop="4dp"')],
             h="match_parent", extra=f'android:gravity="center_vertical|start" {PAD}')),
     # Date, 2x2 and larger: the day's number large on top, the month and year, the Gregorian date, the next occasion.
     "widget_date_tall": ("the Hijri date with the day's number large, the Gregorian date and weekday, and the next Islamic occasion (tall sizes).",
         col([tv("widget_hijri_number", "Number"), tv("widget_hijri_day", "Title", extra='android:layout_marginTop="2dp"'),
              tv("widget_gregorian", "Small", extra='android:layout_marginTop="2dp"'), space(h="0dp", weight=1),
-             tv("widget_occasion_name", "Small"), tv("widget_occasion", "Body", extra='android:layout_marginTop="1dp"')],
+             tv("widget_occasion_name", "Small"), tv("widget_occasion", "Body", extra='android:layout_marginTop="2dp"')],
             h="match_parent", extra=PAD)),
     # Date, 4x1 and wider: the day's number large, the month and year, the Gregorian date, the next occasion apart.
     "widget_date_wide": ("the Hijri date with the day's number large, the Gregorian date and weekday, and the next Islamic occasion.",
@@ -227,7 +227,7 @@ def pcells(n=6, names=("fajr", "shuruq", "dhuhr", "asr", "maghrib", "isha"), tim
         out.append(f'<LinearLayout android:layout_width="0dp" android:layout_height="{h}" android:layout_weight="1" android:gravity="center" '
                    f'android:orientation="vertical" android:paddingTop="4dp" android:paddingBottom="4dp" {bg}>'
                    + ptv(f"@string/widget_preview_{names[i]}", 11, GOLD if on else "#D9FFFFFF")
-                   + ptv(times[i], 14, GOLD if on else "#FFFFFFFF", "sans-serif-medium", 'android:layout_marginTop="1dp"')
+                   + ptv(times[i], 14, GOLD if on else "#FFFFFFFF", "sans-serif-medium", 'android:layout_marginTop="2dp"')
                    + "</LinearLayout>")
     return row(out, h=h, extra=extra)
 

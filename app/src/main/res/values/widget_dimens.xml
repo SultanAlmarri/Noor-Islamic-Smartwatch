@@ -11,5 +11,6 @@
     <dimen name="widget_icon_small">16dp</dimen>
     <dimen name="widget_ring_pad">14dp</dimen>
     <dimen name="widget_cell_pad">6dp</dimen>
+    <dimen name="widget_cell_pad_h">4dp</dimen>
     <dimen name="widget_row">30dp</dimen>
 </resources>

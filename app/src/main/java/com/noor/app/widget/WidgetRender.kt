@@ -210,11 +210,11 @@ internal object WidgetRender {
     }
 
     /** "3:37 PM" with "PM" smaller; "15:37" in 24 hours. */
-    private fun time(r: WidgetCtx, at: Instant?): CharSequence {
+    private fun time(r: WidgetCtx, at: Instant?, withSuffix: Boolean = true): CharSequence {
         if (at == null) return "—"
         val z = at.atZone(r.zone)
         val (t, suffix) = r.f.time(z.hour * 60 + z.minute)
-        if (suffix == null) return t
+        if (suffix == null || !withSuffix) return t
         // AM/PM smaller than the digits, on their baseline; Arabic's م/ص, small letters already, less so (0.8).
         return SpannableString("$t\u2009$suffix").apply { setSpan(RelativeSizeSpan(suffixScale(r)), t.length, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
     }
@@ -368,7 +368,8 @@ internal object WidgetRender {
      * The cells of the day's prayers: each prayer's name and time, the one counted to or from on a pill of the accent,
      * those already past quieter. [nameSize] and [timeSize] are common to all, so they line up.
      */
-    private fun cells(v: RemoteViews, r: WidgetCtx, shown: List<Prayer>, nameSize: Float, timeSizeDp: Float, signs: Boolean = false) {
+    private fun cells(v: RemoteViews, r: WidgetCtx, shown: List<Prayer>, nameSize: Float, timeSizeDp: Float, signs: Boolean = false,
+                      suffix: Boolean = true, markedTime: Float = timeSizeDp) {
         val ws = r.ws ?: return
         val marked = r.marked
         for ((i, p) in Prayer.entries.withIndex()) {
@@ -379,7 +380,7 @@ internal object WidgetRender {
             val nameColor = when { on -> r.pal.accent; past -> r.pal.muted; else -> r.pal.secondary }
             val timeColor = when { on -> r.pal.accent; past -> r.pal.muted; else -> r.pal.text }
             text(v, NAMES[i], r.name(p), nameSize, nameColor)
-            text(v, TIMES[i], time(r, at), timeSizeDp, timeColor)
+            text(v, TIMES[i], time(r, at, withSuffix = suffix || on), if (on) maxOf(timeSizeDp, markedTime) else timeSizeDp, timeColor)
             v.setViewVisibility(PILLS[i], if (on) View.VISIBLE else View.GONE)
             if (on) {
                 // Over the sky and the wallpaper a dark pane (gold on a tint over tan dunes read at 3:1); elsewhere a tint of the accent.
@@ -393,6 +394,40 @@ internal object WidgetRender {
             }
         }
     }
+
+    /** The readability floor of the day's times (the owner: "make everything easily readable"), in dp. */
+    const val FLOOR_NAME = 10f
+    const val FLOOR_TIME = 11f
+    const val FLOOR_MARKED = 12f
+
+    /**
+     * The day's prayers in a row of equal cells across [avail] dp, the names and times as large as wanted and never under
+     * the floor: to fit, AM/PM goes from the cells not marked first (the marked one keeps it), then Shuruq; only then
+     * would a size go under the floor. Returns the prayers shown.
+     */
+    private fun rowCells(v: RemoteViews, r: WidgetCtx, candidates: List<Prayer>, avail: Float, nameWant: Float, timeWant: Float, signs: Boolean = false): List<Prayer> {
+        val ws = r.ws ?: return candidates
+        var shown = candidates
+        while (true) {
+            val cell = avail / shown.size - 8f   // less the pill's padding at the sides (widget_cell_pad_h)
+            val names = shown.map { r.name(it) }
+            val nameSize = Fit.size(names, Fit.REGULAR, nameWant, cell, 0f)
+            val full = timeSize(shown.map { time(r, ws.day.instant(it)) }, timeWant, cell)
+            if (full >= FLOOR_TIME && nameSize >= FLOOR_NAME) {
+                cells(v, r, shown, nameSize, full, signs, markedTime = minOf(maxOf(full, FLOOR_MARKED), timeSize(listOfNotNull(markedTime(r, ws)), maxOf(full, FLOOR_MARKED), cell)))
+                return shown
+            }
+            val short = timeSize(shown.map { time(r, ws.day.instant(it), withSuffix = it == r.marked) }, timeWant, cell)
+            if ((short >= FLOOR_TIME && nameSize >= FLOOR_NAME) || Prayer.SHURUQ !in shown) {
+                cells(v, r, shown, nameSize.coerceAtLeast(FLOOR_NAME), short.coerceAtLeast(FLOOR_TIME), signs, suffix = false,
+                    markedTime = maxOf(short, FLOOR_MARKED))
+                return shown
+            }
+            shown = shown - Prayer.SHURUQ
+        }
+    }
+
+    private fun markedTime(r: WidgetCtx, ws: WidgetScene): CharSequence? = r.marked?.let { time(r, ws.day.instant(it)) }
 
     /** The ring's line: 5 dp on a 2x2, a little bolder on larger rings. */
     private fun ringStroke(ringDp: Float) = 4f * (ringDp / 122f).coerceIn(1f, 1.4f)
@@ -512,7 +547,7 @@ internal object WidgetRender {
             TODAY_ROW -> {
                 background(v, r, skyOptions(r, horizon = 0.78f), R.drawable.widget_scrim_dense)
                 val cell = avail / n - 14f
-                cells(v, r, shown, Fit.size(names, Fit.REGULAR, 12f * k, cell), timeSize(times, 15f * k, cell), signs = false)
+                rowCells(v, r, shown, avail, 12f * k, 15f * k)
             }
             TODAY_COLUMN -> {
                 background(v, r, skyOptions(r, horizon = 0.80f), R.drawable.widget_scrim_dense)
@@ -533,7 +568,7 @@ internal object WidgetRender {
                 val nameW1 = names.maxOf { Fit.width(it, Fit.REGULAR, 10f) } / 10f
                 val timeW1 = times.maxOf { timeWidth(it, 10f) } / 10f
                 val rowSize = minOf(want, (avail - 20f - 8f) * 0.92f / (nameW1 + timeW1))
-                cells(v, r, shown, rowSize, rowSize, signs = false)
+                cells(v, r, shown, rowSize.coerceAtLeast(FLOOR_TIME), rowSize.coerceAtLeast(FLOOR_TIME), signs = false)
                 place(v, r, avail, 11f * k, 9.5f, r.pal.muted)
             }
             else -> {
@@ -555,7 +590,7 @@ internal object WidgetRender {
                     if (android.os.Build.VERSION.SDK_INT >= 31) for (id in CELLS) v.setViewLayoutHeight(id, cellH, TypedValue.COMPLEX_UNIT_DIP)
                     val grow = if (android.os.Build.VERSION.SDK_INT >= 31) cellH / 44f else 1f
                     val cell = avail / n - 14f
-                    cells(v, r, shown, Fit.size(names, Fit.REGULAR, minOf(11.5f * grow, 13f) * k, cell), timeSize(times, minOf(14.5f * grow, 17.5f) * k, cell))
+                    rowCells(v, r, shown, avail, minOf(11.5f * grow, 13f) * k, minOf(14.5f * grow, 17.5f) * k)
                 }
             }
         }
@@ -588,8 +623,9 @@ internal object WidgetRender {
         if (r.hDp >= 240) {
             v.setViewVisibility(R.id.widget_cells, View.VISIBLE)
             val shown = shownPrayers(r)
-            val cell = avail / shown.size - 14f
-            cells(v, r, shown, Fit.size(shown.map { r.name(it) }, Fit.REGULAR, 12f * k, cell), timeSize(shown.map { time(r, ws.day.instant(it)) }, 15f * k, cell))
+            // The cells as tall as a name over a time in this script (Arabic and its digits stand taller).
+            if (android.os.Build.VERSION.SDK_INT >= 31) for (id in CELLS) v.setViewLayoutHeight(id, (12f + 15f) * k * r.lineK + 16f, TypedValue.COMPLEX_UNIT_DIP)
+            rowCells(v, r, shown, avail, 12f * k, 15f * k)
         }
         if (r.o.countdown) countdown(v, r, scale) else gone(v, R.id.widget_countdown_box)
         common(v, r)
@@ -632,21 +668,21 @@ internal object WidgetRender {
         val k = r.k
         val avail = r.wDp - 2 * PAD
         // Shuruq when asked for and there is room for six (a cell of 58 dp or more); otherwise the five prayers.
-        val shown = Prayer.entries.filter { it != Prayer.SHURUQ || (r.o.shuruq && avail / 6f >= 58f) }
+        var shown = Prayer.entries.filter { it != Prayer.SHURUQ || (r.o.shuruq && avail / 6f >= 58f) }
         val n = shown.size
         val inner = r.hDp - 2 * 8f
         // Short (a 4x1 on many phones, under 76 dp): no header; the row alone, the next prayer's cell carrying the
         // countdown, to the minute, under its name.
-        if (r.hDp < 76 && r.o.countdown) {
+        if (r.hDp < 76) {
             gone(v, R.id.widget_header)
             val cell = avail / n - 14f
             val cellRoom = (inner - 13f) / r.lineK
             val times = shown.map { time(r, ws.day.instant(it)) }
             val names = shown.map { r.name(it) }
-            cells(v, r, shown, Fit.size(names, Fit.REGULAR, minOf(12f * k, cellRoom * 0.44f), cell), timeSize(times, minOf(15f * k, cellRoom * 0.56f), cell))
+            shown = rowCells(v, r, shown, avail, minOf(12f * k, cellRoom * 0.44f), minOf(15f * k, cellRoom * 0.56f))
             val marked = r.marked?.let { shown.indexOf(it) }?.takeIf { it >= 0 }
             var minuteCell = -1
-            if (marked != null) {
+            if (marked != null && r.o.countdown) {
                 minuteCell = Prayer.entries.indexOf(shown[marked])
                 v.setTextViewText(TIMES[minuteCell], Fit.digitsSized(StatusNotification.ltr(Widgets.minuteCountdown(r.c!!, r.now, r.f))))
             }
@@ -659,10 +695,16 @@ internal object WidgetRender {
         val scale = countScale(r, minOf(24f * k, inner * 0.40f), avail * 0.45f)
         val countW = if (r.o.countdown) CountPicture.widthDp(r.app, leading(r), scale, r.o.seconds && r.mode == Widgets.CountMode.WHEEL) + 10f else 0f
         val c = r.c!!
+        // The header starts where the first column's text starts and ends where the last one's ends (cells are centred in
+        // their columns): one edge for both lines.
+        val firstW = maxOf(Fit.width(r.name(shown.first()), Fit.REGULAR, 11.5f * k), timeWidth(time(r, ws.day.instant(shown.first())), 14.5f * k))
+        val inset = ((avail / n - firstW) / 2f).coerceIn(0f, 14f)
+        val pxIn = (inset * r.density).toInt()
+        v.setViewPadding(R.id.widget_header, pxIn, 0, pxIn, 0)
         val t = time(r, c.countAt)
         val timeDp = minOf(12f * k, head * 0.86f)
         val name = r.prayer
-        text(v, R.id.widget_prayer, name, Fit.size(listOf(name), Fit.MEDIUM, head, avail - countW - timeWidth(t, timeDp, Fit.REGULAR) - 10f), r.pal.accent)
+        text(v, R.id.widget_prayer, name, Fit.size(listOf(name), Fit.MEDIUM, head, avail - 2 * inset - countW - timeWidth(t, timeDp, Fit.REGULAR) - 10f), r.pal.accent)
         text(v, R.id.widget_time, t, timeDp, r.pal.secondary)
         val cell = avail / n - 14f
         val rowRoom = inner - maxOf(CountPicture.heightDp(r.app, scale), head * 1.25f)
@@ -671,7 +713,7 @@ internal object WidgetRender {
         // The name over the time, each a line of its font (taller in Arabic), inside the pill's padding.
         val cellRoom = (rowRoom - 13f) / r.lineK
         val timeWant = minOf(14.5f * k, cellRoom * 0.56f)
-        cells(v, r, shown, Fit.size(names, Fit.REGULAR, minOf(11.5f * k, cellRoom * 0.44f), cell - 12f), timeSize(times, timeWant, cell - 12f))
+        rowCells(v, r, shown, avail, minOf(11.5f * k, cellRoom * 0.44f), timeWant)
         if (r.o.countdown) countdown(v, r, scale) else gone(v, R.id.widget_countdown_box)
         common(v, r)
         built(Built(layout, scale))
@@ -748,11 +790,20 @@ internal object WidgetRender {
             val lineH = small * r.lineK + 1f
             val daySize = minOf(21f * g * k, (inner - lineH) / 1.22f).coerceAtLeast(12f)
             var room = inner - daySize * 1.22f
-            val line = "${f.number(h.day)} $month"
-            text(v, R.id.widget_hijri_day, line, Fit.size(listOf(line), Fit.MEDIUM, daySize, avail), r.pal.text)
+            // "24 Jumada al-Ula 1448" on one line, the year quieter and smaller (gold is the accent's, not the year's);
+            // without the year where the line would have to shrink for it.
+            val dayMonth = "${f.number(h.day)} $month"
+            val yearPart = f.digits(h.year.toString())
+            val full = "$dayMonth $yearPart"
+            val fullSize = Fit.size(listOf(full), Fit.MEDIUM, daySize, avail, 0f)
+            val line: CharSequence = if (fullSize >= daySize * 0.9f) SpannableString(full).apply {
+                setSpan(android.text.style.ForegroundColorSpan(r.pal.secondary), dayMonth.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(RelativeSizeSpan(0.82f), dayMonth.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } else dayMonth
+            text(v, R.id.widget_hijri_day, line, Fit.size(listOf(line.toString()), Fit.MEDIUM, daySize, avail), r.pal.text)
+            gone(v, R.id.widget_hijri_year)
             val gregSize = Fit.size(listOf(greg), Fit.REGULAR, small, avail)
             if (room >= lineH) { text(v, R.id.widget_gregorian, greg, gregSize, r.pal.secondary); room -= lineH } else gone(v, R.id.widget_gregorian)
-            if (room >= lineH) { text(v, R.id.widget_hijri_year, year, 11f * g * k, r.pal.accent); room -= lineH } else gone(v, R.id.widget_hijri_year)
             if (next != null && room >= lineH + 4f) {
                 val occ = "$occasionName · $days"
                 text(v, R.id.widget_occasion, occ, Fit.size(listOf(occ), Fit.REGULAR, small, avail, 8.5f), r.pal.muted)
