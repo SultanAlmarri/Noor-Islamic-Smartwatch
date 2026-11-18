@@ -92,16 +92,23 @@ class TasbihComplicationService : SuspendingTimelineComplicationDataSourceServic
         val zone = ZoneId.systemDefault()
         val today = LocalDate.now(zone)
         val count = app.tasbih.current().todayOn(today)
-        val m = midnights(today, zone, 2)
         val first = data(this, config, request.complicationType, count) ?: return null
         // The day total starts again at midnight even if the app is not opened.
-        val reset = data(this, config, request.complicationType, 0)?.let { listOf(TimelineEntry(TimeInterval(m[1], m[2]), it)) }.orEmpty()
+        val reset = data(this, config, request.complicationType, 0)?.let { listOf(TimelineEntry(resetInterval(today, zone), it)) }.orEmpty()
         return ComplicationDataTimeline(first, reset)
     }
 
     override fun getPreviewData(type: ComplicationType): ComplicationData? = data(this, null, type, 33)
 
     companion object {
+        /**
+         * From the next midnight on, the day total is 0 until the user counts again (which asks for new data). 0.22: until
+         * then the 0 lasted one day only; this complication is not refreshed on a schedule, so from the second midnight
+         * the watch face went back to the default entry and showed the count of the day it was asked, two days late.
+         */
+        internal fun resetInterval(today: LocalDate, zone: ZoneId): TimeInterval =
+            today.plusDays(1).atStartOfDay(zone).toInstant().let { TimeInterval(it, it.plus(java.time.Duration.ofDays(3650))) }
+
         fun data(context: Context, config: WatchConfig?, type: ComplicationType, count: Int): ComplicationData? {
             if (type != ComplicationType.SHORT_TEXT) return null
             val t = WearText(config)

@@ -20,6 +20,17 @@ class Timetable(val id: String, private val days: Map<LocalDate, IntArray>) {
 
     fun minutes(date: LocalDate): IntArray? = days[date]
 
+    /**
+     * 0.22: equal when they hold the same times (the arrays compared by content). Until then a timetable was equal only
+     * to itself, so a [com.noor.prayer.WatchConfig] carrying one never equalled the same settings worked out again: the
+     * phone re-sent the watch its settings, re-armed its alerts and redrew its notification and widgets at every change
+     * of any setting, and the watch took every arrival as new and redrew all its tiles and complications.
+     */
+    override fun equals(other: Any?): Boolean = other is Timetable && other.id == id && other.days.size == days.size &&
+        days.all { (d, m) -> other.days[d]?.contentEquals(m) == true }
+
+    override fun hashCode(): Int = 31 * id.hashCode() + days.entries.sumOf { (d, m) -> d.hashCode() xor m.contentHashCode() }
+
     /** The published day as a [PrayerDay], with the user's personal minute offsets on top. */
     fun day(date: LocalDate, zone: ZoneId, profileId: String, user: UserAdjustments = UserAdjustments()): PrayerDay? {
         val m = days[date] ?: return null

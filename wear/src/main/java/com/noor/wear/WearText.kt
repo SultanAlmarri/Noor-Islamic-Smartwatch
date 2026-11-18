@@ -53,8 +53,9 @@ class WearText(private val config: WatchConfig?, deviceLocale: Locale = Locale.g
     /** Time without the AM/PM marker, for tight places. */
     fun timeShort(at: Instant, zone: ZoneId): String {
         val t = at.atZone(zone)
-        val h = if (h24) t.hour else (t.hour + 11) % 12 + 1
-        return digits("%d:%02d".format(h, t.minute))
+        // (0.22: two-digit hours with the 24-hour clock, as in [time]: the tile's line read "Fajr 5:12" under "05:12".)
+        if (h24) return digits("%02d:%02d".format(t.hour, t.minute))
+        return digits("%d:%02d".format((t.hour + 11) % 12 + 1, t.minute))
     }
 
     /** Live countdown: "1:23:07" or "23:07". */

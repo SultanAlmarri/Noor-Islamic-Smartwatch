@@ -38,6 +38,10 @@ class WearTextTest {
     @Test fun twentyFourHour() {
         val t = WearText(TestConfigs.dubai().copy(use24h = true))
         assertEquals("15:14", t.time(asr, zone))
+        val fajr = ZonedDateTime.of(2026, 11, 5, 5, 9, 0, 0, zone).toInstant()
+        assertEquals("05:09", t.time(fajr, zone))
+        assertEquals("05:09", t.timeShort(fajr, zone))
+        assertEquals("5:09", WearText(TestConfigs.dubai()).timeShort(fajr, zone))
     }
 
     /** 0.9.8: the digits chosen, whatever the watch's default locale (an Arabic watch writes Arabic-Indic digits). */

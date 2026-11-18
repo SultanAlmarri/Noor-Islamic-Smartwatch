@@ -33,6 +33,25 @@ class WatchConfigTest {
         assertNotNull(back.day(LocalDate.of(2026, 12, 1)).minutes[Prayer.MAGHRIB])
     }
 
+    /**
+     * The same settings with the same weeks of times are the same configuration. Until 0.22 a timetable was equal only
+     * to itself, so two configurations carrying one were never equal: the phone sent the watch its settings again at
+     * every change of any setting (the scenery, the graphics), re-armed every alert and redrew its notification and
+     * widgets each time, and the watch took every arrival as a change and redrew all its tiles and complications.
+     */
+    @Test fun configurationsWithTheSameTimesAreEqual() {
+        val text = "2026-11-04,05:09,06:25,12:05,15:14,17:40,18:55\n2026-11-05,05:10,06:25,12:05,15:14,17:39,18:55"
+        val a = dubai.copy(official = com.noor.prayer.authority.Timetable.parse("iacad_dubai", text))
+        val b = dubai.copy(official = com.noor.prayer.authority.Timetable.parse("iacad_dubai", text))
+        assertEquals(a, b)
+        assertEquals(a.hashCode(), b.hashCode())
+        assertEquals(a, WatchConfig.decode(a.encode()))
+        // A different minute, date or source is a different configuration.
+        assertTrue(a != dubai.copy(official = com.noor.prayer.authority.Timetable.parse("iacad_dubai", text.replace("17:39", "17:38"))))
+        assertTrue(a != dubai.copy(official = com.noor.prayer.authority.Timetable.parse("calc_x", text)))
+        assertTrue(a != dubai.copy(official = com.noor.prayer.authority.Timetable.parse("iacad_dubai", text.substringBefore("\n"))))
+    }
+
     @Test fun watchCalculatesExactlyWhatThePhoneDoes() {
         val date = LocalDate.of(2026, 11, 4)
         val decoded = WatchConfig.decode(dubai.encode())!!

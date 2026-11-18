@@ -49,5 +49,19 @@ class WearSyncTest {
         } finally {
             TimeZone.setDefault(before)
         }
+
+        // 0.22: a setting the watch does not use (the theme, the scenery) is not a reason to send it anything. Until
+        // then two configurations carrying weeks of times were never equal, so every such change went to the watch.
+        val sent = withTimeout(20_000) {
+            WearSync.configs(kotlinx.coroutines.flow.flow {
+                emit(abuDhabi); kotlinx.coroutines.delay(50)
+                emit(abuDhabi.copy(theme = ThemeMode.DARK)); kotlinx.coroutines.delay(50)
+                emit(abuDhabi.copy(theme = ThemeMode.DARK, scenery = Scenery.ARCTIC)); kotlinx.coroutines.delay(50)
+                emit(abuDhabi.copy(theme = ThemeMode.DARK, scenery = Scenery.ARCTIC, timeFormat = TimeFormat.H24)); kotlinx.coroutines.delay(50)
+            }, null, every = 60_000L) { d1 }.take(2).toList()
+        }
+        assertNotNull(sent[0]!!.official)
+        assertEquals(false, sent[0]!!.use24h)
+        assertEquals("the next config sent is the one with a change the watch shows", true, sent[1]!!.use24h)
     }
 }

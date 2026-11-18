@@ -97,13 +97,13 @@ data class FaceData(
             val st = config?.let { c -> runCatching { c.state(now) }.getOrNull() }
             val next = st?.let {
                 val left = Duration.between(now, it.next.at)
-                Next(it.next.prayer, t.name(it.next.prayer), t.clock(it.next.at.atZone(pz)), t.countdown(left), t.countdownShort(left),
-                    it.progress.coerceIn(0f, 1f), it.current?.prayer?.let(t::name))
+                Next(it.next.prayer, t.name(it.next.prayer, it.next.date), t.clock(it.next.at.atZone(pz)), t.countdown(left), t.countdownShort(left),
+                    it.progress.coerceIn(0f, 1f), it.current?.let { e -> t.name(e.prayer, e.date) })
             }
             val prayers = st?.let { s ->
                 Prayer.entries.mapNotNull { p ->
                     s.today.instant(p)?.let { at ->
-                        Line(p, t.name(p), t.clock(at.atZone(pz)), isNext = s.next.prayer == p && s.next.date == placeToday,
+                        Line(p, t.name(p, s.today.date), t.clock(at.atZone(pz)), isNext = s.next.prayer == p && s.next.date == placeToday,
                             isCurrent = s.current?.prayer == p && s.current.date == placeToday)
                     }
                 }
@@ -171,6 +171,10 @@ class FaceText(val arabic: Boolean, val arabicDigits: Boolean, val h24: Boolean)
     fun clock(t: ZonedDateTime): String = hhmm(t.hour, t.minute) + (if (h24) "" else " " + ampm(t.hour))
 
     fun name(p: Prayer): String = if (arabic) p.ar else p.en
+
+    /** 0.22: Dhuhr on a Friday is Jumu'ah, as in the rest of the app on the phone and the watch (the face said Dhuhr). */
+    fun name(p: Prayer, date: LocalDate): String =
+        if (p == Prayer.DHUHR && date.dayOfWeek == java.time.DayOfWeek.FRIDAY) (if (arabic) "الجمعة" else "Jumu’ah") else name(p)
 
     fun weekday(d: LocalDate): String = (if (arabic) WEEKDAYS_AR else WEEKDAYS_EN)[d.dayOfWeek.value - 1]
 
