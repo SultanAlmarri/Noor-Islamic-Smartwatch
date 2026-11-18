@@ -308,8 +308,13 @@ fun TodayContent(
         val todayDay = remember(today, u.settings, u.place, u.profile) { dayFor(today)?.day }
         // (Whether the list shows today: the sky's hint keeps out of the way of "Today" while another day is shown.)
         var viewingToday by remember { mutableStateOf(true) }
+        // (0.21) The sky's own words are already large: they follow the phone's text size up to 15% larger, no further.
+        // Beyond it, as the rows below took the room they need, the sky's text ran down over the Sun's path.
+        val d = LocalDensity.current
+        androidx.compose.runtime.CompositionLocalProvider(LocalDensity provides androidx.compose.ui.unit.Density(d.density, minOf(d.fontScale, 1.15f))) {
         SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup, simple = simpleSky,
             showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed, viewingToday = viewingToday, clock = clock)
+        }
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
