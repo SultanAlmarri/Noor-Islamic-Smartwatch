@@ -576,9 +576,16 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val p = 16f * s
         header(p + 2f * s, p, W - 2 * (p + 2f * s), 22f * t, 18f * t, 30f * t, s)
         val ws = ws ?: return
-        val rise = ws.day.instant(Prayer.SHURUQ); val set = ws.day.instant(Prayer.MAGHRIB)
+        // By day the Sun's path today, solid gold as far as the Sun has come. Before sunrise today's path, after
+        // sunset tomorrow's, dotted and dim, with no Sun on it.
+        val todayRise = ws.day.instant(Prayer.SHURUQ); val todaySet = ws.day.instant(Prayer.MAGHRIB)
+        val afterSunset = todaySet != null && r.now.isAfter(todaySet)
+        val rise = if (afterSunset) at(Prayer.SHURUQ, r.today.plusDays(1)) else todayRise
+        val set = if (afterSunset) at(Prayer.MAGHRIB, r.today.plusDays(1)) else todaySet
+        val daytime = todayRise != null && todaySet != null && !r.now.isBefore(todayRise) && !afterSunset
         val x0 = 34f * s; val x1 = W - 34f * s; val yH = H - 40f * s; val top = 58f * s
-        val u = if (rise != null && set != null) ((r.now.epochSecond - rise.epochSecond).toFloat() / (set.epochSecond - rise.epochSecond)).coerceIn(-0.05f, 1.05f) else 0.5f
+        val u = if (daytime) ((r.now.epochSecond - todayRise!!.epochSecond).toFloat() / (todaySet!!.epochSecond - todayRise.epochSecond)).coerceIn(0f, 1f) else -1f
+        val arc = if (light) r.pal.accent else 0xFFFFD36B.toInt()
         // The sky is never mirrored in Arabic (the owner, 18 November 2026): sunrise on the left, sunset on the right.
         sheet.mirror = false
         sheet.block {
@@ -588,19 +595,18 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
                 cv.drawLine(14f * s, yH, W - 14f * s, yH, pt)
                 fun xy(f: Float): Pair<Float, Float> { val xx = x0 + (x1 - x0) * f; return xx to (yH - (yH - top) * kotlin.math.sin(Math.PI * f).toFloat()) }
                 val solid = android.graphics.Path(); val dotted = android.graphics.Path()
-                val uc = u.coerceIn(0f, 1f)
-                for (i in 0..60) { val f = i / 60f; val (xx, yy) = xy(f); val path = if (f <= uc) solid else dotted
-                    if (path.isEmpty || (f > uc && i > 0 && (i - 1) / 60f <= uc)) path.moveTo(xx, yy) else path.lineTo(xx, yy) }
-                pt.color = if (light) 0x55000000 else 0x55FFFFFF; pt.strokeWidth = 2f * s
+                for (i in 0..60) { val f = i / 60f; val (xx, yy) = xy(f); val path = if (f <= u) solid else dotted
+                    if (path.isEmpty || (f > u && i > 0 && (i - 1) / 60f <= u)) path.moveTo(xx, yy) else path.lineTo(xx, yy) }
+                pt.color = if (light) 0x59000000 else 0x59FFFFFF; pt.strokeWidth = 2f * s
                 pt.pathEffect = android.graphics.DashPathEffect(floatArrayOf(0.1f, 5f * s), 0f)
                 cv.drawPath(dotted, pt); pt.pathEffect = null
-                pt.color = gold; pt.strokeWidth = 2.4f * s; cv.drawPath(solid, pt)
-                if (u in 0f..1f) {
+                pt.color = arc; pt.strokeWidth = 2.4f * s; if (!solid.isEmpty) cv.drawPath(solid, pt)
+                if (daytime) {
                     val (sx, sy) = xy(u)
                     val glow = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                         shader = android.graphics.RadialGradient(sx, sy, 40f * s, intArrayOf(0x55FFD58C, 0x22FFD58C, 0x00FFD58C), floatArrayOf(0f, 0.4f, 1f), android.graphics.Shader.TileMode.CLAMP) }
                     cv.drawCircle(sx, sy, 40f * s, glow)
-                    cv.drawCircle(sx, sy, 8f * s, android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFF4DC.toInt() })
+                    cv.drawCircle(sx, sy, 8f * s, android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = if (light) arc else 0xFFFFF4DC.toInt() })
                 }
             }
             val ts = 13f * t
@@ -621,6 +627,8 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val h = HijriDate.of(today, r.s.hijriAdjust)
         val day = f.number(h.day)
         val month = if (f.arabic) h.monthNameAr else h.monthNameEn
+        /** The month's short form (English: "Jum I"; Arabic's names are short already). */
+        val monthShort = if (f.arabic) h.monthNameAr else listOf("Muh", "Saf", "Rab I", "Rab II", "Jum I", "Jum II", "Raj", "Sha", "Ram", "Shaw", "Dhu Q", "Dhu H")[h.month - 1]
         val year = f.digits(h.year.toString()) + if (f.arabic) " هـ" else " AH"
         val weekday = f.weekday(today).let { if (f.arabic) it else it.uppercase() }
         /** "1448 AH · 4 Nov" / "٤ نوفمبر ١٤٤٨ هـ". */
@@ -706,13 +714,13 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val d = DateWords()
         sheet.block {
             if (H < 60f) {
-                // The smallest date: the day and the month, or (too narrow for the month) the day and the weekday.
+                // The smallest date: the day and the month at 11 dp or more, the short month only where that does not fit.
                 val size = minOf(17f, (H - 10f) / 1.2f)
-                val wd = r.f.weekdayShort(d.today.dayOfWeek)
-                val l = fit(line(run("${d.day} ${d.month}", size, Weight.SEMIBOLD, ink)), inner, 12f)
-                    ?: fit(line(run("${d.day} · $wd", size, Weight.SEMIBOLD, ink)), inner, 12f)
-                    ?: line(run(d.day, 14f, Weight.SEMIBOLD, ink))
-                sheet.text(l, px, H / 2 + l.maxSize * 0.36f, inner, Align.START, "month")
+                val room = W - 20f
+                val l = fit(line(run("${d.day} ${d.month}", size, Weight.MEDIUM, ink)), room, 11f)
+                    ?: fit(line(run("${d.day} ${d.monthShort}", size, Weight.MEDIUM, ink)), room, 11f)
+                    ?: line(run(d.day, 14f, Weight.MEDIUM, ink))
+                sheet.text(l, 10f, H / 2 + l.maxSize * 0.36f, room, Align.START, "month")
                 return@block
             }
             val numSize = minOf(40f * t, (H - 14f) / 0.95f)

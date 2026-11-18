@@ -108,15 +108,14 @@ class WidgetGalleryTest {
                 WidgetInk.hideText = true
                 val bare = try { lay(app, Widgets.preview(app, kind, o, w, h, at)!!, pw, ph) } finally { WidgetInk.hideText = false }
                 bare.findViewById<View>(R.id.widget_count_row)?.visibility = View.INVISIBLE
-                contrast(name, b, bare, pw, ph, o.background == WidgetBackground.SKY || o.background == WidgetBackground.CLEAR || kind == WidgetKind.SKY)
+                contrast(name, b, bare, pw, ph, o.background == WidgetBackground.SKY || o.background == WidgetBackground.CLEAR)
             }
             problems += views(name, frame, pw, ph)
             save(name, frame, pw, ph, d)
             count++
         }
 
-        val dark = WidgetOptions(background = WidgetBackground.DARK, opacity = 100)
-        val light = WidgetOptions(background = WidgetBackground.LIGHT, opacity = 100)
+
         for ((lang, digits) in listOf("en" to Numerals.WESTERN, "ar" to Numerals.WESTERN, "arind" to Numerals.ARABIC_INDIC)) {
             repo.setLanguage(if (lang == "en") Language.ENGLISH else Language.ARABIC); repo.setNumerals(digits)
             val indic = digits == Numerals.ARABIC_INDIC
@@ -124,8 +123,9 @@ class WidgetGalleryTest {
                 val tag = "${kind.name.lowercase()}_${w}x${h}"
                 val sky = kind.defaults.copy(background = WidgetBackground.SKY)
                 for ((mn, m) in moments) shoot("${tag}_${lang}_$mn", kind, sky, w, h, m, indic, "${tag}_$mn".takeIf { lang != "arind" })
-                shoot("${tag}_${lang}_dark", kind, dark, w, h, moments[0].second, indic, "${tag}_dark".takeIf { lang != "arind" })
-                shoot("${tag}_${lang}_light", kind, light, w, h, moments[0].second, indic, "${tag}_light".takeIf { lang != "arind" })
+                // Every background from the kind's own defaults (the strip leaves Shuruq out on all of them).
+                shoot("${tag}_${lang}_dark", kind, kind.defaults.copy(background = WidgetBackground.DARK, opacity = 100), w, h, moments[0].second, indic, "${tag}_dark".takeIf { lang != "arind" })
+                shoot("${tag}_${lang}_light", kind, kind.defaults.copy(background = WidgetBackground.LIGHT, opacity = 100), w, h, moments[0].second, indic, "${tag}_light".takeIf { lang != "arind" })
             }
         }
         repo.setLanguage(Language.ENGLISH); repo.setNumerals(Numerals.WESTERN)
@@ -157,6 +157,12 @@ class WidgetGalleryTest {
             val day = skyAt["${tag}_day"]; val golden = skyAt["${tag}_golden"]; val night = skyAt["${tag}_night"]
             fun far(a: Int?, b: Int?) = a != null && b != null && (Math.abs((a shr 16 and 255) - (b shr 16 and 255)) + Math.abs((a shr 8 and 255) - (b shr 8 and 255)) + Math.abs((a and 255) - (b and 255))) > 40
             if (!far(day, golden) || !far(golden, night) || !far(day, night)) problems += "$tag: the day, golden and night skies are not distinct"
+        }
+        // What a widget says never depends on its background: the same texts over the sky, dark and light.
+        for ((kind, list) in sizes) for ((w, h) in list) for (lang in listOf("en", "ar")) {
+            val tag = "${kind.name.lowercase()}_${w}x${h}"
+            val bySky = said["${tag}_day"]?.get("${tag}_${lang}_day"); val byDark = said["${tag}_dark"]?.get("${tag}_${lang}_dark"); val byLight = said["${tag}_light"]?.get("${tag}_${lang}_light")
+            if (bySky != null && (bySky != byDark || bySky != byLight)) problems += "${tag}_$lang: the background changes what it shows ($bySky / $byDark / $byLight)"
         }
         // English and Arabic say the same things at the same size.
         for ((key, byName) in said) {
