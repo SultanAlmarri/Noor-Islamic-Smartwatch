@@ -222,11 +222,34 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN) },
             detail = stringResource(if (s.alerts.enabled) R.string.settings_on else R.string.settings_off), listed = false))
         add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Notifications, stringResource(R.string.status_setting), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status), null,
-            toggle = s.statusNotification to { on ->
+            // (0.22: on by default, but Android shows it only with the notification permission: the switch says what is
+            // really there, and turning it on asks for the permission.)
+            toggle = (s.statusNotification && (Build.VERSION.SDK_INT < 33 || androidx.core.content.ContextCompat.checkSelfPermission(context,
+                Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED)) to { on ->
                 val needs = on && Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
                     Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
                 if (needs) statusPermission() else vm.setStatusNotification(on)
             }))
+        // (0.22) The countdown also as a chip in the status bar, as Samsung's Clock shows its timer (Android 16 and later).
+        if (s.statusNotification) {
+            val newEnough = Build.VERSION.SDK_INT >= 36
+            val allowed = newEnough && com.noor.app.notify.StatusNotification.promotedAllowed(context)
+            val openSettings = {
+                runCatching {
+                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+                Unit
+            }
+            add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Timer, stringResource(R.string.status_chip_setting),
+                stringResource(when {
+                    !newEnough -> R.string.status_chip_needs_16
+                    s.statusBarChip && !allowed -> R.string.status_chip_blocked
+                    else -> R.string.status_chip_desc
+                }), stringResource(R.string.kw_status),
+                if (newEnough && s.statusBarChip && !allowed) openSettings else null,
+                toggle = if (newEnough) s.statusBarChip to { on -> vm.setStatusBarChip(on) } else null))
+        }
         add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }, listed = false))
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Brightness6, stringResource(R.string.theme), null, stringResource(R.string.kw_theme), { dialog = Dialog.THEME },
             // (At the end of the row the short name; the sheet says what following the sun means.)

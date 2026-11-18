@@ -62,6 +62,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun setTheme(t: ThemeMode) = viewModelScope.launch { repo.setTheme(t) }
     fun setHijriAdjust(d: Int) = viewModelScope.launch { repo.setHijriAdjust(d) }
     fun setStatusNotification(on: Boolean) = viewModelScope.launch { repo.setStatusNotification(on) }
+    fun setStatusBarChip(on: Boolean) = viewModelScope.launch { repo.setStatusBarChip(on) }
     fun setElapsedAfterPrayer(on: Boolean) = viewModelScope.launch { repo.setElapsedAfterPrayer(on) }
     fun setScenery(v: com.noor.app.data.Scenery) = viewModelScope.launch { repo.setScenery(v) }
     fun setSkyGraphics(v: com.noor.app.data.SkyGraphics) = viewModelScope.launch { repo.setSkyGraphics(v) }

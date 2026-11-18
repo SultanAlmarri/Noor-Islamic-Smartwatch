@@ -12,6 +12,9 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <!-- The Adhan screen over the lock screen while the Adhan plays, as an alarm clock does. -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- 0.22: the prayer countdown as a chip in the status bar (Android 16's Live Updates; a normal permission, and the
+         user can turn it off for Minhad in Android's settings). -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <application
         android:name=".NoorApplication"

@@ -59,6 +59,7 @@ class SettingsRepository(
         val hijri = intPreferencesKey("hijri_adjust")
         val alerts = stringPreferencesKey("alerts_v1")
         val status = booleanPreferencesKey("status_notification")
+        val statusChip = booleanPreferencesKey("status_bar_chip")
         val elapsed = booleanPreferencesKey("elapsed_after_prayer")
         val scrubHint = booleanPreferencesKey("hint_scrub_done")
         val scenery = stringPreferencesKey("scenery")
@@ -97,7 +98,8 @@ class SettingsRepository(
             theme = p.enum(K.theme, ThemeMode.SUN),
             hijriAdjust = p[K.hijri] ?: 0,
             alerts = phoneAlerts(AlertSettings.decode(p[K.alerts]), known),
-            statusNotification = p[K.status] ?: false,
+            statusNotification = p[K.status] ?: true,
+            statusBarChip = p[K.statusChip] ?: true,
             elapsedAfterPrayer = p[K.elapsed] ?: true,
             scrubHintDone = p[K.scrubHint] ?: false,
             scenery = p.enum(K.scenery, Scenery.AUTO),
@@ -137,6 +139,7 @@ class SettingsRepository(
     suspend fun setTimeFormat(f: TimeFormat) = context.dataStore.edit { it[K.timeFormat] = f.name }
     suspend fun setTheme(t: ThemeMode) = context.dataStore.edit { it[K.theme] = t.name }
     suspend fun setStatusNotification(on: Boolean) = context.dataStore.edit { it[K.status] = on }
+    suspend fun setStatusBarChip(on: Boolean) = context.dataStore.edit { it[K.statusChip] = on }
     suspend fun setElapsedAfterPrayer(on: Boolean) = context.dataStore.edit { it[K.elapsed] = on }
     suspend fun setScrubHintDone() = context.dataStore.edit { it[K.scrubHint] = true }
     suspend fun setScenery(v: Scenery) = context.dataStore.edit { it[K.scenery] = v.name }

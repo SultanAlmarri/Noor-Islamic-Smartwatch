@@ -92,7 +92,13 @@ data class AppSettings(
     /** Adhan and prayer notifications (shared with the watch through the watch config). */
     val alerts: AlertSettings = AlertSettings(),
     /** The persistent notification with the next prayer and a live countdown (phone only). */
-    val statusNotification: Boolean = false,
+    /** (0.22: on unless turned off, the owner's word) The ongoing notification counting to the next prayer. */
+    val statusNotification: Boolean = true,
+    /**
+     * (0.22) That countdown also as a chip in the status bar, as Samsung's Clock shows its timer (Android 16's Live
+     * Updates: a promoted ongoing notification; Android's own look, not Minhad's custom one, which Android does not promote).
+     */
+    val statusBarChip: Boolean = true,
     /** After a prayer's time: "+" time since it for a while (default), or straight to the next prayer's "−" (0.9.8). */
     val elapsedAfterPrayer: Boolean = true,
     /** The home screen's sky has been drawn along once: its hint ("Drag the sky...") is not shown again (0.15). */

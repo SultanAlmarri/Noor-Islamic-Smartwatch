@@ -109,10 +109,13 @@ object StatusNotification {
         ensureChannel(ctx)
         val now = Instant.now()
         val c = content(config, s, now, arabic)
-        val drawn = !systemDigitsMatch(app, s.numerals)
+        // (0.22) As a chip in the status bar (Android 16's Live Updates), Android's own chronometer counts, in the phone's
+        // digits, as the chip and the Now Bar show them: Minhad does not draw it then.
+        val live = liveWanted(app, s)
+        val drawn = !live && !systemDigitsMatch(app, s.numerals)
         android.util.Log.d("NoorStatus", "countdown digits: phone ${systemLocale(app).toLanguageTag()}, Noor ${s.numerals}: ${if (drawn) "drawn by Noor" else "Android's Chronometer"}")
         val f = Formatter(arabic, s.numerals, s.timeFormat)
-        runCatching { nm.notify(ID, build(ctx, app, c, now, if (drawn) f else null)) }
+        runCatching { nm.notify(ID, if (live) buildLive(ctx, app, c) else build(ctx, app, c, now, if (drawn) f else null)) }
         if (drawn) {
             // Noor draws the seconds itself: every second while the screen is on, and at least every minute otherwise
             // (non-waking: an asleep phone is not woken; the update runs when it wakes).
@@ -210,6 +213,59 @@ object StatusNotification {
             // The watch has its own tiles and complications; never mirror this to it.
             .setLocalOnly(true)
             .build()
+    }
+
+    /**
+     * (0.22) The countdown as a chip in the status bar, as Samsung's Clock shows its timer: wanted in Settings, and
+     * Android 16 or later (its Live Updates). Whether Android shows it is Android's (and the user's) decision: it can be
+     * turned off for Minhad in Android's settings ([promotedAllowed]).
+     */
+    fun liveWanted(context: Context, s: AppSettings): Boolean = s.statusBarChip && android.os.Build.VERSION.SDK_INT >= 36
+
+    /** Whether Android lets Minhad's notifications be promoted to the status bar (always false before Android 16). */
+    fun promotedAllowed(context: Context): Boolean = android.os.Build.VERSION.SDK_INT >= 36 &&
+        runCatching { context.getSystemService(NotificationManager::class.java)?.canPostPromotedNotifications() == true }.getOrDefault(false)
+
+    /** The key Android 16 reads for a notification that asks to be promoted (Notification.EXTRA_REQUEST_PROMOTED_ONGOING). */
+    internal const val EXTRA_REQUEST_PROMOTED = "android.requestPromotedOngoing"
+
+    /**
+     * (0.22) The notification as a Live Update: Android's own template (Android promotes no custom view), the prayer and
+     * its time as the title, the place and the Hijri date below (whole in the expanded view), and Android's chronometer
+     * counting to the prayer (or from it, during its "since" period): the chip in the status bar shows that count.
+     */
+    internal fun buildLive(ctx: Context, app: Context, c: Content): android.app.Notification {
+        val title = "${c.prayer}  ·  ${c.time}"
+        val caption = ctx.getString(when { !c.elapsed -> R.string.next_prayer; c.sunrise -> R.string.since_sunrise; else -> R.string.since_prayer })
+        val text = listOfNotNull(c.hijri, c.place).joinToString("  ·  ")
+        val open = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val n = NotificationCompat.Builder(app, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFFB4883A.toInt())
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(listOfNotNull(c.place, c.hijri).joinToString("\n")))
+            .setSubText(caption)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(!c.elapsed)
+            .setWhen(c.countAt.toEpochMilli())
+            .setShowWhen(true)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(open)
+            .setLocalOnly(true)
+            .build()
+        // Asks Android to promote it, both ways Android 16 reads: the request in the extras (EXTRA_REQUEST_PROMOTED_ONGOING,
+        // later Android 16 releases), and the promoted flag (the first, which Android clears again if it does not promote
+        // the notification: the user's switch for Minhad in Android's settings, a template it does not promote).
+        n.extras.putBoolean(EXTRA_REQUEST_PROMOTED, true)
+        if (android.os.Build.VERSION.SDK_INT >= 36) n.flags = n.flags or android.app.Notification.FLAG_PROMOTED_ONGOING
+        return n
     }
 
     /** A place's own name: the part before its first comma (Latin or Arabic), or the whole when it has none. */
