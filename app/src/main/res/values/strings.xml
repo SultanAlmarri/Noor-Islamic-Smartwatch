@@ -650,6 +650,10 @@
     <string name="w_reset">Reset to default</string>
     <string name="w_apply_all">Apply to all my widgets</string>
     <string name="w_applied">Applied to every Minhad widget</string>
+    <string name="w_warn_text_shown">Hard to read on this background: shown in %1$s.</string>
+    <string name="w_shown_white">white</string>
+    <string name="w_shown_black">black</string>
+    <string name="w_shown_readable">a readable colour</string>
     <string name="w_warn_text">That text colour would be hard to read on this background, so the widget uses a readable one.</string>
     <string name="w_warn_accent">That accent colour would be hard to see on this background, so the widget uses a visible one.</string>
     <string name="w_widgets_title">Widgets</string>

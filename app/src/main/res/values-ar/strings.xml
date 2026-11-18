@@ -655,6 +655,10 @@
     <string name="w_reset">إعادة الضبط</string>
     <string name="w_apply_all">تطبيق على كل أدواتي</string>
     <string name="w_applied">طُبّق على كل أدوات منهاد</string>
+    <string name="w_warn_text_shown">يصعب قراءته على هذه الخلفية، فيظهر %1$s.</string>
+    <string name="w_shown_white">بالأبيض</string>
+    <string name="w_shown_black">بالأسود</string>
+    <string name="w_shown_readable">بلون مقروء</string>
     <string name="w_warn_text">يصعب قراءة لون النص هذا على هذه الخلفية، لذا تستخدم الأداة لونًا مقروءًا.</string>
     <string name="w_warn_accent">يصعب رؤية لون التمييز هذا على هذه الخلفية، لذا تستخدم الأداة لونًا واضحًا.</string>
     <string name="w_widgets_title">الأدوات</string>

@@ -223,6 +223,20 @@ class WidgetGalleryTest {
             Widgets.previewBuilt(app, WidgetKind.NEXT, WidgetOptions(background = WidgetBackground.DARK, opacity = 100, textColor = com.noor.app.widget.TextColor.CUSTOM, textCustom = 0xFFFFD36B.toInt()), 176, 176, moments[0].second) { looks = it.design.looks }
             assertTrue("a readable colour of one's own is kept", !looks!!.textFallback && looks!!.ink == 0xFFFFD36B.toInt())
         }
+        // The widget picker's pictures (tools/widget/previews.py makes res/drawable-nodpi/widget_preview_*.webp from
+        // them): each kind at its first size on a home screen, by day, alone on transparency, in the launcher's corner.
+        repo.setLanguage(Language.ENGLISH)
+        for ((kind, size) in listOf(WidgetKind.NEXT to (176 to 84), WidgetKind.TODAY to (360 to 176), WidgetKind.SKY to (360 to 176),
+                WidgetKind.RING to (176 to 176), WidgetKind.STRIP to (360 to 84), WidgetKind.DATE to (176 to 176))) {
+            val views = Widgets.preview(app, kind, kind.defaults, size.first, size.second, moments[0].second)!!
+            val pw = (size.first * d).toInt(); val ph = (size.second * d).toInt()
+            val frame = lay(app, views, pw, ph)
+            val alone = Bitmap.createBitmap(pw, ph, Bitmap.Config.ARGB_8888)
+            val c = Canvas(alone)
+            c.clipPath(android.graphics.Path().apply { addRoundRect(RectF(0f, 0f, pw.toFloat(), ph.toFloat()), 24f * d, 24f * d, android.graphics.Path.Direction.CW) })
+            frame.draw(c)
+            File(File(out, "previews").apply { mkdirs() }, "widget_preview_${kind.name.lowercase()}.png").outputStream().use { alone.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }
         // Shown shorter than reported (Samsung's 4×1 is shorter than it says): the layout made for the real size, uncut.
         for (kind in WidgetKind.entries) for ((rep, real) in listOf((360 to 84) to (360 to 70), (176 to 176) to (176 to 150), (360 to 176) to (360 to 150))) {
             val views = Widgets.previewSized(app, kind, kind.defaults, listOf(rep), moments[0].second)!!

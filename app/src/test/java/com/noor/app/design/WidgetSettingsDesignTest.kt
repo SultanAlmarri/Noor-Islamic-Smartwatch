@@ -97,6 +97,8 @@ class WidgetSettingsDesignTest {
             Triple(WidgetKind.TODAY, WidgetKind.TODAY.defaults, 340 to 190),
             Triple(WidgetKind.NEXT, WidgetOptions(background = WidgetBackground.GLASS), 180 to 96),
             Triple(WidgetKind.RING, WidgetKind.RING.defaults, 170 to 170),
+            // (0.24) A colour of one's own that would not read: the page says so beside it.
+            Triple(WidgetKind.TODAY, WidgetOptions(background = WidgetBackground.DARK, opacity = 100, textColor = com.noor.app.widget.TextColor.CUSTOM, textCustom = 0xFFE5484D.toInt()), 340 to 190),
         )
         for (lang in listOf("en", "ar")) {
             arabic = lang == "ar"
@@ -105,7 +107,7 @@ class WidgetSettingsDesignTest {
                 val before = built.get()
                 page = { WidgetSettings(kind, o, size, {}, {}, preview = { _, opts -> Widgets.preview(app, kind, opts, size.first, size.second, at).also { built.incrementAndGet() } }) }
                 fresh++
-                shot("${kind.name.lowercase()}_$lang", before + 1)
+                shot("${kind.name.lowercase()}_${if (o.textColor == com.noor.app.widget.TextColor.CUSTOM) "warning_" else ""}$lang", before + 1)
             }
         }
         // (0.24) Settings → Widgets: the widgets placed (two here), the defaults for new ones, how to add one.

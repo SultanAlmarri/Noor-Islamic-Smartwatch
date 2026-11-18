@@ -163,12 +163,10 @@ internal fun WidgetSettings(kind: WidgetKind, initial: WidgetOptions, sizeDp: Pa
     var applied by remember { mutableStateOf(false) }
     val sizes = (if (own) listOf(R.string.w_size_yours to sizeDp) else emptyList()) + previewSizes(kind)
     var size by remember { mutableStateOf(sizes.first().second) }
-    var warnings by remember { mutableStateOf(false to false) }
+    var looks by remember { mutableStateOf<WidgetLooks?>(null) }
     NoorPage(stringResource(kind.nameRes), PaddingValues(top = bars.calculateTopPadding(), bottom = bars.calculateBottomPadding() + 16.dp), onBack = onDone) {
-        WidgetPreview(kind, o, size, if (size == sizeDp) preview else null) { warnings = it }
+        WidgetPreview(kind, o, size, if (size == sizeDp) preview else null) { looks = it }
         Chips(sizes.map { it.second to stringResource(it.first) }.distinctBy { it.first }, size) { size = it }
-        if (warnings.first) Warning(stringResource(R.string.w_warn_text))
-        if (warnings.second) Warning(stringResource(R.string.w_warn_accent))
 
         // ---- Look ----
         SettingsSection(stringResource(R.string.widget_section_look)) {
@@ -197,11 +195,17 @@ internal fun WidgetSettings(kind: WidgetKind, initial: WidgetOptions, sizeDp: Pa
                 Chips(listOf(TextColor.AUTO to R.string.w_auto, TextColor.WHITE to R.string.w_white, TextColor.BLACK to R.string.w_black, TextColor.CUSTOM to R.string.w_custom)
                     .map { it.first to stringResource(it.second) }, o.textColor) { set(o.copy(textColor = it)) }
                 if (o.textColor == TextColor.CUSTOM) Hsv(o.textCustom) { set(o.copy(textCustom = it)) }
+                // Beside the colour: it would not read here, and what the widget shows instead.
+                looks?.takeIf { it.textFallback }?.let { l ->
+                    val shown = when (l.ink) { 0xFFFFFFFF.toInt() -> R.string.w_shown_white; 0xFF1C1C1E.toInt() -> R.string.w_shown_black; else -> R.string.w_shown_readable }
+                    Warning(stringResource(R.string.w_warn_text_shown, stringResource(shown)))
+                }
                 if (prayers || kind == WidgetKind.DATE) {
                     Label(stringResource(R.string.widget_opt_accent))
                     val accents = WidgetAccent.entries.filter { it != WidgetAccent.YOU || android.os.Build.VERSION.SDK_INT >= 31 }
                     Swatches(accents, o.accent) { set(o.copy(accent = it)) }
                     if (o.accent == WidgetAccent.CUSTOM) Hsv(o.accentCustom) { set(o.copy(accentCustom = it)) }
+                    if (looks?.accentFallback == true) Warning(stringResource(R.string.w_warn_accent))
                 }
                 if (prayers) {
                     Label(stringResource(R.string.w_icons))
@@ -295,7 +299,7 @@ internal fun WidgetSettings(kind: WidgetKind, initial: WidgetOptions, sizeDp: Pa
 private fun Warning(text: String) {
     val c = NoorTheme.colors
     Text(text, style = MaterialTheme.typography.bodyMedium, color = c.textPrimary,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0x33FFB14A)).padding(14.dp))
+        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x33FFB14A)).padding(12.dp))
 }
 
 @Composable
@@ -403,17 +407,21 @@ private fun Label(text: String) {
  */
 @Composable
 internal fun WidgetPreview(kind: WidgetKind, o: WidgetOptions, sizeDp: Pair<Int, Int>, preview: (suspend (Context, WidgetOptions) -> RemoteViews?)?,
-                           onLooks: (Pair<Boolean, Boolean>) -> Unit = {}) {
+                           onLooks: (WidgetLooks?) -> Unit = {}) {
     val context = LocalContext.current
     var picture by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     LaunchedEffect(o, sizeDp) {
         delay(60)
         var looks: WidgetLooks? = null
         val views = withContext(Dispatchers.Default) {
-            try { preview?.invoke(context, o) ?: Widgets.previewBuilt(context, kind, o, sizeDp.first, sizeDp.second) { looks = it.design.looks } }
+            try {
+                // (Built by the page's own route whatever the preview, to know what it is drawn in.)
+                val own = Widgets.previewBuilt(context, kind, o, sizeDp.first, sizeDp.second) { looks = it.design.looks }
+                preview?.invoke(context, o) ?: own
+            }
             catch (e: Exception) { android.util.Log.w("MinhadWidget", "preview", e); null }
         }
-        looks?.let { onLooks(it.textFallback to it.accentFallback) }
+        onLooks(looks)
         // The home screen's views, laid out at the widget's size and drawn, here on the main thread, as a picture (the
         // countdown's seconds stand still in it; on the home screen they turn).
         picture = views?.let { v -> runCatching { draw(context, v, sizeDp) }.onFailure { android.util.Log.w("MinhadWidget", "preview draw", it) }.getOrNull() }

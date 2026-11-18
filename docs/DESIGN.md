@@ -523,75 +523,102 @@ period, at midnight, every 15 minutes for the picture, each minute for the count
 settings change, all by non-waking alarms, so a sleeping phone is never woken for a widget (`WidgetsTest`, which also
 draws a widget and reads which second its window shows against the real clock, counting up and down, in both sets of
 digits).
-### The widgets of 0.23: six kinds, options for each, a layout for every size
+### The widgets of 0.24: drawn in Plex, sized for the real widget, every part customisable
 
-The owner: "totally improve the widgets... make them look very nice and organized, display the information in the best
-way possible, and have a lot of options for them" (18 November 2026). Six kinds (`widget/WidgetKind.kt`), prayer times
-first:
+The owner on 0.23 (18 November 2026, his Galaxy, Arabic UI with Western digits, at night): "everything is so small and
+it's not easily readable and it's not visually appealing ... should look a lot better and more professional and
+Apple-like"; then, on the mock-up, "more Apple-like", and "I want to be able to completely customise the widgets". The
+visual target is the lead's mock-up (vivid iOS-Weather-like skies, SemiBold names and countdown, colourful signs);
+its dp are the spec at the base sizes 2×1 176×84, 2×2 176×176, 4×1 360×84, 4×2 360×176, 4×4 360×372.
 
-| Kind (receiver, first size) | What it shows at each size |
-| --- | --- |
-| **Next prayer** (`NextPrayerWidget`, 2×1) | 2×1: the prayer and its Adhan time on one line, the countdown large under it, the area and city when there is room; 3×1 and wider: the prayer on the reading side, the countdown on the other; 2×2 and larger: the prayer large with its time beside it, the countdown large in the middle, "Then Maghrib 5:40 PM" and the place at the foot|
-| **Today's prayers** (`TodayWidget`, 4×2) | 4×1: the six times in a row; 4×2: the prayer, its time and the countdown, the place and the Hijri date, a slim bar from the last prayer to the next, the six times; 2×3/2×4: a column; 4×3 and larger: a grid of the six with their signs; narrow and short: as Next prayer|
-| **Minhad sky** (`SkyWidget`, 4×2) | the home sky of the moment with the Sun's path (as before), the prayer, its time, the countdown, place and date; 4×3 and larger: the day's times along the foot; under 150 dp tall: as Next prayer over the sky|
-| **Countdown ring** (`RingWidget`, 2×2) | a ring from the last prayer to the next, from the top and clockwise (time, not text: the same in Arabic), a dot at its head; inside, the prayer and its time on one line, the countdown|
-| **Prayer strip** (`StripWidget`, 4×1, 5×1) | the prayer, its time and the countdown on one line; the five prayers (and Shuruq, where six fit) in a row, the next on a pill|
-| **Hijri date** (`DateWidget`, 2×1, 4×1) | the Hijri date (the day's number large where there is room), the Gregorian date and weekday, the next occasion of the year ("Ramadan begins · In 96 days"; the White Days only when two days away or under way), with the user's Hijri adjustment|
+**How a widget is drawn** (`widget/WidgetSheet.kt`, `WidgetInk.kt`, `WidgetDesigns.kt`, `WidgetBack.kt`, `WidgetLooks.kt`).
+A home screen ignores an app's fonts in TextViews (the owner's photos showed Samsung's font beside our Plex countdown),
+so every text is drawn in IBM Plex (`res/font/plex_arabic_*`: SemiBold names, Regular times and secondary text,
+figures of one width) into pictures. A composition places lines, signs, bars and capsules in dp, from the reading edge
+(an Arabic widget is the English one mirrored; digits, signs and the countdown never reversed; the sky's arc never
+mirrored), and groups them into blocks; each block becomes one picture as small as its ink, at the screen's density,
+placed by its ImageView's padding in one layout (`res/layout/widget_v3.xml`, written by hand), which lets a picture
+shrink (never stretch or clip) if the space is smaller than drawn. The live countdown is CountPicture (Plex SemiBold,
+tracking −0.035 em) beside the seconds wheel (`tools/widget/SecondsWheel.java`, regenerated in SemiBold), the seconds at
+62 %, at min(40 dp, 0.74 × the minutes) on the minutes' baseline (the wheel's drawables are made at 40 dp; larger it
+would be a picture thousands of pixels across, which Android draws from a cache of at most 2048 px). Every text a
+composition draws is recorded (`Drawn`: role, words, size, ink, box): the tests read the widget through it.
 
-**Options** (per widget, `WidgetOptions`, kept by id in `WidgetOptionsStore`, removed with the widget, moved with it on
-a restore): background (Sky of the moment, Glass, Dark, Light, Wallpaper colours on Android 12+, None) and its opacity;
-accent (Gold, Teal, Rose, Blue, White, Wallpaper); text size (Small, Standard, Large, on top of the phone's font size,
-which counts up to 1.3); countdown on or off; its seconds; Shuruq; the place; the Hijri date; Friday's Dhuhr as
-Jumu'ah; what a tap opens (Today, Qibla or Adhan). Each kind's settings page shows only the options that change it.
-A widget never configured has its kind's defaults; for the three widgets placed before 0.23 that is 0.22's look (the
-sky, every line shown). The settings page (`WidgetConfigActivity`) opens from the widget's menu (long press → Settings)
-on Android 12 and later, optional when placing; before Android 12 when placing. Its top is the widget itself, built by
-the same code as the home screen's (`Widgets.preview`), redrawn as each option changes, over a quiet wallpaper. Each
-change is kept at once and the home screen updated.
+**Corners and size.** No corner of our own: the root is `@android:id/background`, clipped to its outline, a transparent
+shape with the system's widget radius (`drawable-v31/widget_v3_shape.xml`; 24 dp before Android 12), the background
+picture full-bleed under it, so the launcher's clip and ours are one corner (0.23 showed a second, smaller corner inside
+Samsung's). On Android 12 and later each widget gets a map of layouts by size (`Widgets.viewsFor`): one for each size
+in `OPTION_APPWIDGET_SIZES` (or the portrait min W × max H and landscape max W × min H), and each also 16 % shorter, for
+home screens that give less than they say (Samsung's 4×1 cut its bottom row); the home screen shows the one made for
+the size it really gives. Before Android 12, one layout for the portrait size.
 
-**Layouts chosen by size.** Each kind picks its layout from the size the launcher reports (portrait width and height;
-a resize rebuilds it). Android 12's map of layouts by size (`RemoteViews(Map<SizeF, RemoteViews>)`) is not used on
-purpose: a home screen merges a partial update into the widget's stored views without looking into such a map (AOSP
-`RemoteViews.mergeRemoteViews`), so the countdown's minute, a partial update, would never change.
+**Size classes.** Each kind's composition is chosen by the class whose base gives the largest scale min(w / base w,
+h / base h) (a taller class when it is nearly as large: it shows more), and scaled by it, so larger widgets get larger
+text. Floors: nothing under 11 dp, the marked time and the countdown 12 dp; content gives way first (AM/PM, then
+Shuruq where room is short unless asked for, then names before times, the list after the prayer before the main block).
 
-**Typography.** Only system fonts in text (a home screen does not load an app's fonts: 0.9.13); every text sized by
-the code to fit its width, measured in the system fonts with a margin for wider ones (`Fit`), so nothing is cut short
-at any size, at the phone's font size 1.0–1.3, in either language (`WidgetGalleryTest` checks every one). The prayer
-counted to or from: its name, and its Adhan time beside it, smaller and quieter; the countdown the largest thing; past
-prayers quieter; the next on a pill of the accent that wraps its name and time with the same padding on every side.
-AM/PM smaller than the digits (0.72, Arabic's م/ص 0.8, after a thin space); Arabic-Indic digits 16 % larger than the
-text around them (the phone's Arabic font draws them about a third smaller than Western ones). The countdown is a
-picture in Minhad's Plex Medium (`CountPicture`; Light was too thin at a widget's size) and the seconds wheel
-(`tools/widget/SecondsWheel.java`, Plex Medium, drawn at 40 dp and made smaller by shrinking its clock, tinted for light
-backgrounds; Arabic-Indic seconds at their own advances and 15 % larger), the seconds at 70 %, the sign at 62 % with a
-hair's space after it, laid glyph by glyph left to right whatever the digits (the sign first). Where a widget is short
-the prayer's line gives way before the countdown, which stays the largest thing (a degradation ladder: the place, then
-the prayer after, then the size of the name).
+| Kind | 2×1 | 2×2 | 4×1 | 4×2 | tall (2×4, 4×4) |
+| --- | --- | --- | --- | --- | --- |
+| Next prayer | name and time on one line, countdown under (110×40: name and countdown to the minute) | sign and name, Adhan time, bar, countdown 37 | sign, name over time, countdown 42 at the end (under 300 dp wide: as 2×1) | name and time large, place, countdown 54; "Later today" with the next two (no list where it would be small) | name, time, place, countdown, bar, the next prayers spread over the height |
+| Today | as Next 2×1 | six rows, the next in a capsule, the past at half strength | the strip | header (name, time, countdown 30); six columns of sign 26, name and time | header, countdown 54, bar, six rows with signs |
+| Strip | | as Today 2×2 | five columns, name over a large time; short: names at 11 over times at 13 or the times alone; tall: signs too | (the strip, taller) | |
+| Ring | | the ring; the name, countdown, time inside (the time goes under its floor) | | | |
+| Sky | as Next 2×1 | as Next 2×2 | as Next 4×1 | the arc solid gold to the Sun, dotted after, the Sun with its glow, sunrise and sunset at the ends; by night tomorrow's path dotted and dim, no Sun | |
+| Date | "24 Jumada al-Ula" (short month only if it must), or the day beside the month over the year | weekday in gold capitals, the day's number large, month, year and Gregorian, the occasion | the number, month and year over the Gregorian, the occasion at the end | the 4×1 enlarged | as 2×2 |
 
-**Direction and digits.** The app's language decides the widget's direction (a home screen lays a widget out in the
-phone's own: an Arabic phone mirrored an English widget); the app's digits always; the countdown left to right; the
-day's bar fills from the reading side; the ring always clockwise.
+**Colours.** The sky: a smooth vertical gradient (day #2F7FD8 → #4B97E6 → #6FB0EF, golden #3A4F9A → #8A6AA0 →
+#E0896A, dawn rosier, night #0B1430 → #16244C → #233564 with faint stars), blended by the Sun's elevation, each pixel
+darkened where white text would read under 4.6:1. Dark #1C1C1E, Light #FFFFFF with ink #1C1C1E and capsule #F2F2F7;
+Glass and the wallpaper's colours as before. The accent on colour is #FFD36B; the bar 6 dp in it; the capsule white 18 %
+with no stroke. The signs in their own colours (Fajr #8FD0FF, Shuruq #FFB14A, Dhuhr #FFD23F, Asr #FFBE3B, Maghrib
+#FF8A4C, Isha #E9EDFF; deeper on light); past prayers dim their text, never their signs. `WidgetLooks` resolves what is
+drawn so it reads, from the background's colours as they are (over a middling wallpaper where it is see-through):
+the text colour (one's own only where it reads at 4.5:1, else the automatic one, and the page warns); the accent (one's
+own where it shows at 3:1); the quieter text's strengths (72 %, 52 %, 50 %, raised just enough to read at 4.5:1, 3:1
+over the sky); the marked prayer's words (gold where it reads on its capsule, else the ink: over the vivid sky gold on
+a white capsule is 2.4:1, so there the name is white and the gold is in its sign and capsule); the capsule (white 18 %,
+or black 18 % where white text needs it); the opacity (raised in 5 % steps where text would not read); a middle-tone
+colour of one's own (neither white nor ink at 4.5:1) is darkened just enough for white, as the sky is.
 
-**Backgrounds.** Every background is one picture at the widget's real size (`WidgetArt.card`, `WidgetSky.picture`),
-its corners exact: the system's widget corner (`system_app_widget_background_radius`, Android 12+), at most 24 dp, and
-at most a fifth of the height on short widgets (no capsules). The sky of the moment: sharp, a little darkened, with the
-layout's scrim drawn into it (`WidgetArt.Scrim`), the land about a fifth of the height; behind widgets that write over
-the whole picture no Sun or Moon disc and no clouds (the sky's colours, an overcast and rain still say the weather);
-the sky widget keeps its clouds (none so small it reads as a speck) and draws the Sun warm on its path. Text is checked
-against the pixels drawn under it (`WidgetGalleryTest`). Glass: translucent ink, lighter at the top, a sheen along its
-top edge and a hairline of light round it (no blur: widgets cannot blur what is behind them). Text on Dark, Light and
-Glass meets 4.5:1 (`WidgetOptionsTest`); the light backgrounds use the layouts' shadow-free twins
-(`tools/widget/layouts.py` writes both). The next prayer's pill: a tint of the accent on ink, a dark pane over pictures.
+**Options** (`WidgetOptions`, kept per widget id; 0.23's saved options read as before, their new options at the
+defaults): background (Sky following the time of day or at Dawn, Day, Golden or Night; a colour; a gradient of two;
+Dark; Light; as the phone; Glass; Wallpaper colours; Transparent) and opacity; text colour (automatic, white, black,
+one's own); accent (the six, or one's own); signs (colourful, one colour, off); text size 80–130 %; alignment (Next and
+Date); the main number (countdown or Adhan time); the countdown as a timer or in words; each part shown or hidden (sign,
+name, Adhan time, countdown, seconds, bar, the next prayers, Hijri and Gregorian dates on the information line,
+Jumu'ah, AM/PM); the place (area and city, area only, off); the prayers shown (Shuruq where there is room, always,
+never); row order (as the language reads, or Fajr on the left); time format, digits and language (as in the app, or the
+widget's own); past prayers (dimmed, normal, hidden); the next prayer's highlight (filled, outline, colour only); after
+the Adhan (the time since, or straight to the next prayer); what a tap opens. Defaults for new widgets are kept per
+kind (`WidgetOptionsStore.defaults`). The page (`WidgetConfigActivity`, in the 0.15 design system) shows the widget on
+a home-screen backdrop at its own size and the kind's small, wide and large ones, then Look, Content, Show, Language and
+Tap, with Reset to default and Apply to all my widgets. Settings → Widgets (`ui/settings/WidgetsScreen.kt`) lists the
+widgets on the home screen with a small picture each, the defaults for new widgets of each kind, and how to add one
+(with a button where the home screen supports pinning).
 
-**Updates** are 0.22's engine: at each prayer, at the end of a "+" period, at midnight, every 15 minutes for the sky,
-when settings, options or size change; and each minute while the phone is awake, a partial update that redraws only the
-countdown's hours and minutes, the ring and the bar (non-waking alarms; `Widgets.shown` keeps a minute's update from
-ever leaving an old prayer beside a new countdown).
+**Updates.** Every update is a full one (a partial update would not reach into the map of layouts), each minute while
+a prayer widget is placed, at each change of display and at midnight. The minute is made on its instant: the views for
+the instant just after a change are built 800 ms ahead and handed over 50 ms before it, timed in Minhad's process while
+it lives, with an alarm 900 ms ahead (exact where the app may set one, never waking the phone) as the backstop; the
+change is `StatusTicker.nextChange` (before a prayer the time left is rounded up: the minutes turn one second after the
+time left is a whole minute). Building every widget takes some tens of milliseconds (40 ms for three in the tests).
+
+**Tests.** `WidgetGalleryTest` (about 1,070 widgets: every kind at its sizes, in English, in Arabic with Western digits
+and with Arabic-Indic, by day, at the golden hour and at night, over the sky, Dark and Light; every option alone at two
+sizes; 60 random combinations; built for a reported size and shown shorter): nothing outside the widget or its picture,
+no picture shown larger than drawn or stretched, no two texts touching, the floors, the app's digits only, the same
+content in English and Arabic and on every background, the day, golden and night skies distinct, the seconds' window
+inside the widget beside the minutes and on their baseline (1 dp), every text against the pixels under it (4.5:1, or
+3:1 over the sky or the wallpaper); a colour that would not read gives way. `WidgetsTest`: what the widgets say, the
+seconds wheel against the real clock, the minute built ahead and handed over on the change (right just after it), the
+alarm. `WidgetsChangeTest`: the prayer named across the end of a "+" period, a prayer with the "+" off, midnight.
+`WidgetOptionsTest`: every option kept and read back; 0.23's lines. Software renders, not a launcher.
 
 **For a debug host** (the emulator harness): the receivers are `com.noor.app.widget.NextPrayerWidget`, `TodayWidget`,
 `SkyWidget`, `RingWidget`, `StripWidget`, `DateWidget`; set a widget's options with
 `WidgetOptionsStore.save(context, appWidgetId, WidgetOptions(...))` and then `Widgets.refreshAsync(context)`; or build
-any kind at any size without placing it with `Widgets.preview(context, kind, options, widthDp, heightDp)`. From a shell
+any kind at any size without placing it with `Widgets.preview(context, kind, options, widthDp, heightDp)` (0.24: what
+a widget drew, `Widgets.builtFor(id).design.drawn`). From a shell
 (debug builds): `adb shell am broadcast -a com.noor.smartwatch.debug.WIDGET_OPTIONS --ei id <appWidgetId> --es options
 "bg=GLASS;ac=TEAL;sec=false" -n com.noor.smartwatch/com.noor.app.debug.TestHookReceiver` (keys as `WidgetOptions.encode`).
 

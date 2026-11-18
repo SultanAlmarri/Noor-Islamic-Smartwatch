@@ -2070,3 +2070,29 @@ dimming of the wallpaper in dark mode. The automatic sizes take a launcher cell 
 phone's. The pictures are the system's drawing with a software GPU (faithful, slow). The clock is set to the same moment
 before every page, so the countdowns agree to a second or two. `widgets_log.txt` has "Widget host dead" errors from the
 widget service: the previous page's host was stopped while the app was still updating its widgets; harmless.
+
+## 40. The widgets redesigned (0.24 work on `widgets/v3`, 18 November 2026, phone only; not released)
+
+The owner installed 0.23 and was "very disappointed": small, hard to read, not Apple-like. His Galaxy photos showed
+two real bugs: a second, smaller corner inside Samsung's clip (our background drew its own rounded card and outline)
+and the 4×1 strip's bottom row cut off (Samsung's real height is smaller than the size we built for). The lead drew a
+mock-up; the owner asked for it "better and more Apple-like" (vivid skies, SemiBold, colourful signs) and for complete
+customisation. DESIGN.md, "The widgets of 0.24", says how it is built now. In short:
+
+- **Plex everywhere, as pictures**: every text drawn in IBM Plex into pictures (a home screen ignores an app's fonts),
+  placed by padding in one layout (`widget_v3.xml`); the countdown's minutes at full size and the seconds wheel (now in
+  SemiBold) at up to 40 dp on their baseline. The old layouts (`tools/widget/layouts.py`'s), `WidgetSky`'s land and
+  clouds and `WidgetArt`'s cards are no longer drawn (still in the tree; remove when 0.24 is out).
+- **One corner**: no corner of our own; the root is `@android:id/background` clipped to the system radius.
+- **The real size**: a map of layouts by size on Android 12+, each also 16 % shorter (Samsung).
+- **Every minute a full update, on its instant**: built 800 ms ahead, handed over 50 ms before the change (the seconds
+  wheel turns on the clock's second; until 0.23 the minutes changed several hundred ms late). In process while it
+  lives, an alarm as backstop. The lead's countdown rounding (0.24: the time left rounded up) is followed throughout.
+- **Customisation**: every option the owner listed, plus row order and the prayers shown; a page with a live preview
+  at small, wide and large; Settings → Widgets; legibility kept by computation (`WidgetLooks`), with warnings.
+
+Rounds: r1 Next and Today, r2 the rest, r3 the customisation (sheets were in /tmp/claude-0/widgets3/r1..r3 during the
+session). Tested: the widget tests above, Robolectric software renders only. Not tested on a phone: Samsung's real
+sizes against the map of layouts, the hand-over timing on a real launcher (its redraw takes its own time), memory with
+several sizes' pictures per widget (each picture is as small as its ink; the background is drawn at 1 px per dp),
+the picker's previews. `widgets.yml` (section 39) should be run on this branch before a release.
