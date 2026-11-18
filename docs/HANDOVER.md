@@ -1891,3 +1891,14 @@ it only with that developer switch. 0.22.2: on Samsung phones the setting says s
 options, or "About phone" where they are turned on). The countdown's sign was drawn after the digits in a right-to-left
 shade ("2:08:17−"): it is now kept left to right (LRI + LRM, `StatusNotification.ltr`; Robolectric's text engine needs
 the mark); and the Live Update is one line shorter: the prayer and the countdown on its first line (`titleLine`).
+
+**0.22.3 (18 November 2026, phone; watch rebuilt).** The owner (screenshot): the Live Update's first line read
+"Maghrib · 5:34 PM  −1:…" on his Galaxy: a notification's title is one line and the shade ends it with dots.
+`StatusNotification.fittedTitle` keeps everything and its order and tightens the spacing step by step (two gaps, one gap,
+no dot, narrow spaces), with AM/PM at 0.8 and the seconds at 0.86 (as the home screen writes a countdown), until
+`titleFits` (the notification title's own text size with the font scale, bold, across the screen less 133 dp as measured
+on his 411 dp Galaxy, less 3 %) says it fits; only where nothing fits (360 dp at 1.3× for long lines) the seconds go.
+`LiveUpdateTest` tries 1800 combinations (longest names, times, ten-hour countdowns, both languages and digit sets, 1.0–1.3×,
+360–448 dp): all fit with their seconds from 411 dp at up to 1.15×; every real case fits from 384 dp; three real lines are
+too long at 360 dp and 1.3× (reported). The place line now has its city (`withCity`, as the widgets: "Madinat Al Mataar,
+Dubai"). Not yet seen on the phone.
