@@ -252,6 +252,9 @@ class ScreenshotTest {
         shot("15_qibla_turn_night_ar", "القبلة")
         arabic = false; theme = ThemeMode.LIGHT; reading = reading(qibla - 1.2, 6.0, 3, 44.0, 2.0)
         shot("16_qibla_aligned_day_en", "Facing the Qibla")
+        // 0.22.1: the unsure compass shows the figure 8 drawn (by day, and in Arabic).
+        reading = reading(301.4, 34.0, 1, 71.0, 4.0); shot("94_qibla_poor_day_en", "figure 8")
+        theme = ThemeMode.DARK; arabic = true; shot("95_qibla_poor_night_ar", "الرقم 8"); arabic = false
         theme = ThemeMode.DARK; reading = reading(301.4, 34.0, 1, 71.0, 4.0)
         screen = Screen.CALIBRATION; shot("17_calibration_night_en", "Calibrate")
         // Watch setup, every state from nothing to done (as the phone would see it).
