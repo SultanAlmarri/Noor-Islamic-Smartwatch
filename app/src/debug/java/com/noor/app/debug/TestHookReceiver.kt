@@ -48,6 +48,20 @@ class TestHookReceiver : BroadcastReceiver() {
                         app.getSharedPreferences("noor_ui", 0).edit().putBoolean("sky_quality_locked", true).putInt("sky_quality", 0).commit()
                         Log.i(TAG, "CITY done ${intent.getStringExtra("city")}")
                     }
+                    "com.noor.smartwatch.debug.WIDGET_OPTIONS" -> {
+                        // (0.23) A widget's own options, for the widget host (tools/devicetest/widgets.sh ON_BOUND):
+                        // --ei id <appWidgetId> --es options "bg=GLASS;op=78;ac=TEAL;ts=LARGE;sec=false;cd=true;sh=true;pl=true;hi=true;ju=true;tap=QIBLA"
+                        // (any subset; WidgetOptions.encode's keys), then every widget is rebuilt.
+                        val id = intent.getIntExtra("id", -1)
+                        val kind = runCatching { android.appwidget.AppWidgetManager.getInstance(app).getAppWidgetInfo(id)?.provider?.className }.getOrNull()
+                            ?.let { com.noor.app.widget.WidgetKind.ofClassName(it) }
+                        if (id >= 0 && kind != null) {
+                            val o = com.noor.app.widget.WidgetOptions.decode(intent.getStringExtra("options"), kind.defaults)
+                            com.noor.app.widget.WidgetOptionsStore.save(app, id, o)
+                            com.noor.app.widget.Widgets.refresh(app)
+                            Log.i(TAG, "WIDGET_OPTIONS done id=$id ${kind.name} ${o.encode()}")
+                        } else Log.w(TAG, "WIDGET_OPTIONS: no widget $id")
+                    }
                     "com.noor.smartwatch.debug.SKY" -> {
                         // The real sky (0.10): a scenery and a quality by name, for tools/devicetest/real_sky.sh.
                         val repo = app.container.settings

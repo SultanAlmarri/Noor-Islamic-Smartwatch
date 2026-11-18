@@ -1,0 +1,127 @@
+name: Widgets on real Android (emulator)
+
+# Minhad's home-screen widgets as a real Android system draws them, not Robolectric: a separate host app
+# (tools/widgethost) binds them as a launcher does, Android sends the widgets their own updates, and the screen is
+# photographed in each language, theme and background (tools/devicetest/widgets.sh). The pictures are published as
+# pre-release assets (widgets-preview), since workflow artifacts cannot be downloaded from a Claude Code cloud session.
+
+on:
+  push:
+    branches: [ 'widgets/**' ]
+    paths: [ 'tools/widgethost/**', 'tools/devicetest/widgets.sh', 'tools/devicetest/widget_crops.py', '.github/workflows/widgets.yml' ]
+  workflow_dispatch:
+    inputs:
+      apis:
+        description: Android API levels (a JSON list; 34 = Android 14, 35 = Android 15, 36 = Android 16)
+        default: '[34, 36]'
+      passes:
+        description: Passes, phone-locale:app-language:digits (space separated)
+        default: en-US:en:western ar-SA:en:western ar-SA:ar:arabic
+      themes:
+        description: System themes
+        default: light dark
+      backgrounds:
+        description: Backgrounds (wallpaper, neutral)
+        default: wallpaper neutral
+      times:
+        description: Moments, MMDDhhmm:name in UTC, 2026 (Dubai is UTC+4)
+        default: '11180700:day'
+      spec:
+        description: Widgets and sizes (auto, or Provider=WxH,WxH;Provider=WxH in dp)
+        default: auto
+      on_bound:
+        description: A shell command run for each bound widget ($ID $PROVIDER $SIZE $OPTIONS), e.g. a debug broadcast that saves its options
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: widgets-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build the debug app (it carries the test hooks) and the widget host
+        run: ./gradlew :app:assembleDebug :widgethost:assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: widget-apks
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            tools/widgethost/build/outputs/apk/debug/widgethost-debug.apk
+
+  widgets:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        api: ${{ fromJSON(inputs.apis || '[34, 36]') }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: widget-apks
+          path: apks
+
+      - name: Enable hardware acceleration for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: The widgets in each language, theme and background
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          PASSES: ${{ inputs.passes || 'en-US:en:western ar-SA:en:western ar-SA:ar:arabic' }}
+          THEMES: ${{ inputs.themes || 'light dark' }}
+          BGS: ${{ inputs.backgrounds || 'wallpaper neutral' }}
+          TIMES: ${{ inputs.times || '11180700:day' }}
+          SPEC: ${{ inputs.spec || 'auto' }}
+          ON_BOUND: ${{ inputs.on_bound }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 4
+          ram-size: 4096M
+          disk-size: 8G
+          emulator-boot-timeout: 1200
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
+          script: timeout 4200 bash tools/devicetest/widgets.sh $(find apks -name app-debug.apk) $(find apks -name widgethost-debug.apk) widgets-api${{ matrix.api }} || true
+
+      - name: Cut out each widget, and what the host said
+        if: always()
+        run: |
+          [ -d widgets-api${{ matrix.api }} ] || exit 0
+          pip install --quiet pillow || true
+          python3 tools/devicetest/widget_crops.py widgets-api${{ matrix.api }} || true
+          cat widgets-api${{ matrix.api }}/steps.txt || true
+          grep -hE " (READY|TIMEOUT|ERROR|BIND|MISSING) " widgets-api${{ matrix.api }}/*.txt | head -60 || true
+
+      - name: Publish the pictures as a pre-release asset
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          D=widgets-api${{ matrix.api }}
+          [ -d $D ] || exit 0
+          B=$(echo "${{ github.ref_name }}" | tr '/' '-')
+          gzip -f $D/logcat.txt || true
+          (cd $D && zip -qr ../widgets-$B-api${{ matrix.api }}.zip .)
+          gh release view widgets-preview >/dev/null 2>&1 || gh release create widgets-preview --prerelease \
+            --title "Widgets preview (emulator pictures)" --notes "Pictures from the widgets workflow (tools/devicetest/widgets.sh), one zip per branch and Android version; replaced on each run." || true
+          gh release upload widgets-preview widgets-$B-api${{ matrix.api }}.zip --clobber || { sleep 20; gh release upload widgets-preview widgets-$B-api${{ matrix.api }}.zip --clobber; }

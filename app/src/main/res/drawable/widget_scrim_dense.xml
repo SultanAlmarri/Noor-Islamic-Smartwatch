@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- (0.23) Under the day's times on the sky: black 30 % at the top fading by 30 %, a light veil over the middle, and
+     rising to 55 % at the foot where the times stand over the land, so every time reads at a glance. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#4D000000" android:centerColor="#14000000" android:centerY="0.3" android:endColor="#14000000" />
+            <corners android:radius="@dimen/widget_radius" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#00000000" android:centerColor="#1A000000" android:centerY="0.5" android:endColor="#8C000000" />
+            <corners android:radius="@dimen/widget_radius" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The home-screen widgets' text (0.9.10): white over the sky picture, with a soft shadow so it reads over bright
-     clouds and the low Sun. -->
+<!-- The home-screen widgets' text (0.9.10; 0.23). The code sets each text's size and colour for the widget's size and
+     options (WidgetRender); the styles give the font, one line, and, on the default theme, a soft shadow so the text
+     reads over the sky's bright clouds, the low Sun or a wallpaper. Over light backgrounds the layouts' "_plain" twins
+     (tools/widget/layouts.py) use Theme.Noor.Widget.Plain, without the shadow. Only system fonts: a home screen builds
+     widgets in a restricted mode that does not load an app's font resources (0.9.13). -->
 <resources>
-    <style name="Theme.Noor.Widget" parent="android:Theme.DeviceDefault" />
+    <attr name="minhadWidgetShadow" format="color" />
+
+    <style name="Theme.Noor.Widget" parent="android:Theme.DeviceDefault">
+        <item name="minhadWidgetShadow">#73000000</item>
+    </style>
+    <style name="Theme.Noor.Widget.Plain">
+        <item name="minhadWidgetShadow">#00000000</item>
+    </style>
 
     <style name="Widget.Noor.Text" parent="">
         <item name="android:textColor">#FFFFFFFF</item>
-        <item name="android:shadowColor">#73000000</item>
+        <item name="android:shadowColor">?attr/minhadWidgetShadow</item>
         <item name="android:shadowDy">1</item>
         <item name="android:shadowRadius">6</item>
         <item name="android:maxLines">1</item>
@@ -15,8 +25,19 @@
         <item name="android:textAlignment">viewStart</item>
     </style>
 
+    <style name="Widget.Noor.Text.Display">
+        <item name="android:textSize">24sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="Widget.Noor.Text.Number">
+        <item name="android:textSize">40sp</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
     <style name="Widget.Noor.Text.Title">
-        <item name="android:textSize">18sp</item>
+        <item name="android:textSize">17sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
@@ -30,14 +51,20 @@
         <item name="android:textColor">#D9FFFFFF</item>
     </style>
 
+    <style name="Widget.Noor.Text.Caption">
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">#D9FFFFFF</item>
+    </style>
+
     <style name="Widget.Noor.Text.Time">
         <item name="android:textSize">14sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:fontFeatureSettings">tnum</item>
     </style>
 
-    <!-- The countdown: the phone's own light font (a home screen ignores fonts packed in an app), digits of one width, and
-         never cut short with "…" (0.9.13: on a Samsung phone the seconds showed as "..."). -->
+    <!-- The countdown as text (before Android 12): the phone's own light font, digits of one width, never cut short with
+         "…" (0.9.13: on a Samsung phone the seconds showed as "..."), always left to right. -->
     <style name="Widget.Noor.Text.Countdown">
         <item name="android:textSize">28sp</item>
         <item name="android:fontFamily">sans-serif-light</item>

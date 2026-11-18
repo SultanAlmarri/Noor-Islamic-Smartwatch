@@ -70,6 +70,8 @@ object StatusNotification {
     data class Content(
         val prayer: String, val time: String, val line: String, val nextAt: Instant, val refreshAt: Instant,
         val place: String?, val hijri: String, val elapsed: Boolean, val countAt: Instant, val sunrise: Boolean = false,
+        /** (0.23) The prayer counted to or from, and its day (the widgets name it with or without Jumu'ah). */
+        val event: com.noor.prayer.Prayer? = null, val eventDate: java.time.LocalDate? = null,
     ) {
         /** The countdown as the home screen writes it at [now] ("−1:10:34", "+04:12"). */
         fun countdown(now: Instant, f: Formatter): String =
@@ -92,7 +94,8 @@ object StatusNotification {
         // date.
         val refresh = minOf(cd.changesAt.plusMillis(REFRESH_AFTER_MS), midnight.plusSeconds(1))
         return Content(f.prayerName(cd.event.prayer, cd.event.date), f.timeAt(cd.event.at, config.zone), listOfNotNull(place, hijri).joinToString("  ·  "),
-            st.next.at, refresh, place, hijri, cd.elapsed, cd.event.at, cd.event.prayer == com.noor.prayer.Prayer.SHURUQ)
+            st.next.at, refresh, place, hijri, cd.elapsed, cd.event.at, cd.event.prayer == com.noor.prayer.Prayer.SHURUQ,
+            cd.event.prayer, cd.event.date)
     }
 
     private const val REFRESH_AFTER_MS = 500L

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glass (0.23), as the app's cards: translucent ink, lighter at the top and a little lighter still along its top edge
+     (light caught by the pane), with a hairline of light round its edge. Its opacity is set by the code. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#FF2A3449" android:centerColor="#FF1A2133" android:endColor="#FF0E131E" />
+            <corners android:radius="@dimen/widget_radius" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#21FFFFFF" android:centerColor="#00FFFFFF" android:endColor="#00FFFFFF" android:centerY="0.22" />
+            <corners android:radius="@dimen/widget_radius" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <stroke android:width="1dp" android:color="#2EFFFFFF" />
+            <corners android:radius="@dimen/widget_radius" />
+        </shape>
+    </item>
+</layer-list>

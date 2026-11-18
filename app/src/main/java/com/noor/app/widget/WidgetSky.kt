@@ -41,7 +41,7 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
     val today = now.atZone(zone).toLocalDate()!!
     val day = config.day(today)
     val state = config.state(now)
-    val scene: SkyScene = run {
+    val scene: SkyScene by lazy {
         val events = Prayer.entries.mapNotNull { p -> day.instant(p)?.let { p to it } }
         val landSeed = place.nameEn.hashCode().toLong() * 7919L + (place.point.latitude * 100).toLong()
         SkyScene(
@@ -52,7 +52,7 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
             realPath = settings.sunPath == com.noor.app.data.SunPathMode.REAL,
         )
     }
-    val weather: Weather = Weather.of(scene.seed, scene.terrain)
+    val weather: Weather by lazy { Weather.of(scene.seed, scene.terrain) }
 }
 
 /**
@@ -62,13 +62,25 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
  * Drawn with the ordinary Canvas, off the main thread, a few times an hour; rounded at the corners.
  */
 internal object WidgetSky {
-    class Options(val land: Boolean = true, val path: Boolean = false, val horizon: Float = 0.74f, val arcTop: Float = 0.30f)
+    class Options(val land: Boolean = true, val path: Boolean = false, val horizon: Float = 0.74f, val arcTop: Float = 0.30f,
+                  /** The corners, in dp (0.23: the system's widget corner). */
+                  val radius: Float = 22f,
+                  /**
+                   * (0.23) The Sun's and the Moon's discs: off behind widgets that write over the whole picture (only
+                   * the sky widget draws the Sun on its path), where a bright disc would sit under the text; the
+                   * sky's colours and a softer glow still say where the light is.
+                   */
+                  val bodies: Boolean = true,
+                  /** (0.23) Darkened by this much all over (0..1), so white text reads on it (sampled 4.5:1 in WidgetGalleryTest). */
+                  val dim: Float = 0f) {
+        fun with(radius: Float) = Options(land, path, horizon, arcTop, radius, bodies, dim)
+    }
 
     fun picture(res: Resources, ws: WidgetScene, w: Int, h: Int, density: Float, rtl: Boolean, o: Options): Bitmap {
         val bmp = Bitmap.createBitmap(w.coerceAtLeast(8), h.coerceAtLeast(8), Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val wf = bmp.width.toFloat(); val hf = bmp.height.toFloat()
-        val r = 22f * density
+        val r = o.radius * density
         c.clipPath(Path().apply { addRoundRect(RectF(0f, 0f, wf, hf), r, r, Path.Direction.CW) })
         val layout = SceneLayout(cloudTop = 0f, arcTop = o.arcTop, horizon = if (o.land) o.horizon else 0.97f, ground = 1f)
         // (0.23) The scene is never mirrored, whatever the language (as the home screen's).
@@ -99,7 +111,7 @@ internal object WidgetSky {
                 c.drawCircle(x, y, (0.35f + 0.55f * b) * density, p)
             }
         }
-        if (look.moonVisibility > 0f && look.moonY < hy) {
+        if (o.bodies && look.moonVisibility > 0f && look.moonY < hy) {
             val mr = 6f * density
             p.shader = RadialGradient(look.moonX, look.moonY, mr * 5, intArrayOf(argb(0.10f * look.moonVisibility * look.night, 0.85f, 0.9f, 1f), 0), null, Shader.TileMode.CLAMP)
             c.drawCircle(look.moonX, look.moonY, mr * 5, p); p.shader = null
@@ -112,12 +124,15 @@ internal object WidgetSky {
             Atmosphere.tone(light.light.sunDisc.copyOf().also { for (k in 0..2) it[k] *= 0.004 }, disc)
             Atmosphere.tone(light.light.sunGlow.copyOf(), glow)
             val gr = 40f * density
-            p.shader = RadialGradient(look.sunX, look.sunY, gr, intArrayOf(argb(0.55f, glow), argb(0.12f, glow), 0), floatArrayOf(0f, 0.35f, 1f), Shader.TileMode.CLAMP)
+            val g = if (o.bodies) 1f else 0.4f
+            p.shader = RadialGradient(look.sunX, look.sunY, gr, intArrayOf(argb(0.55f * g, glow), argb(0.12f * g, glow), 0), floatArrayOf(0f, 0.35f, 1f), Shader.TileMode.CLAMP)
             c.drawCircle(look.sunX, look.sunY, gr, p); p.shader = null
-            p.color = argb(1f, maxOf(disc[0], 0.9), maxOf(disc[1], 0.8), maxOf(disc[2], 0.6))
-            c.save(); c.clipRect(0f, 0f, wf, hy)
-            c.drawCircle(look.sunX, look.sunY, 6.5f * density, p)
-            c.restore()
+            if (o.bodies) {
+                p.color = argb(1f, maxOf(disc[0], 0.9), maxOf(disc[1], 0.8), maxOf(disc[2], 0.6))
+                c.save(); c.clipRect(0f, 0f, wf, hy)
+                c.drawCircle(look.sunX, look.sunY, 6.5f * density, p)
+                c.restore()
+            }
         }
         // An overcast greys the whole sky.
         if (state.overcast > 0.02f) {
@@ -126,14 +141,25 @@ internal object WidgetSky {
             c.drawRect(0f, 0f, wf, hy, p)
         }
         // The clouds of the moment.
-        CloudAtlas.preload(res)
-        CloudAtlas.get(res)?.let { atlas ->
+        // (0.23) Behind widgets that write over the whole picture, no clouds (the sky's colours, an overcast and rain
+        // still say the weather); on the sky widget, none so small it reads as a speck.
+        if (o.bodies) CloudAtlas.preload(res)
+        if (o.bodies) CloudAtlas.get(res)?.let { atlas ->
             val f = CloudField.Frame(wf, hf, hy, density, view.fov, 40f, ws.weather, state, look.sunAzimuth, look.elevation, light.light, light.lut,
                 look.night, look.moonVisibility * look.moonIllumination * look.night)
-            CloudPainter().draw(c, atlas, f, -1e6f, -1e6f + 1f, lightning = false)
+            CloudPainter().draw(c, atlas, f, -1e6f, -1e6f + 1f, lightning = false, minWidth = 36f * density)
         }
         if (o.land) drawLand(c, ws, view, light, look, wf, hf, density)
         if (o.path) drawPath(c, ws, view, look, wf, density)
+        if (o.dim > 0f) c.drawColor(argb(o.dim, 0.0, 0.0, 0.0))
+        // (0.23) The Sun on the sky widget: a warm core and two soft glows over the dimming, so it reads as the Sun (a
+        // flat grey disc read as the Moon), unless an overcast hides it.
+        if (o.bodies && look.elevation > -0.5 && look.sunY < hy && state.overcast < 0.35f) {
+            val sp = Paint(Paint.ANTI_ALIAS_FLAG)
+            sp.color = 0x1FFFD9A0; c.drawCircle(look.sunX, look.sunY, 28f * density, sp)
+            sp.color = 0x59FFD9A0; c.drawCircle(look.sunX, look.sunY, 12f * density, sp)
+            sp.color = 0xFFFFF4DC.toInt(); c.drawCircle(look.sunX, look.sunY, 5f * density, sp)
+        }
         // Rain falling here.
         if (state.rain > 0.02f) {
             val rnd = java.util.Random(77)
@@ -225,7 +251,7 @@ internal object WidgetSky {
         }
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
         c.save(); c.clipRect(0f, 0f, w, hy)
-        p.color = argb(0.55f, 1.0, 1.0, 1.0); p.strokeWidth = 1.1f * density; p.pathEffect = DashPathEffect(floatArrayOf(2 * density, 4.5f * density), 0f)
+        p.color = argb(0.7f, 1.0, 1.0, 1.0); p.strokeWidth = 1.2f * density; p.pathEffect = DashPathEffect(floatArrayOf(3 * density, 4f * density), 0f)
         c.drawPath(path, p); p.pathEffect = null
         // The day so far, in gold.
         val sunX = geo.x(scene.nowFraction)
@@ -237,6 +263,9 @@ internal object WidgetSky {
         // The prayers on the path (on the horizon while the Sun is below it).
         val fill = Paint(Paint.ANTI_ALIAS_FLAG)
         for ((prayer, at) in scene.events) {
+            // (0.23) Fajr and Isha, with the Sun under the horizon, would stand on the horizon beside Shuruq and
+            // Maghrib as two specks: they are left out (the widget's times say them).
+            if (prayer == Prayer.FAJR || prayer == Prayer.ISHA) continue
             val fr = scene.path.fraction(at)
             val x = geo.x(fr); val y = geo.y(scene.elevationAt(fr), fr).coerceAtMost(hy)
             val passed = !at.isAfter(ws.now)
@@ -244,9 +273,9 @@ internal object WidgetSky {
                 fill.color = argb(0.25f, 0.96, 0.84, 0.59); c.drawCircle(x, y, 7.5f * density, fill)
                 p.color = argb(1f, 0.96, 0.84, 0.59); p.strokeWidth = 1.5f * density; c.drawCircle(x, y, 4f * density, p)
             } else if (passed) {
-                fill.color = argb(0.95f, 1.0, 1.0, 1.0); c.drawCircle(x, y, 2.3f * density, fill)
+                fill.color = argb(0.95f, 1.0, 1.0, 1.0); c.drawCircle(x, y, 3f * density, fill)
             } else {
-                p.color = argb(0.8f, 1.0, 1.0, 1.0); p.strokeWidth = 1f * density; c.drawCircle(x, y, 2.6f * density, p)
+                fill.color = argb(0.55f, 1.0, 1.0, 1.0); c.drawCircle(x, y, 3f * density, fill)
             }
         }
     }

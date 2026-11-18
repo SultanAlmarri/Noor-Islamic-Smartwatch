@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- (0.23) Over a widget's sky picture, for text at the top and the foot: black 25 % at the top fading to nothing by 30 %,
+     nothing to 55 %, then rising to 35 % at the foot. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#40000000" android:centerColor="#00000000" android:centerY="0.3" android:endColor="#00000000" />
+            <corners android:radius="@dimen/widget_radius" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#00000000" android:centerColor="#00000000" android:centerY="0.55" android:endColor="#59000000" />
+            <corners android:radius="@dimen/widget_radius" />
+        </shape>
+    </item>
+</layer-list>

@@ -81,13 +81,13 @@ class WidgetsTest {
         for (id in listOf(next, today, sky)) {
             val v = shadow.getViewFor(id)
             assertTrue("prayer: ${text(v, R.id.widget_prayer)}", text(v, R.id.widget_prayer) in names)
-            assertTrue(text(v, R.id.widget_time).matches(Regex("\\d{1,2}:\\d{2} [AP]M")))
+            assertTrue(text(v, R.id.widget_time).matches(Regex("\\d{1,2}:\\d{2}[ \u2009][AP]M")))
             // The countdown: Noor's picture of "+13" and ":", then the seconds wheel; not Android's digital countdown.
             assertTrue(visible(v, R.id.widget_count_row))
             assertTrue(!visible(v, R.id.widget_countdown) && !visible(v, R.id.widget_countdown_text))
-            assertTrue(main(v).sameAs(CountPicture.draw(app, "+13")))
+            assertTrue(main(v).sameAs(CountPicture.draw(app, CountPicture.Spec("+13", Widgets.builtFor(id)!!.countScale))))
             assertEquals(Widgets.wheelFor(content(at), false).zone, v.findViewById<AnalogClock>(R.id.widget_count_wheel).timeZone)
-            assertNotNull((v.findViewById<ImageView>(R.id.widget_sky).drawable))
+            assertNotNull((v.findViewById<ImageView>(R.id.widget_bg).drawable))
         }
         // At 15:50 the widgets count the time since Asr, as the home screen does.
         assertEquals("Asr", text(shadow.getViewFor(next), R.id.widget_prayer))
@@ -140,9 +140,13 @@ class WidgetsTest {
             fun diff(n: Int): Long {
                 val c = bare.copy(Bitmap.Config.ARGB_8888, true)
                 val label = app.getDrawable(app.resources.getIdentifier("noor_sec_${set}_%02d".format(n), "drawable", app.packageName))!!
+                // (0.23) The wheel is drawn smaller by the widget's scale: its clock is made smaller, and Android scales
+                // the canvas about the clock's centre, the label at its intrinsic size; the same here, about the top.
+                val k = Widgets.builtFor(id)!!.countScale
                 val lw = label.intrinsicWidth; val lh = label.intrinsicHeight
                 val canvas = Canvas(c); canvas.clipRect(r)
-                label.setBounds(r.centerX() - lw / 2, r.top, r.centerX() - lw / 2 + lw, r.top + lh); label.draw(canvas)
+                canvas.scale(k, k, r.exactCenterX(), r.top.toFloat())
+                label.setBounds((r.exactCenterX() - lw / 2f).toInt(), r.top, (r.exactCenterX() - lw / 2f).toInt() + lw, r.top + lh); label.draw(canvas)
                 var sum = 0L
                 for (y in r.top until r.bottom) for (x in r.left until r.right) {
                     val a = full.getPixel(x, y); val b = c.getPixel(x, y)
@@ -154,8 +158,11 @@ class WidgetsTest {
             val best = scores.indices.minByOrNull { scores[it] }!!
             // The window shows one label clearly: almost exactly (a few levels of 255 on average, from smoothing), and
             // better than any other (one that shares a digit, or differs only by a thin stroke, can come within 1.5 times).
+            // (0.23: the wheel is drawn smaller by the widget's scale, in Plex Medium, whose heavier strokes leave more
+            // smoothing at their edges than 0.9.14's Light: up to 8 levels on average, and at least twice as close as
+            // the next best label, where 0.9.14 asked 6 and 1.1 times.)
             val perChannel = scores[best].toDouble() / (r.width() * r.height() * 3)
-            assertTrue("a clear label (${scores.sorted().take(3)}, $perChannel per channel)", perChannel < 6 && scores.sorted()[1] > 1.1 * scores[best])
+            assertTrue("a clear label (${scores.sorted().take(3)}, $perChannel per channel)", perChannel < 8 && scores.sorted()[1] > 2.0 * scores[best])
             return best
         }
         /** What the wheel must show at the real time [now] (the clock it turns on is the real one). */
@@ -194,7 +201,7 @@ class WidgetsTest {
         repo.setNumerals(Numerals.ARABIC_INDIC)
         Thread.sleep(1500)
         Widgets.refresh(app, at)
-        assertTrue(main(shadow.getViewFor(next)).sameAs(CountPicture.draw(app, "+١٣")))
+        assertTrue(main(shadow.getViewFor(next)).sameAs(CountPicture.draw(app, CountPicture.Spec("+١٣", Widgets.builtFor(next)!!.countScale))))
         checkSeconds(today, true, content(at))
         picture("widget_next_arabic_digits", next, 180 to 84)
 
@@ -206,7 +213,7 @@ class WidgetsTest {
         Widgets.refresh(app, before)
         val bv = shadow.getViewFor(next)
         assertEquals("Asr", text(bv, R.id.widget_prayer))
-        assertTrue(main(bv).sameAs(CountPicture.draw(app, "−1:27")))
+        assertTrue(main(bv).sameAs(CountPicture.draw(app, CountPicture.Spec("−1:27", Widgets.builtFor(next)!!.countScale))))
         checkSeconds(today, false, content(before))
         picture("widget_next_before", next, 180 to 84); picture("widget_today_before", today, 340 to 170); picture("widget_sky_before", sky, 340 to 170)
 
@@ -217,19 +224,19 @@ class WidgetsTest {
         for (id in listOf(next, today, sky)) {
             val v = shadow.getViewFor(id)
             assertTrue(visible(v, R.id.widget_count_row))
-            assertTrue(main(v).sameAs(CountPicture.draw(app, "−1:27")))
+            assertTrue(main(v).sameAs(CountPicture.draw(app, CountPicture.Spec("−1:27", Widgets.builtFor(id)!!.countScale))))
         }
         checkSeconds(next, false, content(before))
         // At 14:10:00 exactly it reads "−1:27" (and 00), and the next instant "−1:26:59": the update for that is armed at
         // once, and changes the countdown alone, the sky picture untouched.
         assertEquals(before.plusMillis(30).toEpochMilli(), alarm().triggerAtTime)
         assertTrue(shadowOf(alarm().operation).savedIntent.getBooleanExtra(Widgets.EXTRA_MINUTE, false))
-        val skyPicture = shadow.getViewFor(today).findViewById<ImageView>(R.id.widget_sky).drawable
+        val skyPicture = shadow.getViewFor(today).findViewById<ImageView>(R.id.widget_bg).drawable
         // Robolectric's home screen has no partial updates: apply them as a home screen does, over the widget as it is.
         Widgets.partialUpdate = { _, id, views -> views.reapply(app, shadow.getViewFor(id)) }
         Widgets.refresh(app, before.plusMillis(30), minuteOnly = true)
-        assertTrue(main(shadow.getViewFor(today)).sameAs(CountPicture.draw(app, "−1:26")))
-        assertTrue("the picture is left as it was", skyPicture === shadow.getViewFor(today).findViewById<ImageView>(R.id.widget_sky).drawable)
+        assertTrue(main(shadow.getViewFor(today)).sameAs(CountPicture.draw(app, CountPicture.Spec("−1:26", Widgets.builtFor(today)!!.countScale))))
+        assertTrue("the picture is left as it was", skyPicture === shadow.getViewFor(today).findViewById<ImageView>(R.id.widget_bg).drawable)
         // Then the next one a minute later, at 14:11:00 ("−1:25:59" just after).
         assertEquals(before.plusSeconds(60).plusMillis(30).toEpochMilli(), alarm().triggerAtTime)
 
@@ -247,7 +254,14 @@ class WidgetsTest {
             assertTrue(visible(v, R.id.widget_countdown) && !visible(v, R.id.widget_count_row))
             assertEquals("−1:27:00", v.findViewById<android.widget.Chronometer>(R.id.widget_countdown).text.toString())
         }
-        // Android ticks it: no update each minute then.
+        // Android ticks it: the countdown needs no update each minute then. (0.23) Today's prayers still redraws its
+        // slim bar each minute; laid out as one row (4×1) it has none, and then no widget changes each minute.
+        assertTrue(shadowOf(alarm().operation).savedIntent.getBooleanExtra(Widgets.EXTRA_MINUTE, false))
+        manager.updateAppWidgetOptions(today, android.os.Bundle().apply {
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 340); putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 84)
+        })
+        Thread.sleep(1500)
+        Widgets.refresh(app, before)
         assertTrue(!shadowOf(alarm().operation).savedIntent.getBooleanExtra(Widgets.EXTRA_MINUTE, false))
     }
 

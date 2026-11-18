@@ -17,6 +17,7 @@
                 <action android:name="com.noor.smartwatch.debug.STATUS" />
                 <action android:name="com.noor.smartwatch.debug.LANG" />
                 <action android:name="com.noor.smartwatch.debug.SYSTEM_LOCALE" />
+                <action android:name="com.noor.smartwatch.debug.WIDGET_OPTIONS" />
             </intent-filter>
         </receiver>
     </application>
