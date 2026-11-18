@@ -1903,7 +1903,7 @@ on his 411 dp Galaxy, less 3 %) says it fits; only where nothing fits (360 dp at
 too long at 360 dp and 1.3× (reported). The place line now has its city (`withCity`, as the widgets: "Madinat Al Mataar,
 Dubai"). Not yet seen on the phone.
 
-## 37. The countdown keeps ticking when Minhad is closed (0.22.4 work, 18 November 2026, a helper on `fix/live-ticker`)
+## 37. The countdown keeps ticking when Minhad is closed (0.22.4, 18 November 2026, phone; watch rebuilt; a helper on `fix/live-ticker`)
 
 **What the owner said** (Galaxy, One UI 8 / Android 16, the phone in Arabic with Arabic-Indic digits, Minhad in English
 with Western digits): the status-bar countdown "works well. But ... sometimes it doesn't work when I close the application

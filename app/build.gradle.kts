@@ -12,8 +12,8 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 26
         targetSdk = 35
-        versionCode = 43
-        versionName = "0.22.3"
+        versionCode = 44
+        versionName = "0.22.4"
     }
 
     signingConfigs {
