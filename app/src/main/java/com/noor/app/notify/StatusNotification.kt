@@ -191,11 +191,21 @@ object StatusNotification {
 
     /** Redraws the notification with Noor's own digits; false once its content is due for a full rebuild. */
     internal fun tick(t: Ticking, now: Instant): Boolean {
-        if (!now.isBefore(t.content.refreshAt)) return false
-        val n = if (t.live) buildLive(t.ctx, t.app, t.content, now, t.f, t.seconds) else build(t.ctx, t.app, t.content, now, t.f, t.seconds)
+        val n = prepare(t, now) ?: return false
+        post(t, n)
+        return true
+    }
+
+    /** The notification as it is at [now]; null where its content is out of date (rebuild it). */
+    internal fun prepare(t: Ticking, now: Instant): android.app.Notification? {
+        if (!now.isBefore(t.content.refreshAt)) return null
+        return if (t.live) buildLive(t.ctx, t.app, t.content, now, t.f, t.seconds) else build(t.ctx, t.app, t.content, now, t.f, t.seconds)
+    }
+
+    /** Shows [n] (built by [prepare]). */
+    internal fun post(t: Ticking, n: android.app.Notification) {
         latest = n
         runCatching { NotificationManagerCompat.from(t.app).notify(ID, n) }
-        return true
     }
 
     /**
@@ -584,40 +594,80 @@ internal object StatusTicker {
     @Volatile internal var ticks = 0L
     /** Whether a redraw is waiting (never while the screen is off). */
     @Volatile internal var scheduled = false
+    /** The moment the next notification is to be shown (wall clock, ms): the countdown's next change. */
+    @Volatile private var boundary = 0L
+    /** Built ahead of [boundary], waiting to be shown at it. */
+    @Volatile private var ready: android.app.Notification? = null
+
+    /**
+     * (0.24) Built ahead, shown on the instant: until 0.23 the next second's notification was built only once that second
+     * had begun, so building it and handing it to the shade put the chip a little behind the true countdown (the owner:
+     * "off by a few milliseconds", one second behind the widget in a screenshot). Now it is built [LEAD_MS] before the
+     * countdown changes, for the instant just after the change, and handed to Android [EARLY_MS] before it, the time the
+     * shade takes to draw it.
+     */
     private val tick = object : Runnable {
         override fun run() {
             scheduled = false
             val t = current ?: return
             val pm = t.app.getSystemService(android.os.PowerManager::class.java)
             if (pm?.isInteractive == false) { stop(); return }
-            if (!StatusNotification.tick(t, Instant.now())) { current = null; StatusNotification.refreshAsync(t.app); return }
+            val at = Instant.ofEpochMilli(boundary + 1)
+            val n = StatusNotification.prepare(t, at)
+            if (n == null) { current = null; StatusNotification.refreshAsync(t.app); return }
+            ready = n
+            scheduled = true
+            handler.postDelayed(show, maxOf(0L, boundary - EARLY_MS - System.currentTimeMillis()))
+        }
+    }
+
+    private val show = object : Runnable {
+        override fun run() {
+            scheduled = false
+            val t = current ?: return
+            val n = ready ?: return
+            ready = null
+            StatusNotification.post(t, n)
             ticks++
             schedule(t)
         }
     }
 
-    /**
-     * On the next whole second, so the seconds change in step with the clock; to the minute (0.22.4: where the service
-     * could not start), as the countdown's minute changes.
-     */
+    /** When the countdown next changes, after [now]: as its seconds (or, to the minute, its minutes) turn. */
+    internal fun nextChange(c: StatusNotification.Content, now: Long, seconds: Boolean): Long {
+        val unit = if (seconds) 1000L else 60_000L
+        val ms = now - c.countAt.toEpochMilli()   // negative before the prayer
+        // Before a prayer the countdown drops as the time left falls below a whole unit; after it, it rises as the time
+        // since reaches one. Either way the change is where (now − countAt) is a whole number of units.
+        val wait = unit - Math.floorMod(ms, unit)
+        return now + wait
+    }
+
     private fun schedule(t: StatusNotification.Ticking) {
         val now = System.currentTimeMillis()
-        val wait = if (t.seconds) 1000L - now % 1000L + 5L
-            else maxOf(50L, com.noor.app.widget.Widgets.nextMinute(t.content, Instant.ofEpochMilli(now)).toEpochMilli() - now)
+        var b = nextChange(t.content, now, t.seconds)
+        // Too close to build in time: the change after it (the one now is shown as it stands).
+        if (b - LEAD_MS / 4 < now) b = nextChange(t.content, b + 1, t.seconds)
+        boundary = b
         scheduled = true
-        handler.postDelayed(tick, wait)
+        handler.postDelayed(tick, maxOf(0L, b - LEAD_MS - now))
     }
+
+    /** How long before the change the notification is built (it takes a few hundredths of a second). */
+    private const val LEAD_MS = 300L
+    /** How long before the change it is handed to Android: about a frame of the shade's drawing. */
+    private const val EARLY_MS = 12L
 
     fun start(app: Context, t: StatusNotification.Ticking) {
         handler.post {
             current = t
-            handler.removeCallbacks(tick); scheduled = false
+            handler.removeCallbacks(tick); handler.removeCallbacks(show); ready = null; scheduled = false
             val pm = app.getSystemService(android.os.PowerManager::class.java)
             if (pm?.isInteractive != false) schedule(t)
         }
     }
 
-    fun stop() { handler.post { current = null; handler.removeCallbacks(tick); scheduled = false } }
+    fun stop() { handler.post { current = null; handler.removeCallbacks(tick); handler.removeCallbacks(show); ready = null; scheduled = false } }
 
     val running: Boolean get() = current != null
     /** What it is ticking (for tests and the tester's page). */
