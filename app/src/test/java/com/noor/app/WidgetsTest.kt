@@ -249,7 +249,14 @@ class WidgetsTest {
             assertTrue(visible(v, R.id.widget_countdown) && !visible(v, R.id.widget_count_row))
             assertEquals("−1:27:00", v.findViewById<android.widget.Chronometer>(R.id.widget_countdown).text.toString())
         }
-        // Android ticks it: no update each minute then.
+        // Android ticks it: the countdown needs no update each minute then. (0.23) Today's prayers still redraws its
+        // slim bar each minute; laid out as one row (4×1) it has none, and then no widget changes each minute.
+        assertTrue(shadowOf(alarm().operation).savedIntent.getBooleanExtra(Widgets.EXTRA_MINUTE, false))
+        manager.updateAppWidgetOptions(today, android.os.Bundle().apply {
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 340); putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 84)
+        })
+        Thread.sleep(1500)
+        Widgets.refresh(app, before)
         assertTrue(!shadowOf(alarm().operation).savedIntent.getBooleanExtra(Widgets.EXTRA_MINUTE, false))
     }
 

@@ -38,9 +38,9 @@ internal class WidgetPalette(
 
         /** The accent over dark and over light backgrounds (each meets 4.5:1 on its background: WidgetPaletteTest). */
         fun accentOn(a: WidgetAccent, light: Boolean, context: Context?): Int = when (a) {
-            WidgetAccent.GOLD -> if (light) 0xFF8A6524.toInt() else 0xFFF6D696.toInt()
-            WidgetAccent.TEAL -> if (light) 0xFF0E6E66.toInt() else 0xFF84DCCC.toInt()
-            WidgetAccent.ROSE -> if (light) 0xFFA8395A.toInt() else 0xFFF7AFBF.toInt()
+            WidgetAccent.GOLD -> if (light) 0xFF765519.toInt() else 0xFFF6D696.toInt()
+            WidgetAccent.TEAL -> if (light) 0xFF0A5F58.toInt() else 0xFF84DCCC.toInt()
+            WidgetAccent.ROSE -> if (light) 0xFF963152.toInt() else 0xFFF7AFBF.toInt()
             WidgetAccent.BLUE -> if (light) 0xFF2A57B0.toInt() else 0xFFA3C6FF.toInt()
             WidgetAccent.WHITE -> if (light) INK else WHITE
             WidgetAccent.YOU -> you(context, if (light) android.R.color.system_accent1_700 else android.R.color.system_accent1_200)
@@ -69,7 +69,8 @@ internal class WidgetPalette(
             val text = if (bg == WidgetBackground.YOU) you(context, if (youLight) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50) ?: WHITE
                 else if (light) INK else WHITE
             val secondary = if (light) 0xFF4A505C.toInt() else 0xE6FFFFFF.toInt()
-            val muted = if (light) 0xFF636976.toInt() else 0xB8FFFFFF.toInt()
+            // Over the sky and the wallpaper, past prayers are quieter but still clear; over ink, quieter still.
+            val muted = when { light -> 0xFF636976.toInt(); bg == WidgetBackground.SKY || bg == WidgetBackground.CLEAR -> 0xD0FFFFFF.toInt(); else -> 0xB8FFFFFF.toInt() }
             val accent = if (o.accent == WidgetAccent.YOU || bg != WidgetBackground.YOU) accentOn(o.accent, light, context)
                 else accentOn(WidgetAccent.YOU, light, context)
             val pill = (accent and 0x00FFFFFF) or ((if (light) 0x26 else 0x2E) shl 24)

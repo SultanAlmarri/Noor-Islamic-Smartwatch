@@ -117,6 +117,13 @@ LAYOUTS = {
     "widget_next": ("the next prayer, its time and the countdown (short sizes).",
         col([tv("widget_caption", "Caption"), title_row, count('android:layout_marginTop="2dp"'), tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')],
             h="match_parent", extra=f'android:gravity="center_vertical|start" {PAD}')),
+    # Next prayer, 3x1 and wider short sizes: the prayer on the reading side, the countdown balanced on the other.
+    "widget_next_wide": ("the next prayer and its time on one side, the countdown on the other (wide short sizes).",
+        row([col([tv("widget_caption", "Caption"), tv("widget_prayer", "Title", extra='android:layout_marginTop="1dp"'),
+                  tv("widget_time", "Body", extra='android:layout_marginTop="1dp"'), tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')],
+                 w="0dp", extra='android:layout_weight="1"'),
+             count('android:layout_marginStart="12dp"')],
+            h="match_parent", extra=f'android:gravity="center_vertical" {PAD}')),
     # Next prayer, 2x2 and larger: a calm column, the countdown large at the foot.
     "widget_next_tall": ("the next prayer, its time and the countdown (tall sizes).",
         col([tv("widget_caption", "Caption"), tv("widget_prayer", "Display", extra='android:layout_marginTop="2dp"'),
@@ -150,8 +157,10 @@ LAYOUTS = {
     # Minhad sky, 4x2 and 4x3: the home sky in small, the next prayer and the countdown at the top.
     "widget_sky": ("the home sky in small, with the next prayer, its time, the place and the date, and the countdown.",
         col([row([col([title_row, tv("widget_place", "Small", extra='android:layout_marginTop="2dp"')], w="0dp", extra='android:layout_weight="1"'),
-                  count('android:layout_marginStart="10dp"')], extra='android:gravity="top"')],
-            extra=PAD)),
+                  count('android:layout_marginStart="10dp"')], extra='android:gravity="top"'),
+             space(h="0dp", weight=1),
+             cells(cell_h="@dimen/widget_cell", extra='android:id="@+id/widget_cells" android:visibility="gone"')],
+            h="match_parent", extra=PAD)),
     # Countdown ring, 2x2: the time from the last prayer to the next as a ring, the countdown inside it.
     "widget_ring": ("a ring from the last prayer to the next, the next prayer, the countdown and its time inside.",
         image("widget_ring", "match_parent", "match_parent", 'android:scaleType="fitCenter" android:padding="@dimen/widget_ring_pad"')

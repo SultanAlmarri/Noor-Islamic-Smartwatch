@@ -64,7 +64,13 @@ internal class WidgetScene(val settings: AppSettings, val place: ResolvedPlace, 
 internal object WidgetSky {
     class Options(val land: Boolean = true, val path: Boolean = false, val horizon: Float = 0.74f, val arcTop: Float = 0.30f,
                   /** The corners, in dp (0.23: the system's widget corner). */
-                  val radius: Float = 22f)
+                  val radius: Float = 22f,
+                  /**
+                   * (0.23) The Sun's and the Moon's discs: off behind widgets that write over the whole picture (only
+                   * the sky widget draws the Sun on its path), where a bright disc would sit under the text; the
+                   * sky's colours and a softer glow still say where the light is.
+                   */
+                  val bodies: Boolean = true)
 
     fun picture(res: Resources, ws: WidgetScene, w: Int, h: Int, density: Float, rtl: Boolean, o: Options): Bitmap {
         val bmp = Bitmap.createBitmap(w.coerceAtLeast(8), h.coerceAtLeast(8), Bitmap.Config.ARGB_8888)
@@ -101,7 +107,7 @@ internal object WidgetSky {
                 c.drawCircle(x, y, (0.35f + 0.55f * b) * density, p)
             }
         }
-        if (look.moonVisibility > 0f && look.moonY < hy) {
+        if (o.bodies && look.moonVisibility > 0f && look.moonY < hy) {
             val mr = 6f * density
             p.shader = RadialGradient(look.moonX, look.moonY, mr * 5, intArrayOf(argb(0.10f * look.moonVisibility * look.night, 0.85f, 0.9f, 1f), 0), null, Shader.TileMode.CLAMP)
             c.drawCircle(look.moonX, look.moonY, mr * 5, p); p.shader = null
@@ -114,12 +120,15 @@ internal object WidgetSky {
             Atmosphere.tone(light.light.sunDisc.copyOf().also { for (k in 0..2) it[k] *= 0.004 }, disc)
             Atmosphere.tone(light.light.sunGlow.copyOf(), glow)
             val gr = 40f * density
-            p.shader = RadialGradient(look.sunX, look.sunY, gr, intArrayOf(argb(0.55f, glow), argb(0.12f, glow), 0), floatArrayOf(0f, 0.35f, 1f), Shader.TileMode.CLAMP)
+            val g = if (o.bodies) 1f else 0.4f
+            p.shader = RadialGradient(look.sunX, look.sunY, gr, intArrayOf(argb(0.55f * g, glow), argb(0.12f * g, glow), 0), floatArrayOf(0f, 0.35f, 1f), Shader.TileMode.CLAMP)
             c.drawCircle(look.sunX, look.sunY, gr, p); p.shader = null
-            p.color = argb(1f, maxOf(disc[0], 0.9), maxOf(disc[1], 0.8), maxOf(disc[2], 0.6))
-            c.save(); c.clipRect(0f, 0f, wf, hy)
-            c.drawCircle(look.sunX, look.sunY, 6.5f * density, p)
-            c.restore()
+            if (o.bodies) {
+                p.color = argb(1f, maxOf(disc[0], 0.9), maxOf(disc[1], 0.8), maxOf(disc[2], 0.6))
+                c.save(); c.clipRect(0f, 0f, wf, hy)
+                c.drawCircle(look.sunX, look.sunY, 6.5f * density, p)
+                c.restore()
+            }
         }
         // An overcast greys the whole sky.
         if (state.overcast > 0.02f) {

@@ -78,6 +78,7 @@ internal object WidgetRender {
 
     private class Layout(val normal: Int, val plain: Int)
     private val NEXT = Layout(R.layout.widget_next, R.layout.widget_next_plain)
+    private val NEXT_WIDE = Layout(R.layout.widget_next_wide, R.layout.widget_next_wide_plain)
     private val NEXT_TALL = Layout(R.layout.widget_next_tall, R.layout.widget_next_tall_plain)
     private val TODAY = Layout(R.layout.widget_today, R.layout.widget_today_plain)
     private val TODAY_ROW = Layout(R.layout.widget_today_row, R.layout.widget_today_row_plain)
@@ -113,7 +114,7 @@ internal object WidgetRender {
     /** The minute's update: the countdown's hours and minutes, and the ring or the bar; nothing else changes. */
     fun minute(r: WidgetCtx, b: Built): RemoteViews = RemoteViews(r.app.packageName, b.layout).apply {
         if (r.o.countdown) countdown(this, r, b.countScale)
-        if (b.ringPx > 0) setImageViewBitmap(R.id.widget_ring, WidgetArt.ring(b.ringPx, r.density, r.progress, r.pal.accent, r.pal.track))
+        if (b.ringPx > 0) setImageViewBitmap(R.id.widget_ring, WidgetArt.ring(b.ringPx, r.density, r.progress, r.pal.accent, r.pal.track, ringStroke(b.ringPx / r.density)))
         if (b.barPx > 0) setImageViewBitmap(R.id.widget_progress, bar(r, b.barPx))
     }
 
@@ -167,7 +168,7 @@ internal object WidgetRender {
     /** The sky picture's framing, with the system's corner. */
     private fun skyOptions(r: WidgetCtx, horizon: Float, path: Boolean = false, arcTop: Float = 0.30f) =
         WidgetSky.Options(path = path, horizon = horizon, arcTop = arcTop,
-            radius = r.app.resources.getDimension(R.dimen.widget_radius) / r.density)
+            radius = r.app.resources.getDimension(R.dimen.widget_radius) / r.density, bodies = path)
 
     /**
      * The widget reads in the app's language's direction, whatever the phone's: a home screen lays a widget out in the
@@ -329,13 +330,16 @@ internal object WidgetRender {
             text(v, NAMES[i], r.name(p), nameSize, nameColor)
             text(v, TIMES[i], time(r, at), timeSizeDp, timeColor)
             v.setViewVisibility(PILLS[i], if (on) View.VISIBLE else View.GONE)
-            if (on) { v.setInt(PILLS[i], "setColorFilter", r.pal.accent or 0xFF000000.toInt()); v.setInt(PILLS[i], "setImageAlpha", if (r.pal.light) 0x22 else 0x2E) }
+            if (on) { v.setInt(PILLS[i], "setColorFilter", r.pal.accent or 0xFF000000.toInt()); v.setInt(PILLS[i], "setImageAlpha", r.pal.pill ushr 24) }
             if (signs) {
                 v.setImageViewResource(ICONS[i], SIGNS[i])
                 v.setInt(ICONS[i], "setColorFilter", if (on) r.pal.accent else if (past) r.pal.muted else r.pal.secondary)
             }
         }
     }
+
+    /** The ring's line: 5 dp on a 2x2, a little bolder on larger rings. */
+    private fun ringStroke(ringDp: Float) = 5f * (ringDp / 150f).coerceIn(1f, 1.3f)
 
     private fun shownPrayers(r: WidgetCtx): List<Prayer> = Prayer.entries.filter { it != Prayer.SHURUQ || r.o.shuruq }
 
@@ -355,9 +359,10 @@ internal object WidgetRender {
     /** Next prayer: 2×1 compact (the prayer and time on a line, the countdown under), 2×2 and larger a calm column. */
     private fun next(r: WidgetCtx, built: (Built) -> Unit): RemoteViews {
         val tall = r.hDp >= 118
-        val layout = pick(if (tall) NEXT_TALL else NEXT, r)
+        val wide = !tall && r.wDp >= 230
+        val layout = pick(if (tall) NEXT_TALL else if (wide) NEXT_WIDE else NEXT, r)
         val v = RemoteViews(r.app.packageName, layout)
-        background(v, r, skyOptions(r, horizon = 0.80f), if (tall) R.drawable.widget_scrim_full else R.drawable.widget_scrim_top)
+        background(v, r, skyOptions(r, horizon = if (tall) 0.90f else 0.95f), if (tall) R.drawable.widget_scrim_full else R.drawable.widget_scrim_even)
         val c = r.c!!
         val avail = r.wDp - 2 * PAD
         val inner = r.hDp - 2 * PAD_V
@@ -373,6 +378,21 @@ internal object WidgetRender {
             val want = minOf(40f, 30f + (r.wDp - 150) / 10f + (r.hDp - 130) / 14f) * k
             scale = countScale(r, want, avail)
             if (r.o.place && r.hDp >= 140) place(v, r, avail, 12f * k, 10f * k, r.pal.muted, hijri = false) else gone(v, R.id.widget_place)
+        } else if (wide) {
+            // The prayer, its time (and the caption and place, when there is room) on the reading side; the countdown,
+            // as large as the height allows, on the other.
+            val countWant = minOf(36f * k, (inner - 4f) / 0.842f)
+            scale = countScale(r, countWant, avail * 0.56f)
+            val countW = if (r.o.countdown) CountPicture.widthDp(r.app, leading(r), scale, r.o.seconds && r.mode == Widgets.CountMode.WHEEL) + 12f else 0f
+            val side = avail - countW
+            val name = r.prayer
+            text(v, R.id.widget_prayer, name, Fit.size(listOf(name), Fit.MEDIUM, 17f * k, side), r.pal.text)
+            val t = time(r, c.countAt)
+            text(v, R.id.widget_time, t, timeSize(listOf(t), 13f * k, side, Fit.REGULAR), r.pal.secondary)
+            var room = inner - 17f * k * 1.25f - 13f * k * 1.3f
+            val cap = 11f * k * 1.3f + 1f
+            if (room >= cap) { text(v, R.id.widget_caption, caption(r), 11f * k, r.pal.accent); room -= cap } else gone(v, R.id.widget_caption)
+            if (r.o.place && room >= cap + 2f) place(v, r, side, 11f * k, 9.5f, r.pal.muted, hijri = false) else gone(v, R.id.widget_place)
         } else {
             // From the top: the caption (when there is room), the prayer and its time, the countdown, the place.
             val title = 16f * k * 1.25f
@@ -416,12 +436,12 @@ internal object WidgetRender {
         var barPx = 0
         when (l) {
             TODAY_ROW -> {
-                background(v, r, skyOptions(r, horizon = 0.62f), R.drawable.widget_scrim_bottom)
+                background(v, r, skyOptions(r, horizon = 0.62f), R.drawable.widget_scrim_dense)
                 val cell = avail / n - 6f
                 cells(v, r, shown, Fit.size(names, Fit.REGULAR, 12f * k, cell), timeSize(times, 15f * k, cell), signs = false)
             }
             TODAY_COLUMN -> {
-                background(v, r, skyOptions(r, horizon = 0.55f), R.drawable.widget_scrim_full)
+                background(v, r, skyOptions(r, horizon = 0.55f), R.drawable.widget_scrim_dense)
                 val name = r.prayer
                 text(v, R.id.widget_prayer, name, Fit.size(listOf(name), Fit.MEDIUM, 18f * k, avail), r.pal.text)
                 text(v, R.id.widget_time, time(r, c.countAt), 13f * k, r.pal.secondary)
@@ -437,7 +457,7 @@ internal object WidgetRender {
             }
             else -> {
                 val grid = l == TODAY_GRID
-                background(v, r, skyOptions(r, horizon = if (grid) 0.50f else 0.62f), if (grid) R.drawable.widget_scrim_full else R.drawable.widget_scrim_bottom)
+                background(v, r, skyOptions(r, horizon = if (grid) 0.50f else 0.62f), R.drawable.widget_scrim_dense)
                 scale = countScale(r, (if (grid) 34f else 28f) * k, avail * 0.46f)
                 val countW = if (r.o.countdown) CountPicture.widthDp(r.app, leading(r), scale, r.o.seconds && r.mode == Widgets.CountMode.WHEEL) + 10f else 0f
                 titleRow(v, r, avail - countW, (if (grid) 19f else 17f) * k, 13f * k, r.pal.text)
@@ -470,9 +490,10 @@ internal object WidgetRender {
         val v = RemoteViews(r.app.packageName, layout)
         val ws = r.ws!!
         val size = Widgets.pictureSize(r.app, r.wDp, r.hDp)
-        val o = skyOptions(r, horizon = 0.76f, path = true, arcTop = if (r.hDp >= 250) 0.34f else 0.40f)
+        val big = r.hDp >= 240
+        val o = skyOptions(r, horizon = if (big) 0.66f else 0.76f, path = true, arcTop = if (big) 0.30f else 0.40f)
         v.setImageViewBitmap(R.id.widget_bg, WidgetSky.picture(r.app.resources, ws, size.w, size.h, size.density, false, o))
-        v.setImageViewResource(R.id.widget_scrim, R.drawable.widget_scrim_top)
+        v.setImageViewResource(R.id.widget_scrim, if (big) R.drawable.widget_scrim_full else R.drawable.widget_scrim_top)
         v.setViewVisibility(R.id.widget_scrim, View.VISIBLE)
         val k = r.k
         val avail = r.wDp - 2 * PAD
@@ -480,6 +501,13 @@ internal object WidgetRender {
         val countW = if (r.o.countdown) CountPicture.widthDp(r.app, leading(r), scale, r.o.seconds && r.mode == Widgets.CountMode.WHEEL) + 10f else 0f
         titleRow(v, r, avail - countW, 18f * k, 13f * k, r.pal.text)
         place(v, r, avail - countW, 11.5f * k, 10f, r.pal.secondary)
+        // 4x3 and larger: the day's times along the foot, over the land.
+        if (r.hDp >= 240) {
+            v.setViewVisibility(R.id.widget_cells, View.VISIBLE)
+            val shown = shownPrayers(r)
+            val cell = avail / shown.size - 6f
+            cells(v, r, shown, Fit.size(shown.map { r.name(it) }, Fit.REGULAR, 12f * k, cell), timeSize(shown.map { time(r, ws.day.instant(it)) }, 15f * k, cell))
+        }
         if (r.o.countdown) countdown(v, r, scale) else gone(v, R.id.widget_countdown_box)
         common(v, r)
         built(Built(layout, scale))
@@ -495,14 +523,16 @@ internal object WidgetRender {
         val k = r.k
         val ringDp = minOf(r.wDp, r.hDp) - 2 * 8f
         val ringPx = (ringDp * r.density).toInt()
-        v.setImageViewBitmap(R.id.widget_ring, WidgetArt.ring(ringPx, r.density, r.progress, r.pal.accent, r.pal.track))
+        v.setImageViewBitmap(R.id.widget_ring, WidgetArt.ring(ringPx, r.density, r.progress, r.pal.accent, r.pal.track, ringStroke(ringDp)))
         // Inside the ring: the width of its inner circle a little above and below the middle.
         val inner = (ringDp - 2 * 5f) * 0.72f
         val name = r.prayer
-        text(v, R.id.widget_prayer, name, Fit.size(listOf(name), Fit.MEDIUM, 15f * k, inner * 0.86f), r.pal.accent)
+        // Larger rings, larger text inside (a 2x2 ring is about 150 dp across).
+        val grow = (ringDp / 150f).coerceIn(1f, 1.5f)
+        text(v, R.id.widget_prayer, name, Fit.size(listOf(name), Fit.MEDIUM, 15f * grow * k, inner * 0.86f), r.pal.accent)
         val t = time(r, c.countAt)
-        text(v, R.id.widget_time, t, timeSize(listOf(t), 12f * k, inner * 0.8f, Fit.REGULAR), r.pal.secondary)
-        val scale = countScale(r, minOf(30f, ringDp / 5.2f) * k, inner)
+        text(v, R.id.widget_time, t, timeSize(listOf(t), 12f * grow * k, inner * 0.8f, Fit.REGULAR), r.pal.secondary)
+        val scale = countScale(r, minOf(40f, ringDp / 5.0f) * k, inner)
         if (r.o.countdown) countdown(v, r, scale) else gone(v, R.id.widget_countdown_box)
         common(v, r)
         built(Built(layout, scale, ringPx = ringPx))
@@ -513,7 +543,7 @@ internal object WidgetRender {
     private fun strip(r: WidgetCtx, built: (Built) -> Unit): RemoteViews {
         val layout = pick(STRIP, r)
         val v = RemoteViews(r.app.packageName, layout)
-        background(v, r, skyOptions(r, horizon = 0.70f), R.drawable.widget_scrim_bottom)
+        background(v, r, skyOptions(r, horizon = 0.70f), R.drawable.widget_scrim_dense)
         val ws = r.ws!!
         val k = r.k
         val avail = r.wDp - 2 * PAD
@@ -541,9 +571,21 @@ internal object WidgetRender {
         return v
     }
 
+    /**
+     * The occasion to count down to: the next of the year's (Ramadan, the Eids, Arafah, Ashura, the new year), or the
+     * White Days when they are under way or two days away at most (they come every month, and would otherwise always
+     * hide the others).
+     */
+    internal fun nextOccasion(today: LocalDate, adjust: Int): com.noor.prayer.calendar.UpcomingEvent? {
+        val all = IslamicCalendar.upcoming(today, adjust)
+        val white = all.firstOrNull { it.event == com.noor.prayer.calendar.IslamicEvent.WHITE_DAYS }?.takeIf { it.daysUntil <= 2 }
+        return white ?: all.firstOrNull { it.event != com.noor.prayer.calendar.IslamicEvent.WHITE_DAYS }
+    }
+
     /** Date: the Hijri date large, the Gregorian date and weekday, and the next Islamic occasion in days. */
     private fun date(r: WidgetCtx, built: (Built) -> Unit): RemoteViews {
-        val wide = r.wDp >= 250
+        // Wide and short (4x1): the day's number large beside the month; taller: the lines stacked, larger.
+        val wide = r.wDp >= 250 && r.hDp < 140
         val layout = pick(if (wide) DATE_WIDE else DATE, r)
         val v = RemoteViews(r.app.packageName, layout)
         background(v, r, if (r.ws != null) skyOptions(r, horizon = 0.80f) else null, R.drawable.widget_scrim_full)
@@ -554,37 +596,40 @@ internal object WidgetRender {
         val month = if (f.arabic) h.monthNameAr else h.monthNameEn
         val year = f.digits(h.year.toString()) + if (f.arabic) " هـ" else " AH"
         val greg = "${f.weekday(today)}${if (f.arabic) "، " else ", "}${f.gregorianDate(today)}"
-        val next = IslamicCalendar.upcoming(today, r.s.hijriAdjust, 1).firstOrNull()
+        val next = nextOccasion(today, r.s.hijriAdjust)
         val occasionName = next?.let { if (f.arabic) it.event.ar else it.event.en }
         val days = next?.let { e -> if (e.daysUntil == 0L) r.ctx.getString(R.string.widget_occasion_today)
             else r.ctx.resources.getQuantityString(R.plurals.widget_in_days, e.daysUntil.toInt(), f.number(e.daysUntil.toInt())) }
         val avail = r.wDp - 2 * PAD
         if (wide) {
             val num = f.number(h.day)
-            val numDp = minOf(44f * k, (r.hDp - 2 * PAD_V) * 0.9f)
+            val tallness = ((r.hDp - 84f) / 96f).coerceIn(0f, 1f)
+            val numDp = minOf((44f + 12f * tallness) * k, (r.hDp - 2 * PAD_V) * 0.9f)
+            val g = 1f + 0.12f * tallness
             text(v, R.id.widget_hijri_number, num, numDp, r.pal.accent)
             val numW = Fit.width(num, Fit.LIGHT, numDp) + 12f
-            val occW = if (next != null) maxOf(Fit.width(occasionName!!, Fit.REGULAR, 11f * k), Fit.width(days!!, Fit.REGULAR, 13f * k)).coerceAtMost(avail * 0.36f) + 12f else 0f
-            val mid = avail - numW - occW
+            val occW = if (next != null) maxOf(Fit.width(occasionName!!, Fit.REGULAR, 11f * g * k), Fit.width(days!!, Fit.MEDIUM, 13f * g * k)).coerceAtMost(avail * 0.30f) + 12f else 0f
+            val mid = avail - numW - occW - 10f
             val line = "$month $year"
-            text(v, R.id.widget_hijri_day, line, Fit.size(listOf(line), Fit.MEDIUM, 16f * k, mid), r.pal.text)
-            text(v, R.id.widget_gregorian, greg, Fit.size(listOf(greg), Fit.REGULAR, 12f * k, mid), r.pal.secondary)
+            text(v, R.id.widget_hijri_day, line, Fit.size(listOf(line), Fit.MEDIUM, 16f * g * k, mid), r.pal.text)
+            text(v, R.id.widget_gregorian, greg, Fit.size(listOf(greg), Fit.REGULAR, 12f * g * k, mid), r.pal.secondary)
             if (next != null) {
-                text(v, R.id.widget_occasion_name, occasionName!!, Fit.size(listOf(occasionName), Fit.REGULAR, 11f * k, avail * 0.36f), r.pal.muted)
-                text(v, R.id.widget_occasion, days!!, Fit.size(listOf(days), Fit.MEDIUM, 13f * k, avail * 0.36f), r.pal.accent)
+                text(v, R.id.widget_occasion_name, occasionName!!, Fit.size(listOf(occasionName), Fit.REGULAR, 11f * g * k, avail * 0.30f), r.pal.muted)
+                text(v, R.id.widget_occasion, days!!, Fit.size(listOf(days), Fit.MEDIUM, 13f * g * k, avail * 0.30f), r.pal.accent)
             } else gone(v, R.id.widget_occasion_box)
         } else {
             // From the top: the Hijri day and month, its year, the Gregorian date, the next occasion, as many as fit.
             val inner = r.hDp - 2 * PAD_V
-            val small = 11.5f * k
+            val g = minOf(r.wDp / 170f, r.hDp / 110f).coerceIn(1f, 1.45f)
+            val small = 11.5f * g * k
             val lineH = small * 1.3f + 1f
-            val daySize = minOf(20f * k, (inner - lineH) / 1.22f).coerceAtLeast(12f)
+            val daySize = minOf(21f * g * k, (inner - lineH) / 1.22f).coerceAtLeast(12f)
             var room = inner - daySize * 1.22f
             val line = "${f.number(h.day)} $month"
             text(v, R.id.widget_hijri_day, line, Fit.size(listOf(line), Fit.MEDIUM, daySize, avail), r.pal.text)
             val gregSize = Fit.size(listOf(greg), Fit.REGULAR, small, avail)
             if (room >= lineH) { text(v, R.id.widget_gregorian, greg, gregSize, r.pal.secondary); room -= lineH } else gone(v, R.id.widget_gregorian)
-            if (room >= lineH) { text(v, R.id.widget_hijri_year, year, 11f * k, r.pal.accent); room -= lineH } else gone(v, R.id.widget_hijri_year)
+            if (room >= lineH) { text(v, R.id.widget_hijri_year, year, 11f * g * k, r.pal.accent); room -= lineH } else gone(v, R.id.widget_hijri_year)
             if (next != null && room >= lineH + 4f) {
                 val occ = "$occasionName · $days"
                 text(v, R.id.widget_occasion, occ, Fit.size(listOf(occ), Fit.REGULAR, small, avail, 8.5f), r.pal.muted)
