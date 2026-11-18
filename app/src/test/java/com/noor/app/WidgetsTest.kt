@@ -168,7 +168,9 @@ class WidgetsTest {
         /** What the wheel must show at the real time [now] (the clock it turns on is the real one). */
         fun expected(now: Instant, countAt: Instant, elapsed: Boolean): Int {
             val tSec = Math.floorMod(now.epochSecond, 60L).toInt(); val p = Math.floorMod(countAt.epochSecond, 60L).toInt()
-            return if (elapsed) Math.floorMod(tSec - p, 60) else Math.floorMod(p - tSec - 1, 60)
+            // (0.24) Before the prayer the time left is rounded up (Countdowns.timeLeft: the prayer's time less the clock's),
+            // so at real second t + ε it has p − t seconds; after it, t − p.
+            return if (elapsed) Math.floorMod(tSec - p, 60) else Math.floorMod(p - tSec, 60)
         }
         fun checkSeconds(id: Int, arabicDigits: Boolean, c: StatusNotification.Content) {
             val start = Instant.now()
@@ -227,18 +229,19 @@ class WidgetsTest {
             assertTrue(main(v).sameAs(CountPicture.draw(app, CountPicture.Spec("−1:27", Widgets.builtFor(id)!!.countScale))))
         }
         checkSeconds(next, false, content(before))
-        // At 14:10:00 exactly it reads "−1:27" (and 00), and the next instant "−1:26:59": the update for that is armed at
-        // once, and changes the countdown alone, the sky picture untouched.
-        assertEquals(before.plusMillis(30).toEpochMilli(), alarm().triggerAtTime)
+        // At 14:10:00 it reads "−1:27" (and 00) through that whole second (0.24: the time left is rounded up, so it is the
+        // prayer's time less the clock's), and at 14:10:01 "−1:26:59": the update for that is armed for that instant, and
+        // changes the countdown alone, the sky picture untouched.
+        assertEquals(before.plusSeconds(1).plusMillis(30).toEpochMilli(), alarm().triggerAtTime)
         assertTrue(shadowOf(alarm().operation).savedIntent.getBooleanExtra(Widgets.EXTRA_MINUTE, false))
         val skyPicture = shadow.getViewFor(today).findViewById<ImageView>(R.id.widget_bg).drawable
         // Robolectric's home screen has no partial updates: apply them as a home screen does, over the widget as it is.
         Widgets.partialUpdate = { _, id, views -> views.reapply(app, shadow.getViewFor(id)) }
-        Widgets.refresh(app, before.plusMillis(30), minuteOnly = true)
+        Widgets.refresh(app, before.plusSeconds(1).plusMillis(30), minuteOnly = true)
         assertTrue(main(shadow.getViewFor(today)).sameAs(CountPicture.draw(app, CountPicture.Spec("−1:26", Widgets.builtFor(today)!!.countScale))))
         assertTrue("the picture is left as it was", skyPicture === shadow.getViewFor(today).findViewById<ImageView>(R.id.widget_bg).drawable)
-        // Then the next one a minute later, at 14:11:00 ("−1:25:59" just after).
-        assertEquals(before.plusSeconds(60).plusMillis(30).toEpochMilli(), alarm().triggerAtTime)
+        // Then the next one a minute later, at 14:11:01 ("−1:25:59").
+        assertEquals(before.plusSeconds(61).plusMillis(30).toEpochMilli(), alarm().triggerAtTime)
 
         // Before Android 12 (no seconds wheel): where the phone writes other digits, Noor's, to the minute; where it
         // writes Noor's, Android's own ticking countdown.

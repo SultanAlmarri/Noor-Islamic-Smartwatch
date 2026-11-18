@@ -167,12 +167,20 @@ class StatusNotificationTest {
         collect(bigView)
         assertTrue(texts.toString(), texts.none { it == "Next prayer" || it == "Time since the prayer began" })
         run {
-            // Built 2 s before Maghrib, seen 1.2 s after it (the rebuild not yet done): "00:01", not "−−00:01".
+            // Built 2 s before Maghrib, seen after it (the rebuild not yet done): "00:00", "00:01", never "−−00:01".
+            // (0.24: before the prayer its base is 999 ms later, so the time left reads rounded up, as Minhad counts:
+            // 2 s before, "−00:02"; it passes 00:00 just under a second after the prayer.)
             val cm = StatusNotification.content(config, base, day(17, 39, 58), arabic = false)
             val nn = StatusNotification.build(app, app, cm, day(17, 39, 58))
             val chrono = nn.contentView.apply(app, parent).findViewById<android.widget.Chronometer>(R.id.status_countdown)
-            org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMillis(3200))
+            org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMillis(300))
             chrono.base = chrono.base // redraws its text at the new time
+            assertEquals("\u221200:02", chrono.text.toString().replace('-', '\u2212'))
+            org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMillis(2900))
+            chrono.base = chrono.base
+            assertEquals("00:00", chrono.text.toString())
+            org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMillis(1000))
+            chrono.base = chrono.base
             assertEquals("00:01", chrono.text.toString())
         }
 
