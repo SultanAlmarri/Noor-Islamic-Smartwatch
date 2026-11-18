@@ -141,6 +141,88 @@ class WidgetGalleryTest {
         repo.setTimeFormat(TimeFormat.H24)
         for (kind in WidgetKind.entries) for ((w, h) in sizes[kind]!!.take(2)) shoot("${kind.name.lowercase()}_${w}x${h}_en_24h", kind, kind.defaults, w, h, moments[0].second, false)
         repo.setTimeFormat(TimeFormat.H12)
+
+        // (0.24) Every option the settings page offers, one at a time, on each kind at two sizes; then combinations
+        // chosen at random (a fixed seed): each must pass every check above.
+        val blue = 0xFF2F7FD8.toInt(); val pale = 0xFFF2F2F7.toInt(); val red = 0xFFE5484D.toInt()
+        val variants: List<Pair<String, (WidgetOptions) -> WidgetOptions>> = listOf(
+            "solid" to { o -> o.copy(background = WidgetBackground.SOLID, color1 = blue) },
+            "solidpale" to { o -> o.copy(background = WidgetBackground.SOLID, color1 = pale) },
+            "gradient" to { o -> o.copy(background = WidgetBackground.GRADIENT, color1 = 0xFF3A4F9A.toInt(), color2 = 0xFFE0896A.toInt()) },
+            "auto" to { o -> o.copy(background = WidgetBackground.AUTO) },
+            "glass" to { o -> o.copy(background = WidgetBackground.GLASS, opacity = 78) },
+            "clear" to { o -> o.copy(background = WidgetBackground.CLEAR) },
+            "skydawn" to { o -> o.copy(background = WidgetBackground.SKY, skyLight = com.noor.app.widget.SkyLight.DAWN) },
+            "skynight" to { o -> o.copy(background = WidgetBackground.SKY, skyLight = com.noor.app.widget.SkyLight.NIGHT) },
+            "half" to { o -> o.copy(background = WidgetBackground.DARK, opacity = 50) },
+            "textwhite" to { o -> o.copy(textColor = com.noor.app.widget.TextColor.WHITE) },
+            "textblack" to { o -> o.copy(background = WidgetBackground.LIGHT, textColor = com.noor.app.widget.TextColor.BLACK) },
+            "textred" to { o -> o.copy(background = WidgetBackground.DARK, textColor = com.noor.app.widget.TextColor.CUSTOM, textCustom = red) },
+            "accentcustom" to { o -> o.copy(accent = WidgetAccent.CUSTOM, accentCustom = 0xFF6BFFB0.toInt()) },
+            "iconsmono" to { o -> o.copy(icons = com.noor.app.widget.IconStyle.MONO) },
+            "iconsoff" to { o -> o.copy(icons = com.noor.app.widget.IconStyle.OFF) },
+            "text80" to { o -> o.copy(textScale = 80) },
+            "text130" to { o -> o.copy(textScale = 130) },
+            "centre" to { o -> o.copy(align = com.noor.app.widget.WidgetAlign.CENTER) },
+            "adhanmain" to { o -> o.copy(main = com.noor.app.widget.MainNumber.ADHAN) },
+            "words" to { o -> o.copy(countStyle = com.noor.app.widget.CountStyle.WORDS) },
+            "noname" to { o -> o.copy(showName = false) },
+            "notime" to { o -> o.copy(showTime = false) },
+            "nocount" to { o -> o.copy(countdown = false) },
+            "nobar" to { o -> o.copy(showBar = false) },
+            "nolater" to { o -> o.copy(showLater = false) },
+            "area" to { o -> o.copy(placeMode = com.noor.app.widget.PlaceMode.AREA) },
+            "noplace" to { o -> o.copy(place = false) },
+            "dates" to { o -> o.copy(hijri = true, gregorian = true) },
+            "shuruqon" to { o -> o.copy(shuruq = true, shuruqChoice = com.noor.app.widget.ShuruqChoice.SHOW) },
+            "shuruqoff" to { o -> o.copy(shuruqChoice = com.noor.app.widget.ShuruqChoice.HIDE) },
+            "fajrleft" to { o -> o.copy(rowOrder = com.noor.app.widget.RowOrder.FAJR_LEFT, language = com.noor.app.widget.LanguageChoice.ARABIC) },
+            "h24" to { o -> o.copy(timeFormat = com.noor.app.widget.TimeChoice.H24) },
+            "noampm" to { o -> o.copy(ampm = false) },
+            "indic" to { o -> o.copy(digits = com.noor.app.widget.DigitChoice.ARABIC_INDIC) },
+            "arabic" to { o -> o.copy(language = com.noor.app.widget.LanguageChoice.ARABIC) },
+            "pastnormal" to { o -> o.copy(past = com.noor.app.widget.PastStyle.NORMAL) },
+            "pasthide" to { o -> o.copy(past = com.noor.app.widget.PastStyle.HIDE) },
+            "outline" to { o -> o.copy(highlight = com.noor.app.widget.HighlightStyle.OUTLINE) },
+            "colouronly" to { o -> o.copy(highlight = com.noor.app.widget.HighlightStyle.COLOR) },
+            "afternext" to { o -> o.copy(after = com.noor.app.widget.AfterAdhan.NEXT) },
+        )
+        for (kind in WidgetKind.entries) for ((w, h) in sizes[kind]!!.take(2)) for ((vn, f) in variants) {
+            val o = f(kind.defaults)
+            val at = if (vn == "afternext") at(15, 50) else moments[0].second
+            shoot("opt_${kind.name.lowercase()}_${w}x${h}_$vn", kind, o, w, h, at, o.digits == com.noor.app.widget.DigitChoice.ARABIC_INDIC)
+        }
+        val rnd = java.util.Random(24)
+        fun <E> pick(v: Array<E>) = v[rnd.nextInt(v.size)]
+        val colours = listOf(blue, pale, red, 0xFF1C1C1E.toInt(), 0xFFFFD36B.toInt(), 0xFF2E7D5B.toInt(), 0xFF808080.toInt())
+        for (i in 0 until 60) {
+            val kind = pick(WidgetKind.values())
+            val (w, h) = sizes[kind]!!.let { it[rnd.nextInt(it.size)] }
+            val o = WidgetOptions(
+                background = pick(WidgetBackground.values()), opacity = listOf(100, 85, 60)[rnd.nextInt(3)], accent = pick(WidgetAccent.values()),
+                seconds = rnd.nextBoolean(), countdown = rnd.nextInt(4) != 0, place = rnd.nextBoolean(), hijri = rnd.nextBoolean(), jumuah = rnd.nextBoolean(),
+                skyLight = pick(com.noor.app.widget.SkyLight.values()), color1 = colours[rnd.nextInt(colours.size)], color2 = colours[rnd.nextInt(colours.size)],
+                textColor = pick(com.noor.app.widget.TextColor.values()), textCustom = colours[rnd.nextInt(colours.size)], accentCustom = colours[rnd.nextInt(colours.size)],
+                icons = pick(com.noor.app.widget.IconStyle.values()), textScale = listOf(0, 80, 100, 115, 130)[rnd.nextInt(5)], align = pick(com.noor.app.widget.WidgetAlign.values()),
+                main = pick(com.noor.app.widget.MainNumber.values()), showIcon = rnd.nextBoolean(), showName = rnd.nextInt(4) != 0, showTime = rnd.nextBoolean(),
+                showBar = rnd.nextBoolean(), placeMode = pick(com.noor.app.widget.PlaceMode.values()), gregorian = rnd.nextBoolean(), showLater = rnd.nextBoolean(),
+                countStyle = pick(com.noor.app.widget.CountStyle.values()), timeFormat = pick(com.noor.app.widget.TimeChoice.values()), ampm = rnd.nextBoolean(),
+                digits = pick(com.noor.app.widget.DigitChoice.values()), language = pick(com.noor.app.widget.LanguageChoice.values()), past = pick(com.noor.app.widget.PastStyle.values()),
+                highlight = pick(com.noor.app.widget.HighlightStyle.values()), after = pick(com.noor.app.widget.AfterAdhan.values()), rowOrder = pick(com.noor.app.widget.RowOrder.values()),
+                shuruqChoice = pick(com.noor.app.widget.ShuruqChoice.values()),
+            )
+            shoot("mix_${i}_${kind.name.lowercase()}_${w}x${h}", kind, o, w, h, moments[rnd.nextInt(3)].second, o.digits == com.noor.app.widget.DigitChoice.ARABIC_INDIC)
+        }
+        // A colour of one's own that would not read gives way to one that does, and says so (the page shows a warning).
+        run {
+            var looks: com.noor.app.widget.WidgetLooks? = null
+            Widgets.previewBuilt(app, WidgetKind.NEXT, WidgetOptions(background = WidgetBackground.SOLID, color1 = pale, textColor = com.noor.app.widget.TextColor.WHITE), 176, 176, moments[0].second) { looks = it.design.looks }
+            assertTrue("white on pale gives way", looks!!.textFallback && looks!!.ink != 0xFFFFFFFF.toInt())
+            Widgets.previewBuilt(app, WidgetKind.NEXT, WidgetOptions(background = WidgetBackground.DARK, opacity = 100, accent = WidgetAccent.CUSTOM, accentCustom = 0xFF202022.toInt()), 176, 176, moments[0].second) { looks = it.design.looks }
+            assertTrue("a dark accent on dark gives way", looks!!.accentFallback)
+            Widgets.previewBuilt(app, WidgetKind.NEXT, WidgetOptions(background = WidgetBackground.DARK, opacity = 100, textColor = com.noor.app.widget.TextColor.CUSTOM, textCustom = 0xFFFFD36B.toInt()), 176, 176, moments[0].second) { looks = it.design.looks }
+            assertTrue("a readable colour of one's own is kept", !looks!!.textFallback && looks!!.ink == 0xFFFFD36B.toInt())
+        }
         // Shown shorter than reported (Samsung's 4×1 is shorter than it says): the layout made for the real size, uncut.
         for (kind in WidgetKind.entries) for ((rep, real) in listOf((360 to 84) to (360 to 70), (176 to 176) to (176 to 150), (360 to 176) to (360 to 150))) {
             val views = Widgets.previewSized(app, kind, kind.defaults, listOf(rep), moments[0].second)!!

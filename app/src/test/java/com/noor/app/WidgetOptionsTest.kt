@@ -41,6 +41,34 @@ import kotlin.math.pow
 class WidgetOptionsTest {
     private val app get() = RuntimeEnvironment.getApplication()
 
+    @Test fun everyCustomisationIsKept() {
+        // (0.24) Every option the page offers, far from its default, read back the same; a 0.23 line reads as before,
+        // the new options at their defaults; its "no Shuruq" is "never Shuruq".
+        val a = WidgetOptions(background = WidgetBackground.GRADIENT, opacity = 64, accent = WidgetAccent.CUSTOM, accentCustom = 0xFF6BFFB0.toInt(),
+            skyLight = com.noor.app.widget.SkyLight.GOLDEN, color1 = 0xFF123456.toInt(), color2 = 0xFFABCDEF.toInt(), textColor = com.noor.app.widget.TextColor.CUSTOM,
+            textCustom = 0xFFFEDCBA.toInt(), icons = com.noor.app.widget.IconStyle.MONO, textScale = 115, align = com.noor.app.widget.WidgetAlign.CENTER,
+            main = com.noor.app.widget.MainNumber.ADHAN, showIcon = false, showName = false, showTime = false, showBar = false,
+            placeMode = com.noor.app.widget.PlaceMode.AREA, gregorian = true, showLater = false, countStyle = com.noor.app.widget.CountStyle.WORDS,
+            timeFormat = com.noor.app.widget.TimeChoice.H24, ampm = false, digits = com.noor.app.widget.DigitChoice.ARABIC_INDIC,
+            language = com.noor.app.widget.LanguageChoice.ARABIC, past = com.noor.app.widget.PastStyle.HIDE, highlight = com.noor.app.widget.HighlightStyle.OUTLINE,
+            after = com.noor.app.widget.AfterAdhan.NEXT, rowOrder = com.noor.app.widget.RowOrder.FAJR_LEFT, shuruqChoice = com.noor.app.widget.ShuruqChoice.SHOW)
+        assertEquals(a, WidgetOptions.decode(a.encode(), WidgetOptions()))
+        val old = WidgetOptions.decode("bg=GLASS;op=78;ac=TEAL;ts=LARGE;sec=false;cd=true;sh=false;pl=true;hi=true;ju=true;tap=QIBLA", WidgetOptions())
+        assertEquals(WidgetOptions(background = WidgetBackground.GLASS, opacity = 78, accent = WidgetAccent.TEAL, textSize = WidgetTextSize.LARGE, seconds = false,
+            shuruq = false, hijri = true, tap = WidgetTap.QIBLA), old)
+        assertEquals(com.noor.app.widget.ShuruqChoice.HIDE, old.shuruqShown)
+        assertEquals(1.12f, old.textScaleFactor, 0.001f)
+        // A size outside the slider's is not taken.
+        assertEquals(0, WidgetOptions.decode("tsp=300", WidgetOptions()).textScale)
+        // The defaults for new widgets: kept per kind, and back to the kind's own on reset.
+        WidgetOptionsStore.saveDefaults(app, WidgetKind.NEXT, a)
+        assertEquals(a, WidgetOptionsStore.defaults(app, WidgetKind.NEXT))
+        assertEquals(a, WidgetOptionsStore.load(app, 1234, WidgetKind.NEXT))
+        assertEquals(WidgetKind.TODAY.defaults, WidgetOptionsStore.load(app, 1234, WidgetKind.TODAY))
+        WidgetOptionsStore.resetDefaults(app, WidgetKind.NEXT)
+        assertEquals(WidgetKind.NEXT.defaults, WidgetOptionsStore.load(app, 1234, WidgetKind.NEXT))
+    }
+
     @Test fun optionsAreKeptPerWidgetAndGoWithIt() {
         val a = WidgetOptions(background = WidgetBackground.LIGHT, opacity = 55, accent = WidgetAccent.TEAL, textSize = WidgetTextSize.LARGE,
             seconds = false, countdown = true, shuruq = false, place = false, hijri = false, jumuah = false, tap = WidgetTap.QIBLA)
@@ -57,7 +85,8 @@ class WidgetOptionsTest {
         for (k in listOf(WidgetKind.NEXT, WidgetKind.TODAY, WidgetKind.SKY)) {
             assertEquals(k.defaults, WidgetOptionsStore.load(app, 99, k))
             assertEquals(WidgetBackground.SKY, k.defaults.background)
-            assertTrue(k.defaults.countdown && k.defaults.seconds && k.defaults.place && k.defaults.hijri && k.defaults.jumuah)
+            // (0.24: the Hijri date is no longer on the information line unless asked for; the Date widget has it.)
+            assertTrue(k.defaults.countdown && k.defaults.seconds && k.defaults.place && !k.defaults.hijri && k.defaults.jumuah)
         }
         assertFalse(WidgetKind.STRIP.defaults.shuruq)
         // Removed with its widget; the other stays.

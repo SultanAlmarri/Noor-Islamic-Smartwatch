@@ -108,5 +108,16 @@ class WidgetSettingsDesignTest {
                 shot("${kind.name.lowercase()}_$lang", before + 1)
             }
         }
+        // (0.24) Settings → Widgets: the widgets placed (two here), the defaults for new ones, how to add one.
+        val shadowManager = Shadows.shadowOf(android.appwidget.AppWidgetManager.getInstance(app))
+        shadowManager.createWidget(com.noor.app.widget.NextPrayerWidget::class.java, com.noor.app.R.layout.widget_v3)
+        shadowManager.createWidget(com.noor.app.widget.TodayWidget::class.java, com.noor.app.R.layout.widget_v3)
+        for (lang in listOf("en", "ar")) {
+            arabic = lang == "ar"
+            runBlocking { repo.setLanguage(if (arabic) Language.ARABIC else Language.ENGLISH) }
+            page = { com.noor.app.ui.settings.WidgetsScreen(androidx.compose.foundation.layout.PaddingValues(), {}) }
+            fresh++
+            shot("widgets_page_$lang", 0)
+        }
     }
 }

@@ -42,7 +42,7 @@ internal object WidgetInk {
      */
     class Line(val runs: List<Run>, val rtl: Boolean) {
         val text: String get() = runs.joinToString("") { (if (it.gapBefore > 0f) it.sep else "") + it.text }
-        val maxSize: Float get() = runs.maxOf { it.size }
+        val maxSize: Float get() = runs.maxOfOrNull { it.size } ?: 0f
     }
 
     fun paint(context: Context, r: Run): Paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
@@ -97,9 +97,16 @@ internal object WidgetInk {
 
     private fun fill(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color; style = Paint.Style.FILL }
 
-    /** The next prayer's capsule: plain white at 18 % (on light: #F2F2F7, as iOS's grouped fill). */
-    fun capsule(c: Canvas, r: RectF, radius: Float, light: Boolean, accent: Int) {
-        c.drawRoundRect(r, radius, radius, fill(if (light) 0xFFF2F2F7.toInt() else 0x2EFFFFFF))
+    /** The next prayer's capsule: plain white at 18 % (on light: #F2F2F7, as iOS's grouped fill), or [color]. */
+    fun capsule(c: Canvas, r: RectF, radius: Float, light: Boolean, accent: Int, color: Int = if (light) 0xFFF2F2F7.toInt() else 0x2EFFFFFF) {
+        c.drawRoundRect(r, radius, radius, fill(color))
+    }
+
+    /** The marked prayer in an outline, 1.5 dp. */
+    fun outline(c: Canvas, r: RectF, radius: Float, color: Int) {
+        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.5f; this.color = color }
+        val i = RectF(r).apply { inset(0.75f, 0.75f) }
+        c.drawRoundRect(i, radius - 0.75f, radius - 0.75f, p)
     }
 
     /** A progress bar, [h] high, filled from the reading side. */

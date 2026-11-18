@@ -273,6 +273,8 @@ internal object Routes {
     const val CITIES = "cities"
     const val ACCURACY = "accuracy"
     const val SCENERY = "scenery"
+    /** 0.24: Settings → Widgets. */
+    const val WIDGETS = "widgets"
     /** Testing only (0.14): to be removed before release, with com.noor.app.testing. */
     const val TESTING = "testing"
     const val ADHAN = "adhan"
@@ -423,6 +425,7 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?,
             }
             composable(Routes.ACCURACY) { AccuracyScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.SCENERY) { com.noor.app.ui.settings.SceneryScreen(content, onBack = { nav.popBackStack() }) }
+            composable(Routes.WIDGETS) { com.noor.app.ui.settings.WidgetsScreen(content, onBack = { nav.popBackStack() }) }
             // Testing only (0.14): to be removed before release.
             composable(Routes.TESTING) {
                 val vm: com.noor.app.ui.settings.SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()

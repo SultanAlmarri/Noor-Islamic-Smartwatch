@@ -45,7 +45,7 @@ internal class WidgetCtx(
 ) {
     val density: Float = app.resources.displayMetrics.density
     /** The text's scale: the widget's text size over the system's font size (up to 1.3; the layouts fit at 1.3). */
-    val k: Float = o.textSize.scale * ctx.resources.configuration.fontScale.coerceIn(0.85f, 1.3f)
+    val k: Float = o.textScaleFactor * ctx.resources.configuration.fontScale.coerceIn(0.85f, 1.3f)
     val today: LocalDate get() = now.atZone(zone).toLocalDate()
     /** A line's height over its text size: Arabic's system font stands taller than Latin's. */
     /**
@@ -126,7 +126,7 @@ internal object WidgetRender {
             WidgetKind.SKY -> if (wide && rows >= 2) d.sky4x2() else if (rows == 1) (if (wide) d.next4x1() else d.next2x1()) else d.next2x2()
             WidgetKind.DATE -> when { rows == 1 -> if (wide) d.date4x1() else d.date2x1(); wide && rows == 2 -> d.date4x1(); else -> d.date2x2() }
         }
-        return sheet.design(WidgetBack.draw(r, r.wDp.toFloat(), r.hDp.toFloat()))
+        return sheet.design(WidgetBack.draw(r, r.wDp.toFloat(), r.hDp.toFloat(), d.looks.opacity)).also { it.looks = d.looks }
     }
 
     /** Builds the widget at its size; [built] receives what was drawn. */
@@ -153,7 +153,7 @@ internal object WidgetRender {
         if (spot != null) {
             v.setViewVisibility(R.id.widget_count_slot, View.VISIBLE)
             v.setViewPadding(R.id.widget_count_slot, px(spot.left), px(spot.top), 0, 0)
-            liveCount(v, r, spot.scale, WidgetDesigns(r, Sheet(r.ctx, 1f, 1f, r.rtl, d)).ink, spot.secondsScale)
+            liveCount(v, r, spot.scale, design.looks?.ink ?: WidgetLooks.of(r).ink, spot.secondsScale)
         } else v.setViewVisibility(R.id.widget_count_slot, View.GONE)
         v.setOnClickPendingIntent(android.R.id.background, Widgets.open(r.app, r.o.tap))
         describe(v, r)

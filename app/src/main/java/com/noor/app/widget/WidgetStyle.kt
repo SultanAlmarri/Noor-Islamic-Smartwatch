@@ -45,6 +45,8 @@ internal class WidgetPalette(
             WidgetAccent.WHITE -> if (light) INK else WHITE
             WidgetAccent.YOU -> you(context, if (light) android.R.color.system_accent1_700 else android.R.color.system_accent1_200)
                 ?: accentOn(WidgetAccent.GOLD, light, null)
+            // (A colour of one's own: WidgetLooks, kept legible; here its fallback.)
+            WidgetAccent.CUSTOM -> accentOn(WidgetAccent.GOLD, light, context)
         }
 
         /** The wallpaper's colours (Android 12 and later), or null. */
@@ -57,10 +59,18 @@ internal class WidgetPalette(
         fun of(context: Context, o: WidgetOptions): WidgetPalette {
             val bg = if (o.background == WidgetBackground.YOU && Build.VERSION.SDK_INT < 31) WidgetBackground.DARK else o.background
             val youLight = bg == WidgetBackground.YOU && !night(context)
-            val light = bg == WidgetBackground.LIGHT || youLight
+            // (0.24) A colour of one's own is light where dark text reads better on it than white.
+            fun pale(c: Int) = com.noor.prayer.sky.SkyPalette.contrast(c or 0xFF000000.toInt(), INK) > com.noor.prayer.sky.SkyPalette.contrast(c or 0xFF000000.toInt(), WHITE)
+            val light = bg == WidgetBackground.LIGHT || youLight || (bg == WidgetBackground.AUTO && !night(context)) ||
+                ((bg == WidgetBackground.SOLID || bg == WidgetBackground.GRADIENT) && !WidgetLooks.needsDarkening(WidgetLooks.customColors(o)) &&
+                    WidgetLooks.customColors(o).all { pale(it) })
             val a = (o.opacity.coerceIn(0, 100) * 255 + 50) / 100
             val (fill, alpha) = when (bg) {
-                WidgetBackground.SKY, WidgetBackground.CLEAR -> 0 to 0
+                WidgetBackground.SKY -> 0 to a
+                WidgetBackground.CLEAR -> 0 to 0
+                WidgetBackground.SOLID -> o.color1 to a
+                WidgetBackground.GRADIENT -> o.color1 to a
+                WidgetBackground.AUTO -> (if (light) 0xFFFFFFFF.toInt() else 0xFF1C1C1E.toInt()) to a
                 WidgetBackground.GLASS -> 0 to a
                 WidgetBackground.DARK -> 0xFF121826.toInt() to a
                 WidgetBackground.LIGHT -> 0xFFF4F1EA.toInt() to a

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Brightness6
 import androidx.compose.material.icons.rounded.CalendarMonth
@@ -283,6 +284,9 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             listOf(languageLabel(s.language), stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24, f.number(if (s.timeFormat == TimeFormat.H12) 12 else 24))).joinToString(" · "),
             stringResource(R.string.kw_language) + " " + stringResource(R.string.kw_numerals) + " " + stringResource(R.string.kw_time) + " " + stringResource(R.string.kw_hijri),
             { page = SettingsPage.LANGUAGE }))
+        // 0.24: the home screen's widgets, each customised from here too.
+        add(SettingRow(R.string.settings_appearance, Icons.Rounded.Widgets, stringResource(R.string.w_widgets_title), stringResource(R.string.w_widgets_row_note),
+            stringResource(R.string.w_kw_widgets), { onOpenRoute(Routes.WIDGETS) }))
         // 0.15.2: the watch's page lives here (set up once), no longer a tab.
         add(SettingRow(UNTITLED_4, Icons.Rounded.Watch, stringResource(R.string.watch_title), stringResource(R.string.settings_watch_note), stringResource(R.string.kw_watch), { onOpenRoute(Routes.WATCH) }))
         add(SettingRow(R.string.settings_about, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), null, stringResource(R.string.kw_accuracy), onOpenAccuracy))

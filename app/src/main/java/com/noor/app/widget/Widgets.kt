@@ -104,7 +104,8 @@ object Widgets {
 
     /** What every widget is built from at [now]: the settings, language, digits, the times and what the home screen says. */
     internal class Frame(val app: Context, val ctx: Context, val s: AppSettings, val f: Formatter, val rtl: Boolean, val now: Instant,
-                         val c: StatusNotification.Content?, val ws: WidgetScene?, val mode: CountMode) {
+                         val c: StatusNotification.Content?, val ws: WidgetScene?, val mode: CountMode,
+                         val config: com.noor.prayer.WatchConfig? = null) {
         val zone: java.time.ZoneId get() = ws?.zone ?: java.time.ZoneId.systemDefault()
     }
 
@@ -119,7 +120,7 @@ object Widgets {
         // (0.24) Before Android 12, Minhad's countdown to the minute (Android's own ticking one is in the phone's font).
         val mode = if (wheelSupported()) CountMode.WHEEL else CountMode.MINUTES
         if (config == null || place == null) return Frame(app, ctx, s, f, rtl, now, null, null, mode)
-        return Frame(app, ctx, s, f, rtl, now, StatusNotification.content(config, s, now, arabic), WidgetScene(s, place, config, now), mode)
+        return Frame(app, ctx, s, f, rtl, now, StatusNotification.content(config, s, now, arabic), WidgetScene(s, place, config, now), mode, config)
     }
 
     internal fun ctxFor(fr: Frame, kind: WidgetKind, o: WidgetOptions, wDp: Int, hDp: Int): WidgetCtx {
@@ -128,7 +129,21 @@ object Widgets {
         // chosen, as the others: its arc and Sun over dark, light and the rest.)
         val tiny = wDp < 200 && hDp < 58
         val opts = if (tiny) o.copy(seconds = false) else o
-        return WidgetCtx(kind, fr.ctx, fr.app, fr.s, fr.f, fr.rtl, fr.c, fr.now, fr.mode, fr.ws, fr.zone, wDp, hDp, opts, WidgetPalette.of(fr.ctx, opts))
+        // (0.24) The widget's own language, digits, time format, and what follows the Adhan, where it has chosen them.
+        if (o.language == LanguageChoice.APP && o.digits == DigitChoice.APP && o.timeFormat == TimeChoice.APP && (o.after == AfterAdhan.SINCE || !fr.s.elapsedAfterPrayer))
+            return WidgetCtx(kind, fr.ctx, fr.app, fr.s, fr.f, fr.rtl, fr.c, fr.now, fr.mode, fr.ws, fr.zone, wDp, hDp, opts, WidgetPalette.of(fr.ctx, opts))
+        val s = fr.s.copy(
+            language = when (o.language) { LanguageChoice.ENGLISH -> Language.ENGLISH; LanguageChoice.ARABIC -> Language.ARABIC; LanguageChoice.APP -> fr.s.language },
+            numerals = when (o.digits) { DigitChoice.WESTERN -> com.noor.app.data.Numerals.WESTERN; DigitChoice.ARABIC_INDIC -> com.noor.app.data.Numerals.ARABIC_INDIC; DigitChoice.APP -> fr.s.numerals },
+            timeFormat = when (o.timeFormat) { TimeChoice.H12 -> com.noor.app.data.TimeFormat.H12; TimeChoice.H24 -> com.noor.app.data.TimeFormat.H24; TimeChoice.APP -> fr.s.timeFormat },
+            elapsedAfterPrayer = fr.s.elapsedAfterPrayer && o.after == AfterAdhan.SINCE,
+        )
+        val ctx = if (o.language == LanguageChoice.APP) fr.ctx else localized(fr.app, s)
+        val arabic = ctx.resources.configuration.locales[0].language == "ar"
+        val rtl = ctx.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL
+        val f = Formatter(arabic, s.numerals, s.timeFormat)
+        val c = fr.config?.let { cfg -> runCatching { StatusNotification.content(cfg, s, fr.now, arabic) }.getOrNull() } ?: fr.c
+        return WidgetCtx(kind, ctx, fr.app, s, f, rtl, c, fr.now, fr.mode, fr.ws, fr.zone, wDp, hDp, opts, WidgetPalette.of(ctx, opts))
     }
 
     /** One widget, built (for a placed widget, its settings page's preview and the tests). */

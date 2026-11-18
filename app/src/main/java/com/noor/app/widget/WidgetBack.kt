@@ -30,27 +30,41 @@ internal object WidgetBack {
     /** The design's three skies (as iOS Weather's: vivid, clean): by day, at the golden hour, at night. */
     private val DAY = intArrayOf(0xFF2F7FD8.toInt(), 0xFF4B97E6.toInt(), 0xFF6FB0EF.toInt())
     private val GOLDEN = intArrayOf(0xFF3A4F9A.toInt(), 0xFF8A6AA0.toInt(), 0xFFE0896A.toInt())
+    /** The morning's low light: rosier than the evening's. */
+    private val DAWN = intArrayOf(0xFF34508F.toInt(), 0xFF9A7AAE.toInt(), 0xFFF0A38A.toInt())
     private val NIGHT = intArrayOf(0xFF0B1430.toInt(), 0xFF16244C.toInt(), 0xFF233564.toInt())
 
     /** The Sun's elevation (degrees) now at the widget's place. */
     fun elevation(r: WidgetCtx): Double = r.ws?.let { SunPath.elevation(r.now, it.place.point) } ?: 30.0
 
+    /** The elevation the sky is drawn for: now's, or the light chosen (Dawn, Day, Golden, Night). */
+    fun elevationFor(r: WidgetCtx): Double = when (r.o.skyLight) {
+        SkyLight.LIVE -> elevation(r); SkyLight.DAWN, SkyLight.GOLDEN -> 3.0; SkyLight.DAY -> 35.0; SkyLight.NIGHT -> -20.0
+    }
+
+    /** Whether the low light is the morning's (before noon, or Dawn chosen). */
+    fun morning(r: WidgetCtx): Boolean = when (r.o.skyLight) {
+        SkyLight.DAWN -> true; SkyLight.GOLDEN -> false
+        else -> r.ws?.day?.instant(Prayer.DHUHR)?.let { r.now.isBefore(it) } ?: false
+    }
+
     /**
      * The sky's colours for the Sun at [elev] degrees: the day's sky from 10° up, the golden hour's at 2°, the night's
      * from 6° under the horizon, blended smoothly between (in OKLab, [SkyPalette.mix]).
      */
-    fun skyLook(elev: Double): Look {
+    fun skyLook(elev: Double, morning: Boolean = false): Look {
         fun mix(a: IntArray, b: IntArray, t: Float) = IntArray(3) { SkyPalette.mix(a[it], b[it], t.coerceIn(0f, 1f)) }
+        val low = if (morning) DAWN else GOLDEN
         val c = when {
             elev >= 10 -> DAY
-            elev >= 2 -> mix(GOLDEN, DAY, ((elev - 2) / 8).toFloat())
-            elev >= -6 -> mix(NIGHT, GOLDEN, ((elev + 6) / 8).toFloat())
+            elev >= 2 -> mix(low, DAY, ((elev - 2) / 8).toFloat())
+            elev >= -6 -> mix(NIGHT, low, ((elev + 6) / 8).toFloat())
             else -> NIGHT
         }
         return Look(c[0], c[1], c[2], ((-elev - 2) / 6).toFloat().coerceIn(0f, 1f))
     }
 
-    fun draw(r: WidgetCtx, wDp: Float, hDp: Float): Bitmap? {
+    fun draw(r: WidgetCtx, wDp: Float, hDp: Float, opacity: Int = r.o.opacity): Bitmap? {
         val bg = r.pal.background
         if (bg == WidgetBackground.CLEAR) return null
         val w = maxOf(8, (wDp * PX_PER_DP).toInt()); val h = maxOf(8, (hDp * PX_PER_DP).toInt())
@@ -61,17 +75,27 @@ internal object WidgetBack {
             p.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), stops.map { it.second }.toIntArray(), stops.map { it.first }.toFloatArray(), Shader.TileMode.CLAMP)
             c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), p); p.shader = null
         }
-        val a = r.pal.alpha
+        // (The opacity as drawn: WidgetLooks may have made it more solid, so its text reads.)
+        val a = if (r.pal.background == WidgetBackground.YOU) 255 else (opacity.coerceIn(0, 100) * 255 + 50) / 100
         fun withAlpha(color: Int, alpha: Int) = (color and 0x00FFFFFF) or (alpha.coerceIn(0, 255) shl 24)
         when (bg) {
             WidgetBackground.SKY -> {
-                val l = skyLook(elevation(r))
+                val l = skyLook(elevationFor(r), morning(r))
                 vertical(0f to l.zenith, 0.55f to l.mid, 1f to l.horizon)
                 clamp(bmp, SKY_CONTRAST)
                 if (l.night > 0.3f) stars(c, w, h, l.night)
+                if (a < 255) fade(bmp, a)
             }
             WidgetBackground.DARK -> c.drawColor(withAlpha(0xFF1C1C1E.toInt(), a))
             WidgetBackground.LIGHT -> c.drawColor(withAlpha(0xFFFFFFFF.toInt(), a))
+            WidgetBackground.AUTO -> c.drawColor(withAlpha(if (r.pal.light) 0xFFFFFFFF.toInt() else 0xFF1C1C1E.toInt(), a))
+            WidgetBackground.SOLID, WidgetBackground.GRADIENT -> {
+                if (r.o.background == WidgetBackground.SOLID) c.drawColor(r.o.color1 or 0xFF000000.toInt())
+                else vertical(0f to (r.o.color1 or 0xFF000000.toInt()), 1f to (r.o.color2 or 0xFF000000.toInt()))
+                // A middle tone neither white nor dark text reads on: darkened just enough for white (WidgetLooks).
+                if (WidgetLooks.needsDarkening(WidgetLooks.customColors(r.o))) clamp(bmp, SKY_CONTRAST)
+                if (a < 255) fade(bmp, a)
+            }
             WidgetBackground.GLASS -> {
                 vertical(0f to withAlpha(0xFF2A2D36.toInt(), a), 1f to withAlpha(0xFF15171D.toInt(), a))
                 // A soft light along the top, as the app's glass.
@@ -97,6 +121,24 @@ internal object WidgetBack {
         (if (v <= 0.0031308) 12.92 * v else 1.055 * v.pow(1 / 2.4) - 0.055).let { (it * 255 + 0.5).toInt().coerceIn(0, 255) } }
     private fun lin(v: Int): Double = LIN[v]
     private fun gam(v: Double): Int = GAM[(v.coerceIn(0.0, 1.0) * GAM_STEPS + 0.5).toInt()]
+
+    /** The picture at [alpha] (0..255) of its strength. */
+    private fun fade(bmp: Bitmap, alpha: Int) {
+        val px = IntArray(bmp.width * bmp.height)
+        bmp.getPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+        for (i in px.indices) px[i] = (px[i] and 0x00FFFFFF) or ((((px[i] ushr 24) * alpha) / 255) shl 24)
+        bmp.setPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+    }
+
+    /** One colour no brighter than white text can read on at [SKY_CONTRAST]:1 (as [clamp] does to the picture). */
+    fun clampColor(c: Int): Int {
+        val maxLum = 1.05 / SKY_CONTRAST - 0.05
+        val r = lin(c shr 16 and 255); val g = lin(c shr 8 and 255); val b = lin(c and 255)
+        val lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        if (lum <= maxLum) return c
+        val k = maxLum / lum * 0.995
+        return (c and 0xFF000000.toInt()) or (gam(r * k) shl 16) or (gam(g * k) shl 8) or gam(b * k)
+    }
 
     /** Every pixel no brighter than white text can read on at [contrast]:1 (its light scaled down, its hue kept). */
     internal fun clamp(bmp: Bitmap, contrast: Double) {

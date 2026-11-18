@@ -17,7 +17,10 @@ internal class Block(val rect: RectF, val bitmap: Bitmap)
 internal class CountSpot(val left: Float, val top: Float, val scale: Float, val width: Float, val height: Float, val secondsScale: Float = 1f)
 
 /** A widget as drawn for one size (0.24): its background picture, its blocks, the live countdown, and what it says. */
-internal class Design(val wDp: Float, val hDp: Float, val back: Bitmap?, val blocks: List<Block>, val count: CountSpot?, val drawn: List<Drawn>)
+internal class Design(val wDp: Float, val hDp: Float, val back: Bitmap?, val blocks: List<Block>, val count: CountSpot?, val drawn: List<Drawn>) {
+    /** The colours it was drawn in (and whether a colour of one's own gave way to a legible one). */
+    var looks: WidgetLooks? = null
+}
 
 /**
  * A widget's surface while it is composed (0.24), in dp. Compositions place things from the reading edge ([x] from
@@ -76,6 +79,8 @@ internal class Sheet(val context: Context, val wDp: Float, val hDp: Float, val r
      * The line must already fit ([fit]).
      */
     fun text(line: WidgetInk.Line, x: Float, baseline: Float, boxW: Float, align: Align, role: String): RectF {
+        // Nothing to write (a part hidden by the options): nothing drawn, nothing said.
+        if (line.runs.isEmpty() || line.text.isBlank()) return RectF()
         val lw = width(line)
         val inBox = when (align) { Align.START -> 0f; Align.END -> boxW - lw; Align.CENTER -> (boxW - lw) / 2 }
         val left = absLeft(x + inBox, lw)
