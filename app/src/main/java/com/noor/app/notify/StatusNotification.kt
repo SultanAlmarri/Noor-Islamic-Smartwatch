@@ -46,8 +46,12 @@ import java.util.Locale
  *   the settings change. Those updates use non-waking alarms: they never wake a sleeping phone, and run as soon as the
  *   phone wakes, which is the only time the notification can be seen. At a prayer time the Adhan's own alarm (which
  *   does wake the phone) also refreshes it, so it is right the moment the screen lights up for the Adhan.
- * - It is an ordinary ongoing notification, not a foreground service: nothing keeps running. On Android 14 and later
- *   the user can swipe it away; it then returns at the next update (the next prayer), and can be turned off in Settings.
+ * - Where Android's Chronometer can tick it (the phone's digits are the app's, no Live Update), it is an ordinary
+ *   ongoing notification: nothing keeps running. On Android 14 and later the user can swipe it away; it then returns at
+ *   the next update (the next prayer), and can be turned off in Settings.
+ * - (0.22.4) Where Minhad writes the countdown itself (the phone's digits differ from the app's, or a Live Update), a
+ *   foreground service holds it ([StatusCountdownService]), so the countdown keeps ticking when Minhad is closed; where
+ *   Android does not let it start, the countdown is written to the minute ([Ticking.seconds]), never frozen seconds.
  * - It is separate from the prayer alerts: silent, low importance, its own notification category.
  */
 object StatusNotification {
@@ -96,18 +100,21 @@ object StatusNotification {
     /** Shows, updates or removes the notification to match the settings now, and arms the next update. */
     suspend fun refresh(context: Context) {
         val app = context.applicationContext as? NoorApplication ?: return
+        // (Testing only) The tester's notification test, through the same builders, in place of the real one.
+        test?.let { t -> val now = Instant.now(); show(app, t.context(app), t.content(now), t.formatter(), t.live(app), t.numerals, now, t.onShown); return }
         val s = app.container.settings.current()
         val nm = NotificationManagerCompat.from(app)
         val config = if (s.statusNotification) WearSync.configFor(s, System.currentTimeMillis(), app.container.timetables) else null
         if (config == null) {
+            StatusCountdownService.release(app, remove = true)
             nm.cancel(ID)
             StatusTicker.stop()
             cancelRefresh(app)
+            latest = null
             return
         }
         val ctx = localized(app, s)
         val arabic = ctx.resources.configuration.locales[0].language == "ar"
-        ensureChannel(ctx)
         val now = Instant.now()
         val c = content(config, s, now, arabic).let { k -> k.copy(place = withCity(k.place, PrayerProvider.place(s), arabic)) }
         // (0.22) As a chip in the status bar (Android 16's Live Updates), Android's own chronometer counts, in the phone's
@@ -115,29 +122,76 @@ object StatusNotification {
         // (0.22) Only while the phone really shows it there ([LivePromotion]): where it does not, Minhad's own notification,
         // its large countdown in the app's digits.
         val live = liveWanted(app, s) && !LivePromotion.refused(app)
-        val drawn = live || !systemDigitsMatch(app, s.numerals)
-        android.util.Log.d("NoorStatus", "countdown digits: phone ${systemLocale(app).toLanguageTag()}, Noor ${s.numerals}: ${if (drawn) "drawn by Noor" else "Android's Chronometer"}; live $live")
-        val f = Formatter(arabic, s.numerals, s.timeFormat)
-        runCatching { nm.notify(ID, if (live) buildLive(ctx, app, c, now, f) else build(ctx, app, c, now, if (drawn) f else null)) }
+        show(app, ctx, c, Formatter(arabic, s.numerals, s.timeFormat), live, s.numerals, now)
+    }
+
+    /**
+     * Posts the notification for [c] ([live]: as a Live Update), keeps it ticking (the service, the ticker, the minute
+     * alarm) and arms its next rebuild. [shown] (the tester's page) hears what was posted.
+     */
+    private fun show(app: Context, ctx: Context, c: Content, f: Formatter, live: Boolean, numerals: com.noor.app.data.Numerals, now: Instant,
+                     shown: ((Shown) -> Unit)? = null) {
+        val nm = NotificationManagerCompat.from(app)
+        ensureChannel(ctx)
+        val drawn = live || !systemDigitsMatch(app, numerals)
+        android.util.Log.d("NoorStatus", "countdown digits: phone ${systemLocale(app).toLanguageTag()}, Noor $numerals: ${if (drawn) "drawn by Noor" else "Android's Chronometer"}; live $live")
+        val make = { seconds: Boolean -> if (live) buildLive(ctx, app, c, now, f, seconds) else build(ctx, app, c, now, if (drawn) f else null, seconds) }
+        var n = make(true)
+        latest = n
+        // (0.22.4) Minhad writes the countdown: a foreground service keeps it ticking when the app is closed (the owner:
+        // it froze once Minhad was swiped away). Android lets it start only at certain moments ([StatusCountdownService]);
+        // where it does not, the countdown is written to the minute, so it is never seen frozen on a second.
+        val kept = when {
+            drawn && nm.areNotificationsEnabled() -> StatusCountdownService.keep(app)
+            else -> { StatusCountdownService.release(app, remove = false); true }
+        }
+        val seconds = kept || !drawn
+        if (!seconds) { n = make(false); latest = n }
+        runCatching { nm.notify(ID, n) }
         if (live) LivePromotion.check(app)
         if (drawn) {
-            // Noor draws the seconds itself: every second while the screen is on, and at least every minute otherwise
-            // (non-waking: an asleep phone is not woken; the update runs when it wakes).
-            armRefresh(app, minOf(c.refreshAt, now.plusSeconds(60)))
-            StatusTicker.start(app, Ticking(ctx, app, c, f, live))
+            // Noor draws the countdown itself: every second while the screen is on (every minute without the service),
+            // and at least at each change of its minute otherwise (non-waking: an asleep phone is not woken; the update
+            // runs when it wakes). This alarm is also the safety net if Android ends the service.
+            armRefresh(app, minOf(c.refreshAt, com.noor.app.widget.Widgets.nextMinute(c, now)))
+            StatusTicker.start(app, Ticking(ctx, app, c, f, live, seconds))
         } else {
             armRefresh(app, c.refreshAt)
             StatusTicker.stop()
         }
+        shown?.invoke(Shown(n, live, drawn, kept && drawn, seconds, fitTitle(c.prayer, c.time, countText(c, now, f, seconds), titleFits(ctx), seconds).second))
     }
 
+    /** What [show] posted, for the tester's page. [form]: the first line's spacing ([fitTitle]); [held]: by the service. */
+    internal class Shown(val notification: android.app.Notification, val live: Boolean, val drawn: Boolean, val held: Boolean, val seconds: Boolean, val form: Int)
+
+    /** (Testing only) What the tester's notification test shows in place of the real notification. */
+    internal interface TestSource {
+        val numerals: com.noor.app.data.Numerals
+        val onShown: ((Shown) -> Unit)?
+        fun context(app: Context): Context
+        fun content(now: Instant): Content
+        fun formatter(): Formatter
+        fun live(app: Context): Boolean
+    }
+
+    /** (Testing only) The tester's notification test (testing/NotificationTests); null: the real notification. */
+    @Volatile internal var test: TestSource? = null
+
+    /** The notification last built for the bar (what the service shows as it starts). */
+    @Volatile internal var latest: android.app.Notification? = null
+
     /** What the ticker needs to redraw the notification each second without recomputing the day. */
-    internal class Ticking(val ctx: Context, val app: Context, val content: Content, val f: Formatter, val live: Boolean = false)
+    internal class Ticking(val ctx: Context, val app: Context, val content: Content, val f: Formatter, val live: Boolean = false,
+        /** With its seconds (ticked each second); false: to the minute (ticked as its minute changes). */
+        val seconds: Boolean = true)
 
     /** Redraws the notification with Noor's own digits; false once its content is due for a full rebuild. */
     internal fun tick(t: Ticking, now: Instant): Boolean {
         if (!now.isBefore(t.content.refreshAt)) return false
-        runCatching { NotificationManagerCompat.from(t.app).notify(ID, if (t.live) buildLive(t.ctx, t.app, t.content, now, t.f) else build(t.ctx, t.app, t.content, now, t.f)) }
+        val n = if (t.live) buildLive(t.ctx, t.app, t.content, now, t.f, t.seconds) else build(t.ctx, t.app, t.content, now, t.f, t.seconds)
+        latest = n
+        runCatching { NotificationManagerCompat.from(t.app).notify(ID, n) }
         return true
     }
 
@@ -176,7 +230,7 @@ object StatusNotification {
      * The notification. [drawn]: Noor writes the countdown itself with these digits (see [systemDigitsMatch]);
      * null: Android's Chronometer ticks it.
      */
-    internal fun build(ctx: Context, app: Context, c: Content, now: Instant, drawn: Formatter? = null): android.app.Notification {
+    internal fun build(ctx: Context, app: Context, c: Content, now: Instant, drawn: Formatter? = null, seconds: Boolean = true): android.app.Notification {
         val title = "${c.prayer}  ·  ${c.time}"
         // (0.22: no "Next prayer" in the header any more, the owner's word: the countdown's sign says it.)
         val small = RemoteViews(app.packageName, R.layout.notification_status)
@@ -186,13 +240,13 @@ object StatusNotification {
         // South, Dubai"): the whole of it did not fit beside the date on a Galaxy's narrow row and was cut. The expanded
         // view shows it whole.
         small.setTextViewText(R.id.status_line, listOfNotNull(c.hijri, c.place?.let(::shortPlace)).joinToString(" · "))
-        countdown(small, c, now, drawn)
+        countdown(small, c, now, drawn, seconds)
         val big = RemoteViews(app.packageName, R.layout.notification_status_big)
         big.setTextViewText(R.id.status_prayer, title)
         big.setTextViewText(R.id.status_place, c.place ?: "")
         big.setViewVisibility(R.id.status_place, if (c.place == null) android.view.View.GONE else android.view.View.VISIBLE)
         big.setTextViewText(R.id.status_hijri, c.hijri)
-        countdown(big, c, now, drawn)
+        countdown(big, c, now, drawn, seconds)
         val open = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return NotificationCompat.Builder(app, CHANNEL)
@@ -214,8 +268,14 @@ object StatusNotification {
             .setContentIntent(open)
             // The watch has its own tiles and complications; never mirror this to it.
             .setLocalOnly(true)
+            // (0.22.4) Shown at once when the service holds it (Android may otherwise wait up to 10 s).
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
+
+    /** The countdown as written by Minhad: with its seconds ("−1:10:34"), or to the minute ("−1:10", h:mm). */
+    internal fun countText(c: Content, now: Instant, f: Formatter, seconds: Boolean): String =
+        if (seconds) c.countdown(now, f) else com.noor.app.widget.Widgets.minuteCountdown(c, now, f)
 
     /**
      * (0.22) The countdown as a chip in the status bar, as Samsung's Clock shows its timer: wanted in Settings, and
@@ -238,8 +298,8 @@ object StatusNotification {
      * and its time below, then the place and the Hijri date. The chip in the status bar shows the same countdown
      * ([Notification.Builder.setShortCriticalText]); the ticker writes it again every second while the screen is on.
      */
-    internal fun buildLive(ctx: Context, app: Context, c: Content, now: Instant, f: Formatter): android.app.Notification {
-        val count = c.countdown(now, f)
+    internal fun buildLive(ctx: Context, app: Context, c: Content, now: Instant, f: Formatter, seconds: Boolean = true): android.app.Notification {
+        val count = countText(c, now, f, seconds)
         val prayer = "${c.prayer}  ·  ${c.time}"
         val fits = titleFits(ctx)
         val open = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
@@ -250,7 +310,7 @@ object StatusNotification {
             // (0.22.2, the owner: more compact) The prayer, its time and the countdown on one line, each kept whole
             // and in its own direction: in a right-to-left shade the prayer stands on the right, the countdown on the
             // left; in a left-to-right one the other way round. Then the place and the Hijri date.
-            .setContentTitle(fittedTitle(c.prayer, c.time, count, fits))
+            .setContentTitle(fittedTitle(c.prayer, c.time, count, fits, seconds))
             .setContentText(listOfNotNull(c.place, c.hijri).joinToString("  ·  "))
             .setStyle(NotificationCompat.BigTextStyle().bigText(listOfNotNull(c.place, c.hijri).joinToString("\n")))
             .setShowWhen(false)
@@ -262,6 +322,7 @@ object StatusNotification {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(open)
             .setLocalOnly(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
         // Asks Android to promote it, both ways Android 16 reads: the request in the extras (EXTRA_REQUEST_PROMOTED_ONGOING,
         // public since Android 16's 36.1), and the promoted flag (which Android clears again if it does not promote the
@@ -300,24 +361,31 @@ object StatusNotification {
      * the roomy form; one gap; no dot between the name and the time; narrow spaces. Only where none fits (a very
      * large font on a narrow phone) the seconds go, so the countdown is never cut.
      */
-    internal fun fittedTitle(name: String, time: String, countdown: String, fits: (CharSequence) -> Boolean): CharSequence {
+    internal fun fittedTitle(name: String, time: String, countdown: String, fits: (CharSequence) -> Boolean, seconds: Boolean = true): CharSequence =
+        fitTitle(name, time, countdown, fits, seconds).first
+
+    /**
+     * [fittedTitle] and the form it chose: 0 the roomy form, 1 one gap, 2 no dot, 3 narrow spaces, 4 the seconds left
+     * out (the tester's page reports it).
+     */
+    internal fun fitTitle(name: String, time: String, countdown: String, fits: (CharSequence) -> Boolean, seconds: Boolean = true): Pair<CharSequence, Int> {
         val nb = time.replace(' ', '\u202F')
         val forms = listOf(
             "\u2068$name · $time\u2069\u2003${ltr(countdown)}",
             "\u2068$name · $time\u2069\u2002${ltr(countdown)}",
             "\u2068$name $time\u2069\u2002${ltr(countdown)}",
             "\u2068$name\u2009$nb\u2069\u2009\u2009${ltr(countdown)}",
-        ).map(::styled)
-        forms.firstOrNull(fits)?.let { return it }
-        val noSeconds = countdown.substringBeforeLast(':').takeIf { countdown.count { it == ':' } >= 2 } ?: countdown
-        return styled("\u2068$name\u2009$nb\u2069\u2009\u2009${ltr(noSeconds)}")
+        ).map { styled(it, seconds) }
+        forms.indexOfFirst(fits).takeIf { it >= 0 }?.let { return forms[it] to it }
+        val noSeconds = countdown.substringBeforeLast(':').takeIf { seconds && countdown.count { it == ':' } >= 2 } ?: countdown
+        return styled("\u2068$name\u2009$nb\u2069\u2009\u2009${ltr(noSeconds)}", seconds && noSeconds == countdown) to 4
     }
 
     /**
      * The title as the home screen writes a countdown and a time: the AM/PM mark a little smaller, the seconds a little
      * smaller and quieter; everything else as Android's title. (It also gives the line room: 0.22.3.)
      */
-    private fun styled(text: String): CharSequence {
+    private fun styled(text: String, seconds: Boolean = true): CharSequence {
         val sb = android.text.SpannableStringBuilder(text)
         // AM/PM (and the Arabic ص/م) after a time's digits.
         Regex("(?<=[\\d\\u0660-\\u0669])[\\u0020\\u202F](AM|PM|\u0635|\u0645)").findAll(text).forEach { m ->
@@ -325,7 +393,7 @@ object StatusNotification {
         }
         // The countdown's seconds: the last ":ss" of the countdown (after the second colon of h:mm:ss, or of m:ss).
         val iso = text.lastIndexOf('\u2066')
-        if (iso >= 0) {
+        if (iso >= 0 && seconds) {
             val cd = text.substring(iso)
             val colon = cd.lastIndexOf(':')
             if (colon > 0 && cd.count { it == ':' } >= 1 && cd.length - colon >= 3) {
@@ -378,11 +446,11 @@ object StatusNotification {
      * countdown passes through "00:00" — never a wrong or doubled sign (a count-down with our own "−" would read
      * "−−00:01").
      */
-    private fun countdown(v: RemoteViews, c: Content, now: Instant, drawn: Formatter?) {
+    private fun countdown(v: RemoteViews, c: Content, now: Instant, drawn: Formatter?, seconds: Boolean = true) {
         if (drawn != null) {
             v.setViewVisibility(R.id.status_countdown, android.view.View.GONE)
             v.setViewVisibility(R.id.status_countdown_text, android.view.View.VISIBLE)
-            v.setTextViewText(R.id.status_countdown_text, c.countdown(now, drawn))
+            v.setTextViewText(R.id.status_countdown_text, countText(c, now, drawn, seconds))
             return
         }
         v.setViewVisibility(R.id.status_countdown_text, android.view.View.GONE)
@@ -401,6 +469,10 @@ object StatusNotification {
             enableVibration(false)
         })
     }
+
+    /** A context in the language [tag] ("ar", "en"), for the tester's page. */
+    internal fun inLanguage(app: Context, tag: String): Context =
+        app.createConfigurationContext(Configuration(app.resources.configuration).also { it.setLocale(Locale(tag)) })
 
     /** The language chosen in Noor (or the device's), as AlertNotifications does for the alert categories. */
     private fun localized(app: Context, s: AppSettings): Context {
@@ -502,29 +574,49 @@ internal object LivePromotion {
 }
 
 internal object StatusTicker {
-    private val handler = android.os.Handler(android.os.HandlerThread("NoorStatusTicker").apply { start() }.looper)
+    internal val looper: android.os.Looper = android.os.HandlerThread("NoorStatusTicker").apply { start() }.looper
+    private val handler = android.os.Handler(looper)
     @Volatile private var current: StatusNotification.Ticking? = null
+    /** How many times it has redrawn the notification (for tests). */
+    @Volatile internal var ticks = 0L
+    /** Whether a redraw is waiting (never while the screen is off). */
+    @Volatile internal var scheduled = false
     private val tick = object : Runnable {
         override fun run() {
+            scheduled = false
             val t = current ?: return
             val pm = t.app.getSystemService(android.os.PowerManager::class.java)
             if (pm?.isInteractive == false) { stop(); return }
             if (!StatusNotification.tick(t, Instant.now())) { current = null; StatusNotification.refreshAsync(t.app); return }
-            // On the next whole second, so the seconds change in step with the clock.
-            handler.postDelayed(this, 1000L - System.currentTimeMillis() % 1000L + 5L)
+            ticks++
+            schedule(t)
         }
+    }
+
+    /**
+     * On the next whole second, so the seconds change in step with the clock; to the minute (0.22.4: where the service
+     * could not start), as the countdown's minute changes.
+     */
+    private fun schedule(t: StatusNotification.Ticking) {
+        val now = System.currentTimeMillis()
+        val wait = if (t.seconds) 1000L - now % 1000L + 5L
+            else maxOf(50L, com.noor.app.widget.Widgets.nextMinute(t.content, Instant.ofEpochMilli(now)).toEpochMilli() - now)
+        scheduled = true
+        handler.postDelayed(tick, wait)
     }
 
     fun start(app: Context, t: StatusNotification.Ticking) {
         handler.post {
             current = t
-            handler.removeCallbacks(tick)
+            handler.removeCallbacks(tick); scheduled = false
             val pm = app.getSystemService(android.os.PowerManager::class.java)
-            if (pm?.isInteractive != false) handler.postDelayed(tick, 1000L - System.currentTimeMillis() % 1000L + 5L)
+            if (pm?.isInteractive != false) schedule(t)
         }
     }
 
-    fun stop() { handler.post { current = null; handler.removeCallbacks(tick) } }
+    fun stop() { handler.post { current = null; handler.removeCallbacks(tick); scheduled = false } }
 
     val running: Boolean get() = current != null
+    /** What it is ticking (for tests and the tester's page). */
+    internal val ticking: StatusNotification.Ticking? get() = current
 }

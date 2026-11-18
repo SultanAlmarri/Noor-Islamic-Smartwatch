@@ -15,6 +15,10 @@
     <!-- 0.22: the prayer countdown as a chip in the status bar (Android 16's Live Updates; a normal permission, and the
          user can turn it off for Minhad in Android's settings). -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <!-- 0.22.4: the countdown keeps ticking when Minhad is closed (StatusCountdownService, a foreground service of the
+         "special use" type while Minhad writes the countdown itself; docs/HANDOVER.md section 37). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:name=".NoorApplication"
@@ -79,6 +83,18 @@
                 <action android:name="android.intent.action.LOCALE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- 0.22.4: holds the persistent notification while Minhad writes its countdown (the phone's digits differ from
+             the app's, or the status-bar chip), so it keeps ticking when the app is closed. Not stopped with the task. -->
+        <service
+            android:name=".notify.StatusCountdownService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Live countdown to the next prayer in the status bar and notification, chosen by the user" />
+        </service>
 
         <!-- Home-screen widgets (0.9.10). -->
         <receiver android:name=".widget.NextPrayerWidget" android:exported="true" android:label="@string/widget_next_name">

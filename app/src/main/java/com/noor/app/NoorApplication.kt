@@ -137,6 +137,8 @@ class NoorApplication : Application(), AlertHost {
         runCatching {
             val screen = object : android.content.BroadcastReceiver() {
                 override fun onReceive(c: Context, i: Intent) {
+                    // (0.22.4) While the countdown's service runs, it answers the screen itself.
+                    if (com.noor.app.notify.StatusCountdownService.running) return
                     if (i.action == Intent.ACTION_SCREEN_OFF) com.noor.app.notify.StatusTicker.stop()
                     else com.noor.app.notify.StatusNotification.refreshAsync(c)
                 }

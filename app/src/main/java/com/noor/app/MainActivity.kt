@@ -191,6 +191,9 @@ class MainActivity : AppCompatActivity() {
         // Back after a long while: the home screen comes in again (its sky runs to now, its times settle); no veil.
         val away = if (stoppedAt > 0L) SystemClock.elapsedRealtime() - stoppedAt else 0L
         stoppedAt = 0L
+        // (0.22.4) Minhad on screen is a moment Android lets the countdown's service start: if Android ended it while
+        // the app was closed, the notification is rebuilt and held again (the countdown with its seconds).
+        if (!com.noor.app.notify.StatusCountdownService.running) com.noor.app.notify.StatusNotification.refreshAsync(this)
         if (Opening.replaysOnReturn(away, animationsOn(this), opening.onHome)) opening.begin(OpeningMode.FULL, veil = false, now = true)
     }
 

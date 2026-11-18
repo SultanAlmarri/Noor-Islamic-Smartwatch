@@ -65,6 +65,7 @@ object Tester {
 
     fun reset() {
         stopDemo()
+        NotificationTests.stop()
         on = false; time = null; playing = false; year = null; weather = null; weatherDay = 0; fog = null
     }
 

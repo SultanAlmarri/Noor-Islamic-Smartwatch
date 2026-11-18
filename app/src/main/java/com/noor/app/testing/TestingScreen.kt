@@ -28,6 +28,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -131,8 +133,62 @@ fun TestingScreen(
             Title("Place", "To see another place (its prayer times, its Sun, its night sky), choose it in Minhad's own place chooser, and choose your own place again afterwards.")
             OutlinedButton(onClick = onOpenLocation) { Text("Choose a place") }
         }
+
+        NotificationTestCard()
         Spacer(Modifier.height(24.dp))
     }
+    }
+}
+
+/**
+ * (0.22.4) Notification tests: the status notification with chosen content, through the real builders, the same id,
+ * service and ticker ([NotificationTests]). Leaving this page gives the real notification back.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun NotificationTestCard() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val n = NotificationTests
+    var preset by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(NotificationTests.Preset.LONGEST_EN) }
+    var live by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(android.os.Build.VERSION.SDK_INT >= 36) }
+    var arabicDigits by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    var h24 by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    var arabic by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    // Leaving the page gives the real notification back; Minhad itself closing (swiped away, so that the owner can see the
+    // test keep ticking) or turning the phone does not: the Testing strip on every page says the test is on.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            val activity = context as? android.app.Activity
+            if (activity == null || !(activity.isFinishing || activity.isChangingConfigurations)) NotificationTests.stop(context)
+        }
+    }
+    fun case() = NotificationTests.Case(preset, live, if (arabicDigits) com.noor.app.data.Numerals.ARABIC_INDIC else com.noor.app.data.Numerals.WESTERN,
+        if (h24) com.noor.app.data.TimeFormat.H24 else com.noor.app.data.TimeFormat.H12, arabic)
+    // A change while a test is shown shows it again at once (its countdown starts again).
+    fun again() { if (n.active != null) n.show(context, case()) }
+    Card {
+        Title("Notification tests", "Shows the notification in the status bar and the shade with the content chosen here, made exactly as the real one is " +
+            "(the same layout, fitting, digits and ticking), so you can see what your phone does. The real prayer times and alarms are not touched.")
+        Chips(NotificationTests.Preset.entries.map { it.label to it }, selected = { it == preset }) { p ->
+            preset = p
+            p.arabic?.let { arabic = it }
+            p.numerals?.let { arabicDigits = it == com.noor.app.data.Numerals.ARABIC_INDIC }
+            again()
+        }
+        SwitchRow("Status-bar chip (Live Update)" + if (android.os.Build.VERSION.SDK_INT < 36) ": needs Android 16" else "", live) { live = it; again() }
+        SwitchRow("Arabic-Indic digits", arabicDigits) { arabicDigits = it; again() }
+        SwitchRow("24-hour clock", h24) { h24 = it; again() }
+        SwitchRow("In Arabic", arabic) { arabic = it; again() }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { n.show(context, case()) }) { Text(if (n.active == null) "Show this notification" else "Show again") }
+            if (n.active != null) OutlinedButton(onClick = { n.stop(context) }) { Text("Back to the real notification") }
+        }
+        if (n.active != null) {
+            Text(n.report ?: "Posting…", style = MaterialTheme.typography.bodySmall)
+            if (n.active?.live == true) Text("The chip: " + n.promotion() + ".", style = MaterialTheme.typography.bodySmall)
+            Text("Close Minhad from the recent apps to check that it keeps ticking: the test stays until you leave this page or tap the Testing strip.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -149,6 +205,7 @@ fun TesterBanner() {
         t.year?.let { y -> add(Tester.SEASONS.minByOrNull { kotlin.math.abs(it.second - y) }!!.first.lowercase()) }
         t.weather?.let { add(Tester.WEATHER_NAMES[it].lowercase()) }
         t.fog?.let { if (it > 0f) add("fog") }
+        if (NotificationTests.active != null) add("notification test")
     }.joinToString(", ").ifEmpty { "on" }
     // (0.21) What is shown on a line of its own, wrapped if it must be, and what a touch does under it: on one line
     // with no ellipsis the demo's label ran off the screen. The frame keeps room for it (AppFrame).
