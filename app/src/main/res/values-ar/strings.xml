@@ -516,7 +516,7 @@
     <string name="sun_path_title">مسار الشمس</string>
     <string name="sun_path_simple">بسيط</string>
     <string name="sun_path_real">السماء الحقيقية</string>
-    <string name="sun_path_simple_desc">القوس نفسه كل يوم</string>
+    <string name="sun_path_simple_desc">القوس نفسه دائمًا، من مشرق الشمس إلى مغربها</string>
     <string name="sun_path_real_desc">مسار الشمس الحقيقي لمكانك وتاريخك</string>
     <string name="sky_graphics_title">الرسومات</string>
     <string name="sky_graphics_note">الرسومات الأعلى تستهلك بطارية أكثر. يختار الوضع التلقائي ما يناسب هاتفك، وينخفض من تلقاء نفسه إن ثقلت على هاتفك.</string>

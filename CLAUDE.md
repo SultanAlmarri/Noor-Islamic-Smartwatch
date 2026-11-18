@@ -210,7 +210,9 @@ phone) as bland and fake: never call a render beautiful on your own judgment; pu
 - Rules a scenery must keep: nature only; every source and licence written down in `tools/scenery/sources/`;
   built from real-world data (scans, elevation models) wherever such data exists, not from formulas; and a natural
   skyline: never cut a range or a treeline open so the Sun rises and sets on level ground (the owner rejected that;
-  the Sun may rise over a mountain). The Sun's path (0.23) is the Sun's real path, the same over every scenery and level
+  the Sun may rise over a mountain). The Sun's path has two modes (Settings → Home scenery → Sun's path, `AppSettings.sunPath`): **Simple, the default** (the
+  owner's word): `SimpleArch`, one fixed half-sine arch to the arch's top, its ends where the Sun really rises and sets on a
+  fixed scale (half the width = 135° from the noon Sun), evenly in time; and **Real sky**: the Sun's real path, the same over every scenery and level
   (it depends on the place and the day only), on the level horizon, drawn in front of the land: an equal-angle picture
   facing the noon Sun, the azimuth from the noon Sun's across and the apparent elevation up, ONE scale for both
   (`SunPanorama`, `SkyGeometry`: px per degree `k`, the largest at which Fajr..Isha fits the width and noon fits under

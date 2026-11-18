@@ -511,7 +511,7 @@
     <string name="sun_path_title">Sun\'s path</string>
     <string name="sun_path_simple">Simple</string>
     <string name="sun_path_real">Real sky</string>
-    <string name="sun_path_simple_desc">The same arc every day</string>
+    <string name="sun_path_simple_desc">Always the same arc, from where the Sun rises to where it sets</string>
     <string name="sun_path_real_desc">The Sun\'s true path for your place and date</string>
     <string name="sky_graphics_title">Graphics</string>
     <string name="sky_graphics_note">Higher graphics use more battery. Automatic chooses for your phone, and steps down by itself if your phone finds it heavy.</string>

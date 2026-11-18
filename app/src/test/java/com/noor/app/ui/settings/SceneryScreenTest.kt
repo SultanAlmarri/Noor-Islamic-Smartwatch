@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.noor.app.NoorApplication
 import com.noor.app.data.Scenery
 import com.noor.app.ui.theme.NoorTheme
@@ -55,7 +56,7 @@ class SceneryScreenTest {
         rule.onAllNodesWithText("Dunes, for Dubai", substring = true).onFirst().assertExists()
         // (0.23) The Sun's path: Simple by default (the owner's word), described under the choice.
         assertEquals(com.noor.app.data.SunPathMode.SIMPLE, runBlocking { app.container.settings.current().sunPath })
-        rule.onAllNodesWithText("The same arc every day").onFirst().assertExists()
+        rule.onAllNodesWithText("Always the same arc", substring = true).onFirst().assertExists()
         shot("75_scenery_en")
         // 0.10: the six sceneries of the real sky.
         assertEquals(com.noor.app.sky.Biome.DUNES, com.noor.app.sky.Biome.of(Scenery.AUTO, "AE", 5.0, 25.2))
@@ -65,7 +66,7 @@ class SceneryScreenTest {
         assertEquals(com.noor.app.sky.Biome.RAINFOREST, com.noor.app.sky.Biome.of(Scenery.AUTO, "GB", 30.0, 51.5))
         assertEquals(com.noor.app.sky.Biome.CANYON, com.noor.app.sky.Biome.of(Scenery.AUTO, "YE".let { "AF" }, 1800.0, 34.5))
         assertEquals(com.noor.app.sky.Biome.RAINFOREST, com.noor.app.sky.Biome.of(Scenery.HILLS, "AE", 5.0, 25.2))
-        rule.onAllNodesWithText("Red rock").onFirst().performClick()
+        rule.onAllNodesWithText("Red rock").onFirst().performScrollTo().performClick()
         // The choice is saved on the view model's scope (DataStore writes on its own thread): let the main looper run.
         for (i in 0 until 200) {
             if (runBlocking { app.container.settings.current().scenery } == Scenery.CANYON) break
@@ -74,7 +75,7 @@ class SceneryScreenTest {
         assertEquals(Scenery.CANYON, runBlocking { app.container.settings.current().scenery })
         shot("76_scenery_canyon_en")
         // (0.20) The graphics level is chosen at the top of the page, and the pictures show that level at once.
-        rule.onAllNodesWithText("Low").onFirst().performClick()
+        rule.onAllNodesWithText("Low").onFirst().performScrollTo().performClick()
         for (i in 0 until 200) {
             if (runBlocking { app.container.settings.current().skyGraphics } == com.noor.app.data.SkyGraphics.LOW) break
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(25)
@@ -83,7 +84,7 @@ class SceneryScreenTest {
         rule.onAllNodesWithText("The simplest sky", substring = true).onFirst().assertExists()
         shot("76b_scenery_low_en")
         // (0.23) The real Sun's path, chosen and kept.
-        rule.onAllNodesWithText("Real sky").onFirst().performClick()
+        rule.onAllNodesWithText("Real sky").onFirst().performScrollTo().performClick()
         for (i in 0 until 200) {
             if (runBlocking { app.container.settings.current().sunPath } == com.noor.app.data.SunPathMode.REAL) break
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(25)

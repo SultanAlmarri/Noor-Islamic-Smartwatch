@@ -1851,3 +1851,35 @@ of the width, no NaN. `SkyLanguageTest`: the sky renders identically in Arabic a
 **Weakness, honestly**: on the true scale the arch is small on a short header: Dubai in November k = 1.77 dp/degree, the
 arch 81 dp tall and about 240 dp wide on a 412 x 400 dp header; in June k = 0.92 (noon 88°), a steep climb and a flat top.
 The land at the sides (High's PNW, Arctic, Red rock) hides the low Sun for hours (the owner chose that).
+
+### 35.1 The Sun's path: Simple (default) or Real sky (0.23 work, 18 November 2026, a helper on `sun/modes`)
+
+**What the owner asked**: "there should be an option to show the real accurate sun path depending on the date and
+location, but the default option should be to show the same sun path consistently anywhere you are"; then "the default
+sun path, which is consistent, it should have some realism ... like where the sun rises and sets, depending on your
+location. But the shape should not change."
+
+**What was done**: `AppSettings.sunPath: SunPathMode { SIMPLE, REAL }`, default SIMPLE (DataStore key `sun_path`), chosen on
+Settings → Home scenery under the graphics level (two segments in the same capsule, "Simple" / "Real sky", one line under
+it; English and Arabic). `SkyScene.realPath` carries it to `SkyGeometry`, so every Sun and path follows it (Compose layers,
+High's frame through `SkyLook`, Low, the widget; the benches' `sunPath` option).
+`SimpleArch` (Simple): y = horizon − (horizon − arc top)·sin(π·u), u the day's progress from Shuruq to Maghrib: always the
+same half sine, top at the arch's top at the middle of the day. Its ends at the real azimuths of sunrise and sunset from
+the noon Sun's (facing the noon Sun as the real path does: in the southern hemisphere it rises on the right), on one fixed
+scale: half the width = 135°, held 3 % of the width from the edges. Evenly in time. Under the horizon a fixed dip (half of
+the depth under the horizon at the edges) to Fajr and Isha at their real azimuths (at least 3 % of the width outside
+sunrise/sunset), and on to the edges in deep night (monotone curves). Fallbacks: polar day: the arch over the whole day, its
+ends at the margins, on the horizon outside it; polar night: no arch, the whole day in the dip, highest at noon in the middle;
+only one of sunrise/sunset: the other mirrored about noon; Fajr before midnight or Isha after it: the night's part ends at its
+mark. In Dubai the arch is 196 dp wide on 21 December, 211 dp on 18 November and 356 dp on 21 June (412 dp screen), always 81 dp
+tall on a 400 dp header.
+
+**Tested**: `SunPathSimpleTest` (Dubai Nov/Jun/Dec, Makkah 27 May and 21 Jun, Sydney Jun/Dec, Oslo Jun/Dec, Tromsø Jun/Dec;
+two sizes): the normalised shape is sin(π·u) within 1e-4 everywhere, x even in time, the ends at the Almanac's azimuths within
+0.2° (or held at the margin), the Sun's direction, marks (Shuruq/Maghrib on the horizon, Fajr/Isha under it, Dhuhr at the top),
+polar day never under the horizon and polar night never over it, dragging monotone and invertible minute by minute, no NaN.
+`SceneryScreenTest`: Simple by default, Real sky chosen and kept. The real path's tests (`SunPathRealTest`, `LivingSkyTest`,
+`SunMarkTest`) run with `realPath = true`. **Not tested**: on a phone.
+
+**Weakness**: with a fixed height and real ends, a short winter day far north is a narrow, tall hump (Oslo 21 December:
+121 dp wide, 81 dp tall).
