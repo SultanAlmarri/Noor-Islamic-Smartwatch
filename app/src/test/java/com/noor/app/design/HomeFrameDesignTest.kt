@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -62,6 +63,7 @@ class HomeFrameDesignTest {
     private var arabic by mutableStateOf(false)
     private var fontScale by mutableStateOf(1f)
     private var settings by mutableStateOf(RenderHarness.DUBAI)
+    private var scrub by mutableStateOf<Double?>(null)
 
     private val longPlace = AppSettings(onboardingDone = true, locationMode = LocationMode.MANUAL, manualPlace = KnownLocation(
         GeoPoint(25.0732, 55.2297), "Asia/Dubai", "Mohammed Bin Rashid Al Maktoum City", "AE", null, 0L,
@@ -93,7 +95,7 @@ class HomeFrameDesignTest {
                             val cache = DayCache(tables)
                             val state = Schedule.state(clock, place.zone) { cache.get(s, place, profile, it) }
                             val u = TodayUi(s, place, profile, PrayerProvider.authority(s, place), clock, state, clock.atZone(place.zone).toLocalDate(), refreshing = false, lastRefresh = null)
-                            TodayContent(u, pad, { cache.resolved(s, place, profile, it) }, {}, {}, {})
+                            TodayContent(u, pad, { cache.resolved(s, place, profile, it) }, {}, {}, {}, previewScrub = scrub)
                         }
                     }
                 }
@@ -118,6 +120,34 @@ class HomeFrameDesignTest {
         fontScale = 1.5f; shot("frame_home_larger_text_en", "Maghrib")
         arabic = true; shot("frame_home_larger_text_ar", "المغرب")
         fontScale = 1f; arabic = false
+        // (0.22) The Sun drawn along its path (the owner's screenshot, 8:46 AM): the readout's three lines whole, its
+        // last one ("… ago") not cut through by the header's edge; with large text too, in both languages.
+        settings = RenderHarness.DUBAI
+        scrub = (8 * 60 + 46) / 1440.0
+        shot("frame_home_scrub_en", "ago"); assertWhole("ago")
+        fontScale = 1.3f; shot("frame_home_scrub_large_en", "ago"); assertWhole("ago")
+        arabic = true; fontScale = 1f; shot("frame_home_scrub_ar", "قبل"); assertWhole("قبل")
+        scrub = null; arabic = false
+    }
+
+    /** The text is drawn whole: nothing above it clips it (its bounds on the screen are its own size). */
+    private fun assertWhole(text: String) {
+        val nodes = rule.onAllNodesWithText(text, substring = true, useUnmergedTree = true).fetchSemanticsNodes()
+        assertTrue("\"$text\" is not on the screen", nodes.isNotEmpty())
+        for (n in nodes) assertTrue("\"$text\" is cut: ${n.boundsInRoot.height} px of ${n.size.height}", n.boundsInRoot.height >= n.size.height - 1f)
+        // And within the readout's own place (the next prayer's), which the header draws: until 0.22 its last line ran
+        // below it and was cut through when drawn.
+        val box = rule.onAllNodesWithTag("scrub_readout", useUnmergedTree = true).fetchSemanticsNodes().single().boundsInRoot
+        // (Only the readout's own line: the word may be elsewhere on the page too.)
+        val own = nodes.filter { it.boundsInRoot.top < box.bottom + box.height / 2 }
+        assertTrue("the readout's last line is not there", own.isNotEmpty())
+        for (n in own) assertTrue("\"$text\" ends at ${n.boundsInRoot.bottom}, below its place (${box.bottom})", n.boundsInRoot.bottom <= box.bottom + 1f)
+        // Given the height of its letters (14sp at least): until 0.22 the readout's column gave its last line the few
+        // pixels left over, and the line was drawn cut through, a row of dots.
+        val dm = rule.activity.resources.displayMetrics
+        for (n in own) assertTrue("\"$text\" is squeezed to ${n.size.height} px", n.size.height >= 14f * dm.density * fontScale)
+        val label = rule.onAllNodesWithText(if (arabic) "الشمس" else "SUN", substring = true, useUnmergedTree = true).fetchSemanticsNodes()
+        for (n in label) assertTrue("the Sun's height starts at ${n.boundsInRoot.top}, above its place (${box.top})", n.boundsInRoot.top >= box.top - 1f)
     }
 
     /** The day's last row stands above whatever lies over the foot of the page (the tester's banner, the tab bar). */

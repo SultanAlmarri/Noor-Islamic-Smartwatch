@@ -90,6 +90,7 @@ import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -636,7 +637,7 @@ private fun SkyHeader(
                 if (readout) AtMoment(shown) { f0 ->
                     val at = caught?.second ?: scene.instantAt(f0).plusSeconds(30).truncatedTo(ChronoUnit.MINUTES)
                     ScrubReadout(
-                        at = at, prayer = caught?.first, elevation = scene.elevationAt(f0), now = clock(), zone = place.zone, date = today, f = f, countdownMax = hero.countdownMax,
+                        at = at, prayer = caught?.first, elevation = scene.elevationAt(f0), now = clock(), zone = place.zone, date = today, f = f, countdownMax = hero.countdownMax, titleSize = hero.titleSize,
                         modifier = Modifier.matchParentSize().graphicsLayer { alpha = away; translationY = 12.dp.toPx() * (1f - away) },
                     )
                 }
@@ -694,17 +695,24 @@ private fun PrayerTitle(name: String, arabic: Boolean, size: Float, time: String
 @Composable
 private fun ScrubReadout(
     at: java.time.Instant, prayer: Prayer?, elevation: Double, now: java.time.Instant, zone: java.time.ZoneId, date: LocalDate, f: Formatter,
-    countdownMax: Float, modifier: Modifier = Modifier,
+    countdownMax: Float, titleSize: Float, modifier: Modifier = Modifier,
 ) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        val deg = f.number(abs(elevation.roundToInt()))
-        Text(
-            (if (elevation >= 0) stringResource(R.string.sky_sun_above, deg) else stringResource(R.string.sky_sun_below, deg)).uppercase(),
-            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 2.sp, fontWeight = FontWeight.SemiBold, shadow = SkyText.Shadow), color = Sky.OnSkyMuted,
-        )
-        Spacer(Modifier.height(4.dp))
-        Box(Modifier.height(40.dp), contentAlignment = Alignment.BottomCenter) {
-            if (prayer != null) PrayerTitle(f.prayerName(prayer, date), f.arabic, 28f)
+    // (0.22) The readout takes the place of the next prayer, its countdown and its words, and has their three lines and
+    // no more: the prayer the Sun is on, or else how high the Sun stands, in the title's line; the time in the
+    // countdown's; how far it is from now in the words' line. Until 0.22 it kept an empty line for a prayer's name
+    // under the Sun's height and was taller than the place it stands in: its last line ran out of the header and was
+    // cut through, half hidden (the owner's screenshot, 18 November 2026).
+    Column(modifier.testTag("scrub_readout"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Box(Modifier.height((titleSize * 1.4f).dp), contentAlignment = Alignment.Center) {
+            if (prayer != null) PrayerTitle(f.prayerName(prayer, date), f.arabic, titleSize)
+            else {
+                val deg = f.number(abs(elevation.roundToInt()))
+                Text(
+                    (if (elevation >= 0) stringResource(R.string.sky_sun_above, deg) else stringResource(R.string.sky_sun_below, deg)).uppercase(),
+                    style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 2.sp, fontWeight = FontWeight.SemiBold, shadow = SkyText.Shadow), color = Sky.OnSkyMuted,
+                    maxLines = 1,
+                )
+            }
         }
         val size = (countdownMax * 0.86f).sp
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -718,7 +726,8 @@ private fun ScrubReadout(
                 d.isNegative -> stringResource(R.string.time_ago, durationText(d.negated(), f))
                 else -> stringResource(R.string.today_in, durationText(d, f))
             },
-            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, shadow = SkyText.Shadow), color = if (prayer != null) Sky.GoldOnSky else Sky.OnSkySecondary,
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp, shadow = SkyText.Shadow),
+            color = if (prayer != null) Sky.GoldOnSky else Sky.OnSkySecondary, maxLines = 1,
         )
     }
 }
