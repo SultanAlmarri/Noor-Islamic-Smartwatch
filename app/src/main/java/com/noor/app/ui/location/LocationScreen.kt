@@ -305,7 +305,13 @@ private fun CountriesPane(contentPadding: PaddingValues, vm: LocationViewModel, 
                 item(key = "here") { PlaceRow(flag = Flags.emoji(cc), title = name, subtitle = null, chevron = true) { onCountry(cc) } }
                 item(key = "hereSep") { Hairline() }
             }
-            items(shown, key = { it.first }) { (cc, name) -> PlaceRow(flag = Flags.emoji(cc), title = name, subtitle = null, chevron = true) { onCountry(cc) } }
+            // Israel and Palestine are both named Palestine (the display rule): each says its largest places, so the
+            // two rows can be told apart.
+            items(shown, key = { it.first }) { (cc, name) ->
+                val twin = all.count { it.second == name } > 1
+                val sub = if (twin) remember(world, cc, ar) { world?.largest(cc, 3)?.joinToString(if (ar) "، " else ", ") { if (ar) it.nameAr ?: it.name else it.name } } else null
+                PlaceRow(flag = Flags.emoji(cc), title = name, subtitle = sub, chevron = true) { onCountry(cc) }
+            }
             item { Spacer(Modifier.height(32.dp)) }
         }
     }

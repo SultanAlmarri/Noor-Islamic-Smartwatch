@@ -125,7 +125,7 @@ class LocationRepository(
         runCatching { ZoneCountries.of(w.timeZones().zoneAt(p.latitude, p.longitude)) }.getOrNull()
     }
 
-    private fun Address.parts() = AddressParts(subLocality, locality, subAdminArea, adminArea, countryCode, countryName)
+    private fun Address.parts() = AddressParts(subLocality, locality, subAdminArea, adminArea, countryCode, WorldStore.countryName(this))
 
     /** Dubai emirate is IACAD's jurisdiction; the English geocoder names its admin area "Dubai". */
     private fun regionCode(a: Address?): String? {

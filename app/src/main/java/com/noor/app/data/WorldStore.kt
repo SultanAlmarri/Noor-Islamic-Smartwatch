@@ -131,14 +131,14 @@ class WorldStore(private val context: Context) {
             if (!a.hasLatitude() || !a.hasLongitude()) return@mapNotNull null
             val label = PlaceNaming.label(a.parts(), precise = true)
             val title = a.featureName?.takeIf { it.isNotBlank() && !it.matches(Regex("^[0-9\\s\\-]+$")) && it != label?.primary } ?: label?.primary ?: return@mapNotNull null
-            val sub = listOfNotNull(label?.primary?.takeIf { it != title }, a.locality?.takeIf { it != title && it != label?.primary }, a.adminArea?.takeIf { it != title }, a.countryName)
+            val sub = listOfNotNull(label?.primary?.takeIf { it != title }, a.locality?.takeIf { it != title && it != label?.primary }, a.adminArea?.takeIf { it != title }, countryName(a))
                 .distinct().joinToString(if (arabic) "، " else ", ")
             FoundPlace(GeoPoint(a.latitude, a.longitude), title, sub.ifBlank { null }, a.countryCode, online = true)
         } else photon(q, arabic)
         found.orEmpty()
     }
 
-    private fun Address.parts() = AddressParts(subLocality, locality, subAdminArea, adminArea, countryCode, countryName)
+    private fun Address.parts() = AddressParts(subLocality, locality, subAdminArea, adminArea, countryCode, countryName(this))
 
     private fun regionCode(a: Address?): String? {
         val admin = a?.adminArea ?: return null
@@ -187,17 +187,30 @@ class WorldStore(private val context: Context) {
             val xy = f.getJSONObject("geometry").getJSONArray("coordinates")
             val pr = f.getJSONObject("properties")
             val name = pr.optString("name").ifBlank { return@mapNotNull null }
-            val sub = listOf("district", "city", "state", "country").mapNotNull { k -> pr.optString(k).ifBlank { null }?.takeIf { it != name } }.distinct()
+            val cc = pr.optString("countrycode").ifBlank { null }?.uppercase()
+            val sub = listOf("district", "city", "state", "country").mapNotNull { k ->
+                (if (k == "country" && com.noor.prayer.geo.Flags.displayCountry(cc) == "PS") countryName("PS", arabic) else pr.optString(k)).ifBlank { null }?.takeIf { it != name }
+            }.distinct()
                 .joinToString(if (arabic) "، " else ", ")
-            FoundPlace(GeoPoint(xy.getDouble(1), xy.getDouble(0)), name, sub.ifBlank { null }, pr.optString("countrycode").ifBlank { null }?.uppercase(), online = true)
+            FoundPlace(GeoPoint(xy.getDouble(1), xy.getDouble(0)), name, sub.ifBlank { null }, cc, online = true)
         }
     }.onFailure { Log.i("NoorPlaces", "photon: ${it.message}") }.getOrNull()
 
     companion object {
         val USER_AGENT = "Minhad/${com.noor.app.BuildConfigInfo.versionName} (Android; prayer times; https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch)"
 
-        /** The country's name in English or Arabic, from Android's own locale data. */
-        fun countryName(code: String, arabic: Boolean): String =
-            Locale("", code).getDisplayCountry(if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH).ifBlank { code }
+        /**
+         * The country's name in English or Arabic, from Android's own locale data; Israel (IL) and the Palestinian
+         * territories (PS) are both named Palestine (the display rule, as their flag: [com.noor.prayer.geo.Flags]).
+         */
+        fun countryName(code: String, arabic: Boolean): String {
+            val cc = com.noor.prayer.geo.Flags.displayCountry(code) ?: code
+            if (cc == "PS") return if (arabic) "فلسطين" else "Palestine"
+            return Locale("", cc).getDisplayCountry(if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH).ifBlank { code }
+        }
+
+        /** A geocoder's country name, under the same rule as [countryName]. */
+        fun countryName(a: Address): String? =
+            if (com.noor.prayer.geo.Flags.displayCountry(a.countryCode) == "PS") countryName("PS", a.locale?.language == "ar") else a.countryName
     }
 }
