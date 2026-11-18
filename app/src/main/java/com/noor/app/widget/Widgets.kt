@@ -137,9 +137,19 @@ object Widgets {
     }
 
     /** A widget of [kind] with options [o] at [wDp]×[hDp], as it is at [at] (the settings page's preview, the tests). */
-    suspend fun preview(context: Context, kind: WidgetKind, o: WidgetOptions, wDp: Int, hDp: Int, at: Instant? = null): RemoteViews? {
+    suspend fun preview(context: Context, kind: WidgetKind, o: WidgetOptions, wDp: Int, hDp: Int, at: Instant? = null): RemoteViews? =
+        previewBuilt(context, kind, o, wDp, hDp, at)
+
+    /** As [preview], and what was drawn (the tests). */
+    internal suspend fun previewBuilt(context: Context, kind: WidgetKind, o: WidgetOptions, wDp: Int, hDp: Int, at: Instant? = null, built: (Built) -> Unit = {}): RemoteViews? {
         val app = context.applicationContext as? NoorApplication ?: return null
-        return build(frame(app, at ?: clock()), kind, o, wDp, hDp)
+        return build(frame(app, at ?: clock()), kind, o, wDp, hDp, built)
+    }
+
+    /** The views a home screen gets for a widget reported at [sizes] (the tests: a map of layouts by size). */
+    internal suspend fun previewSized(context: Context, kind: WidgetKind, o: WidgetOptions, sizes: List<Pair<Int, Int>>, at: Instant? = null): RemoteViews? {
+        val app = context.applicationContext as? NoorApplication ?: return null
+        return viewsFor(frame(app, at ?: clock()), kind, o, sizes)
     }
 
     /**
@@ -177,6 +187,7 @@ object Widgets {
         for ((id, v) in p.views) runCatching { manager.updateAppWidget(id, v) }
         built.clear(); built.putAll(p.built)
         pushed = p.now
+        pushedAtMs = System.currentTimeMillis()
     }
 
     /**
@@ -214,6 +225,7 @@ object Widgets {
         val at = change.toEpochMilli()
         armRefresh(app, Instant.ofEpochMilli(at - ALARM_AHEAD_MS), at)
         timer?.cancel()
+        if (!inProcess) return
         timer = scope.launch {
             kotlinx.coroutines.delay(maxOf(0L, at - AHEAD_MS - clock().toEpochMilli()))
             ahead(app, at)
@@ -221,6 +233,10 @@ object Widgets {
     }
 
     private var timer: kotlinx.coroutines.Job? = null
+    /** Whether the process times the next change itself (a test may leave it to the alarm, to step through changes). */
+    internal var inProcess = true
+    /** When the last update was handed to the home screen (the real clock, ms; for the tests). */
+    @Volatile internal var pushedAtMs = 0L
 
     /** The next moment a widget's look changes after [p] was built, or null. */
     internal fun nextChange(p: Prepared): Instant? {

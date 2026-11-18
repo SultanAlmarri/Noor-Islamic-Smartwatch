@@ -78,7 +78,7 @@ internal class Sheet(val context: Context, val wDp: Float, val hDp: Float, val r
         val left = absLeft(x + inBox, lw)
         val ink = WidgetInk.ink(context, line).apply { offset(left, baseline) }
         val boxAbs = RectF(absLeft(x, boxW), baseline - WidgetInk.ascent(line.maxSize) * 1.25f, absLeft(x, boxW) + boxW, baseline + WidgetInk.descent(line.maxSize) * 1.2f)
-        drawn += Drawn(role, line.text, line.runs.minOf { it.size }, RectF(ink), boxAbs, line.runs.first().color, -1)
+        drawn += Drawn(role, line.text, line.runs.first().size, RectF(ink), boxAbs, line.runs.first().color, -1)
         op(RectF(ink)) { c -> WidgetInk.draw(context, c, line, left, baseline) }
         return ink
     }

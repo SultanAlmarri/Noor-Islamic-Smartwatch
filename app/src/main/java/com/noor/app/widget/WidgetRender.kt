@@ -84,7 +84,10 @@ internal class WidgetCtx(
 }
 
 /** What a full update built for one widget (0.24: the countdown's scale, for the tests and the seconds wheel). */
-internal class Built(val countScale: Float, val design: Design)
+internal class Built(val countScale: Float, val design: Design) {
+    /** The countdown picture handed over with it (Android 12 and later), or null. */
+    var countSpec: CountPicture.Spec? = null
+}
 
 /**
  * The widgets' builders (0.24): each widget is composed for its size ([WidgetDesigns]), drawn as pictures in IBM Plex
@@ -102,9 +105,19 @@ internal object WidgetRender {
         val sheet = Sheet(r.ctx, r.wDp.toFloat(), r.hDp.toFloat(), r.rtl, r.density)
         val d = WidgetDesigns(r, sheet)
         val wide = r.wDp >= 250
-        val rows = when { r.hDp < 105 -> 1; r.hDp < 265 -> 2; else -> 4 }
+        // The size class whose composition comes out largest at this size (a taller one when it is nearly as large:
+        // it shows more), by the scale min(w / base w, h / base h) of each class's base size.
+        val baseW = if (wide) 360f else 176f
+        fun scale(baseH: Float) = minOf(r.wDp / baseW, r.hDp / baseH)
+        val rows = when {
+            scale(176f) < 0.9f * scale(84f) -> 1
+            scale(372f) < 0.9f * scale(176f) -> 2
+            else -> 4
+        }
         when (r.kind) {
-            WidgetKind.NEXT -> when (rows) { 1 -> if (wide) d.next4x1() else d.next2x1(); 2 -> if (wide) d.next4x2() else d.next2x2(); else -> d.nextTall() }
+            // A 1-row widget under 300 dp wide reads best as the 2×1 (the name and its time on one line, the countdown
+            // under it, larger) than as a squeezed 4×1.
+            WidgetKind.NEXT -> when (rows) { 1 -> if (r.wDp >= 300) d.next4x1() else d.next2x1(); 2 -> if (wide) d.next4x2() else d.next2x2(); else -> d.nextTall() }
             WidgetKind.TODAY -> when (rows) { 1 -> if (wide) d.strip4x1() else d.next2x1(); 2 -> if (wide) d.today4x2() else d.today2x2(); else -> d.today4x4() }
             WidgetKind.STRIP -> if (rows == 1 || wide) d.strip4x1() else d.today2x2()
             WidgetKind.RING -> d.ring2x2()
@@ -117,8 +130,9 @@ internal object WidgetRender {
     /** Builds the widget at its size; [built] receives what was drawn. */
     fun build(r: WidgetCtx, built: (Built) -> Unit = {}): RemoteViews {
         val design = design(r)
-        built(Built(design.count?.scale ?: 0f, design))
-        return views(r, design)
+        val v = views(r, design)
+        built(Built(design.count?.scale ?: 0f, design).also { it.countSpec = if (design.count != null) Widgets.lastCount else null })
+        return v
     }
 
     fun views(r: WidgetCtx, design: Design): RemoteViews {

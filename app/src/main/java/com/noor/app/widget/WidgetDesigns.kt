@@ -20,6 +20,11 @@ import com.noor.app.widget.Sheet.Align
  * says.
  */
 internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
+    companion object {
+        /** The seconds wheel's largest text size (dp): its drawables are made at it (tools/widget/SecondsWheel.java). */
+        const val MAX_WHEEL = 40f
+    }
+
     private val rtl = sheet.rtl
     private val W = sheet.wDp
     private val H = sheet.hDp
@@ -34,9 +39,9 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
     private fun alpha(c: Int, f: Float) = (c and 0x00FFFFFF) or (((c ushr 24) * f).toInt().coerceIn(0, 255) shl 24)
     /** Secondary, tertiary and past text: 72 %, 52 %, 50 % of the ink (stronger where 4.5:1 or 3:1 asks it). */
     // Over the vivid sky (white reads at 4.6:1 at least there) the quieter text is less quiet, to keep 3:1.
-    val sec = alpha(ink, when { clear -> 0.9f; sky -> 0.82f; light -> 0.72f; else -> 0.72f })
-    val ter = alpha(ink, when { clear -> 0.82f; sky -> 0.72f; light -> 0.62f; else -> 0.55f })
-    private val pastK = when { clear -> 0.8f; sky -> 0.66f; light -> 0.6f; else -> 0.5f }
+    val sec = alpha(ink, when { clear -> 0.9f; sky -> 0.84f; light -> 0.72f; else -> 0.72f })
+    val ter = alpha(ink, when { clear -> 0.82f; sky -> 0.76f; light -> 0.62f; else -> 0.55f })
+    private val pastK = when { clear -> 0.8f; sky -> 0.76f; light -> 0.6f; else -> 0.5f }
     /** The accent: the design's warm gold (#FFD36B) on colour, or the one chosen. */
     val gold = if (!light && r.o.accent == WidgetAccent.GOLD) 0xFFFFD36B.toInt() else r.pal.accent
     /** The prayers' signs in their own colours (deeper on light backgrounds), or the accent and the text's. */
@@ -69,8 +74,12 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         if (at == null) return listOf(run("—", size, weight, color))
         val z = at.atZone(r.zone)
         val (t, s) = r.f.time(z.hour * 60 + z.minute)
-        return if (s == null || !suffix) listOf(run(t, size, weight, color)) else listOf(run(t, size, weight, color), run(s, size * 0.62f, Weight.MEDIUM, color, gap = size * 0.12f))
+        // The marker a thin space (U+2009) from the digits, on the reading side (an Arabic "3:14 م" has its م to the left).
+        return if (s == null || !suffix) listOf(run(t, size, weight, color))
+            else listOf(run(t, size, weight, color), Run(s, size * (if (r.f.arabic) 0.72f else 0.62f), Weight.MEDIUM, color, thinSpace(size), sep = "\u2009"))
     }
+
+    private fun thinSpace(size: Float) = sheet.width(Line(listOf(Run("\u2009", size, Weight.REGULAR, 0)), false)).coerceAtLeast(size * 0.16f)
 
     /** [l] made smaller to fit [w], never under [floor]; null when it cannot. */
     fun fit(l: Line, w: Float, floor: Float): Line? {
@@ -78,7 +87,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         if (lw <= w) return l
         val f = w / lw * 0.995f
         if (l.runs.maxOf { it.size } * f < floor) return null
-        return Line(l.runs.map { Run(it.text, it.size * f, it.weight, it.color, it.gapBefore * f) }, l.rtl)
+        return Line(l.runs.map { Run(it.text, it.size * f, it.weight, it.color, it.gapBefore * f, it.sep) }, l.rtl)
     }
 
     // ---- Times of the day ----
@@ -93,7 +102,13 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val m = marked ?: return false
         return p.ordinal < m.ordinal
     }
-    fun pastColor(color: Int, p: Prayer) = if (past(p)) alpha(color, pastK) else color
+    /** A past prayer's text: the ink at the past's strength (whatever its own strength was), never fainter. */
+    fun pastColor(color: Int, p: Prayer) = if (past(p)) alpha(ink, pastK) else color
+    /**
+     * The marked prayer's words: the accent where it reads on its capsule (dark, light, glass), the ink over the vivid
+     * sky and the wallpaper (gold on a white capsule there is under 3:1; the gold stays in its sign).
+     */
+    val markText: Int get() = if (sky || clear) ink else gold
 
     /** The two prayers after the one counted, from today into tomorrow. */
     fun later(n: Int): List<Pair<Prayer, Instant>> {
@@ -119,7 +134,12 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
     fun countWidth(size: Float) = CountPicture.widthDp(r.app, leading(), size / 40f, seconds) + 1f
     fun countHeight(size: Float) = CountPicture.heightDp(r.app, size / 40f)
     /** The countdown's text size that fits [w], at most [want]. */
-    fun countFit(want: Float, w: Float): Float { val cw = countWidth(want); return if (cw <= w) want else want * w / cw * 0.99f }
+    fun countFit(want0: Float, w: Float): Float {
+        // With its seconds the countdown is at most the seconds wheel's own size (40 dp): Android draws the wheel from
+        // one picture of all sixty labels, and larger it would be a picture thousands of pixels across.
+        val want = if (seconds) minOf(want0, MAX_WHEEL) else want0
+        val cw = countWidth(want); return if (cw <= w) want else want * w / cw * 0.99f
+    }
 
     /** The countdown with its text's top (cap height) at [top]... placed by its picture's top, in a start-relative box. */
     fun countdown(x: Float, top: Float, size: Float, boxW: Float, align: Align) {
@@ -176,12 +196,14 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
 
     /** Next 4×2 (360×176): the name and time large, the place, the countdown large; "Later today" with the next two. */
     fun next4x2() {
-        val s = minOf(W / 360f, H / 176f); val t = s * k
+        // Where the list after it would come out small (a 4×1.5, 300×130), it goes, and the rest is drawn larger.
+        val withList = minOf(W / 360f, H / 176f) * k >= 0.9f
+        val s = if (withList) minOf(W / 360f, H / 176f) else minOf(W / 330f, H / 150f); val t = s * k
         val p = 18f * s
         val inner = W - 2 * p
         val gap = 18f * s
-        val rightW = (inner - gap) / 2.45f
-        val leftW = inner - gap - rightW
+        val rightW = if (withList) (inner - gap) / 2.45f else 0f
+        val leftW = if (withList) inner - gap - rightW else inner
         val cp = counted
         sheet.block {
             val iconSz = 26f * s
@@ -194,26 +216,26 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
             val base = p + ns * 0.86f
             if (cp != null) sheet.icon(cp, p, base - ns * 0.36f - iconSz / 2, iconSz, iconColor(cp, true))
             sheet.text(nameL, p + iconSz + 10f * s, base, avail, Align.START, "name")
-            if (r.o.place) placeLine(p, base + ns * 0.22f + 6f * s + 14f * t * 0.86f, leftW, 14f * t, ter)
+            if (r.o.place && 14f * t >= 11f) placeLine(p, base + ns * 0.22f + 6f * s + 14f * t * 0.86f, leftW, 14f * t, ter)
         }
         if (r.o.countdown) {
-            val size = countFit(54f * t, leftW + gap * 0.5f)
+            val size = countFit(54f * t, if (withList) leftW + gap * 0.5f else inner)
             countdown(p, H - p - countHeight(size), size, leftW, Align.START)
         }
         // Later today, at the foot of the other column.
-        val later = later(2)
+        val later = if (withList) later(2) else emptyList()
         if (later.isNotEmpty()) sheet.block {
             val rowH = 33f * s
             val x0 = p + leftW + gap
             var y = H - p - rowH * later.size
-            val head = fit(line(run(r.ctx.getString(R.string.widget_later_today).let { if (r.f.arabic) it else it.uppercase() }, 12f * t, Weight.SEMIBOLD, ter)), rightW, 9f)
+            val head = fit(line(run(r.ctx.getString(R.string.widget_later_today).let { if (r.f.arabic) it else it.uppercase() }, maxOf(11f, 12f * t), Weight.SEMIBOLD, ter)), rightW, 11f)
             if (head != null) sheet.text(head, x0, y - 4f * s, rightW, Align.START, "later_head")
             for ((lp, lt) in later) {
                 sheet.shape(x0, y, rightW, 1f) { cv, b -> cv.drawRect(b, android.graphics.Paint().apply { color = divider }) }
                 val base = y + 7f * s + 18f * t * 0.86f
-                val tl = line(*time(lt, 18f * t, Weight.SEMIBOLD, ink, suffix = false).toTypedArray())
+                val tl = line(*time(lt, 17f * t, Weight.SEMIBOLD, ink, suffix = false).toTypedArray())
                 val tw = sheet.width(tl)
-                val nl = fit(line(run(name(lp, lt.atZone(r.zone).toLocalDate()), 16f * t, Weight.REGULAR, sec)), rightW - tw - 6f * s, 10f)
+                val nl = fit(line(run(name(lp, lt.atZone(r.zone).toLocalDate()), 17f * t, Weight.REGULAR, sec)), rightW - tw - 6f * s, 11f)
                 if (nl != null) sheet.text(nl, x0, base, rightW - tw - 6f * s, Align.START, "later_name")
                 sheet.text(tl, x0, base, rightW, Align.END, "later_time")
                 y += rowH
@@ -252,7 +274,8 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val inner = W - 2 * px
         if (H < 64f) {
             // The smallest 2×1 (a launcher's 110×40): the name at the start, the countdown to the minute at the end.
-            val countSize = if (r.o.countdown) countFit(minOf(26f, (H - 10f) / 0.85f) * k, inner * 0.58f) else 0f
+            val nameAt12 = sheet.width(line(run(countedName, 12f, Weight.SEMIBOLD, ink)))
+            val countSize = if (r.o.countdown) countFit(minOf(26f, (H - 10f) / 0.85f) * k, minOf(inner * 0.58f, inner - nameAt12 - 8f)) else 0f
             val cw = if (r.o.countdown) countWidth(countSize) + 6f else 0f
             sheet.block {
                 val nl = fit(line(run(countedName, minOf(17f * k, 15f), Weight.SEMIBOLD, ink)), inner - cw, 12f)
@@ -273,50 +296,53 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         if (r.o.countdown) countdown(px, top + ns * 1.05f + 4f * s, countSize, inner, Align.START)
     }
 
-    /** Next, tall (2×4, 4×4): the 2×2 above, with the place and the prayers after it below the countdown. */
+    /** Next, tall (2×4, 4×4): the name, its time and the place; the countdown and the bar; the prayers after it, spread. */
     fun nextTall() {
-        val baseW = if (W >= 250f) 360f else 176f
-        val s = minOf(W / baseW, H / 372f) * (if (baseW > 300f) 1.25f else 1f); val t = s * k
+        val wide = W >= 250f
+        val s = minOf(W / (if (wide) 360f else 176f), H / 372f); val t = s * k
         val p = 20f * s
         val inner = W - 2 * p
         val cp = counted
         var y = p
         sheet.block {
-            val iconSz = 26f * s
-            val nl = fit(line(run(countedName, 30f * t, Weight.SEMIBOLD, ink)), inner - iconSz - 10f * s, 12f) ?: line(run(countedName, 12f, Weight.SEMIBOLD, ink))
+            val iconSz = (if (wide) 30f else 24f) * s
+            val nl = fit(line(run(countedName, (if (wide) 34f else 28f) * t, Weight.SEMIBOLD, ink)), inner - iconSz - 10f * s, 12f) ?: line(run(countedName, 12f, Weight.SEMIBOLD, ink))
             val ns = nl.maxSize
             val base = y + ns * 0.86f
             if (cp != null) sheet.icon(cp, p, base - ns * 0.36f - iconSz / 2, iconSz, iconColor(cp, true))
             sheet.text(nl, p + iconSz + 10f * s, base, inner - iconSz - 10f * s, Align.START, "name")
             y += ns * 1.05f + 4f * s
-            fit(line(*time(countedAt, 24f * t, Weight.REGULAR, sec).toTypedArray()), inner, 11f)?.let { tl ->
+            fit(line(*time(countedAt, (if (wide) 26f else 22f) * t, Weight.REGULAR, sec).toTypedArray()), inner, 11f)?.let { tl ->
                 sheet.text(tl, p, y + tl.maxSize * 0.86f, inner, Align.START, "time"); y += tl.maxSize * 1.05f
             }
-            if (r.o.place) { y += 6f * s; placeLine(p, y + 14f * t * 0.86f, inner, 14f * t, ter); y += 14f * t * 1.05f }
+            if (r.o.place) { y += 6f * s; placeLine(p, y + 15f * t * 0.86f, inner, maxOf(11f, 15f * t), ter); y += 15f * t * 1.05f }
         }
-        y += 12f * s
+        y += 16f * s
         if (r.o.countdown) {
-            val size = countFit((if (baseW > 300f) 54f else 40f) * t, inner)
-            countdown(p, y, size, inner, Align.START); y += countHeight(size) + 14f * s
+            val size = countFit((if (wide) 54f else 44f) * t, inner)
+            countdown(p, y, size, inner, Align.START); y += countHeight(size) + 16f * s
         }
-        bar(p, y, inner, 6f * s); y += 6f * s + 10f * s
-        val later = later(3)
-        val rowH = 34f * s
-        val rows = later.take(((H - p - y) / rowH).toInt().coerceAtLeast(0))
-        if (rows.isNotEmpty()) sheet.block {
-            var ry = H - p - rowH * rows.size
-            for ((lp, lt) in rows) {
-                sheet.shape(p, ry, inner, 1f) { cv, b -> cv.drawRect(b, android.graphics.Paint().apply { color = divider }) }
-                val base = ry + rowH / 2 + 17f * t * 0.36f
-                val iconSz = 20f * s
+        bar(p, y, inner, 6f * s); y += 6f * s + 12f * s
+        // The prayers after it: name and time the same size, each row in an equal share of what is left.
+        val ts = (if (wide) 19f else 16f) * t
+        val rowH = maxOf(30f * s, ts * 1.9f)
+        val later = later(4)
+        val n = minOf(later.size, ((H - p - y) / rowH).toInt())
+        if (n > 0) sheet.block {
+            val step = (H - p - y) / n
+            for ((i, pair) in later.take(n).withIndex()) {
+                val (lp, lt) = pair
+                val ry = y + step * i + (step - rowH) / 2
+                if (i > 0) sheet.shape(p, y + step * i, inner, 1f) { cv, b -> cv.drawRect(b, android.graphics.Paint().apply { color = divider }) }
+                val iconSz = (if (wide) 22f else 20f) * s
                 sheet.icon(lp, p, ry + (rowH - iconSz) / 2, iconSz, iconColor(lp, false))
-                val tl = line(*time(lt, 18f * t, Weight.SEMIBOLD, ink).toTypedArray())
+                val base = ry + rowH / 2 + ts * 0.36f
+                val tl = line(*time(lt, ts, Weight.SEMIBOLD, ink, suffix = wide).toTypedArray())
                 val tw = sheet.width(tl)
-                fit(line(run(name(lp, lt.atZone(r.zone).toLocalDate()), 17f * t, Weight.REGULAR, sec)), inner - iconSz - 12f * s - tw - 8f * s, 10f)?.let {
-                    sheet.text(it, p + iconSz + 12f * s, base, inner - iconSz - 12f * s - tw - 8f * s, Align.START, "later_name")
-                }
+                val room = inner - iconSz - 12f * s - tw - 8f * s
+                val nl = fit(line(run(name(lp, lt.atZone(r.zone).toLocalDate()), ts, Weight.REGULAR, sec)), room, 11f)
+                if (nl != null) sheet.text(nl, p + iconSz + 12f * s, base, room, Align.START, "later_name")
                 sheet.text(tl, p, base, inner, Align.END, "later_time")
-                ry += rowH
             }
         }
     }
@@ -360,7 +386,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
                 val top = pv + step * i
                 val on = p == marked
                 if (on) sheet.shape(ph - 9f * s, top, inner + 18f * s, rowH) { cv, b -> WidgetInk.capsule(cv, b, 9f * s, light, gold) }
-                val nc = if (on) gold else pastColor(ink, p)
+                val nc = if (on) markText else pastColor(ink, p)
                 val base = top + rowH / 2 + nameSize0 * f * 0.36f
                 val tl = line(*time(at(p), maxOf(timeSize0 * f, if (on) 12f else 11f), Weight.SEMIBOLD, nc, suffix).toTypedArray())
                 val nl = line(run(name(p, listDate), maxOf(nameSize0 * f, 10f), if (on) Weight.SEMIBOLD else Weight.REGULAR, nc))
@@ -412,7 +438,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
                 val on = p == marked
                 if (on) sheet.shape(cx, top, cw, cellH) { cv, b -> WidgetInk.capsule(cv, b, 14f * s, light, gold) }
                 var y = top + padV * s
-                val tone = if (on) gold else pastColor(sec, p)
+                val tone = if (on) markText else pastColor(sec, p)
                 if (icons) { sheet.icon(p, cx + (cw - iconSz) / 2, y, iconSz, iconColor(p, on)); y += iconSz + 4f * s }
                 val nl = line(run(name(p, listDate), ns, if (on) Weight.SEMIBOLD else Weight.REGULAR, tone))
                 sheet.text(nl, cx, y + ns * 0.86f, cw, Align.CENTER, if (on) "col_name_marked" else "col_name"); y += ns * 1.1f + 4f * s
@@ -460,7 +486,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
                 sheet.icon(q, p, top + (rowH - iconSz) / 2, iconSz, iconColor(q, on))
                 val base = top + rowH / 2 + ns0 * f * 0.36f
                 val tl = line(*time(at(q), maxOf(ts0 * f, if (on) 12f else 11f), Weight.SEMIBOLD, if (on) ink else pastColor(ink, q)).toTypedArray())
-                val nl = line(run(name(q, listDate), maxOf(ns0 * f, 10f), if (on) Weight.SEMIBOLD else Weight.REGULAR, if (on) gold else pastColor(ink, q)))
+                val nl = line(run(name(q, listDate), maxOf(ns0 * f, 10f), if (on) Weight.SEMIBOLD else Weight.REGULAR, if (on) markText else pastColor(ink, q)))
                 sheet.text(nl, p + iconSz + 14f * s, base, textW - sheet.width(tl) - 8f, Align.START, if (on) "row_name_marked" else "row_name")
                 sheet.text(tl, p, base, inner, Align.END, if (on) "row_time_marked" else "row_time")
             }
@@ -471,35 +497,42 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
     // STRIP
     // =====================================================================================================
 
-    /** Strip 4×1 (360×84): five columns, the name over a large time, the next in a capsule. */
+    /**
+     * Strip 4×1 (360×84): five columns, the name over a large time, the next in a capsule. Narrow, Shuruq goes first
+     * (five columns); short, the names go (the times alone, larger); tall, each column gets its sign above the name.
+     */
     fun strip4x1() {
         val s = minOf(W / 360f, H / 84f); val t = s * k
         val p = 10f * s
-        val list = shown
         val gap = 4f * s
         val inner = W - 2 * p
+        var list = shown
+        if (Prayer.SHURUQ in list && (inner - gap * 5) / 6 < 50f) list = list - Prayer.SHURUQ
         val cw = (inner - gap * (list.size - 1)) / list.size
         val cellH = H - 2 * p
-        var ns = 13f * t; var ts = 20f * t
-        // Short strips (a Samsung 4×1 is shorter than it says): the name and time come down together to fit the height.
-        val need = ns * 1.1f + 2f * s + ts * 1.05f
-        if (need > cellH - 6f) { val f = (cellH - 6f) / need; ns *= f; ts *= f }
-        val nf = list.minOf { q -> minOf(1f, (cw - 4f) / sheet.width(line(run(name(q, listDate), ns, Weight.SEMIBOLD, ink)))) }
-        val tf = list.minOf { q -> minOf(1f, (cw - 4f) / sheet.width(line(*time(at(q), ts, Weight.SEMIBOLD, ink, suffix = false).toTypedArray()))) }
-        ns = maxOf(10f, ns * nf); ts = maxOf(12f, ts * tf)
-        val namesToo = ns * 1.1f + 2f * s + ts * 1.05f <= cellH - 2f
+        fun widest(size: Float, names: Boolean) = list.maxOf { q -> sheet.width(if (names) line(run(name(q, listDate), size, Weight.SEMIBOLD, ink)) else line(*time(at(q), size, Weight.SEMIBOLD, ink, suffix = false).toTypedArray())) }
+        // The times as large as the width allows (up to the design's 20, never under 12).
+        var ts = minOf(20f * t, 20f * (cw - 6f) / widest(20f, false))
+        var ns = minOf(13f * t, 13f * (cw - 4f) / widest(13f, true), ts * 0.72f)
+        var namesToo = ns >= 11f && ns * 1.1f + 2f * s + ts * 1.05f <= cellH - 4f
+        if (!namesToo) ts = minOf(maxOf(ts, minOf(16f * k, 16f * (cw - 6f) / widest(16f, false))), (cellH - 6f) / 1.05f)
+        ts = maxOf(12f, ts)
+        if (namesToo) ns = maxOf(11f, ns)
+        val iconSz = minOf(26f * s, cw * 0.5f)
+        val icons = namesToo && cellH >= ns * 1.1f + 2f * s + ts * 1.05f + iconSz + 6f * s + 16f
         sheet.block {
             list.forEachIndexed { i, q ->
                 val cx = p + i * (cw + gap)
                 val on = q == marked
                 if (on) sheet.shape(cx, p, cw, cellH) { cv, b -> WidgetInk.capsule(cv, b, 14f * s, light, gold) }
-                val blockH = (if (namesToo) ns * 1.1f + 2f * s else 0f) + ts * 1.05f
+                val blockH = (if (icons) iconSz + 6f * s else 0f) + (if (namesToo) ns * 1.1f + 2f * s else 0f) + ts * 1.05f
                 var y = p + (cellH - blockH) / 2
+                if (icons) { sheet.icon(q, cx + (cw - iconSz) / 2, y, iconSz, iconColor(q, on)); y += iconSz + 6f * s }
                 if (namesToo) {
-                    val nl = line(run(name(q, listDate), ns, if (on) Weight.SEMIBOLD else Weight.REGULAR, if (on) gold else pastColor(sec, q)))
+                    val nl = line(run(name(q, listDate), ns, if (on) Weight.SEMIBOLD else Weight.REGULAR, if (on) markText else pastColor(sec, q)))
                     sheet.text(nl, cx, y + ns * 0.86f, cw, Align.CENTER, if (on) "col_name_marked" else "col_name"); y += ns * 1.1f + 2f * s
                 }
-                val tl = line(*time(at(q), ts, Weight.SEMIBOLD, if (on) ink else pastColor(ink, q), suffix = false).toTypedArray())
+                val tl = line(*time(at(q), if (on) maxOf(ts, 12f) else ts, Weight.SEMIBOLD, if (on) ink else pastColor(ink, q), suffix = false).toTypedArray())
                 sheet.text(tl, cx, y + ts * 0.86f, cw, Align.CENTER, if (on) "col_time_marked" else "col_time")
             }
         }

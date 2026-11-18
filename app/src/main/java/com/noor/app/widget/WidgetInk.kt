@@ -34,14 +34,14 @@ internal object WidgetInk {
     @Volatile internal var hideText = false
 
     /** One stretch of text in one size, weight and colour. [gapBefore] in dp. */
-    class Run(val text: String, val size: Float, val weight: Weight, val color: Int, val gapBefore: Float = 0f)
+    class Run(val text: String, val size: Float, val weight: Weight, val color: Int, val gapBefore: Float = 0f, val sep: String = " ")
 
     /**
      * A line: runs in reading order, each drawn left to right in itself (digits and signs never reversed), the runs
      * placed right to left when [rtl] (an Arabic "3:14 م" reads with its م to the left, as the app writes it).
      */
     class Line(val runs: List<Run>, val rtl: Boolean) {
-        val text: String get() = runs.joinToString("") { it.text }
+        val text: String get() = runs.joinToString("") { (if (it.gapBefore > 0f) it.sep else "") + it.text }
         val maxSize: Float get() = runs.maxOf { it.size }
     }
 
