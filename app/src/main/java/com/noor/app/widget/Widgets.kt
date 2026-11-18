@@ -261,9 +261,12 @@ object Widgets {
         Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra(EXTRA_OPEN, tap.name),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
-    /** Whole seconds of the countdown (or of the time since), as the home screen counts them (rounded down). */
+    /**
+     * Whole seconds of the countdown (or of the time since), as the home screen counts them: the time left rounded up, so
+     * it is the prayer's time less the clock's (0.24, Countdowns.timeLeft), the time since rounded down.
+     */
     private fun elapsedSeconds(c: StatusNotification.Content, now: Instant): Long =
-        maxOf(0L, (if (c.elapsed) Duration.between(c.countAt, now) else Duration.between(now, c.countAt)).seconds)
+        maxOf(0L, if (c.elapsed) Duration.between(c.countAt, now).seconds else com.noor.prayer.Countdowns.timeLeft(now, c.countAt).seconds)
 
     /** "−1:23" / "+13", the part before the seconds, as the home screen writes it (hours only when there are any). */
     internal fun leading(c: StatusNotification.Content, now: Instant, f: Formatter): String {
@@ -284,13 +287,13 @@ object Widgets {
     /**
      * The clock turns the wheel to its own second s (it rounds to whole seconds, ticking just after each one). A "down"
      * wheel shows (60 − s) mod 60 and an "up" wheel shows s (tools/widget/SecondsWheel.java). The clock is shifted by
-     * whole seconds so that this is the countdown's own seconds, rounded down as the home screen counts: before a prayer
-     * at second p of its minute, at real second t + ε the countdown has p − t − 1 seconds (mod 60): shift 1 − p; after
-     * it, t − p: shift −p.
+     * whole seconds so that this is the countdown's own seconds, as the home screen counts them: before a prayer at second
+     * p of its minute, at real second t + ε the countdown has p − t seconds (mod 60; the time left is rounded up, 0.24):
+     * shift −p; after it, t − p: shift −p.
      */
     internal fun wheelFor(c: StatusNotification.Content, arabicDigits: Boolean): Wheel {
         val p = Math.floorMod(c.countAt.epochSecond, 60L).toInt()
-        val shift = if (c.elapsed) -p else 1 - p
+        val shift = -p
         val drawable = when {
             arabicDigits && c.elapsed -> R.drawable.noor_wheel_arabic_up
             arabicDigits -> R.drawable.noor_wheel_arabic_down
@@ -306,9 +309,9 @@ object Widgets {
      */
     internal fun nextMinute(c: StatusNotification.Content, now: Instant): Instant {
         val ms = Duration.between(c.countAt, now).toMillis()   // negative before the prayer
-        // Before a prayer the minutes drop as soon as the countdown falls below a whole minute (at −1:27:00 exactly, the
-        // next instant is −1:26:59); after it they rise when it reaches one.
-        val wait = if (c.elapsed) 60_000L - Math.floorMod(ms, 60_000L) else Math.floorMod(-ms, 60_000L)
+        // Before a prayer the minutes drop one second after the time left is a whole minute (the time left is rounded up,
+        // 0.24: −1:27:00 holds through that second, then −1:26:59); after it they rise when the time since reaches one.
+        val wait = if (c.elapsed) 60_000L - Math.floorMod(ms, 60_000L) else Math.floorMod(1_000L - ms, 60_000L)
         return now.plusMillis(wait + 30)
     }
 
