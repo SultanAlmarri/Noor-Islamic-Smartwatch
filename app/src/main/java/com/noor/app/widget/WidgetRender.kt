@@ -85,6 +85,8 @@ internal class WidgetCtx(
 
 /** What a full update built for one widget (0.24: the countdown's scale, for the tests and the seconds wheel). */
 internal class Built(val countScale: Float, val design: Design) {
+    /** The seconds wheel's scale (of its 40 dp). */
+    val secondsScale: Float get() = countScale * (design.count?.secondsScale ?: 1f)
     /** The countdown picture handed over with it (Android 12 and later), or null. */
     var countSpec: CountPicture.Spec? = null
 }
@@ -122,7 +124,7 @@ internal object WidgetRender {
             WidgetKind.STRIP -> if (rows == 1 || wide) d.strip4x1() else d.today2x2()
             WidgetKind.RING -> d.ring2x2()
             WidgetKind.SKY -> if (wide && rows >= 2) d.sky4x2() else if (rows == 1) (if (wide) d.next4x1() else d.next2x1()) else d.next2x2()
-            WidgetKind.DATE -> d.date2x2()
+            WidgetKind.DATE -> when { rows == 1 -> if (wide) d.date4x1() else d.date2x1(); wide && rows == 2 -> d.date4x1(); else -> d.date2x2() }
         }
         return sheet.design(WidgetBack.draw(r, r.wDp.toFloat(), r.hDp.toFloat()))
     }
@@ -151,7 +153,7 @@ internal object WidgetRender {
         if (spot != null) {
             v.setViewVisibility(R.id.widget_count_slot, View.VISIBLE)
             v.setViewPadding(R.id.widget_count_slot, px(spot.left), px(spot.top), 0, 0)
-            liveCount(v, r, spot.scale, WidgetDesigns(r, Sheet(r.ctx, 1f, 1f, r.rtl, d)).ink)
+            liveCount(v, r, spot.scale, WidgetDesigns(r, Sheet(r.ctx, 1f, 1f, r.rtl, d)).ink, spot.secondsScale)
         } else v.setViewVisibility(R.id.widget_count_slot, View.GONE)
         v.setOnClickPendingIntent(android.R.id.background, Widgets.open(r.app, r.o.tap))
         describe(v, r)
@@ -192,11 +194,11 @@ internal object WidgetRender {
      * the seconds a wheel of Minhad's digits that Android's AnalogClock turns as its second hand, seen through a window
      * ([Widgets.wheelFor]); the clock made smaller or larger to draw the wheel at [scale]. Android 12 and later.
      */
-    fun liveCount(v: RemoteViews, r: WidgetCtx, scale: Float, ink: Int) {
+    fun liveCount(v: RemoteViews, r: WidgetCtx, scale: Float, ink: Int, secondsScale: Float = 1f) {
         val c = r.c ?: return
         val quiet = (ink and 0x00FFFFFF) or ((((ink ushr 24) * 0.62f).toInt()) shl 24)
         val seconds = r.o.seconds
-        val spec = CountPicture.Spec(leading(r), scale, ink, quiet, shadow = false, colon = seconds)
+        val spec = CountPicture.Spec(leading(r), scale, ink, quiet, shadow = false, colon = seconds, secondsScale = secondsScale)
         Widgets.lastCount = spec
         v.setImageViewBitmap(R.id.widget_count_main, CountPicture.draw(r.app, spec))
         v.setViewVisibility(R.id.widget_count_window, if (seconds) View.VISIBLE else View.GONE)
@@ -206,9 +208,12 @@ internal object WidgetRender {
         v.setIcon(R.id.widget_count_wheel, "setSecondHand", Icon.createWithResource(r.app, w.drawable))
         v.setString(R.id.widget_count_wheel, "setTimeZone", w.zone)
         if (android.os.Build.VERSION.SDK_INT >= 31) {
-            v.setViewLayoutWidth(R.id.widget_count_window, res.getDimension(if (r.s.numerals == Numerals.ARABIC_INDIC) R.dimen.noor_count_window_arabic else R.dimen.noor_count_window_latin) * scale / d, TypedValue.COMPLEX_UNIT_DIP)
-            v.setViewLayoutHeight(R.id.widget_count_window, res.getDimension(R.dimen.noor_count_height) * scale / d, TypedValue.COMPLEX_UNIT_DIP)
-            val wheel = res.getDimension(R.dimen.noor_count_wheel) * scale / d
+            // The wheel at its own scale, its window lowered so its digits stand on the minutes' baseline.
+            val ws = scale * secondsScale
+            v.setViewLayoutWidth(R.id.widget_count_window, res.getDimension(if (r.s.numerals == Numerals.ARABIC_INDIC) R.dimen.noor_count_window_arabic else R.dimen.noor_count_window_latin) * ws / d, TypedValue.COMPLEX_UNIT_DIP)
+            v.setViewLayoutHeight(R.id.widget_count_window, res.getDimension(R.dimen.noor_count_height) * ws / d, TypedValue.COMPLEX_UNIT_DIP)
+            v.setViewLayoutMargin(R.id.widget_count_window, RemoteViews.MARGIN_TOP, CountPicture.ascentDp(r.app, scale) - CountPicture.ascentDp(r.app, ws), TypedValue.COMPLEX_UNIT_DIP)
+            val wheel = res.getDimension(R.dimen.noor_count_wheel) * ws / d
             v.setViewLayoutWidth(R.id.widget_count_wheel, wheel, TypedValue.COMPLEX_UNIT_DIP)
             v.setViewLayoutHeight(R.id.widget_count_wheel, wheel, TypedValue.COMPLEX_UNIT_DIP)
             v.setColorStateList(R.id.widget_count_wheel, "setSecondHandTintList", ColorStateList.valueOf(quiet))

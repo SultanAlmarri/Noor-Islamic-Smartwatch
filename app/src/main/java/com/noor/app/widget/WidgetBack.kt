@@ -91,8 +91,12 @@ internal object WidgetBack {
         return (c and 0xFF000000.toInt()) or (r shl 16) or (g shl 8) or b
     }
 
-    private fun lin(v: Int): Double = (v / 255.0).let { if (it <= 0.04045) it / 12.92 else ((it + 0.055) / 1.055).pow(2.4) }
-    private fun gam(v: Double): Int = (if (v <= 0.0031308) 12.92 * v else 1.055 * v.pow(1 / 2.4) - 0.055).let { (it * 255 + 0.5).toInt().coerceIn(0, 255) }
+    private val LIN = DoubleArray(256) { v -> (v / 255.0).let { if (it <= 0.04045) it / 12.92 else ((it + 0.055) / 1.055).pow(2.4) } }
+    private const val GAM_STEPS = 4096
+    private val GAM = IntArray(GAM_STEPS + 1) { i -> val v = i.toDouble() / GAM_STEPS
+        (if (v <= 0.0031308) 12.92 * v else 1.055 * v.pow(1 / 2.4) - 0.055).let { (it * 255 + 0.5).toInt().coerceIn(0, 255) } }
+    private fun lin(v: Int): Double = LIN[v]
+    private fun gam(v: Double): Int = GAM[(v.coerceIn(0.0, 1.0) * GAM_STEPS + 0.5).toInt()]
 
     /** Every pixel no brighter than white text can read on at [contrast]:1 (its light scaled down, its hue kept). */
     internal fun clamp(bmp: Bitmap, contrast: Double) {

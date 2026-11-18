@@ -25,10 +25,11 @@ internal object CountPicture {
 
     /**
      * What is drawn: [leading] ("−1:23"), at [scale] of the wheel's size, in [color]; the ":" before the seconds in
-     * [quiet] when [colon] (the seconds are shown), and a soft shadow when [shadow].
+     * [quiet] when [colon] (the seconds are shown), and a soft shadow when [shadow]. (0.24) [secondsScale]: the seconds
+     * (and their ":") smaller than the hours and minutes by this, on the same baseline, as the home screen writes them.
      */
     data class Spec(val leading: String, val scale: Float = 1f, val color: Int = BRIGHT, val quiet: Int = QUIET,
-                    val shadow: Boolean = true, val colon: Boolean = true)
+                    val shadow: Boolean = true, val colon: Boolean = true, val secondsScale: Float = 1f)
 
     @Volatile private var plex: Typeface? = null
 
@@ -51,15 +52,16 @@ internal object CountPicture {
      * The glyphs of [text] laid left to right, one by one (never reordered: "−١:٠٤" keeps its sign first), with their x
      * positions and sizes; returns the total advance.
      */
-    private fun layout(text: String, base: Paint, each: (ch: Char, x: Float, size: Float) -> Unit): Float {
+    private fun layout(text: String, base: Paint, lastScale: Float = 1f, each: (ch: Char, x: Float, size: Float) -> Unit): Float {
         var x = 0f
         val size = base.textSize
         // With Arabic-Indic digits the zero is a dot at the colon's height ("١:٠٤" read as ":·"): the colons are
         // smaller (so lower) with a little air on each side, unmistakably colons.
         val arabic = text.any { isArabicDigit(it) }
-        for (ch in text) {
+        for ((index, ch) in text.withIndex()) {
             val colon = ch == ':' && arabic
-            val sz = when { isArabicDigit(ch) -> size * ARABIC_SCALE; colon -> size * 0.8f; else -> size }
+            val k = if (index == text.length - 1) lastScale else 1f
+            val sz = k * when { isArabicDigit(ch) -> size * ARABIC_SCALE; colon -> size * 0.8f; else -> size }
             if (colon) x += size * COLON_GAP_EM
             base.textSize = sz
             each(ch, x, sz)
@@ -84,7 +86,8 @@ internal object CountPicture {
         if (spec.shadow) paint.setShadowLayer(6f * spec.scale, 0f, 1f, SHADOW)
         // The ":" before the seconds is the last glyph, quieter (set like the others).
         val text = spec.leading + if (spec.colon) ":" else ""
-        val total = layout(text, Paint(paint)) { _, _, _ -> }
+        val last = if (spec.colon) spec.secondsScale else 1f
+        val total = layout(text, Paint(paint), last) { _, _, _ -> }
         val w = maxOf(1, kotlin.math.ceil(total + (if (spec.colon) 0f else 2f * spec.scale)).toInt())
         val h = maxOf(1, kotlin.math.ceil(r.getDimension(R.dimen.noor_count_height) * spec.scale).toInt())
         val baseline = r.getDimension(R.dimen.noor_count_ascent) * spec.scale
@@ -94,7 +97,7 @@ internal object CountPicture {
             val sign = (spec.color and 0x00FFFFFF) or ((((spec.color ushr 24) * SIGN_ALPHA).toInt()) shl 24)
             val p = Paint(paint)
             var i = 0
-            layout(text, Paint(paint)) { ch, x, size ->
+            layout(text, Paint(paint), last) { ch, x, size ->
                 val last = spec.colon && i == text.length - 1
                 p.textSize = size
                 p.color = when { last -> spec.quiet; isSign(ch) -> sign; else -> spec.color }
@@ -106,13 +109,16 @@ internal object CountPicture {
     }
 
     /** How wide the countdown is, in dp, at [scale]: the picture of [leading] and, with [seconds], the wheel's window. */
-    fun widthDp(context: Context, leading: String, scale: Float, seconds: Boolean, arabicDigits: Boolean = leading.any { isArabicDigit(it) }): Float {
+    fun widthDp(context: Context, leading: String, scale: Float, seconds: Boolean, arabicDigits: Boolean = leading.any { isArabicDigit(it) }, secondsScale: Float = 1f): Float {
         val r = context.resources
         val d = r.displayMetrics.density
         val p = paint(context, scale)
-        val lead = layout(leading + if (seconds) ":" else "", p) { _, _, _ -> } / d
-        return lead + if (seconds) r.getDimension(if (arabicDigits) R.dimen.noor_count_window_arabic else R.dimen.noor_count_window_latin) * scale / d else 0f
+        val lead = layout(leading + if (seconds) ":" else "", p, if (seconds) secondsScale else 1f) { _, _, _ -> } / d
+        return lead + if (seconds) r.getDimension(if (arabicDigits) R.dimen.noor_count_window_arabic else R.dimen.noor_count_window_latin) * scale * secondsScale / d else 0f
     }
+
+    /** The baseline below the picture's top, in dp, at [scale]. */
+    fun ascentDp(context: Context, scale: Float): Float = context.resources.let { it.getDimension(R.dimen.noor_count_ascent) * scale / it.displayMetrics.density }
 
     /** How high the countdown is, in dp, at [scale]. */
     fun heightDp(context: Context, scale: Float): Float = context.resources.let { it.getDimension(R.dimen.noor_count_height) * scale / it.displayMetrics.density }

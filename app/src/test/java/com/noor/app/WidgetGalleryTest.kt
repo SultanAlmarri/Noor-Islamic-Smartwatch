@@ -262,7 +262,13 @@ class WidgetGalleryTest {
                     val mr = Rect(0, 0, main.width, main.height); root.offsetDescendantRectToMyCoords(main, mr)
                     if (win.width <= 0 || win.height <= 0) out += "$name: no window for the seconds"
                     if (wr.left < -1 || wr.top < -1 || wr.right > w + 1 || wr.bottom > h + 1) out += "$name: the seconds outside the widget ($wr in ${w}x$h)"
-                    if (Math.abs(wr.left - mr.right) > 1 || Math.abs(wr.top - mr.top) > 1) out += "$name: the seconds not beside the minutes ($wr, $mr)"
+                    if (Math.abs(wr.left - mr.right) > 1) out += "$name: the seconds not beside the minutes ($wr, $mr)"
+                    // The seconds stand on the minutes' baseline (within 1 dp): each picture's baseline is at the same
+                    // share of its height (the countdown's box, res/values/noor_wheel.xml).
+                    val share = v.resources.getDimension(R.dimen.noor_count_ascent) / v.resources.getDimension(R.dimen.noor_count_height)
+                    val dp = v.resources.displayMetrics.density
+                    val bm = mr.top + share * main.height; val bs = wr.top + share * win.height
+                    if (Math.abs(bm - bs) > dp) out += "$name: the seconds off the minutes' baseline by %.1f dp".format(Math.abs(bm - bs) / dp)
                     val wheel = v.findViewById<View>(R.id.widget_count_wheel)
                     val made = v.resources.getDimension(R.dimen.noor_count_wheel)
                     if (wheel.width > made + 1) out += "$name: the seconds wheel drawn larger than made (${wheel.width} > $made)"

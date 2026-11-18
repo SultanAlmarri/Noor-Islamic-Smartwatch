@@ -35,7 +35,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
     private val light = r.pal.light
     private val clear = r.pal.background == WidgetBackground.CLEAR
     val ink: Int = if (light) (if (r.pal.background == WidgetBackground.YOU) r.pal.text else 0xFF1C1C1E.toInt()) else r.pal.text
-    private val sky = r.pal.background == WidgetBackground.SKY
+    private val sky = r.pal.background == WidgetBackground.SKY || r.pal.background == WidgetBackground.GLASS
     private fun alpha(c: Int, f: Float) = (c and 0x00FFFFFF) or (((c ushr 24) * f).toInt().coerceIn(0, 255) shl 24)
     /** Secondary, tertiary and past text: 72 %, 52 %, 50 % of the ink (stronger where 4.5:1 or 3:1 asks it). */
     // Over the vivid sky (white reads at 4.6:1 at least there) the quieter text is less quiet, to keep 3:1.
@@ -130,14 +130,19 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         return if (seconds) Widgets.leading(c, r.now, r.f) else Widgets.minuteCountdown(c, r.now, r.f)
     }
 
+    /**
+     * (0.24) The seconds beside hours and minutes of text size [size]: at most the wheel's own 40 dp (its drawables are
+     * made at it; larger it would be a picture thousands of pixels across) and at most 0.74 of the minutes, on their
+     * baseline, quieter, as the home screen writes them ("2:10" large, ":39" smaller).
+     */
+    fun secondsScale(size: Float) = if (!seconds) 1f else minOf(MAX_WHEEL, 0.74f * size) / size
     /** The countdown's width (dp) at text size [size]. */
-    fun countWidth(size: Float) = CountPicture.widthDp(r.app, leading(), size / 40f, seconds) + 1f
+    fun countWidth(size: Float) = CountPicture.widthDp(r.app, leading(), size / 40f, seconds, secondsScale = secondsScale(size)) + 1f
     fun countHeight(size: Float) = CountPicture.heightDp(r.app, size / 40f)
     /** The countdown's text size that fits [w], at most [want]. */
     fun countFit(want0: Float, w: Float): Float {
-        // With its seconds the countdown is at most the seconds wheel's own size (40 dp): Android draws the wheel from
-        // one picture of all sixty labels, and larger it would be a picture thousands of pixels across.
-        val want = if (seconds) minOf(want0, MAX_WHEEL) else want0
+        // (The seconds beside it are at most the wheel's own size: secondsScale.)
+        val want = want0
         val cw = countWidth(want); return if (cw <= w) want else want * w / cw * 0.99f
     }
 
@@ -147,7 +152,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val w = countWidth(size); val h = countHeight(size)
         val inBox = when (align) { Align.START -> 0f; Align.END -> boxW - w; Align.CENTER -> (boxW - w) / 2 }
         // The countdown reads left to right: its box is mirrored, never its digits.
-        if (wheel) sheet.countAt(x + inBox, top, size / 40f, w, h, leading(), size, ink)
+        if (wheel) sheet.countAt(x + inBox, top, size / 40f, w, h, leading(), size, ink, secondsScale(size))
         else {
             val bmp = CountPicture.draw(r.app, CountPicture.Spec(leading(), size / 40f, ink, alpha(ink, 0.62f), shadow = false, colon = false))
             val d = r.density
@@ -552,13 +557,13 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val innerW = rad * 2 - sw - 16f * s
         val cs = if (r.o.countdown) countFit(29f * t, innerW) else 0f
         val ch = if (r.o.countdown) countHeight(cs) else 0f
-        val ns = 17f * t; val ts = 14f * t
+        val ns = maxOf(12f, 17f * t); val ts = 14f * t
         val total = ns * 1.05f + 3f * s + ch + 3f * s + ts * 1.05f
         var y = cy - total / 2
         sheet.block {
-            val nl = fit(line(run(countedName, ns, Weight.SEMIBOLD, gold)), innerW, 12f) ?: line(run(countedName, 12f, Weight.SEMIBOLD, gold))
+            val nl = fit(line(run(countedName, ns, Weight.SEMIBOLD, markText)), innerW, 12f) ?: line(run(countedName, 12f, Weight.SEMIBOLD, markText))
             sheet.text(nl, (W - innerW) / 2, y + ns * 0.86f, innerW, Align.CENTER, "name")
-            val tl = fit(line(*time(countedAt, ts, Weight.REGULAR, sec).toTypedArray()), innerW, 11f)
+            val tl = if (ts < 11f) null else fit(line(*time(countedAt, ts, Weight.REGULAR, sec).toTypedArray()), innerW, 11f)
             if (tl != null) sheet.text(tl, (W - innerW) / 2, y + ns * 1.05f + 3f * s + ch + 3f * s + ts * 0.86f, innerW, Align.CENTER, "time")
         }
         y += ns * 1.05f + 3f * s
@@ -574,12 +579,14 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val rise = ws.day.instant(Prayer.SHURUQ); val set = ws.day.instant(Prayer.MAGHRIB)
         val x0 = 34f * s; val x1 = W - 34f * s; val yH = H - 40f * s; val top = 58f * s
         val u = if (rise != null && set != null) ((r.now.epochSecond - rise.epochSecond).toFloat() / (set.epochSecond - rise.epochSecond)).coerceIn(-0.05f, 1.05f) else 0.5f
+        // The sky is never mirrored in Arabic (the owner, 18 November 2026): sunrise on the left, sunset on the right.
+        sheet.mirror = false
         sheet.block {
             sheet.shape(0f, 0f, W, H) { cv, _ ->
                 val pt = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { style = android.graphics.Paint.Style.STROKE; strokeCap = android.graphics.Paint.Cap.ROUND }
                 pt.color = if (light) 0x40000000 else 0x40FFFFFF; pt.strokeWidth = 1f
                 cv.drawLine(14f * s, yH, W - 14f * s, yH, pt)
-                fun xy(f: Float): Pair<Float, Float> { val xx = x0 + (x1 - x0) * f; return (if (rtl) W - xx else xx) to (yH - (yH - top) * kotlin.math.sin(Math.PI * f).toFloat()) }
+                fun xy(f: Float): Pair<Float, Float> { val xx = x0 + (x1 - x0) * f; return xx to (yH - (yH - top) * kotlin.math.sin(Math.PI * f).toFloat()) }
                 val solid = android.graphics.Path(); val dotted = android.graphics.Path()
                 val uc = u.coerceIn(0f, 1f)
                 for (i in 0..60) { val f = i / 60f; val (xx, yy) = xy(f); val path = if (f <= uc) solid else dotted
@@ -604,6 +611,28 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
             sheet.icon(Prayer.MAGHRIB, W - 14f * s - iconSz, base - iconSz + 2f, iconSz, sec)
             sheet.text(line(*time(set, ts, Weight.REGULAR, sec, suffix = false).toTypedArray()), W - 14f * s - iconSz - 5f * s - 80f * s, base, 80f * s, Align.END, "set")
         }
+        sheet.mirror = true
+    }
+
+    /** The date's words: the weekday, the Hijri day, month and year, the Gregorian date, the next occasion. */
+    private inner class DateWords {
+        val f = r.f
+        val today = r.today
+        val h = HijriDate.of(today, r.s.hijriAdjust)
+        val day = f.number(h.day)
+        val month = if (f.arabic) h.monthNameAr else h.monthNameEn
+        val year = f.digits(h.year.toString()) + if (f.arabic) " هـ" else " AH"
+        val weekday = f.weekday(today).let { if (f.arabic) it else it.uppercase() }
+        /** "1448 AH · 4 Nov" / "٤ نوفمبر ١٤٤٨ هـ". */
+        val sub = if (f.arabic) "${f.number(today.dayOfMonth)} ${f.monthName(today.month)} $year" else "$year · ${f.number(today.dayOfMonth)} ${f.monthShort(today.month)}"
+        val gregorian = "${f.number(today.dayOfMonth)} ${f.monthShort(today.month)}"
+        val next = WidgetRender.nextOccasion(today, r.s.hijriAdjust)
+        val occasion = next?.let { e -> if (f.arabic) e.event.ar else e.event.en }
+        val days = next?.let { e -> if (e.daysUntil == 0L) r.ctx.getString(R.string.widget_occasion_today)
+            else r.ctx.resources.getQuantityString(R.plurals.widget_in_days, e.daysUntil.toInt(), f.number(e.daysUntil.toInt())) }
+        /** "Ramadan in 96 days". */
+        val occasionLine = if (occasion == null || days == null) null else if (next!!.daysUntil == 0L) "$occasion · $days"
+            else r.ctx.getString(R.string.widget_occasion_in, occasion, if (f.arabic) days else days.replaceFirstChar { it.lowercase() })
     }
 
     /** Date 2×2: the weekday in gold capitals, the day's number large, the month, year and Gregorian date, the occasion. */
@@ -611,28 +640,92 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val s = minOf(W / 176f, H / 176f); val t = s * k
         val p = 16f * s
         val inner = W - 2 * p
-        val f = r.f
-        val today = r.today
-        val h = HijriDate.of(today, r.s.hijriAdjust)
-        val month = if (f.arabic) h.monthNameAr else h.monthNameEn
-        val wd = f.weekday(today).let { if (f.arabic) it else it.uppercase() }
-        val sub = if (f.arabic) "${f.number(today.dayOfMonth)} ${f.monthName(today.month)} ${f.digits(h.year.toString())} هـ"
-            else "${f.digits(h.year.toString())} AH · ${f.number(today.dayOfMonth)} ${f.monthShort(today.month)}"
-        val next = WidgetRender.nextOccasion(today, r.s.hijriAdjust)
-        val occ = next?.let { e -> val n = if (f.arabic) e.event.ar else e.event.en
-            if (e.daysUntil == 0L) "$n · " + r.ctx.getString(R.string.widget_occasion_today)
-            else r.ctx.getString(R.string.widget_occasion_in, n, r.ctx.resources.getQuantityString(R.plurals.widget_in_days, e.daysUntil.toInt(), f.number(e.daysUntil.toInt()))
-                .let { d -> if (f.arabic) d else d.replaceFirstChar { it.lowercase() } }) }
+        val d = DateWords()
         sheet.block {
             var y = p
-            fit(line(run(wd, 13f * t, Weight.SEMIBOLD, gold)), inner, 10f)?.let { sheet.text(it, p, y + 13f * t * 0.86f, inner, Align.START, "weekday") }
-            y += 13f * t * 1.05f + 2f * s
-            val num = line(run(f.number(h.day), 64f * t, Weight.MEDIUM, ink))
+            val ws = maxOf(11f, 13f * t)
+            fit(line(run(d.weekday, ws, Weight.SEMIBOLD, gold)), inner, 11f)?.let { sheet.text(it, p, y + ws * 0.86f, inner, Align.START, "weekday") }
+            y += ws * 1.05f + 2f * s
+            val num = line(run(d.day, 64f * t, Weight.SEMIBOLD, ink))
             sheet.text(num, p, y + 64f * t * 0.76f, inner, Align.START, "day"); y += 64f * t * 0.92f + 2f * s
-            fit(line(run(month, 18f * t, Weight.SEMIBOLD, ink)), inner, 12f)?.let { sheet.text(it, p, y + 18f * t * 0.86f, inner, Align.START, "month") }
-            y += 18f * t * 1.05f + 2f * s
-            fit(line(run(sub, 14f * t, Weight.REGULAR, sec)), inner, 11f)?.let { sheet.text(it, p, y + 14f * t * 0.86f, inner, Align.START, "gregorian") }
-            if (occ != null) fit(line(run(occ, 13f * t, Weight.REGULAR, ter)), inner, 10f)?.let { sheet.text(it, p, H - p - 13f * t * 0.2f, inner, Align.START, "occasion") }
+            val ms = maxOf(12f, 18f * t)
+            fit(line(run(d.month, ms, Weight.SEMIBOLD, ink)), inner, 12f)?.let { sheet.text(it, p, y + ms * 0.86f, inner, Align.START, "month") }
+            y += ms * 1.05f + 2f * s
+            val gs = maxOf(11f, 14f * t)
+            fit(line(run(d.sub, gs, Weight.REGULAR, sec)), inner, 11f)?.let { sheet.text(it, p, y + gs * 0.86f, inner, Align.START, "gregorian") }
+            y += gs * 1.05f
+            val os = maxOf(11f, 13f * t)
+            // The occasion at the foot, where there is room under the rest.
+            if (d.occasionLine != null && H - p - y >= os * 1.3f)
+                fit(line(run(d.occasionLine, os, Weight.REGULAR, ter)), inner, 11f)?.let { sheet.text(it, p, H - p - os * 0.2f, inner, Align.START, "occasion") }
+        }
+    }
+
+    /**
+     * Date 4×1 (360×84), and 4×2 the same enlarged: the day's number large at the start, the month and year over the
+     * Gregorian date beside it, the occasion at the end; centred in the height.
+     */
+    fun date4x1() {
+        val s = minOf(W / 360f, H / 96f); val t = s * k
+        val px = 18f * s
+        val inner = W - 2 * px
+        val d = DateWords()
+        sheet.block {
+            val numSize = minOf(50f * t, (H - 16f) / 0.95f)
+            val num = line(run(d.day, numSize, Weight.SEMIBOLD, ink))
+            val numW = sheet.width(num)
+            val ms = maxOf(12f, 18f * t); val gs = maxOf(11f, 14f * t)
+            val occN = maxOf(11f, 12f * t); val occD = maxOf(12f, 16f * t)
+            val occW = if (d.occasion != null) minOf(inner * 0.32f, maxOf(sheet.width(line(run(d.occasion, occN, Weight.REGULAR, ter))), sheet.width(line(run(d.days!!, occD, Weight.SEMIBOLD, gold))))) else 0f
+            val midX = px + numW + 14f * s
+            val midW = inner - numW - 14f * s - (if (occW > 0f) occW + 14f * s else 0f)
+            sheet.text(num, px, H / 2 + numSize * 0.36f, numW, Align.START, "day")
+            val ml = fit(line(run("${d.month} ${d.year}", ms, Weight.SEMIBOLD, ink)), midW, 12f) ?: fit(line(run(d.month, ms, Weight.SEMIBOLD, ink)), midW, 12f)
+            val gl = fit(line(run(d.weekday.lowercase().replaceFirstChar { it.uppercase() } + (if (r.f.arabic) "، " else ", ") + d.gregorian, gs, Weight.REGULAR, sec)), midW, 11f)
+                ?: fit(line(run(d.gregorian, gs, Weight.REGULAR, sec)), midW, 11f)
+            val blockH = (ml?.maxSize?.times(1.1f) ?: 0f) + (gl?.maxSize?.times(1.1f) ?: 0f)
+            var y = (H - blockH) / 2
+            if (ml != null) { sheet.text(ml, midX, y + ml.maxSize * 0.86f, midW, Align.START, "month"); y += ml.maxSize * 1.1f }
+            if (gl != null) sheet.text(gl, midX, y + gl.maxSize * 0.86f, midW, Align.START, "gregorian")
+            if (occW > 0f) {
+                val nl = fit(line(run(d.occasion!!, occN, Weight.REGULAR, ter)), occW, 11f)
+                val dl = fit(line(run(d.days!!, occD, Weight.SEMIBOLD, gold)), occW, 12f)
+                val oh = (nl?.maxSize?.times(1.1f) ?: 0f) + (dl?.maxSize?.times(1.1f) ?: 0f)
+                var oy = (H - oh) / 2
+                if (nl != null) { sheet.text(nl, px + inner - occW, oy + nl.maxSize * 0.86f, occW, Align.END, "occasion"); oy += nl.maxSize * 1.1f }
+                if (dl != null) sheet.text(dl, px + inner - occW, oy + dl.maxSize * 0.86f, occW, Align.END, "occasion_days")
+            }
+        }
+    }
+
+    /** Date 2×1 (176×84) and smaller: the day's number beside the month over the year; under 60 dp, one line. */
+    fun date2x1() {
+        val s = minOf(W / 176f, H / 84f); val t = s * k
+        val px = 16f * s
+        val inner = W - 2 * px
+        val d = DateWords()
+        sheet.block {
+            if (H < 60f) {
+                // The smallest date: the day and the month, or (too narrow for the month) the day and the weekday.
+                val size = minOf(17f, (H - 10f) / 1.2f)
+                val wd = r.f.weekdayShort(d.today.dayOfWeek)
+                val l = fit(line(run("${d.day} ${d.month}", size, Weight.SEMIBOLD, ink)), inner, 12f)
+                    ?: fit(line(run("${d.day} · $wd", size, Weight.SEMIBOLD, ink)), inner, 12f)
+                    ?: line(run(d.day, 14f, Weight.SEMIBOLD, ink))
+                sheet.text(l, px, H / 2 + l.maxSize * 0.36f, inner, Align.START, "month")
+                return@block
+            }
+            val numSize = minOf(40f * t, (H - 14f) / 0.95f)
+            val num = line(run(d.day, numSize, Weight.SEMIBOLD, ink))
+            val numW = sheet.width(num)
+            val midW = inner - numW - 12f * s
+            sheet.text(num, px, H / 2 + numSize * 0.36f, numW, Align.START, "day")
+            val ml = fit(line(run(d.month, maxOf(12f, 17f * t), Weight.SEMIBOLD, ink)), midW, 12f)
+            val gl = fit(line(run(d.sub, maxOf(11f, 13f * t), Weight.REGULAR, sec)), midW, 11f) ?: fit(line(run(d.year, maxOf(11f, 13f * t), Weight.REGULAR, sec)), midW, 11f)
+            val blockH = (ml?.maxSize?.times(1.1f) ?: 0f) + (gl?.maxSize?.times(1.1f) ?: 0f)
+            var y = (H - blockH) / 2
+            if (ml != null) { sheet.text(ml, px + numW + 12f * s, y + ml.maxSize * 0.86f, midW, Align.START, "month"); y += ml.maxSize * 1.1f }
+            if (gl != null) sheet.text(gl, px + numW + 12f * s, y + gl.maxSize * 0.86f, midW, Align.START, "gregorian")
         }
     }
 }

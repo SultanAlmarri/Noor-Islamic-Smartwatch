@@ -14,7 +14,7 @@ internal class Drawn(val role: String, val text: String, val size: Float, val in
 internal class Block(val rect: RectF, val bitmap: Bitmap)
 
 /** Where the live countdown (its picture and seconds wheel) stands, in dp, and its scale (of the wheel's 40 dp). */
-internal class CountSpot(val left: Float, val top: Float, val scale: Float, val width: Float, val height: Float)
+internal class CountSpot(val left: Float, val top: Float, val scale: Float, val width: Float, val height: Float, val secondsScale: Float = 1f)
 
 /** A widget as drawn for one size (0.24): its background picture, its blocks, the live countdown, and what it says. */
 internal class Design(val wDp: Float, val hDp: Float, val back: Bitmap?, val blocks: List<Block>, val count: CountSpot?, val drawn: List<Drawn>)
@@ -33,7 +33,10 @@ internal class Sheet(val context: Context, val wDp: Float, val hDp: Float, val r
     var count: CountSpot? = null
 
     /** A start-relative box [x, x + w) in the widget's left-to-right coordinates. */
-    fun absLeft(x: Float, w: Float): Float = if (rtl) wDp - x - w else x
+    fun absLeft(x: Float, w: Float): Float = if (rtl && mirror) wDp - x - w else x
+
+    /** False while drawing what is never mirrored in Arabic (the sky: the Sun rises on the same side in either language). */
+    var mirror = true
 
     enum class Align { START, END, CENTER }
 
@@ -102,9 +105,9 @@ internal class Sheet(val context: Context, val wDp: Float, val hDp: Float, val r
     }
 
     /** The live countdown at a start-relative box. */
-    fun countAt(x: Float, top: Float, scale: Float, w: Float, h: Float, text: String, size: Float, color: Int) {
+    fun countAt(x: Float, top: Float, scale: Float, w: Float, h: Float, text: String, size: Float, color: Int, secondsScale: Float = 1f) {
         val left = absLeft(x, w)
-        count = CountSpot(left, top, scale, w, h)
+        count = CountSpot(left, top, scale, w, h, secondsScale)
         drawn += Drawn("countdown", text, size, RectF(left, top, left + w, top + h), RectF(left, top, left + w, top + h), color, -1)
     }
 

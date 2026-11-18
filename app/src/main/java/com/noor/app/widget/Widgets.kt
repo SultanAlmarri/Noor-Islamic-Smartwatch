@@ -171,23 +171,27 @@ object Widgets {
     private suspend fun prepare(app: NoorApplication, now: Instant): Prepared? {
         val all = WidgetKind.entries.associateWith { ids(app, it.provider) }
         if (all.values.all { it.isEmpty() }) { cancelRefresh(app); return null }
+        val t0 = System.nanoTime()
         val fr = frame(app, now)
+        val t1 = System.nanoTime()
         val manager = AppWidgetManager.getInstance(app)
         val views = HashMap<Int, RemoteViews>(); val builtNow = HashMap<Int, Built>()
         for ((kind, ids) in all) for (id in ids) runCatching {
             val o = WidgetOptionsStore.load(app, id, kind)
             views[id] = viewsFor(fr, kind, o, sizesDp(manager, id, kind)) { builtNow[id] = it }
         }
+        lastTimings = "frame ${(t1 - t0) / 1_000_000} ms, views ${(System.nanoTime() - t1) / 1_000_000} ms"
+        android.util.Log.i("NoorWidgets", "built: $lastTimings")
         val prayers = all.any { (k, ids) -> k.prayers && ids.isNotEmpty() }
         return Prepared(now, fr.c, views, builtNow, prayers, all[WidgetKind.DATE]?.isNotEmpty() == true, fr.zone)
     }
 
     private fun push(app: Context, p: Prepared) {
+        pushedAtMs = System.currentTimeMillis()
         val manager = AppWidgetManager.getInstance(app)
         for ((id, v) in p.views) runCatching { manager.updateAppWidget(id, v) }
         built.clear(); built.putAll(p.built)
         pushed = p.now
-        pushedAtMs = System.currentTimeMillis()
     }
 
     /**
@@ -226,16 +230,21 @@ object Widgets {
         armRefresh(app, Instant.ofEpochMilli(at - ALARM_AHEAD_MS), at)
         timer?.cancel()
         if (!inProcess) return
+        val waitMs = maxOf(0L, at - AHEAD_MS - clock().toEpochMilli())
         timer = scope.launch {
-            kotlinx.coroutines.delay(maxOf(0L, at - AHEAD_MS - clock().toEpochMilli()))
-            ahead(app, at)
+            kotlinx.coroutines.delay(waitMs)
+            try { ahead(app, at) } catch (e: Exception) { timerError = e.toString(); android.util.Log.w("NoorWidgets", "timed update", e) }
         }
     }
 
     private var timer: kotlinx.coroutines.Job? = null
     /** Whether the process times the next change itself (a test may leave it to the alarm, to step through changes). */
     internal var inProcess = true
-    /** When the last update was handed to the home screen (the real clock, ms; for the tests). */
+    /** The in-process timer's last failure (for the tests and the log). */
+    @Volatile internal var timerError: String? = null
+    /** How long the last update took to build (for the tests and the log). */
+    @Volatile internal var lastTimings = ""
+    /** When the last update began to be handed to the home screen (the real clock, ms; for the tests). */
     @Volatile internal var pushedAtMs = 0L
 
     /** The next moment a widget's look changes after [p] was built, or null. */
@@ -268,10 +277,10 @@ object Widgets {
         }
     }
 
-    /** How long before a change its views are built (they take some tens of milliseconds for every widget). */
-    private const val AHEAD_MS = 400L
+    /** How long before a change its views are built (every widget at every size: a few hundred ms on a slow phone). */
+    private const val AHEAD_MS = 800L
     /** The alarm's lead: a little more, as an alarm is delivered late by some milliseconds. */
-    private const val ALARM_AHEAD_MS = 450L
+    internal const val ALARM_AHEAD_MS = 900L
     /** How long before a change its views are handed over: about the time a home screen takes to draw them. */
     private const val EARLY_MS = 50L
     /** The views of a change are for this long after it (the countdown's new minute, well clear of the old). */

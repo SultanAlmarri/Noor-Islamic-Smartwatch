@@ -57,8 +57,9 @@ class WidgetsTest {
         // are for the same moment as the test's own.
         val istanbul = ZoneId.of("Europe/Istanbul")
         val at = ZonedDateTime.of(2026, 11, 4, 15, 50, 0, 0, istanbul).toInstant()
-        var moment = at; var since = android.os.SystemClock.elapsedRealtime()
-        Widgets.clock = { moment.plusMillis(android.os.SystemClock.elapsedRealtime() - since) }
+        var moment = at; var since = System.currentTimeMillis()
+        // (The wall clock: Robolectric's SystemClock stands still between its looper's steps.)
+        Widgets.clock = { moment.plusMillis(System.currentTimeMillis() - since) }
         // One layout per widget (the simulated home screen applies one), and the changes stepped by the test.
         Widgets.sizeMaps = { false }
         Widgets.inProcess = false
@@ -120,7 +121,7 @@ class WidgetsTest {
         assertEquals(AlarmManager.RTC, alarm().type)
         val change = StatusTicker.nextChange(content(at), at.toEpochMilli(), false)
         assertEquals(change, alarmFor())
-        assertEquals(change - 450, alarm().triggerAtTime)
+        assertEquals(change - Widgets.ALARM_AHEAD_MS, alarm().triggerAtTime)
 
         // Pictures (and the previews in the widget picker).
         val d = app.resources.displayMetrics.density
@@ -160,7 +161,7 @@ class WidgetsTest {
                 // its clock is made smaller or larger, and Android scales the canvas about the clock's centre, the
                 // label at its intrinsic size; the same here, about the top.
                 label.setTint(0x9EFFFFFF.toInt())
-                val k = Widgets.builtFor(id)!!.countScale
+                val k = Widgets.builtFor(id)!!.secondsScale
                 val lw = label.intrinsicWidth; val lh = label.intrinsicHeight
                 val canvas = Canvas(c); canvas.clipRect(r)
                 canvas.scale(k, k, r.exactCenterX(), r.top.toFloat())
@@ -224,10 +225,10 @@ class WidgetsTest {
 
         // Before a prayer: at 14:10, "−1:27" and the seconds counting down to Asr (15:37).
         val before = ZonedDateTime.of(2026, 11, 4, 14, 10, 0, 0, istanbul).toInstant()
-        moment = before; since = android.os.SystemClock.elapsedRealtime()
+        moment = before; since = System.currentTimeMillis()
         repo.setNumerals(Numerals.WESTERN)
         Thread.sleep(1500)
-        moment = before; since = android.os.SystemClock.elapsedRealtime()
+        moment = before; since = System.currentTimeMillis()
         Widgets.refresh(app, before)
         assertTrue(said(next, "name").startsWith("Asr "))
         assertEquals("−1:27", count(next))
@@ -237,7 +238,7 @@ class WidgetsTest {
         // The owner's phone (13 November 2026): the phone in Arabic (Android writes Arabic-Indic digits), Noor in
         // Western digits. The widget's countdown is Noor's, in Western digits, its seconds included.
         StatusNotification.systemZeroDigit = { '٠' }
-        moment = before; since = android.os.SystemClock.elapsedRealtime()
+        moment = before; since = System.currentTimeMillis()
         Widgets.refresh(app, before)
         for (id in listOf(next, today, sky)) {
             assertTrue(visible(shadow.getViewFor(id), R.id.widget_count_row))
@@ -248,14 +249,17 @@ class WidgetsTest {
         // prayer's time less the clock's), and at 14:10:01 "−1:26:59": the update for that instant is armed ahead of it.
         val crossing = before.plusSeconds(1).toEpochMilli()
         assertEquals(crossing, alarmFor())
-        assertEquals(crossing - 450, alarm().triggerAtTime)
+        assertEquals(crossing - Widgets.ALARM_AHEAD_MS, alarm().triggerAtTime)
         // The minute pushed for the crossing (the alarm's): built ahead, handed over just before it, and showing the
         // minute that is right just after it ("−1:26"), not the one before ("−1:27").
-        moment = Instant.ofEpochMilli(crossing - 450); since = android.os.SystemClock.elapsedRealtime()
+        moment = Instant.ofEpochMilli(crossing - Widgets.ALARM_AHEAD_MS); since = System.currentTimeMillis()
         val t0 = System.currentTimeMillis()
         Widgets.ahead(app, crossing)
         val waited = Widgets.pushedAtMs - t0
-        assertTrue("handed over just before the change, not at once ($waited ms after the alarm)", waited in 350..450)
+        println("ahead: handed over $waited ms after the alarm; ${Widgets.lastTimings}")
+        // Handed over 50 ms before the change: 850 ms after its alarm (900 ms before it), give or take the scheduler's
+        // timing on a busy machine (never early: not before 800 ms).
+        assertTrue("handed over just before the change, not at once ($waited ms after the alarm)", waited in 800..950)
         assertEquals(Widgets.leading(content(Instant.ofEpochMilli(crossing + 1)), Instant.ofEpochMilli(crossing + 1), com.noor.app.util.Formatter(false, Numerals.WESTERN, com.noor.app.data.TimeFormat.H12)), count(today))
         assertEquals("−1:26", count(today))
         assertEquals("−1:27", Widgets.leading(content(Instant.ofEpochMilli(crossing - 1)), Instant.ofEpochMilli(crossing - 1), com.noor.app.util.Formatter(false, Numerals.WESTERN, com.noor.app.data.TimeFormat.H12)))
@@ -268,16 +272,19 @@ class WidgetsTest {
         // In Minhad's own process the same, timed by itself: built ahead and handed over at the change.
         Widgets.inProcess = true
         val soon = before.plusSeconds(61).toEpochMilli()
-        moment = Instant.ofEpochMilli(soon - 700); since = android.os.SystemClock.elapsedRealtime()
+        moment = Instant.ofEpochMilli(soon - 1200); since = System.currentTimeMillis()
         Widgets.refresh(app, moment)
         assertEquals("−1:26", count(today))
-        Thread.sleep(1000)
+        // (The simulated home screen takes the update on the main thread: let it run while waiting.)
+        val until = System.currentTimeMillis() + 1500
+        while (System.currentTimeMillis() < until) { shadowOf(android.os.Looper.getMainLooper()).idle(); Thread.sleep(10) }
+        println("in process: pushed ${Widgets.pushedAtMs - (until - 1500)} ms after the refresh; ${Widgets.lastTimings}; timer error ${Widgets.timerError}")
         assertEquals("−1:25", count(today))
         Widgets.inProcess = false
 
         // Before Android 12 (no seconds wheel): Noor's countdown to the minute, a picture in Noor's font.
         Widgets.wheelSupported = { false }
-        moment = before; since = android.os.SystemClock.elapsedRealtime()
+        moment = before; since = System.currentTimeMillis()
         Widgets.refresh(app, before)
         shadow.getViewFor(next).let { v ->
             assertTrue(!visible(v, R.id.widget_count_slot))

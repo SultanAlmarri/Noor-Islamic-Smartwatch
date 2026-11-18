@@ -31,13 +31,13 @@ enum class WidgetKind(
     SKY(SkyWidget::class.java, R.string.widget_sky_name, WidgetOptions(background = WidgetBackground.SKY),
         listOf(WidgetOption.ACCENT, WidgetOption.TEXT_SIZE, WidgetOption.COUNTDOWN, WidgetOption.SECONDS, WidgetOption.PLACE,
             WidgetOption.HIJRI, WidgetOption.JUMUAH, WidgetOption.TAP), 340 to 190),
-    RING(RingWidget::class.java, R.string.widget_ring_name, WidgetOptions(background = WidgetBackground.GLASS, opacity = 78),
+    RING(RingWidget::class.java, R.string.widget_ring_name, WidgetOptions(background = WidgetBackground.SKY),
         listOf(WidgetOption.BACKGROUND, WidgetOption.ACCENT, WidgetOption.TEXT_SIZE, WidgetOption.COUNTDOWN, WidgetOption.SECONDS,
             WidgetOption.JUMUAH, WidgetOption.TAP), 170 to 170),
-    STRIP(StripWidget::class.java, R.string.widget_strip_name, WidgetOptions(background = WidgetBackground.GLASS, opacity = 78, shuruq = false),
+    STRIP(StripWidget::class.java, R.string.widget_strip_name, WidgetOptions(background = WidgetBackground.DARK, opacity = 100, shuruq = false),
         listOf(WidgetOption.BACKGROUND, WidgetOption.ACCENT, WidgetOption.TEXT_SIZE, WidgetOption.COUNTDOWN, WidgetOption.SECONDS,
             WidgetOption.SHURUQ, WidgetOption.JUMUAH, WidgetOption.TAP), 340 to 96),
-    DATE(DateWidget::class.java, R.string.widget_date_name, WidgetOptions(background = WidgetBackground.GLASS, opacity = 78),
+    DATE(DateWidget::class.java, R.string.widget_date_name, WidgetOptions(background = WidgetBackground.SKY),
         listOf(WidgetOption.BACKGROUND, WidgetOption.ACCENT, WidgetOption.TEXT_SIZE, WidgetOption.TAP), 340 to 96, prayers = false);
 
     companion object {
