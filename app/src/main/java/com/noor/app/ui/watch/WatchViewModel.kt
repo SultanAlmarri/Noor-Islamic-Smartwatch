@@ -79,11 +79,13 @@ class WatchViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * The configuration the page's preview and its Studio card are drawn from: WearSync.configFor(s, 0L) (without the
-     * timetables, as this page has always asked for it), worked out off the main thread once for each settings value
-     * and day at the place, not every second (it calculates eight weeks of times).
+     * The configuration the page's preview and its Studio card are drawn from: WearSync.configFor(s, 0L), worked out
+     * off the main thread once for each settings value and day at the place, not every second (it calculates eight
+     * weeks of times). (0.21: with the official timetables, as the watch is sent it; until 0.20 this page asked
+     * without them, so where the authority publishes its times, Dubai's IACAD among them, the preview showed the
+     * calculated minutes, which can differ by one from what the watch shows.)
      */
-    val config: StateFlow<com.noor.prayer.WatchConfig?> = com.noor.app.data.DailyConfig.flow(settings, null)
+    val config: StateFlow<com.noor.prayer.WatchConfig?> = com.noor.app.data.DailyConfig.flow(settings, container.timetables)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Whether the phone has a configuration to send: configFor is null exactly when the settings give no place. */

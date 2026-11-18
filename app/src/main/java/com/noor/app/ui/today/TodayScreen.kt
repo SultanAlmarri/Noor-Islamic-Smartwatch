@@ -300,7 +300,7 @@ fun TodayContent(
         RealSkyLayer(Modifier.fillMaxSize().graphicsLayer { translationY = -scroll.value.toFloat() }) { bridge.frame.value?.invoke() }
     }
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
-        val todayDay = remember(today, u.settings, u.place, u.profile) { dayFor(today)?.day }
+        val todayDay = remember(today, u.settings, u.place, u.profile, u.tablesVersion) { dayFor(today)?.day }
         // (Whether the list shows today: the sky's hint keeps out of the way of "Today" while another day is shown.)
         var viewingToday by remember { mutableStateOf(true) }
         SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup, simple = simpleSky,
@@ -350,7 +350,7 @@ fun TodayContent(
             )
             HorizontalPager(state = pager, beyondViewportPageCount = 1, pageSpacing = 24.dp, verticalAlignment = Alignment.Top) { page ->
                 val date = DateWindow.dateOf(page)
-                val day = remember(date, u.settings, u.place, u.profile) { dayFor(date) }
+                val day = remember(date, u.settings, u.place, u.profile, u.tablesVersion) { dayFor(date) }
                 if (day != null) Timeline(day.day, date, isToday = date == today, u, f, home, onOpenPrayer, onToggleAlert, clock)
             }
             // Where the times come from and the method now live in Settings (0.9.2); the home screen is the day itself.

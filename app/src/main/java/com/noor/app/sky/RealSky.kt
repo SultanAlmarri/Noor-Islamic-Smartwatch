@@ -106,6 +106,7 @@ object RealSky {
     private const val K_ATTEMPTS_FOR = "real_sky_attempts_for"
     private const val K_FAILED = "real_sky_failed_for"
     private const val K_TIER = "real_sky_tier"
+    private const val K_TIER_FOR = "real_sky_tier_for"
     private const val TAG = "NoorRealSky"
 
     /**
@@ -227,7 +228,9 @@ object RealSky {
      */
     internal fun tierFor(context: Context, renderer: String): Tier {
         val p = context.getSharedPreferences(PREFS, 0)
-        val saved = p.getInt(K_TIER, -1)
+        // (0.21: a step down holds until the app is updated, as automatic's level does; until 0.20 it held for good,
+        // so a phone once slow for a while (the first start, a hot afternoon) drew the coarser sky ever after.)
+        val saved = if (p.getLong(K_TIER_FOR, -1L) == version(context)) p.getInt(K_TIER, -1) else -1
         if (saved in Tier.entries.indices) return Tier.entries[saved]
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val mem = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }.totalMem / (1024.0 * 1024 * 1024)
@@ -260,7 +263,7 @@ object RealSky {
     internal fun stepDown(context: Context, from: Tier): Boolean {
         if (from == Tier.LOW) { SkyLevels.lower(context, SkyLevel.HIGH); return false }
         val next = Tier.entries[from.ordinal + 1]
-        context.getSharedPreferences(PREFS, 0).edit().putInt(K_TIER, next.ordinal).apply()
+        context.getSharedPreferences(PREFS, 0).edit().putInt(K_TIER, next.ordinal).putLong(K_TIER_FOR, version(context)).apply()
         Log.i(TAG, "Pictures take too long at ${from.name}: stepping down to ${next.name}")
         return true
     }

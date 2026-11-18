@@ -39,6 +39,8 @@ data class TodayUi(
     val today: LocalDate?,
     val refreshing: Boolean,
     val lastRefresh: LocationRepository.Result?,
+    /** (0.21) The official timetables' version: the days on show are worked out again when a newer table is stored. */
+    val tablesVersion: Int = 0,
 )
 
 /**
@@ -100,7 +102,7 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
         // side that the list of times can be swiped to.
         SunPaths.of(today, place.point, place.zone)
         cache.get(s, place, profile, today.minusDays(1)); cache.get(s, place, profile, today.plusDays(1))
-        TodayUi(s, place, profile, PrayerProvider.authority(s, place), now, state, today, r, lr)
+        TodayUi(s, place, profile, PrayerProvider.authority(s, place), now, state, today, r, lr, container.timetables.version)
     }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Times for any date in [DateWindow], for the current place and settings, with their source. */
