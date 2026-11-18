@@ -2070,3 +2070,24 @@ dimming of the wallpaper in dark mode. The automatic sizes take a launcher cell 
 phone's. The pictures are the system's drawing with a software GPU (faithful, slow). The clock is set to the same moment
 before every page, so the countdowns agree to a second or two. `widgets_log.txt` has "Widget host dead" errors from the
 widget service: the previous page's host was stopped while the app was still updating its widgets; harmless.
+
+## 40. The countdown exact against the clock, the timer without the icon (0.23.1, 18 November 2026, phone; watch rebuilt)
+
+**The owner:** the status-bar timer was "a bit off from my phone's actual time. I want it to be exact" (his screenshots:
+the chip one second behind the widget), and "I don't want the app's logo to appear in the Samsung clock style timer".
+
+- **Rounding.** The time left was rounded down: at 20:27:52 it read 8:50:07 to a 05:18:00 Fajr, one second short of
+  the clock's own reckoning. `Countdowns.timeLeft` (core) rounds it up, so the countdown is the prayer's time less the
+  time the clock shows, and reaches 0 on the Adhan; the time since stays rounded down (+00:52 at 05:18:52). Followed by
+  `Content.countdown`, the widgets (`Widgets.elapsedSeconds`, the wheel's shift −p, `nextMinute` one second after a
+  whole minute), Android's Chronometer in the notification (base 999 ms later before a prayer) and the watch preview.
+- **Latency.** The notification's next second was built only once that second had begun; `StatusTicker` now builds it
+  300 ms ahead for the instant just after the change (`nextChange`) and posts it 12 ms before it. The home screen's
+  ticker gives each second 110 ms ahead (0 without animations), so its digits' 320 ms roll is half done on the second.
+  `StatusTickerTimingTest`. On the phone, the shade and the launcher still take a frame or so to draw.
+- **The icon.** Android draws a Live Update's chip from the notification's small icon and its short text, with no API to
+  leave the icon out; at the owner's word the Live Update now carries the crescent made transparent
+  (`ic_notification_clear`), unless Settings → "Minhad's icon beside the timer" is on (`AppSettings.statusChipIcon`, off
+  by default). The shade's card still names Minhad in its header. Whether One UI keeps an empty gap for the icon is seen
+  only on the phone.
+
