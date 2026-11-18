@@ -57,53 +57,37 @@ open class WidgetProvider : AppWidgetProvider() {
  *   a widget's own options or size change. Those updates use non-waking alarms: a sleeping phone is never woken for
  *   them; they run as soon as it wakes, the only time a widget can be seen.
  * - Each widget has its own options ([WidgetOptionsStore], chosen in [WidgetConfigActivity]) and chooses its layout for
- *   its size on the screen (the portrait size the launcher reports; a resize rebuilds it). Android 12's map of layouts
- *   by size is not used: a home screen merges a partial update into the widget's views without looking into such a map
- *   (AOSP RemoteViews.mergeRemoteViews), so the countdown's minute would never change.
+ *   its size on the screen. (0.24) On Android 12 and later the home screen gets a layout for each size it may give
+ *   ([viewsFor]) and shows the one made for the size it really gives; every update is a full one, the minute's included
+ *   (a partial update would not reach into such a map), built ahead and handed over on the change ([armNext]).
  */
 object Widgets {
     private const val ACTION_REFRESH = "com.noor.app.WIDGET_REFRESH"
     private const val REQUEST = 7310
-    /** How often the sky picture is redrawn. */
-    private val PICTURE_EVERY: Duration = Duration.ofMinutes(15)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lock = Mutex()
 
     /** The time, for updates that do not say when they are for (a test sets its own). */
     internal var clock: () -> Instant = Instant::now
 
-    internal fun refreshFrom(receiver: BroadcastReceiver, context: Context, minuteOnly: Boolean = false) {
+    internal fun refreshFrom(receiver: BroadcastReceiver, context: Context, aheadOf: Long = 0L) {
         val pending = receiver.goAsync()
         val app = context.applicationContext
-        scope.launch { try { refresh(app, minuteOnly = minuteOnly) } catch (_: Exception) { } finally { pending.finish() } }
+        scope.launch { try { if (aheadOf > 0L) ahead(app, aheadOf) else refresh(app) } catch (_: Exception) { } finally { pending.finish() } }
     }
 
     /** How the countdown is shown (see [WidgetRender.countdown]). */
-    internal enum class CountMode { WHEEL, TICK, MINUTES }
+    internal enum class CountMode { WHEEL, MINUTES }
 
     /** Android 12 and later: the seconds wheel, in Minhad's digits whatever the phone's. Earlier: Android's or Minhad's. */
     internal var wheelSupported: () -> Boolean = { android.os.Build.VERSION.SDK_INT >= 31 }
 
-    /** A minute's update: only what it sets changes on the home screen (a test applies it to its own simulated widget). */
-    internal var partialUpdate: (AppWidgetManager, Int, RemoteViews) -> Unit = { m, id, v -> m.partiallyUpdateAppWidget(id, v) }
-
-    /** When the sky pictures are next due (set by a full update; a minute's update leaves the pictures alone). */
-    private var pictureDue: Instant? = null
-
-    /**
-     * What the widgets were last built to say (set by a full update), less the moments it changes at. A minute's update
-     * changes the countdown alone, so it is only right while the rest is still this: the same prayer, time, sign, date
-     * and place.
-     */
-    private var shown: StatusNotification.Content? = null
-
-    /** What each widget was last built with (its layout, the countdown's scale), for its minute's updates. */
+    /** What each widget was last built with (its design and the countdown's scale, for the tests). */
     private val built = java.util.concurrent.ConcurrentHashMap<Int, Built>()
 
     /** The countdown's picture last drawn (for the tests). */
     @Volatile internal var lastCount: CountPicture.Spec? = null
 
-    private fun said(c: StatusNotification.Content) = c.copy(line = "", nextAt = Instant.EPOCH, refreshAt = Instant.EPOCH)
 
     fun refreshAsync(context: Context) {
         val app = context.applicationContext
@@ -132,12 +116,8 @@ object Widgets {
         val f = Formatter(arabic, s.numerals, s.timeFormat)
         val config = WearSync.configFor(s, now.toEpochMilli(), app.container.timetables)
         val place = PrayerProvider.place(s)
-        val mode = when {
-            wheelSupported() -> CountMode.WHEEL
-            // Android writes the phone's digits; where they are not Minhad's, Minhad writes the countdown itself.
-            StatusNotification.systemDigitsMatch(app, s.numerals) -> CountMode.TICK
-            else -> CountMode.MINUTES
-        }
+        // (0.24) Before Android 12, Minhad's countdown to the minute (Android's own ticking one is in the phone's font).
+        val mode = if (wheelSupported()) CountMode.WHEEL else CountMode.MINUTES
         if (config == null || place == null) return Frame(app, ctx, s, f, rtl, now, null, null, mode)
         return Frame(app, ctx, s, f, rtl, now, StatusNotification.content(config, s, now, arabic), WidgetScene(s, place, config, now), mode)
     }
@@ -163,76 +143,139 @@ object Widgets {
     }
 
     /**
-     * Rebuilds every Minhad widget on the home screen and arms the next update (or nothing, if there is none).
-     * [minuteOnly]: only the countdown's hours and minutes (and the rings and bars) changed; the pictures are left as
-     * they are.
+     * Rebuilds every Minhad widget on the home screen now and arms the next update (or nothing, if there is none).
+     * (0.24) Every update is a full one: each widget's layouts for every size its home screen may give it.
      */
-    suspend fun refresh(context: Context, at: Instant? = null, minuteOnly: Boolean = false) = lock.withLock {
+    suspend fun refresh(context: Context, at: Instant? = null) = lock.withLock {
         val app = context.applicationContext as? NoorApplication ?: return@withLock
-        val all = WidgetKind.entries.associateWith { ids(app, it.provider) }
-        if (all.values.all { it.isEmpty() }) { cancelRefresh(app); return@withLock }
         val now = at ?: clock()
+        val prepared = prepare(app, now) ?: return@withLock
+        push(app, prepared)
+        armNext(app, prepared)
+    }
+
+    /** What an update will hand the home screen: each widget's views, built for [now]. */
+    internal class Prepared(val now: Instant, val content: StatusNotification.Content?, val views: Map<Int, RemoteViews>,
+                            val built: Map<Int, Built>, val prayers: Boolean, val dates: Boolean, val zone: java.time.ZoneId)
+
+    private suspend fun prepare(app: NoorApplication, now: Instant): Prepared? {
+        val all = WidgetKind.entries.associateWith { ids(app, it.provider) }
+        if (all.values.all { it.isEmpty() }) { cancelRefresh(app); return null }
         val fr = frame(app, now)
         val manager = AppWidgetManager.getInstance(app)
-        val c = fr.c
-        val options = all.mapValues { (kind, ids) -> ids.associateWith { WidgetOptionsStore.load(app, it, kind) } }
-        if (c == null) {
-            for ((kind, ids) in all) for (id in ids) runCatching {
-                val (w, h) = sizeDp(manager, id, kind)
-                manager.updateAppWidget(id, build(fr, kind, options[kind]!![id]!!, w, h))
-            }
-            shown = null
-            built.clear()
-            // The date widgets still change at midnight.
-            if (all[WidgetKind.DATE]?.isNotEmpty() == true) {
-                val midnight = now.atZone(fr.zone).toLocalDate().plusDays(1).atStartOfDay(fr.zone).toInstant().plusSeconds(1)
-                armRefresh(app, midnight)
-            } else cancelRefresh(app)
-            return@withLock
-        }
-        val pictures = pictureDue
-        // (0.22) The minute's update armed for the moment the display changes (the end of a "+" period, a prayer with
-        // the "+" turned off, midnight) comes a few hundredths of a second after it, before the full update armed for
-        // it: it must then rebuild everything. Until 0.22 it changed the countdown alone, and the widgets went on naming
-        // the old prayer while counting to the next, until the next picture, up to 15 minutes later.
-        val everyIdBuilt = all.values.all { ids -> ids.all { built.containsKey(it) } }
-        if (minuteOnly && pictures != null && now.isBefore(pictures) && now.isBefore(c.refreshAt) && shown == said(c) && everyIdBuilt) {
-            // A new minute: only the countdown's picture or text, the rings and the bars change (the seconds turn by themselves).
-            for ((kind, ids) in all) for (id in ids) runCatching {
-                val b = built[id] ?: return@runCatching
-                val o = options[kind]!![id]!!
-                if (!needsMinute(kind, o, fr.mode, b)) return@runCatching
-                val (w, h) = sizeDp(manager, id, kind)
-                partialUpdate(manager, id, WidgetRender.minute(ctxFor(fr, kind, o, w, h), b))
-            }
-            armNext(app, c, now, pictures, minuteWanted(all, options, fr.mode))
-            return@withLock
-        }
+        val views = HashMap<Int, RemoteViews>(); val builtNow = HashMap<Int, Built>()
         for ((kind, ids) in all) for (id in ids) runCatching {
-            val (w, h) = sizeDp(manager, id, kind)
-            manager.updateAppWidget(id, build(fr, kind, options[kind]!![id]!!, w, h) { built[id] = it })
+            val o = WidgetOptionsStore.load(app, id, kind)
+            views[id] = viewsFor(fr, kind, o, sizesDp(manager, id, kind)) { builtNow[id] = it }
         }
-        pictureDue = now.plus(PICTURE_EVERY)
-        shown = said(c)
-        armNext(app, c, now, now.plus(PICTURE_EVERY), minuteWanted(all, options, fr.mode))
+        val prayers = all.any { (k, ids) -> k.prayers && ids.isNotEmpty() }
+        return Prepared(now, fr.c, views, builtNow, prayers, all[WidgetKind.DATE]?.isNotEmpty() == true, fr.zone)
     }
 
-    /** Whether a widget changes as each minute turns: a countdown not ticked by Android, a ring or a bar. */
-    private fun needsMinute(kind: WidgetKind, o: WidgetOptions, mode: CountMode, b: Built?): Boolean {
-        if (!kind.prayers) return false
-        val count = o.countdown && (mode != CountMode.TICK || !o.seconds) && (b == null || b.countScale > 0f)
-        val art = if (b != null) b.ringPx > 0 || b.barPx > 0 || b.minuteCell >= 0 else kind == WidgetKind.RING || kind == WidgetKind.TODAY || kind == WidgetKind.STRIP
-        return count || art
+    private fun push(app: Context, p: Prepared) {
+        val manager = AppWidgetManager.getInstance(app)
+        for ((id, v) in p.views) runCatching { manager.updateAppWidget(id, v) }
+        built.clear(); built.putAll(p.built)
+        pushed = p.now
     }
 
-    private fun minuteWanted(all: Map<WidgetKind, IntArray>, options: Map<WidgetKind, Map<Int, WidgetOptions>>, mode: CountMode) =
-        all.any { (kind, ids) -> ids.any { needsMinute(kind, options[kind]!![it]!!, mode, built[it]) } }
+    /**
+     * A widget's views for each of its [sizes] (Android 12 and later: the home screen shows the one made for the size it
+     * really gives the widget, and each is also made a little shorter, for home screens that give less than they say:
+     * Samsung's 4×1 cut its bottom row), or for the first size alone before Android 12. [built] gets the first's design.
+     */
+    internal fun viewsFor(fr: Frame, kind: WidgetKind, o: WidgetOptions, sizes: List<Pair<Int, Int>>, built: (Built) -> Unit = {}): RemoteViews {
+        val first = sizes.first()
+        if (android.os.Build.VERSION.SDK_INT < 31 || !sizeMaps()) return build(fr, kind, o, first.first, first.second, built)
+        val all = LinkedHashSet<Pair<Int, Int>>()
+        for (s in sizes) { all += s; all += s.first to (s.second * 0.84f).toInt() }
+        val map = LinkedHashMap<android.util.SizeF, RemoteViews>()
+        for ((i, s) in all.take(16).withIndex()) map[android.util.SizeF(s.first.toFloat(), s.second.toFloat())] = build(fr, kind, o, s.first, s.second, if (i == 0) built else { _ -> })
+        return if (map.size == 1) map.values.first() else RemoteViews(map)
+    }
 
-    /** The next update: the next prayer or change of display, the next picture, and each minute if a widget needs it. */
-    private fun armNext(app: Context, c: StatusNotification.Content, now: Instant, pictures: Instant, minuteWanted: Boolean) {
-        val full = minOf(c.refreshAt, pictures)
-        val minute = if (!minuteWanted) null else nextMinute(c, now)
-        if (minute != null && minute.isBefore(full)) armRefresh(app, minute, minuteOnly = true) else armRefresh(app, full, minuteOnly = false)
+    /** Whether to hand home screens a map of layouts by size (a test may apply one size's layout itself). */
+    internal var sizeMaps: () -> Boolean = { true }
+
+    /** When the widgets were last handed to the home screen, built for that moment. */
+    @Volatile private var pushed: Instant? = null
+
+    /**
+     * (0.24) The next change, made on its instant: the widgets' minute (the countdown's hours and minutes, the bar, the
+     * ring) changes where the countdown does ([StatusTicker.nextChange]), the prayer marked at the change of display
+     * ([StatusNotification.Content.refreshAt]), the date at midnight. The views for the instant just after it are built
+     * [AHEAD_MS] before, and handed to the home screen [EARLY_MS] before it (the time a home screen takes to draw them),
+     * so the minute shown turns with the seconds wheel, which Android turns on the clock's own second. While Minhad's
+     * process lives this is timed in it; an alarm (exact where the app may set one, never waking the phone) is the
+     * backstop that brings the process back for it.
+     */
+    private fun armNext(app: Context, p: Prepared) {
+        val change = nextChange(p) ?: run { cancelRefresh(app); return }
+        val at = change.toEpochMilli()
+        armRefresh(app, Instant.ofEpochMilli(at - ALARM_AHEAD_MS), at)
+        timer?.cancel()
+        timer = scope.launch {
+            kotlinx.coroutines.delay(maxOf(0L, at - AHEAD_MS - clock().toEpochMilli()))
+            ahead(app, at)
+        }
+    }
+
+    private var timer: kotlinx.coroutines.Job? = null
+
+    /** The next moment a widget's look changes after [p] was built, or null. */
+    internal fun nextChange(p: Prepared): Instant? {
+        val c = p.content
+        val nowMs = p.now.toEpochMilli()
+        val midnight = p.now.atZone(p.zone).toLocalDate().plusDays(1).atStartOfDay(p.zone).toInstant()
+        val candidates = ArrayList<Instant>()
+        if (p.dates || p.prayers) candidates += midnight
+        if (p.prayers && c != null) {
+            candidates += Instant.ofEpochMilli(com.noor.app.notify.StatusTicker.nextChange(c, nowMs, false))
+            if (c.refreshAt.isAfter(p.now)) candidates += c.refreshAt
+        }
+        return candidates.minOrNull()
+    }
+
+    /**
+     * The update for the change at [at] (wall clock, ms): built now for the instant just after it, handed over just
+     * before it. Done once per change (the process's timer and the alarm may both bring it).
+     */
+    internal suspend fun ahead(context: Context, at: Long) {
+        val app = context.applicationContext as? NoorApplication ?: return
+        lock.withLock {
+            if ((pushed?.toEpochMilli() ?: 0L) >= at) return@withLock
+            val p = prepare(app, Instant.ofEpochMilli(at + JUST_AFTER_MS)) ?: return@withLock
+            val wait = at - EARLY_MS - clock().toEpochMilli()
+            if (wait > 0) kotlinx.coroutines.delay(wait)
+            push(app, p)
+            armNext(app, p)
+        }
+    }
+
+    /** How long before a change its views are built (they take some tens of milliseconds for every widget). */
+    private const val AHEAD_MS = 400L
+    /** The alarm's lead: a little more, as an alarm is delivered late by some milliseconds. */
+    private const val ALARM_AHEAD_MS = 450L
+    /** How long before a change its views are handed over: about the time a home screen takes to draw them. */
+    private const val EARLY_MS = 50L
+    /** The views of a change are for this long after it (the countdown's new minute, well clear of the old). */
+    private const val JUST_AFTER_MS = 20L
+
+    /** The sizes the widget may be shown at (dp), the launcher's own list on Android 12 and later, portrait first. */
+    internal fun sizesDp(manager: AppWidgetManager, id: Int, kind: WidgetKind): List<Pair<Int, Int>> {
+        val o = runCatching { manager.getAppWidgetOptions(id) }.getOrNull()
+        if (o != null && android.os.Build.VERSION.SDK_INT >= 31) {
+            @Suppress("DEPRECATION")
+            val list = runCatching { o.getParcelableArrayList<android.util.SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES) }.getOrNull()
+            if (!list.isNullOrEmpty()) return list.map { it.width.toInt() to it.height.toInt() }.filter { it.first > 0 && it.second > 0 }.distinct()
+        }
+        val minW = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0; val maxH = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0
+        val maxW = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) ?: 0; val minH = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
+        val out = ArrayList<Pair<Int, Int>>()
+        if (minW > 0 && maxH > 0) out += minW to maxH
+        if (maxW > 0 && minH > 0) out += maxW to minH
+        if (out.isEmpty()) out += kind.previewDp
+        return out.distinct()
     }
 
     /** The widget's size on the screen, in dp (portrait width and height), or its kind's usual size. */
@@ -241,17 +284,6 @@ object Widgets {
         val w = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)?.takeIf { it > 0 } ?: kind.previewDp.first
         val h = o?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)?.takeIf { it > 0 } ?: kind.previewDp.second
         return w to h
-    }
-
-    /** The widget's size in px for its sky picture (width, height), with the picture's density. */
-    internal class Size(val w: Int, val h: Int, val density: Float)
-
-    /** Never larger than needed for a sharp picture (widgets' pictures travel to the launcher in memory). */
-    internal fun pictureSize(app: Context, wDp: Int, hDp: Int): Size {
-        val d = app.resources.displayMetrics.density
-        // (0.23) At the widget's real size, so the sky is sharp (up to 1440 px a side: a phone's screen width).
-        val k = minOf(1f, 1440f / (wDp * d), 1440f / (hDp * d))
-        return Size((wDp * d * k).toInt().coerceAtLeast(40), (hDp * d * k).toInt().coerceAtLeast(30), d * k)
     }
 
     /** The route a widget's tap opens in the app (MainActivity reads it): a [WidgetTap]'s name. */
@@ -318,16 +350,16 @@ object Widgets {
         return app.createConfigurationContext(Configuration(app.resources.configuration).also { it.setLocale(Locale(tag)) })
     }
 
-    /** On the update alarm: true when only the countdown's minute changes. */
-    internal const val EXTRA_MINUTE = "minute"
+    /** On the update alarm: the change (wall clock, ms) whose views it brings, built ahead and handed over on time. */
+    internal const val EXTRA_AT = "at"
 
-    private fun pending(app: Context, flag: Int, minuteOnly: Boolean = false): PendingIntent? =
-        PendingIntent.getBroadcast(app, REQUEST, Intent(app, WidgetRefreshReceiver::class.java).setAction(ACTION_REFRESH).putExtra(EXTRA_MINUTE, minuteOnly),
+    private fun pending(app: Context, flag: Int, change: Long = 0L): PendingIntent? =
+        PendingIntent.getBroadcast(app, REQUEST, Intent(app, WidgetRefreshReceiver::class.java).setAction(ACTION_REFRESH).putExtra(EXTRA_AT, change),
             flag or PendingIntent.FLAG_IMMUTABLE)
 
-    private fun armRefresh(app: Context, at: Instant, minuteOnly: Boolean = false) {
+    private fun armRefresh(app: Context, at: Instant, change: Long = 0L) {
         val am = app.getSystemService(AlarmManager::class.java) ?: return
-        val pi = pending(app, PendingIntent.FLAG_UPDATE_CURRENT, minuteOnly) ?: return
+        val pi = pending(app, PendingIntent.FLAG_UPDATE_CURRENT, change) ?: return
         // Non-waking (RTC): delivered at the time if the phone is awake, otherwise as soon as it wakes.
         runCatching {
             if (AlertScheduler.canScheduleExact(app)) am.setExact(AlarmManager.RTC, at.toEpochMilli(), pi)
@@ -344,5 +376,5 @@ object Widgets {
 /** The widgets' own update time, a restart, an app update, a clock, time-zone or language change. */
 class WidgetRefreshReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) =
-        Widgets.refreshFrom(this, context, minuteOnly = intent.getBooleanExtra(Widgets.EXTRA_MINUTE, false))
+        Widgets.refreshFrom(this, context, aheadOf = intent.getLongExtra(Widgets.EXTRA_AT, 0L))
 }

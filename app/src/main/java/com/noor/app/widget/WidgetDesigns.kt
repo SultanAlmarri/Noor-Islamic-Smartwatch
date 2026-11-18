@@ -29,14 +29,25 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
 
     private val light = r.pal.light
     private val clear = r.pal.background == WidgetBackground.CLEAR
-    val ink: Int = if (light) (if (r.pal.background == WidgetBackground.YOU) r.pal.text else 0xFF1C1A17.toInt()) else r.pal.text
+    val ink: Int = if (light) (if (r.pal.background == WidgetBackground.YOU) r.pal.text else 0xFF1C1C1E.toInt()) else r.pal.text
+    private val sky = r.pal.background == WidgetBackground.SKY
     private fun alpha(c: Int, f: Float) = (c and 0x00FFFFFF) or (((c ushr 24) * f).toInt().coerceIn(0, 255) shl 24)
     /** Secondary, tertiary and past text: 72 %, 52 %, 50 % of the ink (stronger where 4.5:1 or 3:1 asks it). */
-    val sec = alpha(ink, when { clear -> 0.9f; light -> 0.78f; else -> 0.72f })
-    val ter = alpha(ink, when { clear -> 0.82f; light -> 0.66f; else -> 0.52f })
-    private val pastK = when { clear -> 0.8f; light -> 0.64f; else -> 0.5f }
-    val gold = r.pal.accent
-    val track = if (light) 0x1A000000 else 0x33FFFFFF
+    // Over the vivid sky (white reads at 4.6:1 at least there) the quieter text is less quiet, to keep 3:1.
+    val sec = alpha(ink, when { clear -> 0.9f; sky -> 0.82f; light -> 0.72f; else -> 0.72f })
+    val ter = alpha(ink, when { clear -> 0.82f; sky -> 0.72f; light -> 0.62f; else -> 0.55f })
+    private val pastK = when { clear -> 0.8f; sky -> 0.66f; light -> 0.6f; else -> 0.5f }
+    /** The accent: the design's warm gold (#FFD36B) on colour, or the one chosen. */
+    val gold = if (!light && r.o.accent == WidgetAccent.GOLD) 0xFFFFD36B.toInt() else r.pal.accent
+    /** The prayers' signs in their own colours (deeper on light backgrounds), or the accent and the text's. */
+    fun iconColor(p: Prayer, on: Boolean): Int {
+        val c = when (p) { Prayer.FAJR -> 0xFF8FD0FF; Prayer.SHURUQ -> 0xFFFFB14A; Prayer.DHUHR -> 0xFFFFD23F; Prayer.ASR -> 0xFFFFBE3B
+            Prayer.MAGHRIB -> 0xFFFF8A4C; Prayer.ISHA -> 0xFFE9EDFF }.toInt()
+        if (!light) return c
+        return when (p) { Prayer.FAJR -> 0xFF2E86C9; Prayer.SHURUQ -> 0xFFD9801A; Prayer.DHUHR -> 0xFFC79A00; Prayer.ASR -> 0xFFD18A00
+            Prayer.MAGHRIB -> 0xFFD9581C; Prayer.ISHA -> 0xFF4F5B93 }.toInt()
+    }
+    val track = if (light) 0x1A000000 else 0x38FFFFFF
     val divider = if (light) 0x1A000000 else 0x26FFFFFF
 
     // ---- Words ----
@@ -148,7 +159,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
             val nameL = fit(line(run(countedName, 22f * t, Weight.SEMIBOLD, ink)), inner - iconSz - 8f * s, 12f) ?: line(run(countedName, 12f, Weight.SEMIBOLD, ink))
             val nameSize = nameL.maxSize
             val base = y + nameSize * 0.86f
-            if (cp != null) sheet.icon(cp, p, base - nameSize * 0.36f - iconSz / 2, iconSz, gold)
+            if (cp != null) sheet.icon(cp, p, base - nameSize * 0.36f - iconSz / 2, iconSz, iconColor(cp, true))
             sheet.text(nameL, p + iconSz + 8f * s, base, inner - iconSz - 8f * s, Align.START, "name")
             y += nameSize * 1.05f + 4f * s
             fit(line(*time(countedAt, 22f * t, Weight.REGULAR, sec).toTypedArray()), inner, 11f)?.let { tl ->
@@ -158,9 +169,9 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         if (r.o.countdown) {
             val size = countFit(37f * t, inner)
             val top = H - p - countHeight(size)
-            bar(p, top - 12f * s - 4f * s, inner, 4f * s)
+            bar(p, top - 12f * s - 6f * s, inner, 6f * s)
             countdown(p, top, size, inner, Align.START)
-        } else bar(p, H - p - 4f * s, inner, 4f * s)
+        } else bar(p, H - p - 6f * s, inner, 6f * s)
     }
 
     /** Next 4×2 (360×176): the name and time large, the place, the countdown large; "Later today" with the next two. */
@@ -181,7 +192,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
             val nameL = fit(Line(listOf(nameRun) + timeRuns, rtl), avail, 12f) ?: fit(line(nameRun), avail, 12f) ?: line(run(countedName, 12f, Weight.SEMIBOLD, ink))
             val ns = nameL.runs[0].size
             val base = p + ns * 0.86f
-            if (cp != null) sheet.icon(cp, p, base - ns * 0.36f - iconSz / 2, iconSz, gold)
+            if (cp != null) sheet.icon(cp, p, base - ns * 0.36f - iconSz / 2, iconSz, iconColor(cp, true))
             sheet.text(nameL, p + iconSz + 10f * s, base, avail, Align.START, "name")
             if (r.o.place) placeLine(p, base + ns * 0.22f + 6f * s + 14f * t * 0.86f, leftW, 14f * t, ter)
         }
@@ -226,7 +237,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
             val ns = nl.maxSize; val ts = tl?.maxSize ?: 0f
             val blockH = ns * 1.05f + if (tl != null) 2f * s + ts * 1.05f else 0f
             val top = (H - blockH) / 2
-            if (cp != null) sheet.icon(cp, px, H / 2 - iconSz / 2, iconSz, gold)
+            if (cp != null) sheet.icon(cp, px, H / 2 - iconSz / 2, iconSz, iconColor(cp, true))
             val x = px + iconSz + 14f * s
             sheet.text(nl, x, top + ns * 0.86f, textW, Align.START, "name")
             if (tl != null) sheet.text(tl, x, top + ns * 1.05f + 2f * s + ts * 0.86f, textW, Align.START, "time")
@@ -275,7 +286,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
             val nl = fit(line(run(countedName, 30f * t, Weight.SEMIBOLD, ink)), inner - iconSz - 10f * s, 12f) ?: line(run(countedName, 12f, Weight.SEMIBOLD, ink))
             val ns = nl.maxSize
             val base = y + ns * 0.86f
-            if (cp != null) sheet.icon(cp, p, base - ns * 0.36f - iconSz / 2, iconSz, gold)
+            if (cp != null) sheet.icon(cp, p, base - ns * 0.36f - iconSz / 2, iconSz, iconColor(cp, true))
             sheet.text(nl, p + iconSz + 10f * s, base, inner - iconSz - 10f * s, Align.START, "name")
             y += ns * 1.05f + 4f * s
             fit(line(*time(countedAt, 24f * t, Weight.REGULAR, sec).toTypedArray()), inner, 11f)?.let { tl ->
@@ -288,7 +299,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
             val size = countFit((if (baseW > 300f) 54f else 40f) * t, inner)
             countdown(p, y, size, inner, Align.START); y += countHeight(size) + 14f * s
         }
-        bar(p, y, inner, 4f * s); y += 4f * s + 10f * s
+        bar(p, y, inner, 6f * s); y += 6f * s + 10f * s
         val later = later(3)
         val rowH = 34f * s
         val rows = later.take(((H - p - y) / rowH).toInt().coerceAtLeast(0))
@@ -298,7 +309,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
                 sheet.shape(p, ry, inner, 1f) { cv, b -> cv.drawRect(b, android.graphics.Paint().apply { color = divider }) }
                 val base = ry + rowH / 2 + 17f * t * 0.36f
                 val iconSz = 20f * s
-                sheet.icon(lp, p, ry + (rowH - iconSz) / 2, iconSz, sec)
+                sheet.icon(lp, p, ry + (rowH - iconSz) / 2, iconSz, iconColor(lp, false))
                 val tl = line(*time(lt, 18f * t, Weight.SEMIBOLD, ink).toTypedArray())
                 val tw = sheet.width(tl)
                 fit(line(run(name(lp, lt.atZone(r.zone).toLocalDate()), 17f * t, Weight.REGULAR, sec)), inner - iconSz - 12f * s - tw - 8f * s, 10f)?.let {
@@ -392,7 +403,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val nf = list.minOf { p -> minOf(1f, (cw - 4f) / sheet.width(line(run(name(p, listDate), ns, Weight.SEMIBOLD, ink)))) }
         val tf = list.minOf { p -> minOf(1f, (cw - 4f) / sheet.width(line(*time(at(p), ts, Weight.SEMIBOLD, ink, suffix = false).toTypedArray()))) }
         ns = maxOf(10f, ns * nf); ts = maxOf(11f, ts * tf)
-        val iconSz = 22f * s
+        val iconSz = 26f * s
         val cellH = padV * s * 2 + (if (icons) iconSz + 4f * s else 0f) + ns * 1.1f + 4f * s + ts * 1.05f
         val top = bottom - cellH
         sheet.block {
@@ -402,7 +413,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
                 if (on) sheet.shape(cx, top, cw, cellH) { cv, b -> WidgetInk.capsule(cv, b, 14f * s, light, gold) }
                 var y = top + padV * s
                 val tone = if (on) gold else pastColor(sec, p)
-                if (icons) { sheet.icon(p, cx + (cw - iconSz) / 2, y, iconSz, tone); y += iconSz + 4f * s }
+                if (icons) { sheet.icon(p, cx + (cw - iconSz) / 2, y, iconSz, iconColor(p, on)); y += iconSz + 4f * s }
                 val nl = line(run(name(p, listDate), ns, if (on) Weight.SEMIBOLD else Weight.REGULAR, tone))
                 sheet.text(nl, cx, y + ns * 0.86f, cw, Align.CENTER, if (on) "col_name_marked" else "col_name"); y += ns * 1.1f + 4f * s
                 val tl = line(*time(at(p), if (on) maxOf(ts, 12f) else ts, Weight.SEMIBOLD, if (on) ink else pastColor(ink, p), suffix = false).toTypedArray())
@@ -431,7 +442,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
             countdown(p, y, size, inner, Align.START); y += countHeight(size)
         }
         y += 12f * s
-        bar(p, y, inner, 4f * s); y += 4f * s + 8f * s
+        bar(p, y, inner, 6f * s); y += 6f * s + 8f * s
         val list = shown
         val rowH = 34f * s
         val step = if (list.size > 1) (H - p - y - rowH) / (list.size - 1) else 0f
@@ -446,7 +457,7 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
                 val on = q == marked
                 if (on) sheet.shape(p - 12f * s, top, inner + 24f * s, rowH) { cv, b -> WidgetInk.capsule(cv, b, 12f * s, light, gold) }
                 val tone = if (on) gold else pastColor(sec, q)
-                sheet.icon(q, p, top + (rowH - iconSz) / 2, iconSz, tone)
+                sheet.icon(q, p, top + (rowH - iconSz) / 2, iconSz, iconColor(q, on))
                 val base = top + rowH / 2 + ns0 * f * 0.36f
                 val tl = line(*time(at(q), maxOf(ts0 * f, if (on) 12f else 11f), Weight.SEMIBOLD, if (on) ink else pastColor(ink, q)).toTypedArray())
                 val nl = line(run(name(q, listDate), maxOf(ns0 * f, 10f), if (on) Weight.SEMIBOLD else Weight.REGULAR, if (on) gold else pastColor(ink, q)))
@@ -577,7 +588,8 @@ internal class WidgetDesigns(val r: WidgetCtx, val sheet: Sheet) {
         val next = WidgetRender.nextOccasion(today, r.s.hijriAdjust)
         val occ = next?.let { e -> val n = if (f.arabic) e.event.ar else e.event.en
             if (e.daysUntil == 0L) "$n · " + r.ctx.getString(R.string.widget_occasion_today)
-            else r.ctx.getString(R.string.widget_occasion_in, n, r.ctx.resources.getQuantityString(R.plurals.widget_in_days, e.daysUntil.toInt(), f.number(e.daysUntil.toInt()))) }
+            else r.ctx.getString(R.string.widget_occasion_in, n, r.ctx.resources.getQuantityString(R.plurals.widget_in_days, e.daysUntil.toInt(), f.number(e.daysUntil.toInt()))
+                .let { d -> if (f.arabic) d else d.replaceFirstChar { it.lowercase() } }) }
         sheet.block {
             var y = p
             fit(line(run(wd, 13f * t, Weight.SEMIBOLD, gold)), inner, 10f)?.let { sheet.text(it, p, y + 13f * t * 0.86f, inner, Align.START, "weekday") }

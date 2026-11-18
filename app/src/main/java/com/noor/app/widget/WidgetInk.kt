@@ -97,13 +97,9 @@ internal object WidgetInk {
 
     private fun fill(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color; style = Paint.Style.FILL }
 
-    /** The next prayer's capsule: white at 15 % with a 1 dp inner line at 12 % (on light: the accent at 12 %). */
+    /** The next prayer's capsule: plain white at 18 % (on light: #F2F2F7, as iOS's grouped fill). */
     fun capsule(c: Canvas, r: RectF, radius: Float, light: Boolean, accent: Int) {
-        if (light) { c.drawRoundRect(r, radius, radius, fill((accent and 0x00FFFFFF) or (0x1F shl 24))); return }
-        c.drawRoundRect(r, radius, radius, fill(0x26FFFFFF))
-        val s = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1f; color = 0x1FFFFFFF }
-        val i = RectF(r).apply { inset(0.5f, 0.5f) }
-        c.drawRoundRect(i, radius - 0.5f, radius - 0.5f, s)
+        c.drawRoundRect(r, radius, radius, fill(if (light) 0xFFF2F2F7.toInt() else 0x2EFFFFFF))
     }
 
     /** A progress bar, [h] high, filled from the reading side. */

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- (0.24) The widget's outline: 24 dp before Android 12. Nothing is drawn (transparent): it only gives the corner the content is clipped to. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#00000000" />
+    <corners android:radius="24dp" />
+</shape>

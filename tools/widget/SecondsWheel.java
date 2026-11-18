@@ -10,7 +10,7 @@ import java.nio.file.Files;
 import java.util.Locale;
 
 /**
- * Builds the widgets' seconds wheels (0.9.14): the seconds "00" to "59" in Noor's own Plex Light, as vector drawables,
+ * Builds the widgets' seconds wheels (0.9.14): the seconds "00" to "59" in Noor's own Plex (0.24: SemiBold, as the countdown), as vector drawables,
  * set around a wheel that Android's AnalogClock turns as its second hand.
  *
  * Why: on a home screen only Android can change a widget every second without Noor running, and its digital clocks
@@ -35,7 +35,7 @@ public class SecondsWheel {
 
     public static void main(String[] args) throws Exception {
         File root = new File(".");
-        File fontFile = new File(root, "app/src/main/res/font/plex_arabic_medium.ttf");
+        File fontFile = new File(root, "app/src/main/res/font/plex_arabic_semibold.ttf");
         File drawable = new File(root, "app/src/main/res/drawable");
         File values = new File(root, "app/src/main/res/values");
         Font font = Font.createFont(Font.TRUETYPE_FONT, fontFile).deriveFont(1000f); // 1 unit = 1/1000 em

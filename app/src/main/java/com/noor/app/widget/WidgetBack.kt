@@ -19,26 +19,35 @@ import kotlin.math.pow
  * [SKY_CONTRAST] to 1, so the quieter text (72 % and 52 % white) still reads.
  */
 internal object WidgetBack {
-    /** White on the sky, at least (so 52 % white text keeps 3:1 and white 7:1). */
-    const val SKY_CONTRAST = 7.0
+    /** White on the sky, at least. */
+    const val SKY_CONTRAST = 4.6
 
     /** The picture's resolution: a smooth gradient needs few pixels (the launcher smooths it as it scales). */
     private const val PX_PER_DP = 1f
 
-    class Look(val zenith: Int, val mid: Int, val horizon: Int, val night: Float, val glow: Int, val glowAlpha: Float)
+    class Look(val zenith: Int, val mid: Int, val horizon: Int, val night: Float)
 
-    /** The sky's colours now, where the widget's place is. */
-    fun skyLook(r: WidgetCtx): Look {
-        val ws = r.ws
-        val (elev, evening) = if (ws != null) {
-            val noon = ws.day.instant(Prayer.DHUHR)
-            SunPath.elevation(r.now, ws.place.point) to (noon != null && r.now.isAfter(noon))
-        } else 30.0 to false
-        val c = SkyPalette.colors(elev, evening)
-        val night = c.night
-        // By day a warm Sun's glow, at twilight the horizon's colour, at night a cool, faint Moon's.
-        val glow = when { night > 0.6f -> 0xFFC9D6FF.toInt(); elev < 8 -> c.horizon; else -> 0xFFFFD58C.toInt() }
-        return Look(c.zenith, c.mid, c.horizon, night, glow, if (night > 0.6f) 0.10f else 0.30f)
+    /** The design's three skies (as iOS Weather's: vivid, clean): by day, at the golden hour, at night. */
+    private val DAY = intArrayOf(0xFF2F7FD8.toInt(), 0xFF4B97E6.toInt(), 0xFF6FB0EF.toInt())
+    private val GOLDEN = intArrayOf(0xFF3A4F9A.toInt(), 0xFF8A6AA0.toInt(), 0xFFE0896A.toInt())
+    private val NIGHT = intArrayOf(0xFF0B1430.toInt(), 0xFF16244C.toInt(), 0xFF233564.toInt())
+
+    /** The Sun's elevation (degrees) now at the widget's place. */
+    fun elevation(r: WidgetCtx): Double = r.ws?.let { SunPath.elevation(r.now, it.place.point) } ?: 30.0
+
+    /**
+     * The sky's colours for the Sun at [elev] degrees: the day's sky from 10° up, the golden hour's at 2°, the night's
+     * from 6° under the horizon, blended smoothly between (in OKLab, [SkyPalette.mix]).
+     */
+    fun skyLook(elev: Double): Look {
+        fun mix(a: IntArray, b: IntArray, t: Float) = IntArray(3) { SkyPalette.mix(a[it], b[it], t.coerceIn(0f, 1f)) }
+        val c = when {
+            elev >= 10 -> DAY
+            elev >= 2 -> mix(GOLDEN, DAY, ((elev - 2) / 8).toFloat())
+            elev >= -6 -> mix(NIGHT, GOLDEN, ((elev + 6) / 8).toFloat())
+            else -> NIGHT
+        }
+        return Look(c[0], c[1], c[2], ((-elev - 2) / 6).toFloat().coerceIn(0f, 1f))
     }
 
     fun draw(r: WidgetCtx, wDp: Float, hDp: Float): Bitmap? {
@@ -56,18 +65,13 @@ internal object WidgetBack {
         fun withAlpha(color: Int, alpha: Int) = (color and 0x00FFFFFF) or (alpha.coerceIn(0, 255) shl 24)
         when (bg) {
             WidgetBackground.SKY -> {
-                val l = skyLook(r)
-                vertical(0f to l.zenith, 0.6f to l.mid, 1f to l.horizon)
-                // The glow: high at the widget's far side, as the Sun or the Moon over it.
-                val gx = w * 0.80f; val gy = h * 0.15f; val gr = maxOf(w, h) * 0.55f
-                val g = l.glow and 0x00FFFFFF
-                p.shader = RadialGradient(gx, gy, gr, intArrayOf(g or ((255 * l.glowAlpha).toInt() shl 24), g or ((255 * l.glowAlpha * 0.4f).toInt() shl 24), g), floatArrayOf(0f, 0.35f, 1f), Shader.TileMode.CLAMP)
-                c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), p); p.shader = null
+                val l = skyLook(elevation(r))
+                vertical(0f to l.zenith, 0.55f to l.mid, 1f to l.horizon)
                 clamp(bmp, SKY_CONTRAST)
                 if (l.night > 0.3f) stars(c, w, h, l.night)
             }
-            WidgetBackground.DARK -> vertical(0f to withAlpha(0xFF232327.toInt(), a), 1f to withAlpha(0xFF18181B.toInt(), a))
-            WidgetBackground.LIGHT -> vertical(0f to withAlpha(0xFFFFFFFF.toInt(), a), 1f to withAlpha(0xFFF3F1EC.toInt(), a))
+            WidgetBackground.DARK -> c.drawColor(withAlpha(0xFF1C1C1E.toInt(), a))
+            WidgetBackground.LIGHT -> c.drawColor(withAlpha(0xFFFFFFFF.toInt(), a))
             WidgetBackground.GLASS -> {
                 vertical(0f to withAlpha(0xFF2A2D36.toInt(), a), 1f to withAlpha(0xFF15171D.toInt(), a))
                 // A soft light along the top, as the app's glass.

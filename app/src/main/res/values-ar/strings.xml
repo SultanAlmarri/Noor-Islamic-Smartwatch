@@ -578,6 +578,8 @@
     <string name="widget_after">التالية %1$s  %2$s</string>
     <string name="widget_cd_before">%1$s الساعة %2$s، بعد %3$s</string>
     <string name="widget_cd_after">%1$s الساعة %2$s، منذ %3$s</string>
+    <string name="widget_later_today">بعدها</string>
+    <string name="widget_occasion_in">%1$s %2$s</string>
     <string name="widget_occasion_today">اليوم</string>
     <plurals name="widget_in_days">
         <item quantity="zero">بعد %1$s يوم</item>

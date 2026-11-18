@@ -32,10 +32,10 @@ internal object CountPicture {
 
     @Volatile private var plex: Typeface? = null
 
-    /** (0.23) Plex Medium (Light was too thin at a widget's size on the sky), the seconds wheel's font. */
+    /** (0.24) Plex SemiBold, the seconds wheel's font (tools/widget/SecondsWheel.java), figures of one width. */
     private fun paint(context: Context, scale: Float): Paint {
-        val face = plex ?: (runCatching { ResourcesCompat.getFont(context, R.font.plex_arabic_medium) }.getOrNull() ?: Typeface.DEFAULT).also { plex = it }
-        return Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = face; textSize = context.resources.getDimension(R.dimen.noor_count_text) * scale }
+        val face = plex ?: (runCatching { ResourcesCompat.getFont(context, R.font.plex_arabic_semibold) }.getOrNull() ?: Typeface.DEFAULT).also { plex = it }
+        return Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = face; textSize = context.resources.getDimension(R.dimen.noor_count_text) * scale; fontFeatureSettings = "'tnum' 1, 'lnum' 1" }
     }
 
     /** Arabic-Indic digits are smaller than Western ones in Plex: drawn this much larger, as on the seconds wheel. */
@@ -64,6 +64,8 @@ internal object CountPicture {
             base.textSize = sz
             each(ch, x, sz)
             x += base.measureText(ch.toString())
+            // (0.24) The design's tracking, -0.035 em: the countdown set as one tight figure.
+            x -= size * TRACK_EM
             if (isSign(ch)) x += size * SIGN_GAP_EM
             if (colon) x += size * COLON_GAP_EM
             base.textSize = size
@@ -72,6 +74,7 @@ internal object CountPicture {
     }
 
     private const val COLON_GAP_EM = 0.07f
+    private const val TRACK_EM = 0.035f
 
     fun draw(context: Context, leading: String): Bitmap = draw(context, Spec(leading))
 

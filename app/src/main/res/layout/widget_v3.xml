@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- (0.24) Every widget: one layout. The root is the widget's background (@android:id/background, clipped to its
+     outline), so the launcher's rounded corner and ours are one; the background picture is full-bleed under it. The
+     content is pictures drawn in IBM Plex (WidgetSheet), each placed by its padding, and the live countdown (its
+     picture and the seconds wheel, WidgetRender.liveCount). Written by hand; the code sets everything. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_v3_shape"
+    android:clipToOutline="true"
+    android:layoutDirection="ltr">
+    <ImageView android:id="@+id/widget_bg" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:contentDescription="@null" />
+    <ImageView android:id="@+id/widget_block_0" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_1" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_2" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_3" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_4" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_5" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_6" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_7" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_8" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_9" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_10" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_11" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_12" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <ImageView android:id="@+id/widget_block_13" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitStart" android:contentDescription="@null" android:visibility="gone" />
+    <FrameLayout android:id="@+id/widget_count_slot" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+        <LinearLayout android:id="@+id/widget_count_row" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_gravity="top|left" android:layoutDirection="ltr" android:orientation="horizontal">
+            <ImageView android:id="@+id/widget_count_main" android:layout_width="wrap_content" android:layout_height="wrap_content" android:contentDescription="@null" />
+            <FrameLayout android:id="@+id/widget_count_window" android:layout_width="@dimen/noor_count_window" android:layout_height="@dimen/noor_count_height">
+                <AnalogClock android:id="@+id/widget_count_wheel" android:layout_width="@dimen/noor_count_wheel" android:layout_height="@dimen/noor_count_wheel"
+                    android:layout_gravity="top|center_horizontal" android:dial="@drawable/noor_wheel_blank" android:hand_hour="@drawable/noor_wheel_blank"
+                    android:hand_minute="@drawable/noor_wheel_blank" />
+            </FrameLayout>
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>
