@@ -57,12 +57,27 @@ object AlertScheduler {
         return context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == true
     }
 
+    /**
+     * The times and choices the alarms follow: the app's own; before the phone's first unlock after a restart (Direct
+     * Boot, 0.22), when the app's settings cannot be read, the copy kept with the alarms the last time they were armed.
+     */
+    internal suspend fun configFor(context: Context): WatchConfig? {
+        if (!AlertStore.unlocked(context)) return AlertStore.snapshot(context)
+        return runCatching { context.alertHost?.alertConfig() }.getOrElse { AlertStore.snapshot(context) }
+    }
+
     suspend fun reschedule(context: Context): ScheduleStatus {
         val host = context.alertHost
-        val config = runCatching { host?.alertConfig() }.getOrNull()
+        val unlocked = AlertStore.unlocked(context)
+        val config = configFor(context)
+        // (Kept for Direct Boot: what the alarms need, outside the app's credential-protected files.)
+        if (unlocked && host != null) runCatching { AlertStore.saveSnapshot(context, config) }
         val now = Instant.now()
         val alerts = config?.alerts
-        val plan = if (host != null && alerts != null) AlertPlanner.plan(config, alerts, host.alertDevice, now) else emptyList()
+        // (0.22: a prayer of a day already dealt with is never planned again; one armed and due but not yet delivered is
+        // kept, not replaced by the next day's.)
+        val plan = if (host != null && alerts != null) AlertPlanner.plan(config, alerts, host.alertDevice, now,
+            AlertStore.handled(context), AlertStore.pending(context)) else emptyList()
         val reminders = if (host != null && alerts != null) AlertPlanner.reminders(config, alerts, host.alertDevice, now) +
             AlertPlanner.afterReminders(config, alerts, host.alertDevice, now) else emptyList()
         // (0.17: the alarms ring on the phone only, whichever device the Adhan is on, and whether or not it is on.)
@@ -129,7 +144,16 @@ object AlertScheduler {
         arm(context, am, at, pi, canScheduleExact(context))
     }
 
-    private fun snoozes(context: Context) = context.getSharedPreferences("noor_snoozes", Context.MODE_PRIVATE)
+    /** 0.22: in device-protected storage (a snooze before the first unlock after a restart), moved there once from the app's own. */
+    private fun snoozes(context: Context): android.content.SharedPreferences {
+        val de = AlertStore.deviceContext(context)
+        if (de !== context.applicationContext && AlertStore.unlocked(context) && !movedSnoozes) {
+            movedSnoozes = true
+            runCatching { de.moveSharedPreferencesFrom(context.applicationContext, "noor_snoozes") }
+        }
+        return de.getSharedPreferences("noor_snoozes", Context.MODE_PRIVATE)
+    }
+    @Volatile private var movedSnoozes = false
 
     /** 0.18: a snooze has rung (or was cancelled): forget it. */
     internal fun snoozeDone(context: Context, slot: Int) { snoozes(context).edit().remove(slot.toString()).apply() }
@@ -182,6 +206,7 @@ object AlertScheduler {
             val pi = pending(context, p, planned, PendingIntent.FLAG_UPDATE_CURRENT) ?: continue
             arm(context, am, planned.at.toEpochMilli(), pi, exact)
         }
+        runCatching { AlertStore.setArmed(context, plan) }
         if (config != null) AlertNotifications.ensureChannels(context)
         return ScheduleStatus(plan.minByOrNull { it.at }, plan.size, exact, System.currentTimeMillis()).also { lastStatus = it }
     }

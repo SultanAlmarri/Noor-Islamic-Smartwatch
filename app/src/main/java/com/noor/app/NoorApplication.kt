@@ -47,8 +47,14 @@ class AppContainer(private val app: Application) {
 }
 
 class NoorApplication : Application(), AlertHost {
-    lateinit var container: AppContainer
-        private set
+    @Volatile private var started: AppContainer? = null
+
+    /**
+     * The app's parts, made on first use once the phone is unlocked (0.22: before the first unlock after a restart only
+     * the prayer alarms run, from their own copy of the times: the app's settings cannot be read then, and reading them
+     * would give the defaults, which must never be armed or sent to the watch).
+     */
+    val container: AppContainer get() = started ?: start()
 
     override val alertDevice = AlertDevice.PHONE
     override val notificationIcon = R.drawable.ic_notification
@@ -59,6 +65,8 @@ class NoorApplication : Application(), AlertHost {
     override val ringsAlarms: Boolean get() = true
     override val alertLanguage: String? get() = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language
     override fun onPrayerAlarm(context: Context) {
+        // (Before the first unlock nothing but the alarm itself may run: the bar, the widgets and the watch wait.)
+        if (!androidx.core.os.UserManagerCompat.isUserUnlocked(this)) return
         com.noor.app.notify.StatusNotification.refreshAsync(context)
         com.noor.app.widget.Widgets.refreshAsync(context)
         // 0.18: once a day, the watch gets the settings again, so the weeks of official times it carries never run out
@@ -80,7 +88,22 @@ class NoorApplication : Application(), AlertHost {
     @OptIn(FlowPreview::class)
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
+        if (androidx.core.os.UserManagerCompat.isUserUnlocked(this)) { start(); return }
+        // 0.22, Direct Boot: started by a prayer alarm (or the boot) before the first unlock. Everything else waits for it.
+        val unlocked = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) { runCatching { unregisterReceiver(this) }; start() }
+        }
+        // (If this cannot be registered, the first use after the unlock starts it: BOOT_COMPLETED re-arms the alarms.)
+        runCatching { registerReceiver(unlocked, android.content.IntentFilter(Intent.ACTION_USER_UNLOCKED)) }
+    }
+
+    /** Makes the app's parts and starts what follows the settings (once, after unlock). */
+    @OptIn(FlowPreview::class)
+    private fun start(): AppContainer = synchronized(this) {
+        started?.let { return it }
+        check(androidx.core.os.UserManagerCompat.isUserUnlocked(this)) { "Minhad's settings cannot be read before the first unlock" }
+        val container = AppContainer(this)
+        started = container
         container.wear.start(container.scope)
         // (0.18.2) Off the main thread: every alert makes sure of its channels itself before it posts.
         container.scope.launch { AlertNotifications.ensureChannels(this@NoorApplication) }
@@ -136,5 +159,6 @@ class NoorApplication : Application(), AlertHost {
                 .debounce(500)
                 .collect { com.noor.app.widget.Widgets.refresh(this@NoorApplication) }
         }
+        container
     }
 }

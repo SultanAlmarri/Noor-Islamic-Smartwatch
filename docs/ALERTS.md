@@ -112,11 +112,38 @@ Dismiss. "Try it" arms a one-off alarm in 5 seconds that carries the alarm itsel
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Keep the Adhan playing with the screen off | — (granted at install) |
 | `RECEIVE_BOOT_COMPLETED` | Re-arm after a restart | — |
 | `VIBRATE`, `WAKE_LOCK` | Vibration; keep playing with the screen off | — |
+| `USE_FULL_SCREEN_INTENT` (phone, since 0.9.7) | The Adhan screen over the lock screen while the Adhan plays, as an alarm clock's | Granted at install up to Android 13; on Android 14+ Android may withhold it (Google Play grants it to calling and alarm apps) and the user can turn it off: then a heads-up notification with Stop shows instead, and the Adhan tab says so. |
 
 Not requested, deliberately: `USE_EXACT_ALARM` (Google Play reserves it for alarm-clock and calendar apps),
-`USE_FULL_SCREEN_INTENT` (restricted to calling and alarm apps on Android 14+), `ACCESS_NOTIFICATION_POLICY`
-(Noor never changes Do Not Disturb), `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (the tab links to the system's battery page
-instead). A user who force-stops Noor cancels its alarms until Noor is opened again; that is Android's rule.
+`ACCESS_NOTIFICATION_POLICY` (Noor never changes Do Not Disturb), `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (the tab
+links to the system's battery page instead). A user who force-stops Noor cancels its alarms until Noor is opened again;
+that is Android's rule.
+
+## Never twice, never lost, and before the first unlock (0.22)
+
+- **Each prayer of each day is dealt with once.** When a prayer alarm fires and alerts (or leaves the "late" note),
+  that prayer and its date are remembered (`AlertStore`, the last four days per prayer). A remembered prayer is never
+  planned or called again, so putting the clock back, or an alarm that came within the 90 s early tolerance, cannot
+  call the same Adhan twice.
+- **An armed alarm is never silently replaced.** The alarm armed for each prayer is remembered too. If the alarms are
+  re-armed after a prayer's time but before Android delivered that prayer's alarm (an inexact alarm running late, the
+  app starting or a setting saved at that moment, a restart at the prayer time), the alarm is armed again at its own
+  time instead of the next day's: Android delivers it at once and the usual rules decide (within 10 minutes the
+  alert, up to 3 hours the quiet "late" note, later nothing). An alarm being delivered at that moment is marked as it
+  arrives, so it is not armed again.
+- **Before the first unlock after a restart (Direct Boot, phone).** Android keeps an app's own files locked until the
+  phone is first unlocked after a restart, and Samsung phones restart themselves at night by default; until 0.21 the
+  alarms were armed again only after the unlock (`BOOT_COMPLETED`), so Fajr could be missed. Now the boot receiver also
+  takes `LOCKED_BOOT_COMPLETED`, and it, the alarm receiver and the Adhan service are `directBootAware` (in the phone's
+  manifest only; the watch is unchanged). Each time the alarms are armed, a copy of what they need (the times for the
+  coming weeks and the alert choices, as sent to the watch) is kept in device-protected storage
+  (`createDeviceProtectedStorageContext()`), with the remembered prayers, the snoozes and the alert history. Before
+  the unlock the alarms are armed and fired from that copy; the rest of the app (settings, status bar notification,
+  widgets, watch sync) does not start until the unlock. The bundled recordings play as usual; a prayer set to the
+  user's own recording plays the default Adhan instead, and its notification and Alert history say why. The Adhan
+  screen over the lock screen is not shown before the unlock (the notification with Stop is). After the unlock,
+  `BOOT_COMPLETED` arms everything from the real settings again. No permission is involved: Direct Boot is Android's
+  documented way for alarm apps to work after a restart.
 
 ## Sounds
 

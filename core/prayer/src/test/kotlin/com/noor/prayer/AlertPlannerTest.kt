@@ -254,4 +254,46 @@ class AlertPlannerTest {
         val next = AlertPlanner.afterReminders(dubai, s, AlertDevice.PHONE, after[0].remindAt.plusSeconds(60)).first()
         assertEquals(after[0].date.plusDays(1), next.date)
     }
+
+    /** 0.22: a prayer of a day already dealt with is never planned again (the clock moved back, an alarm a little early). */
+    @Test fun aPrayerAlreadyHandledIsNeverPlannedTwice() {
+        val date = LocalDate.of(2026, 11, 4)
+        val dhuhr = dubai.day(date).instant(Prayer.DHUHR)!!
+        val h: (Prayer, LocalDate) -> Boolean = { p, d -> p == Prayer.DHUHR && d == date }
+        // The Adhan has been called at Dhuhr; then the phone's clock is put back five minutes (network time, by hand).
+        val back = dhuhr.minus(Duration.ofMinutes(5))
+        // Without the record, today's Dhuhr is armed again and called a second time.
+        assertEquals(date, AlertPlanner.plan(dubai, on, AlertDevice.PHONE, back).first { it.prayer == Prayer.DHUHR }.date)
+        assertEquals(date.plusDays(1), AlertPlanner.plan(dubai, on, AlertDevice.PHONE, back, handled = h).first { it.prayer == Prayer.DHUHR }.date)
+        // The other prayers are untouched.
+        assertEquals(AlertPlanner.plan(dubai, on, AlertDevice.PHONE, back).filter { it.prayer != Prayer.DHUHR },
+            AlertPlanner.plan(dubai, on, AlertDevice.PHONE, back, handled = h).filter { it.prayer != Prayer.DHUHR })
+    }
+
+    /**
+     * 0.22: an alarm armed and not yet delivered when its time has come is kept, not replaced by the next day's (which
+     * lost the alert without a trace): armed again at its own time, so it is delivered at once and judged as it fires.
+     */
+    @Test fun anAlarmDueButNotYetDeliveredIsKept() {
+        val date = LocalDate.of(2026, 11, 4)
+        val dhuhr = dubai.day(date).instant(Prayer.DHUHR)!!
+        val pending = mapOf(Prayer.DHUHR to com.noor.prayer.alerts.Armed(date, dhuhr))
+        val now = dhuhr.plus(Duration.ofMinutes(4))
+        // Without it (as up to 0.21), the plan moves on to tomorrow's Dhuhr: today's was never delivered, nor noted.
+        assertEquals(date.plusDays(1), AlertPlanner.plan(dubai, on, AlertDevice.PHONE, now).first { it.prayer == Prayer.DHUHR }.date)
+        val kept = AlertPlanner.plan(dubai, on, AlertDevice.PHONE, now, pending = pending).first { it.prayer == Prayer.DHUHR }
+        assertEquals(date, kept.date); assertEquals(dhuhr, kept.at)
+        // ...and it fires as a delivered-late alarm would: within ten minutes, the Adhan.
+        assertIs<FireDecision.Alert>(AlertPlanner.onFire(dubai, on, AlertDevice.PHONE, Prayer.DHUHR, date, now))
+        // Once handled, or more than three hours on, or turned off, it is not kept.
+        assertEquals(date.plusDays(1), AlertPlanner.plan(dubai, on, AlertDevice.PHONE, now, { p, d -> p == Prayer.DHUHR && d == date }, pending)
+            .first { it.prayer == Prayer.DHUHR }.date)
+        assertEquals(date.plusDays(1), AlertPlanner.plan(dubai, on, AlertDevice.PHONE, dhuhr.plus(Duration.ofHours(4)), pending = pending)
+            .first { it.prayer == Prayer.DHUHR }.date)
+        val off = on.with(Prayer.DHUHR, on.alert(Prayer.DHUHR).copy(enabled = false))
+        assertTrue(AlertPlanner.plan(dubai, off, AlertDevice.PHONE, now, pending = pending).none { it.prayer == Prayer.DHUHR })
+        // One still to come is planned as usual.
+        assertEquals(AlertPlanner.plan(dubai, on, AlertDevice.PHONE, dhuhr.minusSeconds(60)),
+            AlertPlanner.plan(dubai, on, AlertDevice.PHONE, dhuhr.minusSeconds(60), pending = pending))
+    }
 }
