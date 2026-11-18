@@ -172,12 +172,16 @@ fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpe
     val held = remember { arrayOfNulls<TodayUi>(1) }
     if (held[0] != minuteState) held[0] = minuteState
     val m = held[0]!!
+    // Back from the background, the view model first hands over the state it held when the app went away, until its
+    // fresh one is ready (a frame or two; longer over midnight, when the new day is worked out): a moment on show is
+    // this moment's when it is the clock's minute or the one before.
+    val fresh = remember { { t: java.time.Instant -> !t.isBefore(java.time.Instant.now().minusSeconds(120)) } }
     TodayContent(m, contentPadding, dayFor = { vm.day(m, it) }, onRefresh = vm::refresh, onOpenLocation = onOpenLocation, onOpenSource = onOpenSource, onOpenPrayer = onOpenPrayer, onScrubbed = vm::scrubLearned,
         onToggleAlert = { p, on ->
             // (The first alert turned on asks for Android's notification permission, at the moment its reason is plain.)
             if (on && !m.settings.alerts.enabled && android.os.Build.VERSION.SDK_INT >= 33) notifications()
             vm.setAlert(p, on)
-        }, clock = clock)
+        }, clock = clock, fresh = fresh)
 }
 
 /**
@@ -256,6 +260,8 @@ fun TodayContent(
     onToggleAlert: (Prayer, Boolean) -> Unit = { _, _ -> },
     /** (0.18.2) The moment to the second, for what counts seconds; [u]'s moment may be to the minute. */
     clock: () -> java.time.Instant = { u.now },
+    /** Whether a moment on show is this moment (false for the old state shown a frame or two after a return, see [TodayScreen]). */
+    fresh: (java.time.Instant) -> Boolean = { true },
 ) {
     val ar = isArabicUi()
     // (Kept between the screen's once-a-second updates: a new formatter each second made every row of the day's
@@ -317,7 +323,7 @@ fun TodayContent(
         val d = LocalDensity.current
         androidx.compose.runtime.CompositionLocalProvider(LocalDensity provides androidx.compose.ui.unit.Density(d.density, minOf(d.fontScale, 1.15f))) {
         SkyHeader(u, f, todayDay, top, home.heroHeight, scroll, onOpenLocation = onOpenLocation, onRefresh = onRefresh, previewScrub = previewScrub, previewSkyTime = previewSkyTime, real = realSetup, simple = simpleSky,
-            showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed, viewingToday = viewingToday, clock = clock)
+            showScrubHint = !u.settings.scrubHintDone && previewScrub == null && viewingToday, onScrubbed = onScrubbed, viewingToday = viewingToday, clock = clock, fresh = fresh)
         }
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
@@ -403,6 +409,7 @@ private fun SkyHeader(
     simple: Boolean = false,
     showScrubHint: Boolean = false, onScrubbed: () -> Unit = {}, viewingToday: Boolean = true,
     clock: () -> java.time.Instant = { u.now },
+    fresh: (java.time.Instant) -> Boolean = { true },
 ) {
     val st = u.state ?: return
     val place = u.place ?: return
@@ -456,15 +463,19 @@ private fun SkyHeader(
     val opening = remember { Animatable(if (app.arriving && app.veil && previewScrub == null) 0f else 1f) }
     LaunchedEffect(app.run) {
         if (previewScrub == null && app.claimSky()) {
-            val now = current.nowFraction.toFloat()
-            val start = OpeningSky.startFraction(current)
-            val ms = Opening.skyMs(start, now)
             // From the launch screen the scene itself comes in (out of the dusk: it fades up, the path draws itself). On
             // a return the scene stays as it is, and only the Sun runs to now.
             val fromDusk = app.veil
             intro = true
             try {
                 if (fromDusk) opening.snapTo(0f)
+                // (A return after a while: until the fresh state arrives the screen still has the one from when the app
+                // went away. Until 0.22 the Sun ran to that old moment and stayed there until the next minute, then
+                // jumped: back in the morning after a night away, the sky showed last night for up to a minute.)
+                OpeningSky.awaitFresh { fresh(current.now) }
+                val now = current.nowFraction.toFloat()
+                val start = OpeningSky.startFraction(current)
+                val ms = Opening.skyMs(start, now)
                 shown.snapTo(start)
                 snapshotFlow { app.elapsedMs >= (if (fromDusk) Opening.SKY_AT else 0) || app.skipped }.first { it }
                 kotlinx.coroutines.coroutineScope {
@@ -479,6 +490,9 @@ private fun SkyHeader(
                     if (app.skipped && !scrubbing) {
                         launch { opening.animateTo(1f, tween(240)) }
                         shown.animateTo(current.nowFraction.toFloat(), tween(260, easing = OpeningSky.Ease))
+                    } else if (!scrubbing && !shown.isRunning && shown.value != current.nowFraction.toFloat()) {
+                        // (The minute turned while the Sun ran: the rest of the way, which the minute's own step skipped.)
+                        shown.animateTo(current.nowFraction.toFloat(), tween(260, easing = OpeningSky.Ease))
                     }
                 }
             } finally {
@@ -486,7 +500,7 @@ private fun SkyHeader(
             }
         } else if (opening.value < 1f && !opening.isRunning) opening.snapTo(1f)
     }
-    LaunchedEffect(scene.nowFraction) { if (!scrubbing && !shown.isRunning) shown.snapTo(scene.nowFraction.toFloat()) }
+    LaunchedEffect(scene.nowFraction) { if (!scrubbing && !intro && !shown.isRunning) shown.snapTo(scene.nowFraction.toFloat()) }
     LaunchedEffect(previewScrub) {
         if (previewScrub != null) { scrubbing = true; shown.snapTo(previewScrub.toFloat()) }
         else if (scrubbing) { scrubbing = false; shown.snapTo(current.nowFraction.toFloat()) }
@@ -553,6 +567,7 @@ private fun SkyHeader(
         // (0.18) The moment is read inside its own scope: a drag or the opening's sweep recomposes the sky, not the
         // whole header with its text at every frame.
         AtMoment(shown) { display ->
+            androidx.compose.runtime.SideEffect { OpeningSky.shownForTests = display }
             LivingSky(
                 scene, layout, display = display, scrubbing = scrubbing || intro, page = c.background, description = desc,
                 modifier = Modifier.fillMaxSize(), parallax = { scroll.value.toFloat() }, stillTime = previewSkyTime,
@@ -744,6 +759,18 @@ internal object OpeningSky {
         val prev = scene.events.map { scene.path.fraction(it.second) }.filter { it < now }.maxOrNull() ?: (now - 3.0 / 24)
         return prev.coerceIn(now - 6.0 / 24, now - 50.0 / 1440).coerceAtLeast(0.0).toFloat()
     }
+
+    /** How long the sweep waits for the state of this moment after a return, at most. */
+    const val FRESH_WAIT_MS = 2_000L
+
+    /** Waits (at most [FRESH_WAIT_MS]) until the screen has the state of this moment (read from snapshot state). */
+    suspend fun awaitFresh(fresh: () -> Boolean) {
+        if (fresh()) return
+        kotlinx.coroutines.withTimeoutOrNull(FRESH_WAIT_MS) { snapshotFlow { fresh() }.first { it } }
+    }
+
+    /** The moment of the day the home sky last showed (for tests). */
+    @Volatile internal var shownForTests: Double = Double.NaN
 
     /** Extra seconds of cloud drift during the opening: fast at first, none added by the end (so nothing jumps). */
     fun cloudLapse(p: Float): Float { val q = 1f - p.coerceIn(0f, 1f); return 45f * (1f - q * q * q) - 45f }
