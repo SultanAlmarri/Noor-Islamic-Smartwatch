@@ -53,13 +53,15 @@ class PaintedLandTest {
         for (t in Terrain.entries) {
             val id = PaintedLand.idOf(t) ?: continue
             val dir = File(assets, "medium/$id")
-            val meta = org.json.JSONObject(File(dir, "meta.json").readText())
-            assertEquals(PaintedLand.HORIZON, meta.getInt("horizon"))
-            val sky = meta.getJSONArray("skyline")
-            assertTrue("$id skyline", sky.length() >= 100)
+            // (Read by hand: a plain unit test has only Android's stub of org.json, which answers 0 to everything.)
+            val meta = File(dir, "meta.json").readText()
+            assertEquals(PaintedLand.HORIZON, Regex("\"horizon\"\\s*:\\s*(\\d+)").find(meta)!!.groupValues[1].toInt())
+            val sky = Regex("\"skyline\"\\s*:\\s*\\[([^\\]]*)]").find(meta)!!.groupValues[1].split(',').map { it.trim().toDouble() }
+            assertTrue("$id skyline", sky.size >= 100)
+            assertTrue("$id has land", sky.max() > 0.0 || id == "ocean")
             // The land stays below the countdown: its white digits stand about a quarter of the width over the horizon,
             // and a snowy peak behind them made the time unreadable (the first arctic, 18 November 2026).
-            for (j in 0 until sky.length()) assertTrue("$id rises to ${sky.getDouble(j)} of the width at strip $j", sky.getDouble(j) <= MAX_RISE)
+            sky.forEachIndexed { j, v -> assertTrue("$id rises to $v of the width at strip $j", v <= MAX_RISE) }
             for (s in PaintedLand.STATES) {
                 val f = File(dir, "$s.webp")
                 assertTrue("$id/$s", f.isFile && f.length() > 10_000)
