@@ -1812,3 +1812,42 @@ sense", then "i want the most accurate and exactly like real life sun path". The
 tilting in 3D as it travels the figure (the owner's reference video; the first versions leaned in the picture's plane,
 stood upright, or turned along the line, and none looked like a phone in a hand), a fading gold trail, one line of text.
 Its own perspective (Robolectric ignores `android.graphics.Camera`). `QiblaCalibrateDesignTest`.
+
+## 35. The Sun's real path (0.23 work, 18 November 2026, a helper on `sun/real`)
+
+**What the owner asked**: "i want the most accurate and exactly like real life sun path", "exactly like real life
+anywhere in the world", "regardless of app language setting"; and, shown how tall the land is on the path's true scale,
+"Hidden like real life" (the Sun hidden behind land that stands in front of it; the ring on the path shows where).
+
+**What was done**:
+- `core`: `SolarPosition.horizontal` (SPA's azimuth beside the elevation, the elevation computed exactly as before;
+  `elevation` itself untouched), `SunPath.track` (every 6 minutes, every minute for an hour round a noon above 70°),
+  `SunPath.azimuthAt`. `SunAzimuthTest` against the Astronomical Almanac's low-precision Sun (0.05° el, 0.08° az).
+- `SunPanorama` (app): the side the noon Sun is on decides the facing (south, or north in the southern hemisphere and on
+  the tropics' poleward-noon days); azimuth from the noon Sun's, unwrapped from noon; within 1° of the zenith the azimuth
+  is not used and the track goes on evenly in time along the top (the zenith day is continuous, no NaN); a step across the
+  zenith goes the way the Sun travels. The window shown exactly: Fajr..Isha (missing: sunrise an hour before / sunset an
+  hour after; missing too: the whole day).
+- `SkyGeometry` (rewritten, no `rtl`): `k` px per degree = min(width·0.86 / the window's azimuth span, (horizon − arc
+  top) / noon's apparent elevation, (foot − horizon) / the deepest apparent elevation in the window); centred. `y` =
+  horizon − k·apparent(el) above and below. Before Fajr and after Isha a monotone Hermite carries the moment to the edge
+  the Sun comes from / goes to. `dragX`/`fractionAt`: the path's x wherever it runs one way; where the tropics' path turns
+  back on itself (Makkah in June: the Sun's azimuth moves away from north after sunrise until about 67° up), the dragging
+  axis goes straight on in time across the turn (the finger and the drawn Sun part there by up to about 25° of azimuth).
+  `SkyDetent` uses `dragX`.
+- No mirroring of the scene in Arabic: `LivingSky` and the widget pass `rtl = false` into everything of the scene; the
+  light's side (`RealSkyFrame`, `SetClouds`), the painted land's light (`sunRight`) and the stars' facing
+  (`SkyView.facingNorth`) follow the Sun's real side. The gold "day so far" is the path up to the Sun (not a side of the
+  screen); under the horizon the path goes on faint and dashed from Fajr to sunrise and from sunset to Isha.
+- Benches: `tools/skybench/panorama.js` (a port, the Almanac's Sun) used by the Medium bench and the High bench.
+
+**Tested**: `SunPathRealTest` (19 place-days: Dubai Nov/Jun/Dec, Makkah 27 May zenith day, 21 Jun, 15 Jul, Jakarta,
+Nairobi, Sydney Jun/Dec, Johannesburg, London, Oslo Jun/Dec, Tromsø Jun (midnight Sun)/Dec (polar night), Reykjavik; three
+header sizes): every drawn angle across and up / k equals the Almanac's within 0.12°, Shuruq/Maghrib marks within 0.6 dp of
+the horizon, every mark on screen, dragging monotone the way the Sun moves and invertible each minute, no step over a fifth
+of the width, no NaN. `SkyLanguageTest`: the sky renders identically in Arabic and English (medium Canvas and low).
+`LivingSkyTest`, `SunMarkTest` updated. **Not tested**: on a phone or an emulator.
+
+**Weakness, honestly**: on the true scale the arch is small on a short header: Dubai in November k = 1.77 dp/degree, the
+arch 81 dp tall and about 240 dp wide on a 412 x 400 dp header; in June k = 0.92 (noon 88°), a steep climb and a flat top.
+The land at the sides (High's PNW, Arctic, Red rock) hides the low Sun for hours (the owner chose that).

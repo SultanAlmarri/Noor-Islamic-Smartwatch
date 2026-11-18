@@ -11,7 +11,11 @@ So Noor shows the sky.
 - **The Today screen opens on the real sky above the user**: its colour comes from the sun's elevation at that place and
   moment (`SkyPalette`, shared by phone and watch), cooler at dawn and warmer at dusk, with stars appearing in twilight
   and the moon, shaped by the Hijri date, riding the sun's own arc as far behind it as it is old.
-- **The sun path** across the sky is the day's actual elevation curve, with each prayer placed where it happens on it.
+- **The sun path** across the sky is the Sun's real path (0.23): an equal-angle picture as a person facing the noon Sun
+  sees it, the azimuth across and the elevation up on one scale, so its shape is the real one (in Dubai it leaves the
+  horizon at about 63°, rounds over the south and comes down as steeply; in June it nearly reaches the zenith with a
+  flat top; in a polar summer it circles the whole sky, low). Fajr..Isha fits the width; noon fits under the countdown;
+  deep night is carried to the screen's edges. (Until 0.22, below: the elevation curve with the time stretched.)
   The time axis is stretched smoothly so daylight takes most of the width (the vertical positions are the true
   elevations). The day so far is drawn solid, the rest dotted; the night part runs under the land; the next prayer
   wears a gold ring that breathes slowly.
@@ -804,8 +808,9 @@ night). The interval ring keeps a gap at the top for the system clock.
 
 ## Arabic and right-to-left
 
-Layouts mirror, including the sun path (time flows from the right) and the timeline; numbers, times and the countdown
-always read left to right. Arabic display names use Reem Kufi; the Hijri date leads in gold.
+Layouts mirror, including the timeline; numbers, times and the countdown always read left to right. The sky scene does
+not mirror (0.23: the Sun's path, the land, the light and dragging are as in real life whatever the language; the owner,
+18 November 2026: "make sure the sunpath reflects real life exactly (regardless of app language setting)"). Arabic display names use Reem Kufi; the Hijri date leads in gold.
 
 **The one exception to "nothing changes at a stroke" (0.18 review):** cloud sets are read ahead of the moment they come
 into view (`SkyDirector.ahead`), so they are normally on the GPU before they are seen. If a phone is too slow and a set's
