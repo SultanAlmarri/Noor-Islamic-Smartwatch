@@ -44,7 +44,10 @@ import java.util.concurrent.TimeUnit
 class NextPrayerComplicationService : SuspendingTimelineComplicationDataSourceService() {
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationDataTimeline? {
-        val config = (application as NoorWearApp).config.currentOrPull()
+        val repo = (application as NoorWearApp).config
+        // (0.22: the watch's own settings take up newer official times here too, every few hours, app opened or not.)
+        runCatching { repo.refreshLocal() }
+        val config = repo.currentOrPull()
             ?: return ComplicationDataTimeline(NoDataComplicationData(), emptyList())
         val now = Instant.now()
         val intervals = Intervals.upcoming(config, now)

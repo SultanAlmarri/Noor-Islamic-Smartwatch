@@ -84,6 +84,11 @@ class ConfigRepository(private val context: Context, private val timetables: Off
     /** Stores a configuration from the phone. Returns true when it changed anything the watch shows. */
     suspend fun save(encoded: String): Boolean {
         val incoming = WatchConfig.decode(encoded) ?: return false
+        // 0.22: the item already stored, read again from the Data Layer (each time the app opens, and while "Sync now"
+        // waits), is not a new arrival. Until then it stamped "received" with the time of reading: Settings said
+        // "Updated just now" and the phone's Watch page "received just now" though the phone had sent nothing for days,
+        // and "Sync now" stopped waiting for the phone's answer at its first look.
+        if (context.store.data.first()[keyConfig] == encoded) return false
         val before = current()
         context.store.edit { p ->
             p[keyConfig] = encoded
@@ -128,8 +133,12 @@ class ConfigRepository(private val context: Context, private val timetables: Off
         val ageDays = old?.let { (System.currentTimeMillis() - it.updatedAtEpochMs) / 86_400_000L } ?: Long.MAX_VALUE
         val zoneMoved = old != null && setup.place?.fromGps == true && old.zoneId != ZoneId.systemDefault().id
         val clockMoved = old != null && setup.use24h == null && old.use24h != DateFormat.is24HourFormat(context)
-        if (!force && old != null && ageDays < 7 && !zoneMoved && !clockMoved) return
         val built = build(setup) ?: return
+        // 0.22: the app now holds official times further ahead than the stored weeks (a newer table came with an update,
+        // or a long table's window moved on). Until then only a week's age counted: a table bundled by an update
+        // waited up to seven days, and in the meantime the watch calculated days the authority had published.
+        val moreOfficial = built.official?.last?.let { new -> old?.official?.last?.let { new > it } ?: true } ?: false
+        if (!force && old != null && ageDays < 7 && !zoneMoved && !clockMoved && !moreOfficial) return
         context.store.edit { it[keyLocal] = built.encode() }
         if (s.source == ConfigSource.WATCH) { refreshSurfaces(context); afterChange() }
     }
