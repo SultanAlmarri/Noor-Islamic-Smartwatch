@@ -18,13 +18,21 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
+        <!-- 0.22: the prayer and its time shrink to fit beside the countdown (down to 11sp), never cut: on the owner's
+             Galaxy, with a countdown in hours, "Dhuhr · 12:07 PM" was shown as "Dhuhr · 12:0…". -->
         <TextView
             android:id="@+id/status_prayer"
             style="@style/TextAppearance.Compat.Notification.Title"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="30dp"
             android:layout_weight="1"
+            android:autoSizeMaxTextSize="16sp"
+            android:autoSizeMinTextSize="11sp"
+            android:autoSizeStepGranularity="0.5sp"
+            android:autoSizeTextType="uniform"
             android:ellipsize="end"
+            android:gravity="center_vertical"
+            android:includeFontPadding="false"
             android:maxLines="1"
             android:textAlignment="viewStart" />
 
@@ -33,12 +41,12 @@
             style="@style/TextAppearance.Compat.Notification.Title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="8dp"
             android:fontFeatureSettings="tnum"
             android:includeFontPadding="false"
             android:maxLines="1"
             android:textDirection="ltr"
-            android:textSize="25dp" />
+            android:textSize="23dp" />
 
         <!-- 0.9.8: the same countdown drawn by Noor, in the digits chosen in Noor, when Android's own digits differ. -->
         <TextView
@@ -47,12 +55,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="8dp"
             android:fontFeatureSettings="tnum"
             android:includeFontPadding="false"
             android:maxLines="1"
             android:textDirection="ltr"
-            android:textSize="25dp" />
+            android:textSize="23dp" />
     </LinearLayout>
 
     <TextView

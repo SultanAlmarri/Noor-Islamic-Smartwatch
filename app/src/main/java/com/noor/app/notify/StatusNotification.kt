@@ -176,7 +176,10 @@ object StatusNotification {
         val small = RemoteViews(app.packageName, R.layout.notification_status)
         small.setTextViewText(R.id.status_prayer, title)
         // The date first: if a place name is too long even for the smallest size, only the place is shortened here.
-        small.setTextViewText(R.id.status_line, listOfNotNull(c.hijri, c.place).joinToString("  ·  "))
+        // (0.22) Collapsed, the place by its own name, the part before the first comma ("Al Barsha South" of "Al Barsha
+        // South, Dubai"): the whole of it did not fit beside the date on a Galaxy's narrow row and was cut. The expanded
+        // view shows it whole.
+        small.setTextViewText(R.id.status_line, listOfNotNull(c.hijri, c.place?.let(::shortPlace)).joinToString(" · "))
         countdown(small, c, now, drawn)
         val big = RemoteViews(app.packageName, R.layout.notification_status_big)
         big.setTextViewText(R.id.status_prayer, title)
@@ -208,6 +211,9 @@ object StatusNotification {
             .setLocalOnly(true)
             .build()
     }
+
+    /** A place's own name: the part before its first comma (Latin or Arabic), or the whole when it has none. */
+    internal fun shortPlace(place: String): String = place.split(',', '\u060C').first().trim().ifEmpty { place }
 
     /**
      * The live countdown, ticked by Android itself on its own clock (elapsed time, which survives clock changes). It

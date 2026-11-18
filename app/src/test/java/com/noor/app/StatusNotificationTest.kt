@@ -182,16 +182,26 @@ class StatusNotificationTest {
         // (about 270dp).
         val long = config.copy(placeEn = "Al Barsha South Third, Dubai, United Arab Emirates", placeAr = "البرشاء جنوب الثالثة، دبي، الإمارات العربية المتحدة")
         val usual = config.copy(placeEn = "Al Barsha South, Dubai", placeAr = "البرشاء جنوب، دبي")
-        for ((name, arabic, cfg) in listOf(Triple("en", false, usual), Triple("ar", true, usual), Triple("en_long", false, long), Triple("ar_long", true, long))) {
+        // (0.22) And the owner's own case: Dhuhr, the longest time (12:07 PM), 2:27:44 away, the countdown in hours drawn by
+        // Noor (his phone's digits differ from the app's), in the shade of a phone whose system is in Arabic (right to
+        // left): the prayer's time was cut to "12:0…".
+        val dhuhrAway = ZonedDateTime.of(2026, 11, 4, 9, 37, 16, 0, dubai).toInstant()
+        val cases = listOf(Triple("en", false, usual), Triple("ar", true, usual), Triple("en_long", false, long), Triple("ar_long", true, long),
+            Triple("en_hours_rtl", false, usual))
+        for ((name, arabic, cfg) in cases) {
             val ctx = if (arabic) app.createConfigurationContext(android.content.res.Configuration(app.resources.configuration).also { it.setLocale(java.util.Locale("ar")) }) else app
-            val lc = StatusNotification.content(cfg, base, asr, arabic)
-            val n = StatusNotification.build(ctx, app, lc, asr)
+            val hours = name.contains("hours")
+            val at = if (hours) dhuhrAway else asr
+            val lc = StatusNotification.content(cfg, base, at, arabic)
+            if (hours) { assertEquals("Dhuhr", lc.prayer); assertEquals("\u22122:27:44", lc.countdown(at, f)) }
+            val n = StatusNotification.build(ctx, app, lc, at, if (hours) f else null)
             for ((kind, view, maxDp) in listOf(Triple("collapsed", n.contentView, 48), Triple("expanded", n.bigContentView, 252))) {
                 val v = view.apply(ctx, parent)
                 // (0.21) In Arabic the notification shade lays a notification out right to left; this render did not.
-                v.layoutDirection = if (arabic) android.view.View.LAYOUT_DIRECTION_RTL else android.view.View.LAYOUT_DIRECTION_LTR
+                v.layoutDirection = if (arabic || name.endsWith("rtl")) android.view.View.LAYOUT_DIRECTION_RTL else android.view.View.LAYOUT_DIRECTION_LTR
                 val d = app.resources.displayMetrics
-                val w = (270 * d.density).toInt()
+                // (The owner's Galaxy gives the notification's row about 220dp, measured from his screenshot.)
+                val w = ((if (hours) 220 else 270) * d.density).toInt()
                 // Twice, as Android does when the text shrinks to fit and asks for a new layout.
                 repeat(2) {
                     v.measure(android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
