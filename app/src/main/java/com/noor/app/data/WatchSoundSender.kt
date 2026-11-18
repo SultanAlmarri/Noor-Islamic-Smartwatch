@@ -44,20 +44,24 @@ class WatchSoundSender(private val context: Context, private val custom: CustomS
         }.toSet()
     }
 
-    /** Sends whatever each Noor watch is missing. Safe to call often: it only transfers what a watch lacks. */
-    suspend fun syncIfNeeded(alerts: AlertSettings?) = mutex.withLock {
-        val want = needed(alerts)
-        if (want.isEmpty()) return@withLock
-        runCatching {
-            val nodes = Wearable.getCapabilityClient(context)
-                .getCapability(com.noor.prayer.WatchConfig.CAPABILITY_WATCH, com.google.android.gms.wearable.CapabilityClient.FILTER_REACHABLE)
-                .await().nodes
-            val reports = reports()
-            for (node in nodes) {
-                val have = reports[node.id]?.sounds.orEmpty()
-                for (id in want - have) send(node.id, id)
-            }
-        }.onFailure { Log.i(TAG, "Sounds not sent to the watch now: ${it.message}") }
+    /**
+     * Sends whatever each Noor watch is missing. Safe to call often: it only transfers what a watch lacks, and the sounds
+     * in [resend] (a recording the user replaced: same id, new file) whether the watch has them or not.
+     */
+    // (0.21: on a thread for files, whoever calls: a replaced recording was sent from the Adhan page's own scope, the
+    // main thread, copying megabytes there.)
+    suspend fun syncIfNeeded(alerts: AlertSettings?, resend: Set<String> = emptySet()): Unit = mutex.withLock {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val want = needed(alerts)
+            if (want.isEmpty()) return@withContext
+            runCatching {
+                val nodes = Wearable.getCapabilityClient(context)
+                    .getCapability(com.noor.prayer.WatchConfig.CAPABILITY_WATCH, com.google.android.gms.wearable.CapabilityClient.FILTER_REACHABLE)
+                    .await().nodes
+                val reports = reports()
+                for (node in nodes) for (id in toSend(want, reports[node.id]?.sounds.orEmpty(), resend)) send(node.id, id)
+            }.onFailure { Log.i(TAG, "Sounds not sent to the watch now: ${it.message}") }
+        }
     }
 
     private suspend fun reports(): Map<String, WatchReport> {
@@ -102,5 +106,11 @@ class WatchSoundSender(private val context: Context, private val custom: CustomS
         /** Channel path: /noor/sound/<id>/<extension>. */
         const val PATH_PREFIX = "/noor/sound/"
         private const val TAG = "NoorWatchSounds"
+
+        /**
+         * What one watch is sent: what it needs and lacks, and what it needs that was replaced on the phone (0.21: a
+         * replaced recording keeps its id, so until 0.20 a watch that had the old one was never sent the new).
+         */
+        internal fun toSend(want: Set<String>, have: Set<String>, resend: Set<String>): Set<String> = (want - have) + (want intersect resend)
     }
 }

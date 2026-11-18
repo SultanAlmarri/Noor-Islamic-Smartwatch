@@ -65,10 +65,25 @@ object ReceivedSounds {
 
     /** Removes received sounds that no prayer alerting on this watch uses any more. */
     fun prune(context: Context, config: WatchConfig?) {
-        val a = config?.alerts
-        val keep = if (a == null || !a.enabled || !a.device.includes(AlertDevice.WATCH)) emptySet() else
-            Prayer.entries.filter { a.alertsOn(it, AlertDevice.WATCH) }.mapNotNull { p -> a.alert(p).takeIf { it.mode == AlertMode.ADHAN || it.mode == AlertMode.CUSTOM }?.soundId }.toSet() +
-                setOf(SoundIds.DEFAULT_ADHAN, SoundIds.DEFAULT_FAJR_ADHAN)
+        val keep = keep(config)
         dir(context).listFiles().orEmpty().filter { it.name.substringBeforeLast('.') !in keep || it.name.endsWith(".part") }.forEach { it.delete() }
+    }
+
+    /**
+     * The sounds the watch's alerts may play: what the phone sends it (WatchSoundSender.needed). With "Random" (0.21:
+     * until 0.20 only the prayer's own sound id was kept, "random.favourites", so the voices the phone had sent for it
+     * were deleted by the next settings to arrive, and the watch played the openings instead of the Adhan).
+     */
+    internal fun keep(config: WatchConfig?): Set<String> {
+        val a = config?.alerts
+        return if (a == null || !a.enabled || !a.device.includes(AlertDevice.WATCH)) emptySet() else
+            Prayer.entries.filter { a.alertsOn(it, AlertDevice.WATCH) }.flatMap { p ->
+                val x = a.alert(p)
+                when {
+                    x.mode != AlertMode.ADHAN && x.mode != AlertMode.CUSTOM -> emptyList()
+                    x.soundId == SoundIds.RANDOM -> a.favourites
+                    else -> listOfNotNull(x.soundId)
+                }
+            }.toSet() + setOf(SoundIds.DEFAULT_ADHAN, SoundIds.DEFAULT_FAJR_ADHAN)
     }
 }

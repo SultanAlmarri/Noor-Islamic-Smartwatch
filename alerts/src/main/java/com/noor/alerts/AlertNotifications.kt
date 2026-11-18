@@ -187,16 +187,21 @@ object AlertNotifications {
     /** 0.17: "Snoozed until 4:37 AM", while an alarm is snoozed ([id] 0: a tried alarm). */
     internal fun snoozedId(id: Int) = ID_ALARM_BASE + 50 + id
     private const val ID_ALARM_BASE = 4400
+    /** How long a notification-only alarm stays in the shade when nothing makes it go sooner (an hour). */
+    internal const val NOTE_STAYS_MS = 60 * 60_000L
 
-    /** 0.17: a notification-only alarm ("25 min before Fajr"), with the phone's notification sound. */
-    internal fun postAlarmNote(context: Context, id: Int, title: String, body: String, at: Instant) {
+    /**
+     * 0.17: a notification-only alarm ("25 min before Fajr"), with the phone's notification sound. [timeoutMs]: how long
+     * it stays (0.21: one before a prayer goes when the prayer begins, as the reminders it replaced did).
+     */
+    internal fun postAlarmNote(context: Context, id: Int, title: String, body: String, at: Instant, timeoutMs: Long = NOTE_STAYS_MS) {
         ensureChannels(context)
         if (!canPost(context, CHANNEL_REMIND)) return
         val n = base(context, CHANNEL_REMIND, title, body, at)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
-            .setTimeoutAfter(60 * 60_000L)
+            .setTimeoutAfter(timeoutMs)
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(alarmId(id), n) }
     }

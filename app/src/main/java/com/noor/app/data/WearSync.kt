@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -37,10 +38,7 @@ class WearSync(private val context: Context, private val settings: SettingsRepos
     val lastSent: StateFlow<Long?> = _lastSent.asStateFlow()
 
     fun start(scope: CoroutineScope) = scope.launch {
-        settings.settings
-            .map { configFor(it, System.currentTimeMillis(), tables) }
-            .distinctUntilChanged { a, b -> a?.copy(updatedAtEpochMs = 0) == b?.copy(updatedAtEpochMs = 0) }
-            .collect { c -> if (c != null) push(c) }
+        configs(settings.settings, tables).collect { c -> if (c != null) push(c) }
     }
 
     /** Sends the current settings now (the "Sync now" button). */
@@ -66,12 +64,36 @@ class WearSync(private val context: Context, private val settings: SettingsRepos
         const val KEY_CONFIG = "config"
         private const val TAG = "NoorWearSync"
 
+        /**
+         * (0.21) What the watch is sent: the configuration for each settings value, and again whenever the date at the
+         * place or its time zone changes (checked every [every] ms while the app runs). Until 0.20 it was sent only
+         * when a setting changed (and once a day at a prayer, only while the phone's alerts were on): a phone left
+         * alone let the watch's eight weeks of times run out, and a phone in automatic mode carried to another time
+         * zone left the watch writing the times in the old zone's hours until a new fix of the location came in.
+         */
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+        internal fun configs(
+            settings: kotlinx.coroutines.flow.Flow<AppSettings>, tables: OfficialTimetables?, every: Long = 60_000L,
+            dateAt: (java.time.ZoneId) -> java.time.LocalDate = { java.time.LocalDate.now(it) },
+        ): kotlinx.coroutines.flow.Flow<WatchConfig?> = settings
+            .flatMapLatest { s ->
+                kotlinx.coroutines.flow.flow {
+                    while (true) { val z = PrayerProvider.place(s)?.zone; emit(Triple(s, z, z?.let(dateAt))); kotlinx.coroutines.delay(every) }
+                }
+            }
+            .distinctUntilChanged()
+            .map { (s, _, _) -> configFor(s, System.currentTimeMillis(), tables, dateAt) }
+            .distinctUntilChanged { a, b -> a?.copy(updatedAtEpochMs = 0) == b?.copy(updatedAtEpochMs = 0) }
+
         /** Resolves every automatic choice on the phone so the watch calculates exactly the same times. */
-        fun configFor(s: AppSettings, now: Long, tables: OfficialTimetables? = null): WatchConfig? {
+        fun configFor(
+            s: AppSettings, now: Long, tables: OfficialTimetables? = null,
+            dateAt: (java.time.ZoneId) -> java.time.LocalDate = { java.time.LocalDate.now(it) },
+        ): WatchConfig? {
             val place = PrayerProvider.place(s) ?: return null
             val profile = PrayerProvider.profile(s, place)
             // When the authority's own times are available, the watch gets the next eight weeks of them as published.
-            val today = java.time.LocalDate.now(place.zone)
+            val today = dateAt(place.zone)
             val published = PrayerProvider.authority(s, place)?.takeIf { it.profile.id == profile.id && PrayerEngine.referencePointFor(profile, place.point) != null }
                 ?.timetableId?.let { tables?.get(it) }?.window(today.minusDays(1), today.plusDays(56))?.takeIf { it.size > 0 }
             // 0.18: otherwise the phone's own calculated minutes for the same weeks, so a watch on an older version (which
