@@ -1,6 +1,11 @@
 package com.noor.app.ui.qibla
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -75,6 +80,8 @@ import com.noor.shared.compass.CompassAvailability
 import com.noor.shared.compass.CompassReading
 import com.noor.app.ui.components.GlassCard
 import com.noor.app.ui.components.Hairline
+import com.noor.app.ui.components.LocalAmbientMotion
+import com.noor.app.ui.components.NoorMotion
 import com.noor.app.ui.components.Noor
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.components.ScreenTitle
@@ -158,7 +165,7 @@ fun QiblaContent(
             CompassIssue.NOT_FLAT in reading.assessment.issues -> stringResource(R.string.qibla_hold_flat)
             // 0.15: an unsure compass is not followed: the first thing said is what to do (the turn stays in the
             // readings below, for who wants it).
-            reading.assessment.quality == CompassQuality.POOR -> stringResource(R.string.qibla_calibrate_first)
+            reading.assessment.quality == CompassQuality.POOR -> stringResource(R.string.cal_title)
             aligned -> stringResource(R.string.qibla_aligned)
             turn!! > 0 -> stringResource(R.string.qibla_turn_right, f.degrees(abs(turn)))
             else -> stringResource(R.string.qibla_turn_left, f.degrees(abs(turn)))
@@ -171,10 +178,12 @@ fun QiblaContent(
             Text(status, style = MaterialTheme.typography.titleMedium, color = statusColor, textAlign = TextAlign.Center)
         }
         // 0.15: when the compass itself is unsure, the direction is not to be trusted yet: said here, where the eye
-        // is, and not only in the accuracy card below.
-        if (unsure)
-            Text(stringResource(R.string.qibla_poor_hint), style = MaterialTheme.typography.bodyMedium, color = c.warning, textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().clickable { showCalibration = true }.padding(top = 2.dp))
+        // is, and not only in the accuracy card below. 0.22.1: shown, not only written (the owner: "it should display
+        // the figure 8"): a phone gliding along a figure 8, with one line; it folds away once the compass is sure.
+        AnimatedVisibility(unsure,
+            enter = fadeIn(tween(NoorMotion.Standard)) + expandVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
+            exit = fadeOut(tween(NoorMotion.Standard)) + shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
+        ) { CalibrateNudge(onOpen = { showCalibration = true }) }
 
         // Readings, side by side: where the Qibla is, where the phone points, and the difference (two decimals each).
         GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
@@ -462,5 +471,104 @@ private fun DrawScope.figureEight(phase: Float, accent: Color, track: Color, pho
         drawRoundRect(phone, Offset(p.x - w / 2, p.y - hh / 2), androidx.compose.ui.geometry.Size(w, hh), androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))
         drawRoundRect(accent, Offset(p.x - w / 2 + 2.dp.toPx(), p.y - hh / 2 + 3.dp.toPx()), androidx.compose.ui.geometry.Size(w - 4.dp.toPx(), hh - 8.dp.toPx()),
             androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+    }
+}
+
+/** Where the still drawing (animations off) shows the phone: on the right lobe's lower curve, its trail behind it. */
+internal const val NUDGE_STILL_PHASE = 0.16f
+
+/** One loop of the figure 8, in milliseconds. */
+private const val NUDGE_LOOP_MS = 2800
+
+/**
+ * (0.22.1) The unsure compass's message, under the dial: the gesture drawn, a phone gliding along a figure 8 with a
+ * fading trail behind it, over one line that says the same; tapping opens the calibration guide. The loop runs only
+ * while this is shown and animations are allowed ([LocalAmbientMotion]); otherwise it is a still drawing of the same
+ * moment. [phase] fixes the moment (0..1 of a loop), for renders.
+ */
+@Composable
+internal fun CalibrateNudge(onOpen: () -> Unit, modifier: Modifier = Modifier, phase: Float? = null) {
+    val c = NoorTheme.colors
+    val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val line = stringResource(R.string.qibla_figure8)
+    GlassCard(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius))
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onOpen)
+            .semantics(mergeDescendants = true) {},
+        padding = 0.dp,
+    ) {
+        val drawing = Modifier.fillMaxWidth().height(98.dp).padding(top = 10.dp)
+        when {
+            phase != null -> FigureEightCanvas({ phase }, rtl, drawing)
+            LocalAmbientMotion.current -> {
+                val t = rememberInfiniteTransition(label = "nudge")
+                val p = t.animateFloat(0f, 1f, infiniteRepeatable(tween(NUDGE_LOOP_MS, easing = LinearEasing), RepeatMode.Restart), label = "nudgePhase")
+                // (Read in the draw phase only: each frame draws again, nothing is composed again.)
+                FigureEightCanvas({ p.value }, rtl, drawing)
+            }
+            else -> FigureEightCanvas({ NUDGE_STILL_PHASE }, rtl, drawing)
+        }
+        // The line centred in the card, the chevron (it opens the guide) at the card's end, as on a row.
+        Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 14.dp), contentAlignment = Alignment.CenterEnd) {
+            Text(line, style = MaterialTheme.typography.titleSmall, color = c.warning, textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp))
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.padding(end = 12.dp).size(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun FigureEightCanvas(phase: () -> Float, rtl: Boolean, modifier: Modifier) {
+    val c = NoorTheme.colors
+    Canvas(modifier) { nudgeFigure(phase(), rtl, c.gold, c.textMuted.copy(alpha = 0.30f), c.textPrimary, c.surface) }
+}
+
+/**
+ * A lemniscate of Bernoulli (made a little fuller), drawn as a faint line; a phone glides along it, leaning as a wrist
+ * turns, with a trail that fades behind it. Strokes in plain colours, faded with alpha (a gradient brush on a stroke
+ * stops the emulator's graphics: HANDOVER.md section 28).
+ */
+private fun DrawScope.nudgeFigure(phase: Float, rtl: Boolean, trail: Color, track: Color, body: Color, screen: Color) {
+    val cx = size.width / 2; val cy = size.height / 2
+    val phoneH = 26.dp.toPx(); val phoneW = 15.dp.toPx()
+    // Half the width, so the figure (about 0.46 of it high on each side of the middle) leaves room for the phone.
+    val a = minOf(size.width * 0.30f, (size.height / 2 - phoneH * 0.55f) / 0.46f, 96.dp.toPx())
+    val dir = if (rtl) -1f else 1f
+    fun pt(t: Double): Offset {
+        val s = sin(t); val k = 1 + s * s
+        return Offset(cx + dir * (a * cos(t) / k).toFloat(), cy + (1.3 * a * s * cos(t) / k).toFloat())
+    }
+    // The figure.
+    val path = Path()
+    for (i in 0..160) { val p = pt(2 * PI * i / 160); if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y) }
+    path.close()
+    drawPath(path, track, style = Stroke(1.5.dp.toPx()))
+    // The trail: short segments behind the phone, thinner and fainter the further back. Drawn from the tail to the
+    // head in a layer of its own, each replacing what is under it (Src), so where two meet no seam is drawn twice.
+    val t0 = 2 * PI * phase
+    val n = 48; val span = 2 * PI * 0.40
+    drawContext.canvas.saveLayer(androidx.compose.ui.geometry.Rect(Offset.Zero, size), androidx.compose.ui.graphics.Paint())
+    for (i in n downTo 1) {
+        val fade = 1 - i / n.toFloat()
+        val from = pt(t0 - span * i / n); val to = pt(t0 - span * (i - 1) / n)
+        drawLine(trail.copy(alpha = trail.alpha * Math.pow(fade.toDouble(), 1.3).toFloat()), from, to, strokeWidth = (1.3f + 3.4f * fade).dp.toPx(),
+            cap = StrokeCap.Round, blendMode = androidx.compose.ui.graphics.BlendMode.Src)
+    }
+    drawContext.canvas.restore()
+    // The phone, leaning with the turn of the wrist (smoothly, the same way each loop).
+    val p = pt(t0)
+    val lean = (22.0 * cos(t0) * dir).toFloat()
+    // A soft glow under the phone (a filled circle: a gradient on a fill is safe, only on a stroke it is not).
+    val glow = 24.dp.toPx()
+    drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(trail.copy(alpha = 0.30f), trail.copy(alpha = 0f)), p, glow), glow, p)
+    rotate(lean, p) {
+        drawRoundRect(body, Offset(p.x - phoneW / 2, p.y - phoneH / 2), androidx.compose.ui.geometry.Size(phoneW, phoneH),
+            androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))
+        val inset = 1.7.dp.toPx()
+        drawRoundRect(screen, Offset(p.x - phoneW / 2 + inset, p.y - phoneH / 2 + inset * 1.8f),
+            androidx.compose.ui.geometry.Size(phoneW - 2 * inset, phoneH - inset * 3.6f), androidx.compose.ui.geometry.CornerRadius(2.5.dp.toPx()))
+        // On its screen, a compass needle in gold.
+        val nh = 6.dp.toPx(); val nw = 2.4.dp.toPx()
+        drawPath(Path().apply { moveTo(p.x, p.y - nh); lineTo(p.x + nw, p.y); lineTo(p.x, p.y + nh); lineTo(p.x - nw, p.y); close() }, trail)
     }
 }

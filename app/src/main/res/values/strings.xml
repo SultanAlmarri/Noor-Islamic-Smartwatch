@@ -593,10 +593,9 @@
     <string name="adhan_hint_silent">Notice only, no sound</string>
     <string name="adhan_plays">Plays: %s</string>
     <string name="hijri_today_is">Today: %s</string>
-    <string name="qibla_poor_hint">The compass is unsure here: calibrate before following the turn. Tap for how.</string>
     <string name="watch_get_wearable">Get Galaxy Wearable</string>
     <string name="watch_how_to">How to put Minhad on your watch</string>
-    <string name="qibla_calibrate_first">Calibrate first: move the phone in a figure 8</string>
+    <string name="qibla_figure8">Move your phone in a figure 8</string>
     <string name="adhan_turn_on_all">Turn on the Adhan for every prayer</string>
     <string name="adhan_off_would">Off · would play %s</string>
     <string name="adhan_action_notifications">Turn on notifications</string>

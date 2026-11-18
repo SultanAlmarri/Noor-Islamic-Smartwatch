@@ -764,6 +764,11 @@ short:
   "Iftar".
 - **The Qibla dial** turns with the phone; a beam of light runs from the centre to the Kaaba on the rim, as wide as the
   compass is uncertain (the sensor's own estimate), turning green with a haptic tap when the phone faces the Qibla.
+  When the compass is unsure (0.22.1, the owner: "it should display the figure 8"), "Calibrate the compass" stands
+  under the dial over a glass card that shows the gesture: a phone gliding along a figure 8 with a fading gold trail
+  (2.8 s a loop; a still drawing when animations are off), and one line, "Move your phone in a figure 8"; tapping it
+  opens the calibration guide, and it folds away once the compass is sure (`CalibrateNudge`, renders in
+  `QiblaCalibrateDesignTest`).
 - **The watch preview** (Watch tab) is a drawn watch showing exactly what the Noor watch app shows now, with the glow
   of the current sky under it.
 - **The countdown** (0.9.7): "−1:23:45" before a prayer (a true minus sign), "+04:12" for a while after it, the same

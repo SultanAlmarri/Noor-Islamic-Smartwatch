@@ -598,10 +598,9 @@
     <string name="adhan_hint_silent">إشعار فقط، بلا صوت</string>
     <string name="adhan_plays">يُشغَّل: %s</string>
     <string name="hijri_today_is">اليوم: %s</string>
-    <string name="qibla_poor_hint">البوصلة غير متيقنة هنا: عايرها قبل أن تتبع الاتجاه. اضغط لمعرفة الطريقة.</string>
     <string name="watch_get_wearable">تنزيل Galaxy Wearable</string>
     <string name="watch_how_to">كيف تضع منهاد على ساعتك</string>
-    <string name="qibla_calibrate_first">عايِر أولًا: حرّك الهاتف على شكل الرقم 8</string>
+    <string name="qibla_figure8">حرّك هاتفك على شكل الرقم 8</string>
     <string name="adhan_turn_on_all">تشغيل الأذان لكل الصلوات</string>
     <string name="adhan_off_would">متوقف · سيُشغَّل %s</string>
     <string name="adhan_action_notifications">تفعيل الإشعارات</string>
