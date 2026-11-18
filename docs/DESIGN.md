@@ -591,7 +591,9 @@ ever leaving an old prayer beside a new countdown).
 **For a debug host** (the emulator harness): the receivers are `com.noor.app.widget.NextPrayerWidget`, `TodayWidget`,
 `SkyWidget`, `RingWidget`, `StripWidget`, `DateWidget`; set a widget's options with
 `WidgetOptionsStore.save(context, appWidgetId, WidgetOptions(...))` and then `Widgets.refreshAsync(context)`; or build
-any kind at any size without placing it with `Widgets.preview(context, kind, options, widthDp, heightDp)`.
+any kind at any size without placing it with `Widgets.preview(context, kind, options, widthDp, heightDp)`. From a shell
+(debug builds): `adb shell am broadcast -a com.noor.smartwatch.debug.WIDGET_OPTIONS --ei id <appWidgetId> --es options
+"bg=GLASS;ac=TEAL;sec=false" -n com.noor.smartwatch/com.noor.app.debug.TestHookReceiver` (keys as `WidgetOptions.encode`).
 
 ## Appearance
 

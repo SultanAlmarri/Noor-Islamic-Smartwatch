@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minhad's widget test host (testing only; see tools/devicetest/widgets.sh). Binding widgets needs the shell's
+     "adb shell appwidget grantbind" for this package, the documented developer path. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Android 11+ hides other apps unless asked for (a launcher sees every app): the widgets' app. -->
+    <queries>
+        <package android:name="com.noor.smartwatch" />
+    </queries>
+    <application
+        android:label="Widget host"
+        android:allowBackup="false"
+        android:supportsRtl="true"
+        android:theme="@style/HostTheme">
+        <activity
+            android:name=".HostActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboardHidden"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -1930,3 +1930,77 @@ prayer never beside a new countdown. `WidgetSettingsDesignTest`: the settings pa
 **Not verified**: on a real launcher (One UI or Pixel): the restricted-mode fonts, the shrunken AnalogClock wheel, the
 settings entry in the widget's long-press menu, the partial updates of the new kinds, `setViewLayoutWidth` on the
 wheel, the system corner radius, Material You colours.
+
+## 37. Widgets on a real system (draft, 18 November 2026; a helper on `widgets/harness`; testing only, nothing for users)
+
+**Why**: Robolectric's renders of the widgets have differed from the owner's Samsung phone more than once (sections 16
+and 18: a home screen inflates a widget in a restricted context in which a TextView ignores an app's fonts). So the
+widgets are now also photographed as a real Android system draws them, on an emulator.
+
+**How it works**:
+- `tools/widgethost` (module `:widgethost`, package `com.noor.widgethost`): a tiny separate app that is a widget host,
+  as a launcher is. It must be another app: Android's `RemoteViews` gives a host of the *same* package the app's own,
+  unrestricted context (`getContextForResourcesEnsuringCorrectCachedApkPaths`: same package → the host's context,
+  otherwise `createApplicationContext(..., CONTEXT_RESTRICTED)`), so a host inside the phone app would load resources a
+  launcher ignores. It is built only by the workflow and never given to users; the phone app is unchanged.
+- The host (`HostActivity`) deletes what an earlier launch bound, allocates widget ids on its `AppWidgetHost`, binds
+  them with `bindAppWidgetIdIfAllowed` (allowed by `adb shell appwidget grantbind --package com.noor.widgethost`, the
+  documented developer path) with the size in the options bundle (min = max = the size, host category home screen,
+  Android 12+ also `OPTION_APPWIDGET_SIZES`) and, on its host views, `updateAppWidgetSize` with the list of sizes, as a
+  launcher does. Binding makes Android send the provider its `APPWIDGET_UPDATE`: the app's own `onUpdate` →
+  `Widgets.refresh`; nothing is simulated. Its theme is the system's DeviceDefault (light or dark), since a widget's
+  theme attributes resolve against the host's theme. Background: the system wallpaper (`FLAG_SHOW_WALLPAPER`) or a
+  neutral grey; the system bars hidden.
+- Which widgets: `spec=auto` (default) takes every provider the app declares (`getInstalledProvidersForPackage`, in the
+  manifest's order), each at its target cells (Android 12+), its smallest resize, the whole width and one row more, a
+  launcher cell taken as 90×110 dp with 8 dp between cells. So new widget kinds appear by themselves. Exact sizes:
+  `Provider=WxH,WxH;Provider=WxH` (dp; simple or full class name); `+key=value` after a size puts strings in that
+  widget's options bundle. Each provider starts a page; sizes that do not fit the screen go on to the next page.
+- It logs (tag `NoorWidgetHost`, each line with the launch's token): PROVIDERS, BOUND (id, provider, size), UPDATE
+  (each RemoteViews received, with its layout), ERROR (the host had to show its error view: the widget could not be
+  inflated), READY when every widget has had an update and none came for 4 s (TIMEOUT after 120 s), then BOUNDS and
+  VIEW lines: every visible text as Android shows it, with its size, colour, lines and whether it is cut short.
+- `tools/devicetest/widgets.sh <app apk> <host apk> <out>`: Dubai chosen (manual, `TestHookReceiver` CITY), time zone
+  Asia/Dubai, a fixed clock for each picture (`TIMES`, default 18 November 2026 07:00 UTC = 11:00 in Dubai); for each
+  pass (`PASSES`, default `en-US:en:western ar-SA:en:western ar-SA:ar:arabic`: phone in English; phone in Arabic with
+  Minhad in English and Western digits, the owner's phone; phone and Minhad in Arabic with Arabic-Indic digits), each
+  system theme (`THEMES`: `cmd uimode night`) and background (`BGS`), every page: `screencap` → `<name>.png`, the host's
+  lines → `<name>.txt`. `ON_BOUND` runs a command for each bound widget (`$ID $PROVIDER $SIZE $OPTIONS`), for widgets
+  whose own options are saved per id (the host then waits `HOLD` ms). `widget_crops.py` cuts each widget out
+  (`crops/<Provider>_<W>x<H>/`, and a labelled sheet per widget and size).
+- `.github/workflows/widgets.yml`: on a push to `widgets/**` that touches the harness, or by hand (inputs: API levels as
+  a JSON list, passes, themes, backgrounds, times, spec). One job builds the debug app and the host; one emulator job per
+  API level (pixel_6 profile, 1080×2400 at 420 dpi = 411 dp wide). Each publishes `widgets-<branch>-api<N>.zip` on the
+  pre-release `widgets-preview` (pictures, crops, the host's lines, `widgets_log.txt`: the host's, the app's process's
+  and the widget service's lines, and the whole logcat gzipped).
+
+**How to run it**: Actions → "Widgets on real Android (emulator)" → Run workflow on the branch (a push to `widgets/**`
+that changes the harness also runs it with the defaults). Then download
+`https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/download/widgets-preview/widgets-<branch with - for />-api<N>.zip`
+(curl works from a cloud session). A full run (3 passes × 2 themes × 2 backgrounds × 3 pages = 36 screens per Android
+version) takes about 12 minutes of emulator time after a 6-minute build; a page settles in 10–15 s.
+
+**To add a widget kind, size or option**: a new provider in the app's manifest is picked up by `spec=auto` with no
+change here. For chosen sizes: `spec`, e.g. `TodayWidget=270x110,320x160+style=ring;SkyWidget=380x200` (the
+`+key=value` pairs go into the options bundle and are printed under the widget). For options saved per widget id by the
+app itself, the workflow's `on_bound` (the script's `ON_BOUND`) runs a command for each bound widget with `$ID
+$PROVIDER $SIZE $OPTIONS` set, e.g. `adb shell am broadcast -a <a debug action> --ei id $ID ... -n
+com.noor.smartwatch/com.noor.app.debug.TestHookReceiver`; the host waits 15 s after binding before the page counts as
+ready, and the app must refresh that widget when its options change. The host does not open a widget's configuration
+activity (it logs a NOTE when one is declared).
+
+**First results (18 November 2026, Android 14, 15 and 16 emulators; nothing here was seen on a phone)**: every widget
+bound, updated through the app's own path and drawn without an error view, in all 36 screens per version. Phone in
+Arabic with Minhad in English: the countdown, times and dates in Western digits, the prayer names in English; Minhad in
+Arabic: Arabic names and Arabic-Indic digits throughout. What the pictures show that the Robolectric renders did not:
+at the providers' smallest resize sizes the content does not fit (NextPrayer 110×40 dp: the time cut to "…" and the
+countdown hidden; Today 180×110 dp: three of six prayers, cut to "…", the next rows cut off; Sky 180×90 dp: the
+prayer's name cut to "…"; Today 270×110 dp shows three prayers); the sky picture's rounded corners are a little smaller
+than the background's, so a thin blue or sand rim shows at some corners. The Android 16 image (API 36) ran reliably.
+
+**Limits**: an emulator's launcher is not Samsung's One UI: the host reproduces what Android itself does (binding,
+options, restricted inflation, the system's digits and fonts), not One UI's own cell sizes, padding, corner rounding or
+dimming of the wallpaper in dark mode. The automatic sizes take a launcher cell as 90×110 dp, which is only roughly a
+phone's. The pictures are the system's drawing with a software GPU (faithful, slow). The clock is set to the same moment
+before every page, so the countdowns agree to a second or two. `widgets_log.txt` has "Widget host dead" errors from the
+widget service: the previous page's host was stopped while the app was still updating its widgets; harmless.
