@@ -128,7 +128,7 @@
     <string name="acc_good">جيدة</string>
     <string name="acc_fair">متوسطة</string>
     <string name="acc_poor">ضعيفة</string>
-    <string name="acc_estimate">يقدّر الهاتف أن اتجاهه دقيق ضمن ±%1$s°.</string>
+    <string name="acc_estimate">يقدّر الهاتف أن اتجاهه دقيق ضمن &#x2066;±%1$s°&#x2069;.</string>
     <string name="acc_interference">معدن أو مغناطيس قريب يشوّش على البوصلة.</string>
     <string name="acc_needs_calibration">البوصلة تحتاج إلى معايرة: اضغط لمعرفة الطريقة.</string>
     <string name="acc_status_only">بحسب حالة المستشعر التي يبلّغ عنها الهاتف. اضغط لنصائح المعايرة.</string>
@@ -159,7 +159,7 @@
     <string name="step_app_guide">فتح دليل التثبيت</string>
     <string name="step_sync_title">إعدادات الصلاة على الساعة</string>
     <string name="step_after_install">متاح بعد تثبيت منهاد على الساعة.</string>
-    <string name="step_sync_done">استلمتها الساعة الساعة %1$s. تحسب المواقيت بنفسها من الآن.</string>
+    <string name="step_sync_done">استلمتها ساعتك عند %1$s. تحسب المواقيت بنفسها من الآن.</string>
     <string name="step_sync_sent">أُرسلت الساعة %1$s. تستلمها الساعة فور اتصالها.</string>
     <string name="step_face_title">واجهة منهاد</string>
     <string name="step_face_needs6">تتطلب Wear OS 6. تعمل هذه الساعة بـ Wear OS %1$s؛ البطاقة والإضافة تعملان بدونه.</string>
@@ -426,7 +426,7 @@
     <string name="adhan_random_detail">أذان مختلف من مفضلتك (%1$s) في كل مرة؛ لا يتكرر أحدها حتى تُسمع كلها.</string>
     <string name="adhan_random_needs">اختر أذانين على الأقل في المفضلة (♡) من مكتبة الأذان.</string>
     <string name="adhan_screen_stop">إيقاف</string>
-    <string name="adhan_screen_close">متابعة الأذان</string>
+    <string name="adhan_screen_close">متابعة التشغيل</string>
     <string name="since_prayer">الوقت منذ دخول الصلاة</string>
     <string name="since_sunrise">الوقت منذ الشروق</string>
     <!-- 0.9.7: choosing a location (search, country → city → area, coordinates, satellite map) -->

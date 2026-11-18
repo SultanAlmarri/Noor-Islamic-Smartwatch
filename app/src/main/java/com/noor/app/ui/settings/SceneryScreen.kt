@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -157,9 +158,11 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
             Scenery.SEA to Biome.OCEAN, Scenery.SAVANNA to Biome.MEADOW, Scenery.CANYON to Biome.CANYON,
         )
         choices.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+            // (0.21) The two cards of a row are one height, also when a name takes two lines ("Pacific Northwest" with
+            // large text, its Arabic name): they were uneven.
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(bottom = 12.dp)) {
                 row.forEach { (sc, b) ->
-                    Box(Modifier.weight(1f)) {
+                    Box(Modifier.weight(1f).fillMaxHeight()) {
                         SceneryCard(sceneryImage(b, level), stringResource(sceneryName(b)), null, s.scenery != Scenery.AUTO && chosen == b, wide = false) { vm.setScenery(sc) }
                     }
                 }
@@ -210,8 +213,12 @@ private fun GraphicsPicker(choice: SkyGraphics, level: SkyLevel, autoLevel: SkyL
                     .clickable(onClick = com.noor.app.ui.components.withTick { onChoose(g) }),
                 contentAlignment = Alignment.Center,
             ) {
+                // (0.21) The four names keep to one line in a quarter of the width: with large text "Medium" was cut to
+                // "Mediu". Their size follows the phone's text size up to a fifth larger, no further.
+                val grow = com.noor.app.ui.components.limitedGrowth(1.2f)
+                val label = MaterialTheme.typography.labelLarge
                 Text(stringResource(if (g == SkyGraphics.AUTO) R.string.sky_graphics_auto_short else graphicsName(g)),
-                    style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1,
+                    style = label.copy(fontSize = label.fontSize * grow), color = fg, maxLines = 1, softWrap = false,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp))
             }
         }
@@ -230,7 +237,7 @@ private fun GraphicsPicker(choice: SkyGraphics, level: SkyLevel, autoLevel: SkyL
 private fun SceneryCard(image: Int, title: String, subtitle: String?, selected: Boolean, wide: Boolean, onClick: () -> Unit) {
     val c = NoorTheme.colors
     val shape = RoundedCornerShape(18.dp)
-    Column(Modifier.fillMaxWidth().clip(shape)
+    Column(Modifier.fillMaxWidth().then(if (wide) Modifier else Modifier.fillMaxHeight()).clip(shape)
         .border(if (selected) 2.dp else 0.75.dp, if (selected) c.gold else c.glassEdge.copy(alpha = c.glassEdge.alpha * 0.6f), shape)
         .background(c.glass)
         .semantics { role = Role.RadioButton; this.selected = selected }

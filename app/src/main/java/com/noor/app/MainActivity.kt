@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -335,9 +336,7 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
     // 0.15: the tab bar floats over the page (a capsule of glass, as on iOS 26), and the pages run on under it: their
     // last line can still be scrolled clear of it.
     CompositionLocalProvider(LocalTabReselect provides reselect.intValue) {
-    Box(Modifier.fillMaxSize()) {
-        val bars = WindowInsets.systemBars.asPaddingValues()
-        val content = PaddingValues(top = bars.calculateTopPadding(), bottom = bars.calculateBottomPadding() + if (topLevel) TabBarSpace else 0.dp)
+    AppFrame(topLevel, tabBar = { NoorTabBar(inTab, ::openTab) }) { content ->
         NavHost(
             navController = nav, startDestination = start,
             enterTransition = tabEnter, exitTransition = tabExit, popEnterTransition = popEnter, popExitTransition = popExit,
@@ -407,12 +406,28 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?)
                 )
             }
         }
+    }
+    }
+}
+
+/**
+ * The frame of every page: the page, and over its foot the tester's banner (testing only) and, on a tab's pages, the
+ * floating tab bar. The page's bottom padding holds both, so its last line can always be scrolled clear of them, and
+ * the home screen fits its day above them (0.21: the banner was laid over the page with no room kept for it, and on
+ * the owner's phone it covered Isha's row and its "Now").
+ */
+@Composable
+internal fun AppFrame(topLevel: Boolean, tabBar: @Composable () -> Unit, page: @Composable (PaddingValues) -> Unit) {
+    Box(Modifier.fillMaxSize()) {
+        val bars = WindowInsets.systemBars.asPaddingValues()
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        var banner by remember { mutableStateOf(0.dp) }
+        page(PaddingValues(top = bars.calculateTopPadding(), bottom = bars.calculateBottomPadding() + (if (topLevel) TabBarSpace else 0.dp) + banner))
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
             // (Testing only, 0.14: says so on every page while the tester's options change what the sky shows.)
-            com.noor.app.testing.TesterBanner()
-            if (topLevel) NoorTabBar(inTab, ::openTab) else Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBars))
+            Box(Modifier.fillMaxWidth().onSizeChanged { banner = with(density) { it.height.toDp() } }) { com.noor.app.testing.TesterBanner() }
+            if (topLevel) tabBar() else Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBars))
         }
-    }
     }
 }
 

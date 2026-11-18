@@ -54,6 +54,9 @@ fun TestingScreen(
     onOpenLocation: () -> Unit,
 ) {
     val t = Tester
+    // (0.21) The page's text in the theme's own colour: with none given, the titles and the switches' names were black,
+    // all but invisible on the dark theme's night sky.
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides com.noor.app.ui.theme.NoorTheme.colors.textPrimary) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(contentPadding).padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -70,7 +73,9 @@ fun TestingScreen(
 
         Card {
             SwitchRow("Use the options below", t.on) { if (it) t.on = true else t.reset() }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // (0.21: the buttons wrap onto a second line when they do not fit side by side; "Back to real" was squeezed
+            // into a column of single words on a 360 dp phone, and pushed off the card with large text.)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { t.on = true; onShowHome() }) { Text("Show the home screen") }
                 OutlinedButton(onClick = { t.reset() }) { Text("Back to real") }
             }
@@ -78,7 +83,7 @@ fun TestingScreen(
 
         Card {
             Title("Demo", "Every scenery in turn, each through a whole day in a season and a weather of its own: about nine minutes. It stops by itself.")
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { t.startDemo(scenery) { setScenery(it) }; onShowHome() }) { Text(if (t.demoLabel == null) "Start the demo" else "Start again") }
                 if (t.demoLabel != null) OutlinedButton(onClick = { t.stopDemo() }) { Text("Stop") }
             }
@@ -127,6 +132,7 @@ fun TestingScreen(
         }
         Spacer(Modifier.height(24.dp))
     }
+    }
 }
 
 /**
@@ -143,9 +149,15 @@ fun TesterBanner() {
         t.weather?.let { add(Tester.WEATHER_NAMES[it].lowercase()) }
         t.fog?.let { if (it > 0f) add("fog") }
     }.joinToString(", ").ifEmpty { "on" }
+    // (0.21) What is shown on a line of its own, wrapped if it must be, and what a touch does under it: on one line
+    // with no ellipsis the demo's label ran off the screen. The frame keeps room for it (AppFrame).
     Surface(color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth().clickable { t.reset() }) {
-        Text("Testing: $what  ·  tap for the real sky", Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onTertiaryContainer, maxLines = 1)
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+            Text("Testing: $what", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onTertiaryContainer,
+                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text("Tap here for the real sky", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f), maxLines = 1)
+        }
     }
 }
 

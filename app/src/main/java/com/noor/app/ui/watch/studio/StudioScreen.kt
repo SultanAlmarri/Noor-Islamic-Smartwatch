@@ -222,7 +222,9 @@ private fun ModeSwitch(ambient: Boolean, onChange: (Boolean) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (on) { Icon(Icons.Rounded.DarkMode, null, tint = if (sel) c.onGold else c.textSecondary, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)) }
-                Text(label, style = MaterialTheme.typography.labelLarge, color = if (sel) c.onGold else c.textSecondary)
+                // (0.21: on one line, up to 15% larger with the phone's text size: larger, "Always-on" broke in two.)
+                val grow = com.noor.app.ui.components.limitedGrowth()
+                Text(label, style = MaterialTheme.typography.labelLarge.let { it.copy(fontSize = it.fontSize * grow) }, color = if (sel) c.onGold else c.textSecondary, maxLines = 1, softWrap = false)
             }
         }
     }

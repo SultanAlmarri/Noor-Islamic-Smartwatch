@@ -58,7 +58,9 @@ fun HeroCard(
     Column(
         modifier.fillMaxWidth().clip(shape).background(c.glassRaised)
             .drawBehind {
-                drawRect(Brush.radialGradient(listOf(glow, Color.Transparent), center = Offset(size.width * 0.12f, 0f), radius = max(size.width, size.height) * 0.85f))
+                // (0.21) Lit from the medallion's corner: the right one in Arabic (it was the left in both languages).
+                val corner = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) 0.88f else 0.12f
+                drawRect(Brush.radialGradient(listOf(glow, Color.Transparent), center = Offset(size.width * corner, 0f), radius = max(size.width, size.height) * 0.85f))
             }
             .glassEdge(shape, c.glassEdge, c.glassEdgeLow)
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = withTick(onClick)) else Modifier)
@@ -69,7 +71,8 @@ fun HeroCard(
             Medallion(icon)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                if (overline != null) Text(overline.uppercase(), color = c.goldText, maxLines = 1,
+                // (0.21: two lines at most; on one, large text cut "PRAYER TIMES ARE FOR" to "PRAYER TIMES".)
+                if (overline != null) Text(overline.uppercase(), color = c.goldText, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, letterSpacing = 1.0.sp, fontWeight = FontWeight.SemiBold))
                 Text(title, color = c.textPrimary,
                     style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp))

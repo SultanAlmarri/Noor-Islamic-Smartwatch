@@ -180,13 +180,18 @@ fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpe
  * How the home screen shares its height (0.9.2): the day's six times always fit above the tab bar without scrolling
  * (at the default text size), and the sky takes whatever height is left, within limits. Tests render it on small,
  * common and large phones and fail if any prayer is cut off.
+ *
+ * (0.21) With larger text the rows grow with it ([textScale], the phone's font size): the sky gives them the room, so
+ * the day still fits above the tab bar (and the tester's banner) where it can; until then Isha went under them.
  */
 internal class HomeLayout(val heroHeight: Dp, val rowHeight: Dp, val shuruqHeight: Dp, val compact: Boolean) {
     companion object {
         private val GAP = 10.dp
-        fun of(viewport: Dp, top: Dp, bottom: Dp): HomeLayout {
+        fun of(viewport: Dp, top: Dp, bottom: Dp, textScale: Float = 1f): HomeLayout {
             if (viewport == Dp.Infinity || viewport <= 0.dp) return HomeLayout(top + 330.dp, 54.dp, 44.dp, false)
-            fun hero(date: Dp, row: Dp, sh: Dp) = viewport - (date + row * 5 + sh + GAP + bottom)
+            // (Rows grow less than their text: only the lines of text grow, not the discs or the spacing.)
+            val k = 1f + 0.4f * (textScale.coerceIn(1f, 2f) - 1f)
+            fun hero(date: Dp, row: Dp, sh: Dp) = viewport - ((date + row * 5 + sh) * k + GAP + bottom)
             val regular = hero(58.dp, 54.dp, 44.dp)
             if (regular >= top + 252.dp) return HomeLayout(regular.coerceAtMost(top + 430.dp), 54.dp, 44.dp, false)
             val compact = hero(56.dp, 48.dp, 38.dp)
@@ -264,7 +269,7 @@ fun TodayContent(
     }
 
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-    val home = HomeLayout.of(maxHeight, top, contentPadding.calculateBottomPadding())
+    val home = HomeLayout.of(maxHeight, top, contentPadding.calculateBottomPadding(), LocalDensity.current.fontScale)
     // The real sky (0.10): the whole screen is the window. The scene is drawn behind everything by its own renderer;
     // the day's times lie on frosted glass over its lower part. Where it cannot run, the 0.9 sky fills the header.
     val skyContext = androidx.compose.ui.platform.LocalContext.current
@@ -629,7 +634,9 @@ private fun SkyHeader(
         ) {
             Icon(Icons.Rounded.SwipeRight, null, tint = Sky.OnSky, modifier = Modifier.size(16.dp).graphicsLayer { if (rtl) scaleX = -1f })
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.sky_scrub_hint_short), style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, letterSpacing = 0.sp), color = Sky.OnSky, maxLines = 1)
+            // (0.21) Up to 15% larger with the phone's text size, no further: at 1.5 the hint lost its last word ("Sun").
+            val grow = com.noor.app.ui.components.limitedGrowth()
+            Text(stringResource(R.string.sky_scrub_hint_short), style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp * grow, letterSpacing = 0.sp), color = Sky.OnSky, maxLines = 1)
         }
     }
 }
@@ -862,7 +869,8 @@ private fun DateBar(
             // (0.15: and the day's name when it is one of the year's great days: "1 Shawwal 1448 AH · Eid al-Fitr".)
             val occasion = occasionOf(hijri)
             Text(f.hijri(hijri) + (occasion?.let { " · " + if (f.arabic) it.ar else it.en } ?: ""), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, letterSpacing = 0.2.sp),
-                color = c.goldText, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                // (0.21: two lines if it must, as the date above: with large text one line cut the year, "144...".)
+                color = c.goldText, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         }
         DayArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.next_day), canNext, onNext)
     }
