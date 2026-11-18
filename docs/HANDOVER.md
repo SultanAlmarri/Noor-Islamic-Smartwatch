@@ -1803,15 +1803,10 @@ the switch, the permission or the version changes; Settings says what happened (
 turned off for Minhad, with a way to Android's promotion settings). So the next report from the owner says whether
 Android or the phone is in the way. Not seen on a phone.
 
-**The Sun's path: a dial in the sky** (helper on `fix/sunpath`; DESIGN.md). One arch, the same over every scenery and
-level, standing on a baseline above the land (`SkyGeometry.baseY`: 0.14 of the width over the true horizon, at most
-0.68 of the way to the arch's top; `SceneLayout.dial`, the home screen only, the widgets keep the 0.20 path); Shuruq
-and Maghrib on the baseline, Fajr and Isha in a short dip that never reaches the true horizon. One Sun: the marker on
-the dial; the renderers' glow slides to the true place on the horizon as the Sun goes under (`SkyGeometry.onDial`, in
-`RealSkyFrame.of` and `SkyLook.at`; the Medium shader's disc fades out). Where a tall tree or peak still stands in front
-(High's Pacific Northwest and Arctic, and on short headers), the Sun is drawn in front of it (`frontSun`, replacing the
-ring). Honest limits: on short headers the arch is a shallow bow; over flat horizons the Sun rises on the baseline, a
-little above the sea or sand; High's tallest firs and peaks still cross the dial's low ends. `SkyDialTest`.
+**The Sun's path.** A helper made it a "dial" (`fix/sunpath`: one arch on a baseline over the land, the Sun drawn in
+front of everything). The owner, from its description: "i really dont like how you did the new sunpath. it does not make
+sense", then "i want the most accurate and exactly like real life sun path". The dial was reverted before release
+(it made the Sun rise and set in mid-air); 0.22.1 keeps 0.20's path, and the real Sun's path is the next work (section 35).
 
 **The compass.** The poor-accuracy hint is a glass card with an animated figure 8: a phone held screen up, its top away,
 tilting in 3D as it travels the figure (the owner's reference video; the first versions leaned in the picture's plane,
