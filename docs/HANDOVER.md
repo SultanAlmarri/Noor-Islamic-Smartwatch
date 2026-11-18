@@ -1745,6 +1745,38 @@ Dubai with the real sky's clouds, `tools/skybench`), criticised, and sent back u
   on a device).
 - The lead: tapping the Adhan tile on a prayer with the user's own recording put the Makkah voice in its place;
   Settings said "Automatic: High" where the real sky cannot run and the home screen draws Medium.
+**Second bug hunt** (the owner: "you still have not found the bug i was talking about ... Find all the bugs in the app
+and fix them"; four helpers, one per area, each bug proven by a test that fails on the old code where possible):
+- Widgets named the old prayer next to the next one's countdown for up to 15 minutes after each change (the minute's
+  update came before the full one: `Widgets.shown`); automatic location refreshed only on the first screen (now each
+  time the app comes back); "Israel" written in place lists (now Palestine, rule 9).
+- A prayer's notification stayed 90 minutes (now until the next prayer); **the same prayer never alerts twice** (the
+  handled (prayer, date) pairs are kept: clock put back, early firing); **an alarm due but not yet delivered is never
+  lost** (and a prayer missed while the phone was off gets its Adhan or the late note at the boot); **Direct Boot**:
+  after a restart before the first unlock (Samsung phones restart themselves at night) the prayer alarms run from a
+  copy of the times in device-protected storage (`AlertStore`; only `SystemEventsReceiver`, `AlertReceiver` and
+  `AdhanService` are direct-boot aware; `NoorApplication.container` is made after the unlock; a user's own recording
+  falls back to the default Adhan then). Not yet confirmed by a real locked restart.
+- Watch: timetables compared by value (any phone setting re-sent everything to the watch); the tasbih complication's
+  old count came back; the Studio face's Jumu'ah; an honest "Updated ... ago"; a watch set up alone takes newer
+  official times at once; two-digit hours on the tile with 24 h.
+- Home: after a while away the Sun ran to the moment the app had left, then jumped.
+- The tester's demo keeps the user's own scenery on disk (Start again lost it; an app closed mid-demo never gave it back).
+
+**The owner's two bugs** (screenshots, 18 November 2026): the notification cut the prayer's time ("Dhuhr · 12:0…": the
+title now shrinks to fit, the collapsed line names the place by its own name; `StatusNotificationTest` at the Galaxy's
+220dp); the readout while the Sun is dragged had its last line squeezed into 20 px, a row of dots (now three lines in
+the countdown's place; `HomeFrameDesignTest.assertWhole`). Both tests fail on the old code.
+
+**The countdown in the status bar** (the owner, with a screenshot of Samsung Clock's timer chip): Android 16's Live
+Updates. `StatusNotification.buildLive`: Android's own template (custom views are never promoted), its chronometer
+counting to the prayer (or from it in the "since" period), the promotion requested both ways Android 16 reads
+(`android.requestPromotedOngoing`, `FLAG_PROMOTED_ONGOING`), `POST_PROMOTED_NOTIFICATIONS` in the manifest, compileSdk 36.
+Settings: the notification (now on by default; its switch shows on only with the notification permission) and
+"Countdown in the status bar" (on by default; "Needs Android 16" below it; a note and a way to Android's settings when
+the user turned promotion off for Minhad). Below Android 16, Minhad's own notification as before. **Not seen on a phone**:
+Robolectric stops at Android 15.
+
 - Found, not fixed: the bundled IACAD timetable ends on 30 November 2026 (from 1 December Dubai's times are
   calculated, about 90 % exact, the rest within a minute, until IACAD's next tables are added); an alarm whose time
   passed while the phone was off is skipped without a "missed" note; a few small file reads on the main thread
