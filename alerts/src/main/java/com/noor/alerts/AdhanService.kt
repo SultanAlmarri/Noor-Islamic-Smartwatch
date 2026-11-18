@@ -55,6 +55,8 @@ internal data class PlayRequest(
     val snoozeLabel: String? = null,
     /** A tried alarm (not saved, or not due): the alarm itself, so its Snooze rings the same again. */
     val alarmText: String? = null,
+    /** 0.22: when the next prayer begins (0 = unknown): the prayer's notification left after the sound goes then. */
+    val nextPrayerAtMs: Long = 0L,
 ) {
     fun toIntent(context: Context): Intent = Intent(context, AdhanService::class.java).setAction(AdhanService.ACTION_PLAY)
         .putExtra("id", notificationId).putExtra("title", title).putExtra("body", body).putExtra("at", atMs)
@@ -66,7 +68,7 @@ internal data class PlayRequest(
         .putExtra("vibrate", vibrate).putExtra("keep", keepNotification)
         .putExtra("log", logId)
         .putExtra("fbAsset", (fallback as? SoundSource.Asset)?.path).putExtra("fbFile", (fallback as? SoundSource.LocalFile)?.file?.absolutePath)
-        .putExtra("fbNote", fallbackNote).putExtra("failNote", failedNote)
+        .putExtra("fbNote", fallbackNote).putExtra("failNote", failedNote).putExtra("nextAt", nextPrayerAtMs)
 
     companion object {
         fun from(i: Intent): PlayRequest? {
@@ -83,7 +85,7 @@ internal data class PlayRequest(
                 fallbackNote = i.getStringExtra("fbNote"), failedNote = i.getStringExtra("failNote"),
                 alarmId = i.getIntExtra("alarm", 0), snoozeMinutes = i.getIntExtra("snooze", 0), loop = i.getBooleanExtra("loop", false),
                 alarmDate = i.getStringExtra("alarmDate"), snoozeLabel = i.getStringExtra("snoozeLabel"),
-                alarmText = i.getStringExtra("alarmText"))
+                alarmText = i.getStringExtra("alarmText"), nextPrayerAtMs = i.getLongExtra("nextAt", 0L))
         }
     }
 }
@@ -116,7 +118,8 @@ class AdhanService : Service() {
                 current?.let { old ->
                     finishNotification(old, null)
                     // (0.17: an alarm cut short by the Adhan, or by another alarm, stays in the shade, so it is not lost.)
-                    if (old.alarmId != 0) AlertNotifications.post(this, old.notificationId, AlertNotifications.CHANNEL_SILENT, old.title, old.body, Instant.ofEpochMilli(old.atMs))
+                    if (old.alarmId != 0) AlertNotifications.post(this, old.notificationId, AlertNotifications.CHANNEL_SILENT, old.title, old.body, Instant.ofEpochMilli(old.atMs),
+                        timeoutMs = AlertNotifications.prayerNoteStays(old.nextPrayerAtMs))
                 }
                 // (An alarm's vibration repeats until stopped: it never runs on into what replaces it.)
                 stopVibration(this)
@@ -168,7 +171,7 @@ class AdhanService : Service() {
                 detail = listOfNotNull(it.detail, result.report).joinToString("; ").ifEmpty { null }) }
             // (0.17: an alarm nobody stopped, silenced after its ten minutes, stays in the shade, as a missed alarm does.)
             if (req.alarmId != 0 && !result.stoppedByUser) AlertNotifications.post(this, req.notificationId, AlertNotifications.CHANNEL_SILENT, req.title, req.body,
-                Instant.ofEpochMilli(req.atMs))
+                Instant.ofEpochMilli(req.atMs), timeoutMs = AlertNotifications.prayerNoteStays(req.nextPrayerAtMs))
             done(req, note = if (usingFallback) req.fallbackNote else null)
             return
         }
@@ -193,9 +196,9 @@ class AdhanService : Service() {
         // (An alarm never falls back to the backup Adhan: an Adhan before or after its time would mislead. A plain
         // notification, with the phone's notification sound, says the alarm's time instead.)
         if (req.alarmId != 0) AlertNotifications.post(this, req.notificationId, AlertNotifications.CHANNEL_NOTIFY, req.title, req.body,
-            Instant.ofEpochMilli(req.atMs), req.failedNote)
+            Instant.ofEpochMilli(req.atMs), req.failedNote, AlertNotifications.prayerNoteStays(req.nextPrayerAtMs))
         else AlertNotifications.postBackup(this, req.notificationId, req.title, req.body, Instant.ofEpochMilli(req.atMs),
-            listOfNotNull(req.detail, req.failedNote).joinToString("\n").ifEmpty { null })
+            listOfNotNull(req.detail, req.failedNote).joinToString("\n").ifEmpty { null }, AlertNotifications.prayerNoteStays(req.nextPrayerAtMs))
         shutdown()
     }
 
@@ -219,7 +222,8 @@ class AdhanService : Service() {
 
     private fun finishNotification(req: PlayRequest, note: String?) {
         if (req.keepNotification) AlertNotifications.post(this, req.notificationId, AlertNotifications.CHANNEL_SILENT, req.title, req.body,
-            Instant.ofEpochMilli(req.atMs), listOfNotNull(req.detail, note).joinToString("\n").ifEmpty { null })
+            Instant.ofEpochMilli(req.atMs), listOfNotNull(req.detail, note).joinToString("\n").ifEmpty { null },
+            AlertNotifications.prayerNoteStays(req.nextPrayerAtMs))
     }
 
     private fun shutdown() {

@@ -166,19 +166,39 @@ object AlertNotifications {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
-    /** The prayer-time notification for notification-only and silent alerts, and after a sound has finished. */
-    internal fun post(context: Context, id: Int, channel: String, title: String, body: String, at: Instant, note: String? = null) {
+    /**
+     * The prayer-time notification for notification-only and silent alerts, and after a sound has finished. [timeoutMs]:
+     * how long it stays (a prayer's own: [prayerNoteStays], until the next prayer begins).
+     */
+    internal fun post(context: Context, id: Int, channel: String, title: String, body: String, at: Instant, note: String? = null,
+                      timeoutMs: Long = PRAYER_NOTE_MS) {
         ensureChannels(context)
         if (!canPost(context, channel)) return
         val n = base(context, channel, title, body, at)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(if (channel == CHANNEL_NOTIFY) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
-            .setTimeoutAfter(90 * 60_000L)
+            .setTimeoutAfter(timeoutMs)
             .apply { if (note != null) setStyle(NotificationCompat.BigTextStyle().bigText("$body\n$note")) }
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(id, n) }
     }
+
+    /** The longest a prayer's notification stays in the shade (an hour and a half). */
+    internal const val PRAYER_NOTE_MS = 90 * 60_000L
+
+    /** When the prayer after the one at [at] begins (sunrise after Fajr), or null if the times cannot say. */
+    internal fun nextPrayerAt(config: WatchConfig, at: Instant): Instant? =
+        runCatching { config.events(at, 1).firstOrNull { it.at.isAfter(at) }?.at }.getOrNull()
+
+    /**
+     * How long a prayer's notification stays when posted at [nowMs] (0.22): until the next prayer begins ([nextAtMs];
+     * 0 when unknown), at most [PRAYER_NOTE_MS], at least a minute. Until 0.21 it always stayed 90 minutes: in Dubai
+     * Maghrib's "Time for Maghrib" was still in the shade when Isha had come (about 80 minutes later), and Fajr's after
+     * sunrise, when Fajr's time had ended.
+     */
+    internal fun prayerNoteStays(nextAtMs: Long, nowMs: Long = System.currentTimeMillis()): Long =
+        (if (nextAtMs > 0) minOf(PRAYER_NOTE_MS, nextAtMs - nowMs) else PRAYER_NOTE_MS).coerceAtLeast(60_000L)
 
     internal fun idFor(p: Prayer) = ID_PRAYER_BASE + p.ordinal
 
@@ -227,14 +247,14 @@ object AlertNotifications {
     }
 
     /** The backup alert: Android plays the short Adhan of [CHANNEL_BACKUP] with it. Alarm category, so DND treats it as an alarm. */
-    internal fun postBackup(context: Context, id: Int, title: String, body: String, at: Instant, note: String?) {
+    internal fun postBackup(context: Context, id: Int, title: String, body: String, at: Instant, note: String?, timeoutMs: Long = PRAYER_NOTE_MS) {
         ensureChannels(context)
-        if (!canPost(context, CHANNEL_BACKUP)) { post(context, id, CHANNEL_NOTIFY, title, body, at, note); return }
+        if (!canPost(context, CHANNEL_BACKUP)) { post(context, id, CHANNEL_NOTIFY, title, body, at, note, timeoutMs); return }
         val n = base(context, CHANNEL_BACKUP, title, body, at)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .setTimeoutAfter(90 * 60_000L)
+            .setTimeoutAfter(timeoutMs)
             .apply { if (note != null) setStyle(NotificationCompat.BigTextStyle().bigText("$body\n$note")) }
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(id, n) }
@@ -242,7 +262,8 @@ object AlertNotifications {
 
     fun post(context: Context, config: WatchConfig, p: Prayer, date: LocalDate, at: Instant, channel: String, note: String? = null) {
         val text = AlertText(context, config)
-        post(context, idFor(p), channel, text.title(p, date), text.body(p, at), at, note)
+        post(context, idFor(p), channel, text.title(p, date), text.body(p, at), at, note,
+            prayerNoteStays(nextPrayerAt(config, at)?.toEpochMilli() ?: 0L))
     }
 
     /** A quiet note that a prayer time passed while the device could not alert (switched off or in deep sleep). */

@@ -58,6 +58,18 @@ class AlarmRingTest {
         assertEquals(AlertNotifications.NOTE_STAYS_MS, nm.allNotifications.single().timeoutAfter)
         app.getSystemService(NotificationManager::class.java).cancelAll()
 
+        // 0.22: so does the note left by a ringing alarm before a prayer that cannot ring (here Do Not Disturb blocks
+        // alarms); it stayed 90 minutes.
+        val real = app.getSystemService(NotificationManager::class.java)
+        real.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+        val ringing = before.copy(id = 3, sound = AlarmSound.PHONE_ALARM)
+        AlarmDispatcher.ring(app, dubai, AlertSettings(), PlannedAlarm(ringing, date, prayerAt, prayerAt.minus(Duration.ofMinutes(15))))
+        val quiet = nm.allNotifications.single()
+        assertEquals(AlertNotifications.CHANNEL_SILENT, quiet.channelId)
+        assertTrue("timeout ${quiet.timeoutAfter} ms", kotlin.math.abs(quiet.timeoutAfter - Duration.ofMinutes(15).toMillis()) < 5_000)
+        real.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+        real.cancelAll()
+
         // A note whose prayer has come already (rung late, within its ten minutes) still shows for a moment.
         assertEquals(60_000L, AlarmDispatcher.noteStays(PlannedAlarm(before, date, asr, asr.minusSeconds(900)), tried = false, nowMs = asr.toEpochMilli() + 30_000))
         // One being tried stays as long as any.
