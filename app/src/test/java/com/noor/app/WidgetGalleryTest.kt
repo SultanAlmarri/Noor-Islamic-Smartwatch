@@ -161,6 +161,9 @@ class WidgetGalleryTest {
         problems.forEach { println("  $it") }
         lowContrast.forEach { println("  contrast $it") }
         assertTrue("every widget fits:\n" + problems.joinToString("\n"), problems.isEmpty())
+        // Every text reads against what is drawn under it: 4.5:1 over plain backgrounds, 3:1 over the sky or the
+        // wallpaper (whose text also has a shadow), sampled from the rendered pixels.
+        assertTrue("every text reads:\n" + lowContrast.joinToString("\n"), lowContrast.isEmpty())
         // Each size gets the layout made for it; light backgrounds the shadow-free twin.
         val expected = mapOf(
             "today_340x84_en" to "widget_today_row", "today_300x64_en" to "widget_today_row", "today_340x180_en" to "widget_today",

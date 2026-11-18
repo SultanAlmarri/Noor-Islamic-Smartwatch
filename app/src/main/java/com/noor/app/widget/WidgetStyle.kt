@@ -38,7 +38,7 @@ internal class WidgetPalette(
 
         /** The accent over dark and over light backgrounds (each meets 4.5:1 on its background: WidgetPaletteTest). */
         fun accentOn(a: WidgetAccent, light: Boolean, context: Context?): Int = when (a) {
-            WidgetAccent.GOLD -> if (light) 0xFF765519.toInt() else 0xFFF6D696.toInt()
+            WidgetAccent.GOLD -> if (light) 0xFF6C4E14.toInt() else 0xFFF6D696.toInt()
             WidgetAccent.TEAL -> if (light) 0xFF0A5F58.toInt() else 0xFF84DCCC.toInt()
             WidgetAccent.ROSE -> if (light) 0xFF963152.toInt() else 0xFFF7AFBF.toInt()
             WidgetAccent.BLUE -> if (light) 0xFF2A57B0.toInt() else 0xFFA3C6FF.toInt()
@@ -91,7 +91,7 @@ internal object Fit {
     private const val MARGIN = 0.92f
 
     @Synchronized private fun paint(family: String, size: Float) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = faces.getOrPut(family) { Typeface.create(family, Typeface.NORMAL) }
+        typeface = faces.getOrPut(family) { if (family == BOLD) Typeface.create(REGULAR, Typeface.BOLD) else Typeface.create(family, Typeface.NORMAL) }
         textSize = size
     }
 
@@ -142,4 +142,6 @@ internal object Fit {
     const val MEDIUM = "sans-serif-medium"
     const val REGULAR = "sans-serif"
     const val LIGHT = "sans-serif-light"
+    /** The system's bold (an Arabic name, whose medium falls back to regular). */
+    const val BOLD = "sans-serif#bold"
 }

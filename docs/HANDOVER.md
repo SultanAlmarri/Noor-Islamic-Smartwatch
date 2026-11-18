@@ -1921,8 +1921,8 @@ Evidence (software renders and Robolectric, not a launcher): `WidgetGalleryTest`
 English and Arabic, over sky, glass, light and other options, after a prayer, with the phone in Arabic and the app in
 English, with Arabic-Indic digits and 24 hours, at font size 1.3, into `app/build/widgets` (and the picker's pictures,
 `tools/widget/previews.py`), and fails on any text cut short, wider than its view, squeezed, outside the widget,
-overlapping another, in the other digits, a countdown not left to right, or a layout not the one for its size; it lists
-texts under 4.5:1 (3:1 over pictures) against the pixels drawn under them. `WidgetOptionsTest`: options per id saved,
+overlapping another, in the other digits, a countdown not left to right, a layout not the one for its size, or a text under 4.5:1 (3:1 over the sky or the
+wallpaper) against the pixels drawn under it. `WidgetOptionsTest`: options per id saved,
 read, removed, moved; defaults; receivers declared; contrast of every palette; the ring's progress; the sign first in
 both digit sets; the next occasion and its days with the Hijri adjustment. `WidgetsTest` and `WidgetsChangeTest` (0.9.14,
 0.22) adapted: the seconds wheel read against the real clock at the widget's scale, the minute's partial update, the old

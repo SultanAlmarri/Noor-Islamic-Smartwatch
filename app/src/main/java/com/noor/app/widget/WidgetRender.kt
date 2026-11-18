@@ -406,7 +406,10 @@ internal object WidgetRender {
         val timeDp = minOf(timeWant, timeSize(listOf(t), timeWant, availDp * 0.45f, Fit.REGULAR))
         val tw = timeWidth(t, timeDp, Fit.REGULAR) + 8f
         val name = r.prayer
-        text(v, R.id.widget_prayer, name, Fit.size(listOf(name), Fit.MEDIUM, want, availDp - tw), prayerColor)
+        // The phone's Arabic face has no medium weight (sans-serif-medium falls back to its regular): bold, so an Arabic
+        // name stands as firmly as an English one.
+        val shown: CharSequence = if (r.f.arabic) SpannableString(name).apply { setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) } else name
+        text(v, R.id.widget_prayer, shown, Fit.size(listOf(name), if (r.f.arabic) Fit.BOLD else Fit.MEDIUM, want, availDp - tw), prayerColor)
         text(v, R.id.widget_time, t, timeDp, r.pal.secondary)
     }
 
@@ -452,8 +455,9 @@ internal object WidgetRender {
             // Under the prayer, as the height allows: the prayer after it, then the place.
             var room = inner - 17f * k * r.lineK
             val line = 11.5f * k * r.lineK + 2f
-            if (room >= line) { then(v, r, side, 11.5f * k); room -= line } else gone(v, R.id.widget_then)
-            if (r.o.place && room >= line) place(v, r, side, 11.5f * k, 9.5f, r.pal.secondary, hijri = false) else gone(v, R.id.widget_place)
+            // The place first (the same in both languages), then the prayer after it if there is still room.
+            if (r.o.place && room >= line) { place(v, r, side, 11.5f * k, 9.5f, r.pal.secondary, hijri = false); room -= line } else gone(v, R.id.widget_place)
+            if (room >= line) then(v, r, side, 11.5f * k) else gone(v, R.id.widget_then)
         } else {
             // The prayer and its time on one line, the countdown as large as the rest allows under it, the place when
             // there is room. Short widgets (a 2x1 on most phones) take less margin at the top and foot.
