@@ -91,6 +91,8 @@ class NoorApplication : Application(), AlertHost {
         }
         // The home sky's tables (a fraction of a second), built in the background before the first screen needs them.
         container.scope.launch(kotlinx.coroutines.Dispatchers.Default) { com.noor.app.ui.today.CloudAtlas.preload(resources); com.noor.app.ui.today.Atmosphere.warmUp() }
+        // (Testing only) A tester's demo the app was closed during gives the user's own scenery back.
+        container.scope.launch { runCatching { com.noor.app.testing.Tester.restoreAfterDemo(this@NoorApplication) { container.settings.setScenery(it) } } }
         container.scope.launch {
             val s = container.settings.current()
             LocationWorker.sync(this@NoorApplication, s.backgroundUpdates && container.location.hasBackgroundPermission())

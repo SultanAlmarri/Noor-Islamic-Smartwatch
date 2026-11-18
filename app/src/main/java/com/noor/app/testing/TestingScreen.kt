@@ -54,6 +54,7 @@ fun TestingScreen(
     onOpenLocation: () -> Unit,
 ) {
     val t = Tester
+    val context = androidx.compose.ui.platform.LocalContext.current
     // (0.21) The page's text in the theme's own colour: with none given, the titles and the switches' names were black,
     // all but invisible on the dark theme's night sky.
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides com.noor.app.ui.theme.NoorTheme.colors.textPrimary) {
@@ -84,7 +85,7 @@ fun TestingScreen(
         Card {
             Title("Demo", "Every scenery in turn, each through a whole day in a season and a weather of its own: about nine minutes. It stops by itself.")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { t.startDemo(scenery) { setScenery(it) }; onShowHome() }) { Text(if (t.demoLabel == null) "Start the demo" else "Start again") }
+                Button(onClick = { t.startDemo(context, scenery) { setScenery(it) }; onShowHome() }) { Text(if (t.demoLabel == null) "Start the demo" else "Start again") }
                 if (t.demoLabel != null) OutlinedButton(onClick = { t.stopDemo() }) { Text("Stop") }
             }
             t.demoLabel?.let { Text(it, style = MaterialTheme.typography.bodySmall) }

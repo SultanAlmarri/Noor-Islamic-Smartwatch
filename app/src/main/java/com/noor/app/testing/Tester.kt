@@ -74,6 +74,8 @@ object Tester {
     fun launch(block: suspend () -> Unit) { scope.launch { block() } }
     private var clock: Job? = null
     private var demo: Job? = null
+    /** Counts the demos started: only the latest gives the scenery back when it ends. */
+    private var demoRun = 0
 
     /** Starts or stops the day running by itself. */
     fun play(run: Boolean) {
@@ -96,7 +98,14 @@ object Tester {
      * own, so that everything the sky can do passes by in a few minutes. [setScenery] changes the scenery in Settings;
      * [restore] is the scenery to go back to when the demo ends or is stopped.
      */
-    fun startDemo(restore: Scenery, setScenery: suspend (Scenery) -> Unit) {
+    fun startDemo(context: android.content.Context, restore: Scenery, setScenery: suspend (Scenery) -> Unit) {
+        // (0.22) The user's own scenery is kept on disk while the demo runs: until 0.22 it lived only in the demo's
+        // coroutine, so "Start again" during a demo took the demo's scenery of the moment for the user's, and an app
+        // closed by Android during a demo never put it back. [restoreAfterDemo] puts it back at the next start.
+        val prefs = context.applicationContext.getSharedPreferences(PREFS, 0)
+        val own = prefs.getString(K_RESTORE, null)?.let { n -> Scenery.entries.firstOrNull { it.name == n } } ?: restore
+        prefs.edit().putString(K_RESTORE, own.name).apply()
+        val mine = ++demoRun
         stopDemo()
         on = true
         demo = scope.launch {
@@ -127,11 +136,29 @@ object Tester {
                     }
                 }
             } finally {
-                demoLabel = null; time = null; year = null; weather = null; weatherDay = 0
-                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { setScenery(restore) }
+                // (Only the latest demo ends things: one stopped by "Start again" leaves them to the new one.)
+                if (demoRun == mine) {
+                    demoLabel = null; time = null; year = null; weather = null; weatherDay = 0
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                        setScenery(own)
+                        prefs.edit().remove(K_RESTORE).apply()
+                    }
+                }
             }
         }
     }
 
     fun stopDemo() { demo?.cancel(); demo = null }
+
+    private const val PREFS = "noor_tester"
+    private const val K_RESTORE = "demo_restore_scenery"
+
+    /** At the app's start: a demo the app was closed during gives the user's own scenery back ([startDemo]). */
+    suspend fun restoreAfterDemo(context: android.content.Context, setScenery: suspend (Scenery) -> Unit) {
+        val prefs = context.applicationContext.getSharedPreferences(PREFS, 0)
+        val own = prefs.getString(K_RESTORE, null)?.let { n -> Scenery.entries.firstOrNull { it.name == n } } ?: return
+        if (demo != null) return
+        setScenery(own)
+        prefs.edit().remove(K_RESTORE).apply()
+    }
 }
