@@ -13,8 +13,8 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 33 // Wear OS 4+ (Galaxy Watch 4 and later are on Wear OS 5 or 6)
         targetSdk = 35
-        versionCode = 27
-        versionName = "0.22.1"
+        versionCode = 28
+        versionName = "0.22.2"
     }
 
     signingConfigs {
