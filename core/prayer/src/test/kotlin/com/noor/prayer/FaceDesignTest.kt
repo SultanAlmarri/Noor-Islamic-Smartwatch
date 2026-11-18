@@ -139,6 +139,23 @@ class FaceDesignTest {
         assertEquals("منهاد", follow.appName)
     }
 
+    /** 0.22: on a Friday the face says Jumu'ah, as the watch's app, tile and complications and the phone do. */
+    @Test fun onFridayDhuhrIsJumuah() {
+        val friday = ZonedDateTime.of(2026, 11, 20, 10, 0, 0, 0, ZoneId.of("Asia/Dubai")).toInstant()
+        val en = FaceData.build(FaceTemplates.HORIZON, dubai, friday)
+        assertEquals(Prayer.DHUHR, en.next!!.prayer)
+        assertEquals("Jumu’ah", en.next!!.name)
+        assertEquals("Jumu’ah", en.prayers.first { it.prayer == Prayer.DHUHR }.name)
+        val ar = FaceData.build(FaceTemplates.HORIZON.copy(language = FaceLanguage.AR), dubai, friday)
+        assertEquals("الجمعة", ar.next!!.name)
+        // After it, during Asr's wait, the interval is still named from it.
+        val afternoon = FaceData.build(FaceTemplates.HORIZON, dubai, friday.plusSeconds(4 * 3600))
+        assertEquals("Jumu’ah", afternoon.next!!.currentName)
+        // Any other day it is Dhuhr.
+        val thursday = FaceData.build(FaceTemplates.HORIZON, dubai, friday.minusSeconds(86_400))
+        assertEquals("Dhuhr", thursday.next!!.name)
+    }
+
     @Test fun withoutAPlaceTheFaceStillTellsTheTime() {
         val d = FaceData.build(FaceTemplates.HORIZON, null, now, ZoneId.of("Asia/Dubai"), device24h = true)
         assertNull(d.next); assertTrue(d.prayers.isEmpty()); assertNull(d.qibla)
