@@ -75,7 +75,7 @@ object StatusNotification {
     ) {
         /** The countdown as the home screen writes it at [now] ("−1:10:34", "+04:12"). */
         fun countdown(now: Instant, f: Formatter): String =
-            (if (elapsed) "+" else MINUS) + f.timer(if (elapsed) Duration.between(countAt, now) else Duration.between(now, countAt))
+            (if (elapsed) "+" else MINUS) + f.timer(if (elapsed) Duration.between(countAt, now) else com.noor.prayer.Countdowns.timeLeft(now, countAt))
     }
 
     /** A true minus sign, as on the home screen. */
@@ -468,7 +468,9 @@ object StatusNotification {
         }
         v.setViewVisibility(R.id.status_countdown_text, android.view.View.GONE)
         v.setViewVisibility(R.id.status_countdown, android.view.View.VISIBLE)
-        val base = SystemClock.elapsedRealtime() + Duration.between(now, c.countAt).toMillis()
+        // (0.24) Before the prayer, Android's Chronometer drops the fraction of a second left (8:50:07.4 reads 8:50:07); a
+        // base 999 ms later rounds it up, as Minhad counts (Countdowns.timeLeft), so it is the prayer's time less the clock's.
+        val base = SystemClock.elapsedRealtime() + Duration.between(now, c.countAt).toMillis() + (if (c.elapsed) 0L else 999L)
         v.setChronometer(R.id.status_countdown, base, if (c.elapsed) "+%s" else null, true)
         v.setChronometerCountDown(R.id.status_countdown, false)
     }
@@ -637,9 +639,11 @@ internal object StatusTicker {
     internal fun nextChange(c: StatusNotification.Content, now: Long, seconds: Boolean): Long {
         val unit = if (seconds) 1000L else 60_000L
         val ms = now - c.countAt.toEpochMilli()   // negative before the prayer
-        // Before a prayer the countdown drops as the time left falls below a whole unit; after it, it rises as the time
-        // since reaches one. Either way the change is where (now − countAt) is a whole number of units.
-        val wait = unit - Math.floorMod(ms, unit)
+        // The seconds change where (now − countAt) is a whole second, before and after the prayer. The minutes, before
+        // it, one second after the time left is a whole minute (it is rounded up: −8:50:00 holds through that second, then
+        // −8:49:59); after it, where the time since reaches a whole minute.
+        val at = if (!seconds && !c.elapsed) 1_000L else 0L
+        val wait = unit - Math.floorMod(ms - at, unit)
         return now + wait
     }
 

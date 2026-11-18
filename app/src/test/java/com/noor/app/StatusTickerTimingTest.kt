@@ -34,14 +34,18 @@ class StatusTickerTimingTest {
         // Before the prayer: the next change is at the next whole second of (now − countAt).
         val b = StatusTicker.nextChange(before, t, seconds = true)
         assertEquals(Instant.parse("2026-11-18T16:27:52Z").toEpochMilli(), b)
-        // Just before it the countdown reads −8:50:08; built for just after it, −8:50:07, which is right until the next one.
-        assertEquals("−8:50:08", before.countdown(Instant.ofEpochMilli(b - 1), f))
-        assertEquals("−8:50:07", before.countdown(Instant.ofEpochMilli(b + 1), f))
-        assertEquals("−8:50:07", before.countdown(Instant.ofEpochMilli(StatusTicker.nextChange(before, b + 1, true) - 1), f))
+        // Just before it the countdown reads −8:50:09 (the clock shows 16:27:51); built for just after it, −8:50:08, right until the next one.
+        assertEquals("−8:50:09", before.countdown(Instant.ofEpochMilli(b - 1), f))
+        assertEquals("−8:50:08", before.countdown(Instant.ofEpochMilli(b + 1), f))
+        assertEquals("−8:50:08", before.countdown(Instant.ofEpochMilli(StatusTicker.nextChange(before, b + 1, true) - 1), f))
+        // The countdown is the prayer's time less the time the clock shows: through 16:27:51 (20:27:51 in Dubai), 8:50:09.
+        assertEquals("\u22128:50:09", before.countdown(Instant.ofEpochMilli(t), f))
         // Exactly on a change, the next one is a whole second later (never the same instant again).
         assertEquals(b + 1000, StatusTicker.nextChange(before, b, seconds = true))
-        // To the minute: where the time left falls below a whole minute.
-        assertEquals(Instant.parse("2026-11-18T16:28:00Z").toEpochMilli(), StatusTicker.nextChange(before, t, seconds = false))
+        // To the minute: one second after the time left is a whole minute (−8:50:00 holds through 16:28:00, then −8:49:59).
+        assertEquals(Instant.parse("2026-11-18T16:28:01Z").toEpochMilli(), StatusTicker.nextChange(before, t, seconds = false))
+        assertEquals("\u22128:50:00", before.countdown(Instant.parse("2026-11-18T16:28:00.500Z"), f))
+        assertEquals("\u22128:49:59", before.countdown(Instant.parse("2026-11-18T16:28:01.001Z"), f))
         // A prayer time with a fraction of a second (not whole minutes) is followed exactly too.
         val odd = content(fajr.plusMillis(250), elapsed = false)
         assertEquals(Instant.parse("2026-11-18T16:27:52.250Z").toEpochMilli(), StatusTicker.nextChange(odd, t, true))

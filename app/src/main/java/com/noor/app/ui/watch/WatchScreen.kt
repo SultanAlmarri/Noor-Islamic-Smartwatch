@@ -129,7 +129,7 @@ fun watchPreview(config: com.noor.prayer.WatchConfig, now: Instant, f: Formatter
     return WatchPreviewState(
         prayer = f.prayerName(st.next.prayer, st.next.date),
         caption = (if (f.arabic) config.placeAr ?: config.placeEn else config.placeEn),
-        countdown = f.countdown(Duration.between(now, st.next.at)), time = f.timeAt(st.next.at, zone), progress = st.progress, glow = glow, arabic = f.arabic,
+        countdown = f.countdown(com.noor.prayer.Countdowns.timeLeft(now, st.next.at)), time = f.timeAt(st.next.at, zone), progress = st.progress, glow = glow, arabic = f.arabic,
     )
 }
 

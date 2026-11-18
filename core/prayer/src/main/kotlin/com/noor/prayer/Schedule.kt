@@ -64,7 +64,20 @@ object Countdowns {
             val end = minOf(cur.at.plus(sinceWindow(cur.prayer)), state.next.at)
             if (now.isBefore(end)) return Countdown(cur, elapsed = true, Duration.between(cur.at, now).coerceAtLeast(Duration.ZERO), end)
         }
-        return Countdown(state.next, elapsed = false, Duration.between(now, state.next.at).coerceAtLeast(Duration.ZERO), state.next.at)
+        return Countdown(state.next, elapsed = false, timeLeft(now, state.next.at), state.next.at)
+    }
+
+    /**
+     * (0.24) The time left until [at], rounded UP to the whole second, so the countdown is the prayer's time less the time
+     * the phone's clock shows: at 20:27:52 (and through that whole second) it reads 8:50:08 to a 05:18:00 Fajr, and it
+     * reaches 0 on the Adhan's instant. Until 0.23 it was rounded down, one second short of the clock (the owner: "a bit
+     * off from my phone's actual time. I want it to be exact"). The time since a prayer stays rounded down, as a clock
+     * counts: +00:52 at 05:18:52.
+     */
+    fun timeLeft(now: Instant, at: Instant): Duration {
+        val d = Duration.between(now, at)
+        if (d.isNegative) return Duration.ZERO
+        return if (d.nano > 0) Duration.ofSeconds(d.seconds + 1) else d
     }
 
     private fun Duration.coerceAtLeast(min: Duration): Duration = if (this < min) min else this
