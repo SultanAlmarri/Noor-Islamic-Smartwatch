@@ -313,7 +313,7 @@ internal object AlarmDispatcher {
         val title = text.alarmTitle(a, p.date)
         val body = text.alarmBody(a, p.date, p.prayerAt)
         val id = AlertNotifications.alarmId(a.id)
-        if (a.sound == AlarmSound.NOTIFICATION) { AlertNotifications.postAlarmNote(context, a.id, title, body, p.at); return }
+        if (a.sound == AlarmSound.NOTIFICATION) { AlertNotifications.postAlarmNote(context, a.id, title, body, p.at, noteStays(p, tried != null)); return }
 
         // An Adhan sounding now is never cut short by an alarm: the alarm comes as a notification with the phone's sound.
         if (AdhanService.nowPlaying.value?.let { it.alarmId == 0 } == true) {
@@ -368,6 +368,14 @@ internal object AlarmDispatcher {
             AlertNotifications.post(context, id, AlertNotifications.CHANNEL_NOTIFY, title, body, p.at, text.string(R.string.noor_alarm_failed))
         }
     }
+
+    /**
+     * How long a notification-only alarm stays in the shade (0.21). One before a prayer ("15 minutes before Asr") goes
+     * when the prayer begins, as the reminders it replaced did (0.9.9, 0.16; until 0.20 it stayed an hour, still saying
+     * the prayer was to come after it had come). One after a prayer, or one being tried, stays an hour.
+     */
+    internal fun noteStays(p: PlannedAlarm, tried: Boolean, nowMs: Long = System.currentTimeMillis()): Long =
+        if (tried || p.alarm.after) AlertNotifications.NOTE_STAYS_MS else (p.prayerAt.toEpochMilli() - nowMs).coerceAtLeast(60_000L)
 
     /** An alarm left ringing stops by itself after ten minutes, as the Clock app's do. */
     const val RING_SECONDS = 600
