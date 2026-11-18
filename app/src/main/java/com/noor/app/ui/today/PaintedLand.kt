@@ -97,6 +97,8 @@ internal class PaintedLandPainter(private val assets: AssetManager, val id: Stri
     private var shownAt = 0L
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
     private val src = Rect(); private val dst = RectF()
+    private var filterStep = -1
+    private var filter: ColorMatrixColorFilter? = null
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
     init {
@@ -169,11 +171,18 @@ internal class PaintedLandPainter(private val assets: AssetManager, val id: Stri
         dst.set(0f, horizonY - PaintedLand.HORIZON * k, w, horizonY + (PaintedLand.HEIGHT - PaintedLand.HORIZON) * k)
         paint.alpha = (255 * alpha * fadeIn * fadeIn * (3 - 2 * fadeIn)).toInt().coerceIn(0, 255)
         // Under an overcast sky the light is grey and flat: less colour, a little darker.
-        paint.colorFilter = if (overcast > 0.02f) ColorMatrixColorFilter(ColorMatrix().apply {
-            setSaturation(1f - 0.5f * overcast)
-            val d = 1f - 0.22f * overcast
-            postConcat(ColorMatrix(floatArrayOf(d, 0f, 0f, 0f, 0f, 0f, d, 0f, 0f, 0f, 0f, 0f, d, 0f, 0f, 0f, 0f, 0f, 1f, 0f)))
-        }) else null
+        // (Made again only when the weather has changed by a step: not on every frame.)
+        val step = if (overcast > 0.02f) (overcast * 50f).toInt().coerceIn(1, 50) else 0
+        if (step != filterStep) {
+            filterStep = step
+            val o = step / 50f
+            filter = if (step == 0) null else ColorMatrixColorFilter(ColorMatrix().apply {
+                setSaturation(1f - 0.5f * o)
+                val d = 1f - 0.22f * o
+                postConcat(ColorMatrix(floatArrayOf(d, 0f, 0f, 0f, 0f, 0f, d, 0f, 0f, 0f, 0f, 0f, d, 0f, 0f, 0f, 0f, 0f, 1f, 0f)))
+            })
+        }
+        paint.colorFilter = filter
         if (rtl) { canvas.save(); canvas.scale(-1f, 1f, w / 2f, 0f) }
         canvas.drawBitmap(bmp, src, dst, paint)
         if (rtl) canvas.restore()
