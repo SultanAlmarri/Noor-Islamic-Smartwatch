@@ -1782,3 +1782,38 @@ Robolectric stops at Android 15.
   passed while the phone was off is skipped without a "missed" note; a few small file reads on the main thread
   (`AlertLog.update` from `AdhanService`, Studio's settings file, `rememberDaylight`'s once-a-minute calculation); the
   tester's banner and page are English only (to be removed before release).
+
+## 34. The owner's notes on 0.22.0 (0.22.1, 18 November 2026, phone; watch rebuilt)
+
+**What the owner said** (with a screenshot of the shade): the notification's countdown "shows up very small and it is
+in Arabic numerals, even though I have the Western numerals in the app settings. It should always follow the app
+settings regardless of my phone language settings. Also, there's no need to write next prayer ... nothing shows up in
+the status bar, like a timer ... Like Samsung clock app"; "I really don't like the sun path line ... in the medium and
+high settings. They mostly only appear inside the terrain, and the sun is not really visible most of the time ... find a
+smart solution"; and the compass's poor-accuracy text "should display the figure 8 or something ... visually appealing".
+
+**The notification.** 0.22.0's Live Update used Android's chronometer: the phone's digits (Arabic-Indic on his Arabic
+Galaxy) and small, in the card's header. Now Minhad writes the countdown itself, in the app's digits, as the title (and
+the chip's text, `setShortCriticalText`), every second while the screen is on (`StatusTicker`, `Ticking.live`). "Next
+prayer" is gone from both looks. **The chip**: Android decides, and a maker may add rules (in One UI 8's betas other
+apps' Live Updates needed a developer option, "Live notifications for all apps"; reports differ on the stable release).
+`LivePromotion` looks a moment after posting: `FLAG_PROMOTED_ONGOING` stays only on a promoted notification. Not
+promoted: Minhad's own notification comes back (its large countdown) and Live Updates are not tried for a day or until
+the switch, the permission or the version changes; Settings says what happened (accepted / not shown by the phone /
+turned off for Minhad, with a way to Android's promotion settings). So the next report from the owner says whether
+Android or the phone is in the way. Not seen on a phone.
+
+**The Sun's path: a dial in the sky** (helper on `fix/sunpath`; DESIGN.md). One arch, the same over every scenery and
+level, standing on a baseline above the land (`SkyGeometry.baseY`: 0.14 of the width over the true horizon, at most
+0.68 of the way to the arch's top; `SceneLayout.dial`, the home screen only, the widgets keep the 0.20 path); Shuruq
+and Maghrib on the baseline, Fajr and Isha in a short dip that never reaches the true horizon. One Sun: the marker on
+the dial; the renderers' glow slides to the true place on the horizon as the Sun goes under (`SkyGeometry.onDial`, in
+`RealSkyFrame.of` and `SkyLook.at`; the Medium shader's disc fades out). Where a tall tree or peak still stands in front
+(High's Pacific Northwest and Arctic, and on short headers), the Sun is drawn in front of it (`frontSun`, replacing the
+ring). Honest limits: on short headers the arch is a shallow bow; over flat horizons the Sun rises on the baseline, a
+little above the sea or sand; High's tallest firs and peaks still cross the dial's low ends. `SkyDialTest`.
+
+**The compass.** The poor-accuracy hint is a glass card with an animated figure 8: a phone held screen up, its top away,
+tilting in 3D as it travels the figure (the owner's reference video; the first versions leaned in the picture's plane,
+stood upright, or turned along the line, and none looked like a phone in a hand), a fading gold trail, one line of text.
+Its own perspective (Robolectric ignores `android.graphics.Camera`). `QiblaCalibrateDesignTest`.
