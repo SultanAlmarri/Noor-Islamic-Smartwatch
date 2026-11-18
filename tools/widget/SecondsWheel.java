@@ -84,11 +84,13 @@ public class SecondsWheel {
                     }
                 } else {
                     // (0.23) Arabic-Indic: the two digits at their own advances, as text sets them (in a Western digit's
-                    // cell the narrow ١ stood apart: "٤ ١"), made as tall as Western digits, centred in the label.
+                    // cell the narrow ١ stood apart: "٤ ١"), made as tall as Western digits, from the label's start.
                     double k = ARABIC_SCALE;
                     double a0 = font.createGlyphVector(frc, String.valueOf(digits.charAt(0))).getGlyphMetrics(0).getAdvance() * k;
                     double a1 = font.createGlyphVector(frc, String.valueOf(digits.charAt(1))).getGlyphMetrics(0).getAdvance() * k;
-                    double x0 = (w - a0 - a1) / 2;
+                    // From the start of the label (after the colon), not centred: the pair is narrower than the
+                    // window for most seconds, and centred it stood off from the colon by a varying gap.
+                    double x0 = 0.03 * 1000;
                     double[] xs = {x0, x0 + a0};
                     for (int i = 0; i < 2; i++) {
                         GlyphVector g = font.createGlyphVector(frc, String.valueOf(digits.charAt(i)));

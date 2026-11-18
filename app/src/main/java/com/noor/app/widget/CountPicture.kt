@@ -54,16 +54,24 @@ internal object CountPicture {
     private fun layout(text: String, base: Paint, each: (ch: Char, x: Float, size: Float) -> Unit): Float {
         var x = 0f
         val size = base.textSize
+        // With Arabic-Indic digits the zero is a dot at the colon's height ("١:٠٤" read as ":·"): the colons are
+        // smaller (so lower) with a little air on each side, unmistakably colons.
+        val arabic = text.any { isArabicDigit(it) }
         for (ch in text) {
-            val sz = if (isArabicDigit(ch)) size * ARABIC_SCALE else size
+            val colon = ch == ':' && arabic
+            val sz = when { isArabicDigit(ch) -> size * ARABIC_SCALE; colon -> size * 0.8f; else -> size }
+            if (colon) x += size * COLON_GAP_EM
             base.textSize = sz
             each(ch, x, sz)
             x += base.measureText(ch.toString())
             if (isSign(ch)) x += size * SIGN_GAP_EM
+            if (colon) x += size * COLON_GAP_EM
             base.textSize = size
         }
         return x
     }
+
+    private const val COLON_GAP_EM = 0.07f
 
     fun draw(context: Context, leading: String): Bitmap = draw(context, Spec(leading))
 
@@ -71,9 +79,10 @@ internal object CountPicture {
         val r = context.resources
         val paint = paint(context, spec.scale)
         if (spec.shadow) paint.setShadowLayer(6f * spec.scale, 0f, 1f, SHADOW)
-        val colon = if (spec.colon) ":" else ""
-        val lead = layout(spec.leading, Paint(paint)) { _, _, _ -> }
-        val w = maxOf(1, kotlin.math.ceil(lead + paint.measureText(colon) + (if (spec.colon) 0f else 2f * spec.scale)).toInt())
+        // The ":" before the seconds is the last glyph, quieter (set like the others).
+        val text = spec.leading + if (spec.colon) ":" else ""
+        val total = layout(text, Paint(paint)) { _, _, _ -> }
+        val w = maxOf(1, kotlin.math.ceil(total + (if (spec.colon) 0f else 2f * spec.scale)).toInt())
         val h = maxOf(1, kotlin.math.ceil(r.getDimension(R.dimen.noor_count_height) * spec.scale).toInt())
         val baseline = r.getDimension(R.dimen.noor_count_ascent) * spec.scale
         return Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bmp ->
@@ -81,16 +90,14 @@ internal object CountPicture {
             val canvas = Canvas(bmp)
             val sign = (spec.color and 0x00FFFFFF) or ((((spec.color ushr 24) * SIGN_ALPHA).toInt()) shl 24)
             val p = Paint(paint)
-            layout(spec.leading, Paint(paint)) { ch, x, size ->
+            var i = 0
+            layout(text, Paint(paint)) { ch, x, size ->
+                val last = spec.colon && i == text.length - 1
                 p.textSize = size
-                p.color = if (isSign(ch)) sign else spec.color
+                p.color = when { last -> spec.quiet; isSign(ch) -> sign; else -> spec.color }
+                if (last) p.clearShadowLayer()
                 canvas.drawText(ch.toString(), x, baseline, p)
-            }
-            if (spec.colon) {
-                p.textSize = paint.textSize
-                p.color = spec.quiet
-                p.clearShadowLayer()
-                canvas.drawText(colon, lead, baseline, p)
+                i++
             }
         }
     }
@@ -100,7 +107,7 @@ internal object CountPicture {
         val r = context.resources
         val d = r.displayMetrics.density
         val p = paint(context, scale)
-        val lead = (layout(leading, p) { _, _, _ -> } + (if (seconds) p.measureText(":") else 0f)) / d
+        val lead = layout(leading + if (seconds) ":" else "", p) { _, _, _ -> } / d
         return lead + if (seconds) r.getDimension(if (arabicDigits) R.dimen.noor_count_window_arabic else R.dimen.noor_count_window_latin) * scale / d else 0f
     }
 

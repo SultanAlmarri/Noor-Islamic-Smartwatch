@@ -144,7 +144,7 @@ LAYOUTS = {
         cells(h="match_parent", extra=PAD.replace("widget_pad_v", "widget_pad_row"))),
     # Today's prayers, 2x3 and 2x4: a column.
     "widget_today_column": ("today's prayers in a column: the next one and the countdown, then the six times.",
-        col([title_row, count('android:layout_marginTop="4dp"'),
+        col([title_row, count('android:layout_marginTop="4dp"'), tv("widget_then", "Small", extra='android:layout_marginTop="2dp"'),
              progress('android:layout_marginTop="8dp" android:layout_marginBottom="8dp"'),
              col([cell(i, vertical=False, h="@dimen/widget_row") for i in range(6)]),
              space(h="0dp", weight=1),
@@ -214,8 +214,8 @@ def ptv(text, size, color="#FFFFFFFF", font="sans-serif", extra=""):
 
 
 GOLD = "#FFF6D696"
-COUNT = ptv("@string/widget_preview_count", 28, font="sans-serif-light", extra='android:textDirection="ltr" android:layoutDirection="ltr"')
-SMALL_COUNT = ptv("@string/widget_preview_count", 20, font="sans-serif-light", extra='android:textDirection="ltr" android:layoutDirection="ltr"')
+COUNT = ptv("@string/widget_preview_count", 28, font="sans-serif-medium", extra='android:textDirection="ltr" android:layoutDirection="ltr"')
+SMALL_COUNT = ptv("@string/widget_preview_count", 20, font="sans-serif-medium", extra='android:textDirection="ltr" android:layoutDirection="ltr"')
 
 
 def pcells(n=6, names=("fajr", "shuruq", "dhuhr", "asr", "maghrib", "isha"), times=("5:58", "7:25", "12:28", "3:37", "5:58", "7:19"),
@@ -257,7 +257,8 @@ PREVIEWS = {
     "widget_preview_ring": ("the Countdown ring.", "widget_glass",
         '<ImageView android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" '
         'android:padding="8dp" android:scaleType="fitCenter" android:src="@drawable/widget_preview_ring_art" />'
-        + col([ptv("@string/widget_preview_asr", 15, GOLD, "sans-serif-medium"), SMALL_COUNT, ptv("3:37 PM", 12, "#E6FFFFFF")],
+        + col([row([ptv("@string/widget_preview_asr", 14, GOLD, "sans-serif-medium"), ptv("3:37 PM", 12, "#E6FFFFFF", extra='android:layout_marginStart="6dp"')],
+                   w="wrap_content"), SMALL_COUNT],
               h="match_parent", extra='android:gravity="center"')),
     "widget_preview_strip": ("the Prayer strip.", "widget_glass",
         col([row([ptv("@string/widget_preview_asr", 14, GOLD, "sans-serif-medium"), ptv("3:37 PM", 12, "#E6FFFFFF", extra='android:layout_marginStart="6dp"'),

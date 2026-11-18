@@ -166,11 +166,11 @@ internal object WidgetRender {
 
     /**
      * The widget's corner: the system's (Android 12 and later; 20 dp before), at most 24 dp, and on short widgets at
-     * most a third of the height, so a 2x1 is a card, not a capsule.
+     * most a fifth of the height, so a 2x1 is a card, not a capsule.
      */
     internal fun radiusDp(r: WidgetCtx): Float {
         val system = r.app.resources.getDimension(R.dimen.widget_radius) / r.density
-        return minOf(system, 24f, 0.25f * minOf(r.wDp, r.hDp))
+        return minOf(system, 24f, 0.2f * minOf(r.wDp, r.hDp))
     }
 
     private fun scrimOf(res: Int) = when (res) {
@@ -518,13 +518,18 @@ internal object WidgetRender {
                 scale = countScale(r, (if (r.hDp >= 330) 40f else 32f) * k, avail)
                 barPx = (avail * r.density).toInt()
                 v.setImageViewBitmap(R.id.widget_progress, bar(r, barPx))
-                val rows = r.hDp - 2 * PAD_V - 18f * k * r.lineK - CountPicture.heightDp(r.app, scale) - 28f - 12f * k * r.lineK
+                var rows = r.hDp - 2 * PAD_V - 18f * k * r.lineK - CountPicture.heightDp(r.app, scale) - 28f - 12f * k * r.lineK
+                // Rows at a calm rhythm (34 dp at most); a tall widget's extra height says what comes after.
+                val thenLine = 12f * k * r.lineK + 2f
+                if (rows / n > 34f && rows - thenLine >= 30f * n) { then(v, r, avail, 12f * k); rows -= thenLine } else gone(v, R.id.widget_then)
                 val rowH = (rows / n).coerceIn(22f, 34f)
                 if (android.os.Build.VERSION.SDK_INT >= 31) for (id in CELLS) v.setViewLayoutHeight(id, rowH, TypedValue.COMPLEX_UNIT_DIP)
-                val rowSize = minOf(14f * k, (if (android.os.Build.VERSION.SDK_INT >= 31) rowH else 30f) / r.lineK - 2f)
-                val nameAvail = avail - 16f - timeWidth(times.maxByOrNull { it.length } ?: "", rowSize) - 8f
-                cells(v, r, shown, Fit.size(names, Fit.REGULAR, rowSize, nameAvail), rowSize, signs = false)
-                for (id in NAMES) v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_DIP, Fit.size(names, Fit.REGULAR, rowSize, nameAvail))
+                val want = minOf(16f * k, (if (android.os.Build.VERSION.SDK_INT >= 31) rowH else 30f) / r.lineK - 2f)
+                // The name and the time at one size, the largest at which the longest of each fit side by side.
+                val nameW1 = names.maxOf { Fit.width(it, Fit.REGULAR, 10f) } / 10f
+                val timeW1 = times.maxOf { timeWidth(it, 10f) } / 10f
+                val rowSize = minOf(want, (avail - 20f - 8f) * 0.92f / (nameW1 + timeW1))
+                cells(v, r, shown, rowSize, rowSize, signs = false)
                 place(v, r, avail, 11f * k, 9.5f, r.pal.muted)
             }
             else -> {

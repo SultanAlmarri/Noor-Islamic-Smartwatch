@@ -574,7 +574,7 @@ day's bar fills from the reading side; the ring always clockwise.
 
 **Backgrounds.** Every background is one picture at the widget's real size (`WidgetArt.card`, `WidgetSky.picture`),
 its corners exact: the system's widget corner (`system_app_widget_background_radius`, Android 12+), at most 24 dp, and
-at most a third of the height on short widgets (no capsules). The sky of the moment: sharp, a little darkened, with the
+at most a fifth of the height on short widgets (no capsules). The sky of the moment: sharp, a little darkened, with the
 layout's scrim drawn into it (`WidgetArt.Scrim`), the land about a fifth of the height; behind widgets that write over
 the whole picture no Sun or Moon disc and no clouds (the sky's colours, an overcast and rain still say the weather);
 the sky widget keeps its clouds (none so small it reads as a speck) and draws the Sun warm on its path. Text is checked

@@ -85,7 +85,8 @@ class WidgetSettingsDesignTest {
             // The preview is built off the main thread (the sky picture takes a moment here): wait for it, then settle.
             val until = System.currentTimeMillis() + 30_000
             while (built.get() < previews && System.currentTimeMillis() < until) { Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); Thread.sleep(50) }
-            for (i in 0 until 40) { Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); rule.waitForIdle(); Thread.sleep(25) }
+            // The preview's picture is made on the main thread after it is built, on Compose's clock: let that clock run.
+            for (i in 0 until 40) { Shadows.shadowOf(android.os.Looper.getMainLooper()).idle(); rule.mainClock.advanceTimeBy(100); rule.waitForIdle(); Thread.sleep(25) }
             rule.mainClock.advanceTimeBy(1500); rule.waitForIdle()
             val root = rule.activity.window.decorView
             val bmp = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.ARGB_8888)
