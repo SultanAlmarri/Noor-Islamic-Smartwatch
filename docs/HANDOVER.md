@@ -2101,7 +2101,7 @@ both, 4 the coming prayer's symbol. Timing: each second is handed over 80 ms ahe
 against the phone's clock drawn to the second), and "Timer counted by the phone itself" (`statusChipSystemTimer`)
 gives the Live Update Android's chronometer instead (exact on the phone's clock, in its digits, without the sign).
 
-## 41. The widgets redesigned (0.24 work on `widgets/v3`, 18 November 2026, phone only; not released)
+## 41. The widgets redesigned (0.24.0, 19 November 2026, phone; watch rebuilt; a helper on `widgets/v3`)
 
 The owner installed 0.23 and was "very disappointed": small, hard to read, not Apple-like. His Galaxy photos showed
 two real bugs: a second, smaller corner inside Samsung's clip (our background drew its own rounded card and outline)
