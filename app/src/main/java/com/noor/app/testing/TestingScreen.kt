@@ -219,7 +219,8 @@ private fun TimerTiming() {
     Text("The timer's icon slot", style = MaterialTheme.typography.titleSmall)
     Text("Your phone keeps a place for an icon beside the timer. Try each way and keep the one that leaves no gap " +
         "(Minhad's icon must be off in Settings). Tap \"Show again\" above, or wait for the next second.", style = MaterialTheme.typography.bodySmall)
-    Chips(listOf("Transparent icon" to 0, "One pixel wide" to 1, "Samsung chip icon" to 2, "Both (default)" to 3, "Prayer's symbol" to 4), selected = { it == slot }) { m ->
+    Chips(listOf("Transparent icon" to 0, "One pixel wide" to 1, "Samsung chip icon" to 2, "Both (default)" to 3, "Samsung Now Bar path" to 5,
+        "Samsung live card" to 6, "Prayer's symbol" to 4), selected = { it == slot }) { m ->
         slot = m; com.noor.app.notify.StatusNotification.saveSlot(context.applicationContext, m)
         com.noor.app.notify.StatusNotification.refreshAsync(context.applicationContext)
     }

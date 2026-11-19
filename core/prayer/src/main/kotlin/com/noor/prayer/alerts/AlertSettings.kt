@@ -76,8 +76,11 @@ data class AlertSettings(
     val enabled: Boolean = false,
     val device: AlertDevice = AlertDevice.PHONE,
     val perPrayer: Map<Prayer, PrayerAlert> = DEFAULTS,
-    /** Seconds to rise from quiet to the chosen volume. 0 = start at full volume. */
-    val gradualSeconds: Int = 10,
+    /**
+     * Seconds to rise from quiet to the chosen volume. 0 = start at full volume: the default since 0.24.1 (the owner:
+     * "I don't want the Adhan sound to get progressively louder, I want it at its normal volume from the beginning").
+     */
+    val gradualSeconds: Int = 0,
     /**
      * False (the default): the Adhan plays like an alarm clock. The phone being on vibrate or silent does not stop it;
      * under Do Not Disturb the system's own rule for alarms decides. True: while the device is on vibrate, silent or in
@@ -216,7 +219,7 @@ data class AlertSettings(
                 enabled = m["on"] == "1",
                 device = m["dev"]?.let { n -> AlertDevice.entries.firstOrNull { it.name == n } } ?: AlertDevice.PHONE,
                 perPrayer = per,
-                gradualSeconds = (m["grad"]?.toIntOrNull() ?: 10).coerceIn(0, 60),
+                gradualSeconds = (m["grad"]?.toIntOrNull() ?: 0).coerceIn(0, 60),
                 // Versions before 0.9 had only "dnd", off by default, which silenced the Adhan on vibrate: that default was
                 // the main reason Adhans did not sound, so it is not carried over. Only an explicit "quiet" choice is kept.
                 quietWhenSilent = m["quiet"] == "1",

@@ -2126,3 +2126,12 @@ session). Tested: the widget tests above, Robolectric software renders only. Not
 sizes against the map of layouts, the hand-over timing on a real launcher (its redraw takes its own time), memory with
 several sizes' pictures per widget (each picture is as small as its ink; the background is drawn at 1 px per dp),
 the picker's previews. `widgets.yml` (section 39) should be run on this branch before a release.
+
+**0.24.1 (19 November 2026).** The owner tried 0.23.2's slot modes 1 to 3 on his Galaxy: the gap stayed ("keep trying").
+Two more, in the same list: 5, One UI's Now Bar path (`android.ongoingActivityNoti.automation`, as the tigerduck app
+found One UI 8.5 needs) with the narrow chip icon; 6, One UI's own Live Notification card (`style` 1, primary info,
+`chipExpandedText`, the narrow `chipIcon`, and the manifest's `com.samsung.android.support.ongoing_activity`), which One
+UI shows only for apps on its list. Next if both fail: the coming prayer's symbol (mode 4), the owner's last resort.
+Also: the Adhan starts at full volume by default (`AlertSettings.gradualSeconds` 0; the owner); phones that still had
+the old default, 10 seconds, are changed once (`noor_migrations`/`adhan_full_from_start`).
+

@@ -202,6 +202,13 @@ object StatusNotification {
     @Volatile internal var slotMode = SLOT_BOTH
     @Volatile private var slotLoaded = false
     const val SLOT_CLEAR = 0; const val SLOT_NARROW = 1; const val SLOT_SAMSUNG = 2; const val SLOT_BOTH = 3; const val SLOT_PRAYER = 4
+    /**
+     * (0.24.1, 0.23.2's three left the gap on the owner's Galaxy) 5: One UI's Now Bar path for promoted notifications
+     * (android.ongoingActivityNoti.automation, which One UI 8.5 needs to show a plain Live Update), with the narrow chip
+     * icon; 6: One UI's own Live Notification card (style 1, its primary info and chip text, the narrow chip icon), which
+     * One UI shows only for the apps it lists: elsewhere it is simply not used.
+     */
+    const val SLOT_SAMSUNG_NOWBAR = 5; const val SLOT_SAMSUNG_CARD = 6
 
     internal fun loadSlot(app: Context) { slotMode = app.getSharedPreferences("noor_status_live", 0).getInt("slot_mode", SLOT_BOTH) }
     internal fun saveSlot(app: Context, mode: Int) { slotMode = mode; app.getSharedPreferences("noor_status_live", 0).edit().putInt("slot_mode", mode).apply() }
@@ -397,7 +404,18 @@ object StatusNotification {
             val b = android.app.Notification.Builder.recoverBuilder(app, n)
             if (!systemTimer) b.setShortCriticalText(chipText(count))
             if (!chipIcon && (slotMode == SLOT_NARROW || slotMode == SLOT_BOTH)) b.setSmallIcon(narrowIcon)
-            if (!chipIcon && (slotMode == SLOT_SAMSUNG || slotMode == SLOT_BOTH)) b.extras.putParcelable("android.ongoingActivityNoti.chipIcon", narrowIcon)
+            if (!chipIcon && (slotMode == SLOT_SAMSUNG || slotMode == SLOT_BOTH || slotMode >= SLOT_SAMSUNG_NOWBAR)) {
+                b.setSmallIcon(narrowIcon)
+                b.extras.putParcelable("android.ongoingActivityNoti.chipIcon", narrowIcon)
+            }
+            if (!chipIcon && slotMode == SLOT_SAMSUNG_NOWBAR) b.extras.putBoolean("android.ongoingActivityNoti.automation", true)
+            if (!chipIcon && slotMode == SLOT_SAMSUNG_CARD) {
+                b.extras.putInt("android.ongoingActivityNoti.style", 1)
+                b.extras.putCharSequence("android.ongoingActivityNoti.primaryInfo", "${c.prayer} · ${c.time}")
+                b.extras.putCharSequence("android.ongoingActivityNoti.secondaryInfo", listOfNotNull(c.place, c.hijri).joinToString(" · "))
+                if (!systemTimer) b.extras.putCharSequence("android.ongoingActivityNoti.chipExpandedText", chipText(count))
+                b.extras.putCharSequence("android.ongoingActivityNoti.nowbarPrimaryInfo", if (systemTimer) "${c.prayer} · ${c.time}" else chipText(count))
+            }
             return b.build()
                 .also { it.flags = it.flags or android.app.Notification.FLAG_PROMOTED_ONGOING; it.extras.putBoolean(EXTRA_REQUEST_PROMOTED, true) }
         }

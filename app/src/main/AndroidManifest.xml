@@ -84,6 +84,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- 0.24.1: tells One UI that Minhad's ongoing notification can be a Live Notification (its own card, used only in
+             the tester's "Samsung live card" experiment for the status-bar timer's icon slot; One UI shows it only for the
+             apps it lists). -->
+        <meta-data android:name="com.samsung.android.support.ongoing_activity" android:value="true" />
+
         <!-- 0.22.4: holds the persistent notification while Minhad writes its countdown (the phone's digits differ from
              the app's, or the status-bar chip), so it keeps ticking when the app is closed. Not stopped with the task. -->
         <service
