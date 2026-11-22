@@ -2228,3 +2228,14 @@ the same evening (see that file, and ADHAN_025_NOTES.md and PAGES_025_NOTES.md, 
 session's model reached its usage limit; the owner switched the session to Claude Opus, which finished the work from
 where it had stopped (a helper's half-done changes were read, compiled, kept and completed). New tests:
 `NumeralsInStringsTest`, `ButtonContrastTest`, `AccuracyStatementsTest`, `PlaceTextTest`, `QiblaKaabaContrastTest`.
+
+**Released** (22 November 2026): `main` at `ceccf72`. GitHub on that commit: `android.yml` run 113 passed (every test,
+both APKs, the watch faces validated) and republished `dev-latest`: the phone link was downloaded and reads Minhad
+0.25.0, versionCode 50; the watch link 0.25.0, versionCode 36. `device-alerts.yml` (the real alarm → Adhan path on
+Android 14 and 15 emulators) passed (run 53); `watch-face.yml` (Wear OS 6 emulator) passed (run 18). `home-sky.yml`
+(run 42) photographed the sky at every moment, the opening and the drag on both emulators, then failed at its last step:
+a "Minhad isn't responding" dialog, raised by the emulators' software GPU during the 9-second drag (seen in earlier
+runs too), hid the Qibla tab from the script. `home_sky.sh` now closes such a dialog first (`3a940a5`); that run and
+the other two the push started were cancelled after a few minutes by something outside the session (not a failure;
+not re-run). Locally, on the final code: prayer engine 154 tests (4 skipped by design), alerts 20, phone 161, watch 44,
+no failures; both release APKs built. **Nothing of 0.25 has been run on a phone or a watch.**
