@@ -130,6 +130,9 @@ adb shell input swipe $((W * 5 / 100)) $Y $((W * 95 / 100)) $Y 4000
 adb shell dumpsys gfxinfo $PKG > "$OUT/gfxinfo_drag.txt"
 
 # Qibla: open the tab, lay the phone flat, then change the magnetic field.
+# (0.25: the software GPU stalls the app during the long drag above and Android may show "isn't responding": close it
+# first, or the tab is looked for under the dialog; seen on both emulators on 22 November 2026.)
+sleep 3; no_anr
 adb shell uiautomator dump /sdcard/ui.xml >/dev/null; adb pull /sdcard/ui.xml "$OUT/ui.xml" >/dev/null
 BOUNDS=$(python3 - "$OUT/ui.xml" <<'PY'
 import re, sys
