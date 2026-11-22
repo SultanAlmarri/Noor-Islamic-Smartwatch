@@ -148,7 +148,7 @@ class PrayerTileService : TileService() {
                         )
                     },
                     bottomSlot = {
-                        textEdgeButton(onClick = openApp(context)) { label(context.getString(R.string.today), 15f, ON_GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD) }
+                        textEdgeButton(onClick = openApp(context)) { label(context.getString(R.string.tile_all_times), 15f, ON_GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD) }
                     },
                 )
             }

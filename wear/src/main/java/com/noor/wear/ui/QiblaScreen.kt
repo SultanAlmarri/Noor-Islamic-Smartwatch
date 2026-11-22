@@ -109,7 +109,7 @@ fun QiblaContent(c: WatchConfig, t: WearText, reading: CompassReading?, hasCompa
     LaunchedEffect(aligned) { if (aligned) haptics.success() }
 
     // No clock on this screen: 12 o'clock is the pointer.
-    ScreenScaffold(timeText = {}) { _ ->
+    ScreenScaffold { _ ->
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (!hasCompass || q.veryClose) {
                 StaticQibla(q, t, if (q.veryClose) stringResource(R.string.qibla_in_makkah) else stringResource(R.string.qibla_no_compass))
@@ -196,27 +196,30 @@ private fun Dial(heading: Double?, qibla: Double, turn: Double?, aligned: Boolea
 @Composable
 private fun Centre(q: QiblaResult, t: WearText, turn: Double?, aligned: Boolean, reading: CompassReading?) {
     val issues = reading?.assessment?.issues.orEmpty()
+    // 0.25: one order at a time. While the compass is starting, the wrist is tilted or the calibration is poor there
+    // is no figure to trust, so none is shown: only what to do, with its sign.
+    val notLevel = CompassIssue.NOT_FLAT in issues
+    val poor = reading != null && reading.assessment.quality == CompassQuality.POOR
     val hint = when {
         reading == null -> stringResource(R.string.qibla_starting)
-        CompassIssue.NOT_FLAT in issues -> stringResource(R.string.qibla_hold_level)
-        reading.assessment.quality == CompassQuality.POOR -> stringResource(R.string.qibla_calibrate)
+        notLevel -> stringResource(R.string.qibla_hold_level)
+        poor -> stringResource(R.string.qibla_calibrate)
         else -> null
     }
-    // 0.25: while the compass is starting or the wrist is tilted there is no figure to trust: the instruction
-    // stands alone. With a poor calibration the figure stays, quiet, under the instruction to calibrate.
-    val notLevel = CompassIssue.NOT_FLAT in issues
     val main = when {
-        turn == null || notLevel -> null
+        turn == null || hint != null -> null
         aligned -> stringResource(R.string.qibla_facing)
         else -> t.degrees(abs(turn))
     }
     val sub = when {
-        turn == null || aligned || notLevel -> null
+        turn == null || aligned || hint != null -> null
         turn > 0 -> stringResource(R.string.qibla_turn_right)
         else -> stringResource(R.string.qibla_turn_left)
     }
-    // Short on the dial, so it stays clear of the turning letters; in full for a screen reader.
-    val summary = stringResource(R.string.qibla_summary_short, t.degrees(q.bearingDeg), t.count(q.distanceKm.toLong()))
+    // Under the figure, two short lines that say what they are: "Qibla 258°" (the bearing, not the turn) and the
+    // distance. Short, so they stay clear of the turning letters; a screen reader hears the full sentence.
+    val bearing = stringResource(R.string.qibla_bearing_label, t.degrees(q.bearingDeg))
+    val distance = stringResource(R.string.qibla_distance, t.count(q.distanceKm.toLong()))
     val spokenSummary = stringResource(R.string.qibla_summary, t.degrees(q.bearingDeg), t.count(q.distanceKm.toLong()))
     // The arrival: the check lands with a spring.
     val land by animateFloatAsState(if (aligned) 1f else 0.6f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow), label = "qiblaLand")
@@ -227,6 +230,11 @@ private fun Centre(q: QiblaResult, t: WearText, turn: Double?, aligned: Boolean,
             contentDescription = listOfNotNull(main, sub, hint ?: spokenSummary).joinToString(". ")
         },
     ) {
+        if (hint != null) {
+            if (reading != null) Icon(painterResource(if (notLevel) R.drawable.ic_level else R.drawable.ic_figure8), null, Modifier.padding(bottom = 6.dp).size(40.dp), tint = Gold)
+            Text(hint, style = Type.body, color = Ink, textAlign = TextAlign.Center, maxLines = 3)
+            return@Column
+        }
         if (aligned && main != null) {
             Box(Modifier.padding(bottom = 4.dp).size(38.dp).scale(land).background(Ink, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(painterResource(R.drawable.ic_check), null, Modifier.size(26.dp), tint = ArrivalCentre)
@@ -234,8 +242,7 @@ private fun Centre(q: QiblaResult, t: WearText, turn: Double?, aligned: Boolean,
             Text(main, style = Type.title, color = Ink, textAlign = TextAlign.Center, maxLines = 2)
         } else if (main != null) {
             // Three figures ("120°") a size down, so they stay inside the ring of letters.
-            Numeral(main, if (turn != null && abs(turn) >= 99.5) Screen.sp(38f, 50f) else Screen.sp(46f, 56f), Modifier.padding(bottom = 2.dp),
-                color = if (hint != null) Quiet else Ink)
+            Numeral(main, if (turn != null && abs(turn) >= 99.5) Screen.sp(38f, 50f) else Screen.sp(46f, 56f), Modifier.padding(bottom = 2.dp))
         }
         if (sub != null && turn != null) {
             // The arrow is on the side it points to, whatever the language: right is right.
@@ -247,12 +254,8 @@ private fun Centre(q: QiblaResult, t: WearText, turn: Double?, aligned: Boolean,
                 }
             }
         }
-        Text(
-            hint ?: summary,
-            style = if (hint != null && main == null) Type.row else if (hint != null) Type.detail else Type.note,
-            color = if (hint != null) GoldSoft else if (aligned) Ink else Quiet, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 3.dp), maxLines = 3,
-        )
+        Text(bearing, style = Type.note, color = if (aligned) Ink else Quiet, textAlign = TextAlign.Center, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
+        Text(distance, style = Type.note, color = if (aligned) Ink else Quiet, textAlign = TextAlign.Center, maxLines = 1)
     }
 }
 
@@ -263,7 +266,7 @@ private fun StaticQibla(q: QiblaResult, t: WearText, note: String) {
         RoundSign(R.drawable.ic_qibla, Tint.Gold, size = 34.dp)
         Numeral(t.degrees(q.bearingDeg), Screen.sp(44f, 52f), Modifier.padding(top = 4.dp))
         Text(stringResource(R.string.qibla_true_north), style = Type.row, color = Gold, textAlign = TextAlign.Center)
-        Text(note, style = Type.note, color = Quiet, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp))
+        Text(note, style = Type.detail, color = Quiet, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

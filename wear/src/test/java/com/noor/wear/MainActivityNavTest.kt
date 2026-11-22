@@ -78,7 +78,7 @@ class ShortcutLaunchTest {
         val dubai = SetupPlace(GeoPoint(25.2048, 55.2708, 5.0), "Asia/Dubai", "Dubai", "دبي", "AE", "AE-DU", fromGps = false)
         runBlocking { app.config.saveSetup(LocalSetup(dubai)) }
         androidx.test.core.app.ActivityScenario.launch<MainActivity>(MainActivity.intent(app, Dest.QIBLA)).use { scenario ->
-            rule.waitUntil(15_000) { rule.onAllNodesWithText("from true North", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+            rule.waitUntil(15_000) { rule.onAllNodesWithText("from north", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
             scenario.onActivity { Shots.save(Shots.drawView(it.window.decorView), "n02_app_qibla_shortcut") }
         }
     }

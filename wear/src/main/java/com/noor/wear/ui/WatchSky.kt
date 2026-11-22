@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.unit.dp
 import com.noor.prayer.sky.SkyPalette
 
 /**
@@ -71,6 +72,9 @@ internal fun SkyBackdrop(stops: WatchSky.Stops, modifier: Modifier = Modifier) {
         val w = size.width; val h = size.height
         val top = Color(stops.top); val mid = Color(stops.mid); val low = Color(stops.low)
         drawRect(Brush.verticalGradient(0f to top, 0.46f to mid, 0.80f to low, 1f to low, startY = 0f, endY = h))
+        // The time is written straight on the sky in the ring's gap: the sky is a little darker there, fading in 44 dp.
+        val shade = 44.dp.toPx()
+        drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.35f), 1f to Color.Transparent, startY = 0f, endY = shade), size = Size(w, shade))
         if (stops.night > 0.02f) {
             val unit = h / 225f
             for (s in WatchSky.stars) drawCircle(Color.White.copy(alpha = (stops.night * s[3]).coerceIn(0f, 1f)), s[2] * unit, Offset(s[0] * w, s[1] * h))

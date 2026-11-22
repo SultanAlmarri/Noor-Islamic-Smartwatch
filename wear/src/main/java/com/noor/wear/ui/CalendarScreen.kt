@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,9 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.noor.prayer.HijriDate
 import com.noor.prayer.WatchConfig
@@ -45,8 +42,8 @@ fun CalendarScreen(c: WatchConfig, t: WearText, today: LocalDate) {
     val events = remember(today, c.hijriAdjust) { IslamicCalendar.upcoming(today, c.hijriAdjust) }
     val monthLength = remember(h) { IslamicCalendar.monthLength(h.year, h.month) }
     val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    PageScaffold(list) {
+        NoorList(list) {
             item {
                 val spoken = t.hijri(h) + ", " + t.longDate(today)
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp).semantics(mergeDescendants = true) { contentDescription = spoken }) {
@@ -92,9 +89,8 @@ private fun EventRow(e: UpcomingEvent, t: WearText, today: LocalDate) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(t.eventName(e.event), style = Type.row, color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            // The Hijri day of a yearly event is in its name (Eid al-Fitr is 1 Shawwal); the White Days show their month.
-            val line = if (e.event == IslamicEvent.WHITE_DAYS) dates + "  ·  " + (if (t.arabic) e.hijri.monthNameAr else e.hijri.monthNameEn) else dates
-            Text(line, style = Type.detail, color = Quiet, maxLines = 2)
+            // The dates alone, on one line (the Hijri day and month are said to a screen reader).
+            Text(dates, style = Type.detail, color = Quiet, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (!counted) Text(until, style = Type.detail.copy(fontWeight = FontWeight.SemiBold), color = Gold, maxLines = 1)
         }
         if (counted) {

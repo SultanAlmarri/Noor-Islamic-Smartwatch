@@ -38,8 +38,9 @@ already crowding in, then six rows and four long chips. Now the first screenful 
 sky as it is now (blue by day, indigo with stars at night, amber at the horizon around sunrise and sunset: the
 phone's own `SkyPalette`), dunes along the bottom, the next prayer's sign and name, the countdown at 48–58 sp
 SemiBold (40–48 with hours), the time it is at, the interval ring, and the Hijri date and place written on the
-dunes. Scroll and the sky moves away with it and fades to black. Then "TODAY" and the six times: the next one is a
-gold row with dark text, the current one a raised grey row, those gone by are grey, those to come white. Then the
+dunes. Scroll and the sky moves away with it and fades to black. Then "TODAY" and the six times, with one highlight
+(second round): the next one tinted gold with gold text, the current one white with a small gold "Now", those gone by
+grey. Then the
 alert card (only when alerts are on the watch), Qibla and Tasbih as two tiles side by side showing their figure
 (`258°`, `254`), the Hijri calendar row with the next event, and a round gear for Settings. The page is shorter than
 before (two tiles, a row and a button in place of four chips).
@@ -50,8 +51,9 @@ the side it points to in both languages. On arrival the whole screen turns to a 
 check lands with a spring, "Facing the Qibla". Two changes of presentation that are more than style: (1) while the
 wrist is tilted or the compass is starting, the figure and "Turn …" are hidden and only the instruction is shown
 (before, a figure that could not be trusted stood large above the hint); with a poor calibration the figure stays
-but greyed; (2) the line under the figure is now `258° · 1,633 km` (was `258° from North · 1,633 km`), so it stays
-clear of the turning letters; a screen reader still hears the full sentence. The cardinal letters moved inside the
+but greyed (second round: no figure then either, only the figure-8 sign and its words); (2) under the figure, two
+short lines, "Qibla 258°" and "1,633 km" (was one line, `258° from North · 1,633 km`), so they stay clear of the
+turning letters and say which number is which; a screen reader still hears the full sentence. The cardinal letters moved inside the
 Kaaba's track so they never collide with it (in Dubai the Qibla is almost due West: they overlapped before, too).
 
 **Tasbih.** The count at 62–76 sp SemiBold (a size down for each further digit, sized by calculation to stay between
@@ -118,8 +120,9 @@ Each final render was looked at with that question. What I changed because of it
 
 ## Tested, and how
 
-- `:wear:testDebugUnitTest` (with the Robolectric mirror flag, through the shared Gradle lock): **39 tests, 0
-  failures, 0 skipped** (34 before; five are new). Per class: WearScreensTest 9, FacePushTest 6, WearTextTest 5,
+- (First round; the second round's numbers are in its own section below.) `:wear:testDebugUnitTest` (with the
+  Robolectric mirror flag, through the shared Gradle lock): **39 tests, 0 failures, 0 skipped** (34 before; five are
+  new). Per class: WearScreensTest 9, FacePushTest 6, WearTextTest 5,
   IntervalsTest 4, WatchSkyTest 4, WearScreenshotTest 2, and one each in ComplicationTimelinesTest,
   ConfigRepositoryTest, MainActivityNavTest, OfficialRefreshTest, ReceivedSoundsTest, ReceivedStampTest,
   ShortcutLaunchTest, StudioWearTest, WearSmallScreenTest.
@@ -147,7 +150,7 @@ Smoothness was not measured (`smooth.yml` measures the phone).
 
 ## Found on the way
 
-- **Not mine, not fixed:** in `s15_qibla_ar` the system clock appears over the compass. It is in the baseline
+- **Fixed in the second round** (see below; this is how it stood after the first): in `s15_qibla_ar` the system clock appears over the compass. It is in the baseline
   render too: the test changes the language while the Qibla screen is showing, and the scaffold's "no clock here" is
   lost when the theme's context is replaced. On a watch this could happen only if the phone changes the language
   while the compass is open. It needs a change outside the look (how the theme swaps its context), so I left it.
@@ -159,3 +162,122 @@ Smoothness was not measured (`smooth.yml` measures the phone).
   the moment, in the phone's own sky colours darkened just enough for white text (5:1), with stars at night and
   dunes along the bottom; everything else is black with dark platters. The interval ring keeps a gap at the top for
   the system clock. See WATCH.md, 'The look of the watch app (0.25)'."
+
+## Second round: after the independent review (22 November 2026)
+
+A reviewer judged the 64 renders against "would Apple ship this?" and found the app about three-quarters of the way,
+held back by the words, by the round screen's edges and by an inconsistent component language. Every finding is
+answered below. As before: judged on software renders, nothing run on a watch.
+
+### Must
+
+1. **Tasbih "round complete" overlay.** The scrim is opaque black; nothing of the counter shows. Three things only: the
+   green disc (72 dp, 62 on the smallest watch) centred at 38 % of the height, "Done" 22 sp bold at 62 %, the prayer
+   line 14 sp `#9A9AA2` at 74 %. A test reads the picture: black where the side buttons and the count were.
+2. **The time over the compass.** Cause: the page's "no clock here" was held by Wear's scaffold, which dropped it when
+   the language changed under it. Fixed at the root: the app's frame (`NoorScaffold`) never draws the system's time
+   text; pages write the time themselves (`WatchClock`), and the compass does not. `s15` shows the mark, no time.
+3. **Text cut at the end of lists.** Partly a rendering artefact: the test stopped scrolling as soon as the last item
+   entered the screen, although on the watch it could already rise to the middle. The renders (`s25`, `s44`, `t07`) are
+   now taken at the true end. And changed as asked: 30 % of the screen below the last item of every list, closing
+   lines no wider than 60 % of the screen, 12 sp in `#9A9AA2` (they were that grey already; they looked dimmer because
+   Wear dims rows near the edge, which the lists no longer do).
+4. **Wording.** All replacements made in English and Arabic: the hub row is "Prayer times" with "Dubai · This watch"
+   or "From phone · 5 min ago"; the toggle is "Set on this watch" on one line; Asr says the school really in use
+   ("Auto · Standard" when left to the authority, from the method's own school; "Standard"; "Hanafi"); "Language",
+   "Same as watch", "123" / "١٢٣"; "Get the phone app / Opens on your phone"; "Can't reach phone / Open Minhad on your
+   phone"; "Set in Minhad on your phone."; "Minhad Studio · In use"; "Not in use" and the one-sentence hint; the
+   unsupported page's sentence; "Original". **One not done as written:** the footer "Dubai · IACAD timetable". The
+   watch has the authority's name only as core gives it ("Dubai — IACAD (Dulook DXB)"), and whether today's times come
+   from its timetable or from its calculation can differ by day. The footer now shows that name alone (true in both
+   cases) and "Calculated on the watch" is gone. A shorter name needs a field in `core/`.
+5. **Scroll bar on the ring.** Two answers. (a) It was the test: Wear's scroll bar shows only just after a list moves
+   and fades by itself; the old pictures were taken 1.2 s after the screen appeared. Proof: `x01_scrollbar_just_scrolled`
+   (150 ms after a scroll: the bar is there) and `x02_scrollbar_at_rest` (3.5 s: gone). All pictures are now taken at
+   rest. (b) Changed all the same: on the home screen the bar is hidden for as long as the ring is in view, so the two
+   never share the radius even while scrolling; it comes in as the sky goes.
+
+### Should
+
+6. **The time's capsule.** Gone: the app writes the time itself, straight on the page. On the home screen it stands in
+   the ring's gap on the sky, whose top 44 dp are darkened (black 35 % to 0). Every list hides it the moment it leaves
+   its top, the same way everywhere.
+7. **Times list.** One highlight: the next prayer's row tinted gold (20 %) with gold text; the current prayer has no
+   fill, white text and a 12 sp gold "Now" after its name; past ones grey. 16 sp names and times, AM/PM 11 sp regular,
+   44 dp rows, "TODAY" 12 sp.
+8. **Touch targets.** Tasbih's two buttons: 44 dp discs (40 on the smallest watch, where 44 would touch the ring)
+   inside 48 dp of touch, same centres. Colour swatches: 40 dp with 8 dp gaps, the chosen one ringed. **Not as
+   written:** two rows (three and two) instead of one row that scrolls sideways: a sideways scroll on Wear fights the
+   swipe that closes the page, and two rows show all five at once.
+9. **Qibla.** While the calibration is poor: only the figure-8 sign (40 dp, gold) and "Move your wrist in a figure 8";
+   tilted: the same pattern with a spirit level. Under the figure: "Qibla 258°" and "1,633 km" on two short lines (one
+   line that long would run into the turning letters); in Arabic digits the Arabic thousands mark ("١٬٦٣٣", for every
+   count in the app). "from north"; "No compass on this watch."
+10. **Watch-face page.** First view: the title at 20 %, the whole face (120 dp, 100 on the smallest watch) centred at
+    58 %; then "Minhad Studio · Not in use" 12 sp, then the button. The Minhad faces' rows have a 36 dp round sketch of
+    each design in the chosen colour and a gold check on the chosen one. The sketches are drawn (a time bar over
+    dunes, hands, the time alone, a ring): the watch app holds no pictures of the pushed faces.
+11. **Tiles.** (a) The Minhad tile's top line is the next prayer and its time. This needed a timeline that changes at
+    each prayer as well as at midnight: `ToolsTimeline` (new tests: no gap, two days, each stretch inside one day and
+    one interval, the cut at midnight). The prayer tile's timeline and countdown are untouched. (b) The three names
+    always, the count as "Tasbih 254". **Not as written:** one line under the buttons ("Qibla · Tasbih 254 ·
+    Calendar") rather than a 12 sp name under each: under a 56 dp button "Tasbih 254" was cut with "…" in the
+    renderer. From 1,000 the figure alone. (c) "All times" on both. (d) The bottom button: it is Wear Material's edge
+    button, whose own shape follows the screen's curve; the test renderer draws only its bounding box, so the picture
+    cannot show whether it clears. I did not replace it with a lifted plain button on the strength of a picture that
+    cannot show it. To check on a watch.
+12. **First run.** One card of one height in all three states (no jump); looking: "Finding your location…", the pin
+    becomes a spinner, gold stays at 100 %; failed: "No location yet" / "Try outdoors, or choose a city". The spinner
+    is Wear's own; a test render shows one still frame of it. The welcome's sentence is shorter ("Prayer times, Qibla
+    and dhikr. Works without your phone."); on the smallest watches the sentence and the pin are left out so the name
+    and the action fit one screenful.
+13. **Arabic-Indic zeros.** The countdown's colons are at 55 % and closer in those digits; at nought the tasbih says
+    "Tap to count" / "اضغط للعدّ" under the number (in both languages), in place of the day's total.
+14. **Prayer signs.** Strokes from 1.25 to 2 dp (at 24 dp); 22 dp on the home screen, 20 dp in the list. The six files
+    are shared with the complications, whose signs are heavier too.
+15. **Settings density.** Title at 20 %, 8 dp to the first row, 52 dp rows; the first screen shows the title and two
+    and a half rows. Rows keep their second line where it says a state the title does not.
+
+### Polish, decided
+
+16. Done: "of 33" and a dot for each phrase of the set, gold up to the current one (the words "of 33 · 2/4" are still
+    said to a screen reader).
+17. **The home ring fills; it does not drain.** Apple's Timer drains because the ring is the countdown. Here the ring
+    is the interval between two prayers, and on Minhad's own watch faces the same ring fills. One meaning on the face
+    and the opposite in the app would be worse than either. If the owner prefers draining, it is one line (`progress`
+    in `HomeScreen`).
+18. Done: the app writes the time, so it is in the chosen digits ("٦:٥٦") and clock.
+19. Done: the event's dates only, on one line; "days" 12 sp.
+20. Done: "Vibrate".
+
+### Asked to check
+
+- **(a) "23 Jumada al-Ula" on the home screen, "24" on the calendar and the tile.** The tests' fixtures: the home
+  renders are of 4 November, the calendar and tile renders of 5 November. One place in the app could really differ:
+  the calendar page took the watch's own date while the home screen and the tile take the date at the place. With a
+  city in another time zone they disagreed for the hours between the two midnights. Fixed in `NoorWearNav.kt` (the
+  calendar now takes the place's date). Nothing in `core/` was involved.
+- **(b) The alert moment.** There is no screen of the app to render: on the watch the Adhan or alert is a system
+  notification (built in `alerts/`, outside this work) with an Ongoing Activity chip; Wear OS draws both, and the watch
+  gives no full-screen page for it (`adhanScreen` is not provided by the watch app). So nothing was restyled and
+  nothing can be rendered here. A page of the app's own for that moment (the prayer's name, Stop) would be new work
+  in `alerts/` and `wear/`. Tasbih counts of three and four digits: rendered (`s26`, `s27`, `m05`), and the counter at
+  nought (`s28`).
+- **(c) Tests.** 44 tests, 0 failures, 0 skipped (39 after the first round). New: `ToolsTimelineTest` (4, one of them
+  the thousands mark) and `tasbihLargeCounts`. Changed to the new truth: the texts above; the home test also checks
+  "Now" on the current prayer; the Qibla test that no figure and no "Turn" show while calibrating; the round-done test
+  reads the picture for black; the tile test the top line, the three names and "All times". The picker test presses
+  "Dial" through its action rather than a touch (the row can be below the fold in the test's bare list). 73 renders.
+  `:wear:assembleRelease` succeeded again (12.29 MB), not installed anywhere.
+
+### What still falls short
+
+- The home sky by day is one calm blue, with no Sun or Moon (as before, for the contrast rule).
+- Tiles: the system font, the three buttons' real shape and the edge button's clearance are unknown until seen on a
+  watch; the names under the buttons are one line, not one under each.
+- The face sketches are sketches, not the faces.
+- Lists are still cut by the round screen while they scroll (every Wear list is); only the end of a list is now safe.
+- The smallest watches get a reduced welcome (no sentence, no pin).
+- The footer still carries core's long authority name.
+- No page of the app's own for the alert moment on the watch.
+- Motion (the sky's fade, the springs, the clock's fade, the spinner) has not been seen moving anywhere.
