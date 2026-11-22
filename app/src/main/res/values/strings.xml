@@ -323,7 +323,6 @@
     <string name="adhan_delete_used">It is used for %1$s. Those prayers will switch to the default Adhan.</string>
     <string name="adhan_name">Name</string>
     <string name="adhan_save">Save</string>
-    <string name="adhan_library_intro">Every recording here is freely licensed (public domain or Creative Commons) and credited to the person who recorded it.</string>
     <string name="adhan_cat_renowned">Makkah and Madinah</string>
     <string name="adhan_cat_fajr">For Fajr</string>
     <string name="adhan_cat_regional">From around the world</string>
@@ -334,7 +333,6 @@
     <string name="adhan_licence">Licence</string>
     <string name="adhan_changes_generic">Edited for Minhad: trimmed to the Adhan, short fades, loudness evened out, converted to mono.</string>
     <string name="adhan_sa_note">This edited recording is shared under the same licence.</string>
-    <string name="adhan_sounds_credit">Original sounds made for Minhad, free for anyone to use (CC0).</string>
     <string name="theme_sun">Follow the sun: light from sunrise, dark from Maghrib</string>
     <string name="today_in">in %1$s</string>
     <string name="sky_desc_up">The sun is %1$s° above the horizon. Next prayer at the gold ring.</string>
@@ -447,7 +445,6 @@
     <string name="kw_theme">dark light night day theme appearance follow the sun</string>
     <string name="kw_watch">Galaxy Wear OS smartwatch watch face tile complication</string>
     <string name="kw_accuracy">sources accuracy official timetable IACAD licence credits</string>
-    <string name="lib_intro">%1$s recordings from %2$s countries, freely licensed and credited. Tap ▶ to listen.</string>
     <string name="lib_search">Search by place, country, mosque or reciter</string>
     <string name="lib_filter_all">All</string>
     <string name="lib_filter_favourites">Favourites</string>

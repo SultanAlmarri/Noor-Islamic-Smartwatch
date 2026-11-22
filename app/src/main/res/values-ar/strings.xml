@@ -329,7 +329,6 @@
     <string name="adhan_delete_used">مستخدم في: %1$s. ستعود هذه الصلوات إلى الأذان الافتراضي.</string>
     <string name="adhan_name">الاسم</string>
     <string name="adhan_save">حفظ</string>
-    <string name="adhan_library_intro">كل تسجيل هنا مرخّص ترخيصًا حرًّا (ملكية عامة أو المشاع الإبداعي) ومنسوب إلى من سجّله.</string>
     <string name="adhan_cat_renowned">مكة المكرمة والمدينة المنورة</string>
     <string name="adhan_cat_fajr">لصلاة الفجر</string>
     <string name="adhan_cat_regional">من أنحاء العالم</string>
@@ -340,7 +339,6 @@
     <string name="adhan_licence">الترخيص</string>
     <string name="adhan_changes_generic">عُدّل لتطبيق منهاد: قُصّ ليقتصر على الأذان، مع تلاشٍ قصير وتوحيد لمستوى الصوت وتحويل إلى قناة واحدة.</string>
     <string name="adhan_sa_note">يُشارك هذا التسجيل المعدّل بالترخيص نفسه.</string>
-    <string name="adhan_sounds_credit">أصوات أصلية صُنعت لتطبيق منهاد، حرّة الاستخدام للجميع (CC0).</string>
     <string name="theme_sun">مع الشمس: فاتح من الشروق، داكن من المغرب</string>
     <string name="today_in">بعد %1$s</string>
     <string name="sky_desc_up">الشمس فوق الأفق بـ%1$s°. الصلاة القادمة عند الحلقة الذهبية.</string>
@@ -457,7 +455,6 @@
     <string name="kw_theme">داكن فاتح ليلي نهاري مظهر مع الشمس</string>
     <string name="kw_watch">ساعة ذكية واجهة بلاطة جالكسي</string>
     <string name="kw_accuracy">مصادر دقة جدول رسمي ترخيص</string>
-    <string name="lib_intro">%1$s تسجيلًا من %2$s دولة، مرخّصة بحرية ومنسوبة لأصحابها. اضغط ▶ للاستماع.</string>
     <string name="lib_search">ابحث بالمكان أو الدولة أو المسجد أو المؤذن</string>
     <string name="lib_filter_all">الكل</string>
     <string name="lib_filter_favourites">المفضلة</string>
