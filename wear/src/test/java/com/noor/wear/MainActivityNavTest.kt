@@ -40,6 +40,9 @@ class MainActivityNavTest {
         val dubai = SetupPlace(GeoPoint(25.2048, 55.2708, 5.0), "Asia/Dubai", "Dubai", "دبي", "AE", "AE-DU", fromGps = false)
         runBlocking { app.config.saveSetup(LocalSetup(dubai)) }
 
+        // 0.25: the home screen opens on the next prayer alone (whichever it is now), over the place.
+        waitFor("Dubai", substring = true)
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Fajr"))
         waitFor("Fajr")
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Tasbih"))
         rule.onNode(hasText("Tasbih")).performClick()
@@ -51,8 +54,12 @@ class MainActivityNavTest {
         waitFor("3")
 
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        // Back on the home screen where it was left (scrolled to the tools), with the new day total on the chip.
-        waitFor("Today 3")
+        // Back on the home screen where it was left (scrolled to the tools), with the new day total on the tile
+        // (the figure is shown; "Today 3" is what it says to a screen reader).
+        rule.waitUntil(15_000) {
+            rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Today 3", substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        waitFor("3")
         // The count was stored on the way.
         runBlocking { assertEquals(3, app.tasbih.current().count) }
 

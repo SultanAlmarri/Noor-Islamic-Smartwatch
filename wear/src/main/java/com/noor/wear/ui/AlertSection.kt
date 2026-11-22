@@ -8,7 +8,10 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -25,9 +28,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import com.noor.alerts.AlertScheduler
 import com.noor.prayer.WatchConfig
@@ -61,30 +61,32 @@ fun AlertSection(c: WatchConfig, t: WearText) {
     val exact = remember(tick) { AlertScheduler.canScheduleExact(ctx) }
     val launcher = rememberNotificationRequest { refreshAll() }
 
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(stringResource(R.string.alerts_title), style = MaterialTheme.typography.titleSmall, color = Gold, textAlign = TextAlign.Center)
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp).background(Platter, PlatterShape).padding(horizontal = 12.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RoundSign(R.drawable.ic_bell, Tint.Red, size = 24.dp)
+            Text(stringResource(R.string.alerts_title), style = Type.row, color = Ink, maxLines = 1)
+        }
         when {
             !notifGranted -> {
-                Text(stringResource(R.string.alerts_need_notifications), style = MaterialTheme.typography.bodySmall, color = Mist,
-                    textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 4.dp))
-                Button(onClick = { launcher() }, modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.filledTonalButtonColors()) { Text(stringResource(R.string.alerts_allow)) }
+                Text(stringResource(R.string.alerts_need_notifications), style = Type.note, color = Quiet,
+                    textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp, bottom = 7.dp))
+                PrimaryButton(stringResource(R.string.alerts_allow), { launcher() })
             }
             !exact && Build.VERSION.SDK_INT >= 31 -> {
-                Text(stringResource(R.string.alerts_need_exact), style = MaterialTheme.typography.bodySmall, color = Mist,
-                    textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 4.dp))
-                Button(onClick = {
+                Text(stringResource(R.string.alerts_need_exact), style = Type.note, color = Quiet,
+                    textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp, bottom = 7.dp))
+                PrimaryButton(stringResource(R.string.alerts_allow), {
                     val i = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     runCatching { ctx.startActivity(i) }.onFailure {
                         runCatching { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", ctx.packageName, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     }
-                }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.filledTonalButtonColors()) { Text(stringResource(R.string.alerts_allow)) }
+                })
             }
             else -> {
                 val next = remember(c, tick) { AlertPlanner.plan(c, alerts, AlertDevice.WATCH, Instant.now()).firstOrNull() }
                 Text(
                     if (next != null) stringResource(R.string.alerts_next, t.name(next.prayer), t.time(next.at, c.zone)) else stringResource(R.string.alerts_none),
-                    style = MaterialTheme.typography.bodySmall, color = Mist, textAlign = TextAlign.Center,
+                    style = Type.detail, color = if (next != null) Gold else Quiet, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp),
                 )
             }
         }

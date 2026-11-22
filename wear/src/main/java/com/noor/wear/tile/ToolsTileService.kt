@@ -13,19 +13,17 @@ import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.protolayout.layout.column
 import androidx.wear.protolayout.layout.spacer
-import androidx.wear.protolayout.material3.ButtonDefaults.filledTonalButtonColors
-import androidx.wear.protolayout.material3.Typography
+import androidx.wear.protolayout.material3.ButtonColors
 import androidx.wear.protolayout.material3.buttonGroup
 import androidx.wear.protolayout.material3.icon
 import androidx.wear.protolayout.material3.iconButton
 import androidx.wear.protolayout.material3.materialScope
 import androidx.wear.protolayout.material3.primaryLayout
-import androidx.wear.protolayout.material3.text
 import androidx.wear.protolayout.material3.textEdgeButton
 import androidx.wear.protolayout.modifiers.LayoutModifier
 import androidx.wear.protolayout.modifiers.clickable
 import androidx.wear.protolayout.modifiers.contentDescription
-import androidx.wear.protolayout.types.layoutString
+import androidx.wear.protolayout.types.argb
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
@@ -76,6 +74,8 @@ class ToolsTileService : TileService() {
             .setValidity(TimelineBuilders.TimeInterval.Builder().apply { if (start != null) setStartMillis(start) }.setEndMillis(end).build())
             .build()
 
+    private class Tool(val icon: String, val dest: String, val label: Int, val tint: Int, val onTint: Int)
+
     companion object {
         private const val RESOURCES_VERSION = "2"
         private const val IC_QIBLA = "qibla"
@@ -106,34 +106,44 @@ class ToolsTileService : TileService() {
             val t = WearText(config)
             val h = HijriDate.of(date, config?.hijriAdjust ?: 0)
             return materialScope(context, device, allowDynamicTheme = false, defaultColorScheme = PrayerTileService.Scheme) {
-                fun tool(id: String, dest: String, label: Int) = iconButton(
+                // 0.25: each tool on a round button of its own colour, the colours of the app's home screen.
+                fun tool(id: String, dest: String, label: Int, tint: Int, onTint: Int) = iconButton(
                     onClick = open(context, dest),
                     iconContent = { icon(id) },
-                    width = expand(), height = dp(52f),
-                    colors = filledTonalButtonColors(),
+                    width = expand(), height = dp(54f),
+                    shape = shapes.full,
+                    colors = ButtonColors(containerColor = tint.argb, iconColor = onTint.argb),
                     modifier = LayoutModifier.contentDescription(context.getString(label)),
                 )
                 primaryLayout(
-                    titleSlot = { text(context.getString(R.string.app_name).layoutString, color = colorScheme.primary) },
+                    titleSlot = { PrayerTileService.label(context.getString(R.string.app_name), 14f, PrayerTileService.GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD) },
                     mainSlot = {
                         column(
-                            text((t.digits(h.day.toString()) + " " + (if (t.arabic) h.monthNameAr else h.monthNameEn)).layoutString,
-                                typography = Typography.TITLE_MEDIUM, color = colorScheme.onSurface),
+                            PrayerTileService.label(t.digits(h.day.toString()) + " " + (if (t.arabic) h.monthNameAr else h.monthNameEn),
+                                20f, PrayerTileService.INK, LayoutElementBuilders.FONT_WEIGHT_BOLD),
                             spacer(height = dp(8f)),
                             buttonGroup {
                                 // Read in the language's direction: Qibla first, on the right in Arabic.
-                                val tools = listOf(Triple(IC_QIBLA, Dest.QIBLA, R.string.qibla), Triple(IC_TASBIH, Dest.TASBIH, R.string.tasbih),
-                                    Triple(IC_CALENDAR, Dest.CALENDAR, R.string.calendar))
-                                for ((id, dest, label) in if (t.arabic) tools.reversed() else tools) buttonGroupItem { tool(id, dest, label) }
+                                val white = 0xFFFFFFFF.toInt()
+                                val tools = listOf(
+                                    Tool(IC_QIBLA, Dest.QIBLA, R.string.qibla, PrayerTileService.GOLD, PrayerTileService.ON_GOLD),
+                                    Tool(IC_TASBIH, Dest.TASBIH, R.string.tasbih, 0xFF34C96B.toInt(), 0xFF05230F.toInt()),
+                                    Tool(IC_CALENDAR, Dest.CALENDAR, R.string.calendar, 0xFF6E6BF2.toInt(), white),
+                                )
+                                for (x in if (t.arabic) tools.reversed() else tools) buttonGroupItem { tool(x.icon, x.dest, x.label, x.tint, x.onTint) }
                             },
                             spacer(height = dp(6f)),
-                            text(
-                                (if (tasbihToday > 0) context.getString(R.string.tasbih_today, t.digits(tasbihToday.toString())) else context.getString(R.string.tile_tools_hint)).layoutString,
-                                typography = Typography.BODY_SMALL, color = colorScheme.onSurfaceVariant,
+                            PrayerTileService.label(
+                                if (tasbihToday > 0) context.getString(R.string.tasbih_today, t.digits(tasbihToday.toString())) else context.getString(R.string.tile_tools_hint),
+                                13f, PrayerTileService.QUIET,
                             ),
                         )
                     },
-                    bottomSlot = { textEdgeButton(onClick = open(context, null)) { text(context.getString(R.string.tile_open_times).layoutString) } },
+                    bottomSlot = {
+                        textEdgeButton(onClick = open(context, null)) {
+                            PrayerTileService.label(context.getString(R.string.tile_open_times), 15f, PrayerTileService.ON_GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD)
+                        }
+                    },
                 )
             }
         }

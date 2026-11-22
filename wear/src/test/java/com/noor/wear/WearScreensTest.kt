@@ -98,6 +98,10 @@ class WearScreensTest {
     private fun has(text: String, substring: Boolean = false) =
         rule.onAllNodesWithText(text, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
+    /** Something on screen says [text] to a screen reader. */
+    private fun described(text: String) =
+        rule.onAllNodes(androidx.compose.ui.test.hasContentDescription(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
     private fun reading(heading: Double, quality: CompassQuality = CompassQuality.GOOD, issues: Set<CompassIssue> = emptySet(), accuracy: Double? = 6.0) =
         CompassReading(heading, 1.6, accuracy, 3, 45.0, 45.0, 4.0, CompassAssessment(quality, issues), CompassReading.Source.ROTATION_VECTOR)
 
@@ -106,11 +110,26 @@ class WearScreensTest {
         screen = { NoorWearTheme(config) { t -> HomeScreen(config!!, t, { TestConfigs.afternoon }, HomeExtras(tasbihToday = 254) { opened += it }) } }
         start()
         shot("s01_home_top", "Asr")
+        // 0.25: the first screenful is the moment alone (the countdown in the owner's format, the time, the place and date).
+        assertTrue(has("23:00")); assertTrue(has("at 3:14 PM")); assertTrue(has("Dubai", substring = true)); assertTrue(has("23 Jumada al-Ula 1448"))
+        // Then the day's six times, each by name.
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Dhuhr"))
+        shot("s03_home_times", "Fajr")
+        for ((name, time) in listOf("Fajr" to "5:09 AM", "Shuruq" to "6:25 AM", "Dhuhr" to "12:05 PM", "Asr" to "3:14 PM", "Maghrib" to "5:40 PM", "Isha" to "6:55 PM")) {
+            // (By the time: the next prayer's name is also in the first screenful.)
+            rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(time))
+            assertTrue(name, has(name)); assertTrue("$name at $time", has(time))
+        }
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Tasbih"))
-        shot("s02_home_tools", "Today 254")
-        assertTrue("Qibla bearing shown", has("° from North", substring = true) || has("°\u2069 from North", substring = true))
-        // The calendar chip names the next event and how far it is.
+        shot("s02_home_tools", "254")
+        // 0.25: the two tools are tiles that show their figure (the bearing, today's count) and say the rest aloud.
+        val bearing = "%.0f°".format(Qibla.from(config!!.point).bearingDeg)
+        assertTrue("Qibla bearing shown", has(bearing, substring = true))
+        assertTrue("Qibla bearing spoken", described("from North"))
+        assertTrue("today's count spoken", described("Today 254"))
+        // The calendar row names the next event and how far it is.
         assertTrue(has("White Days · in", substring = true))
+        assertTrue("Settings is a round button with a spoken name", described("Settings"))
         rule.onAllNodesWithText("Tasbih", useUnmergedTree = true).fetchSemanticsNodes()
         rule.onNode(hasText("Tasbih")).performClick()
         assertEquals(listOf("tasbih"), opened)
