@@ -219,7 +219,7 @@ fun TimetableContent(
                     Modifier.align(Alignment.CenterEnd).padding(end = 4.dp).size(48.dp).clip(CircleShape)
                         .clickable(role = Role.Button, onClickLabel = share, onClick = withTick {
                             scope.launch {
-                                val table = source.load(month)
+                                val table = source.loadOrNull(month) ?: return@launch
                                 onShare("${words.title} · $title", TimetableText.of(table, placeName, method, adjust, f, words))
                             }
                         })
@@ -430,7 +430,8 @@ private fun MonthPage(
     // The days and their dates are known at once; the times come from the source (at once too when it has them).
     val days = remember(month, adjust) { month.dates(adjust).map { TableDay(it, HijriDate.of(it, adjust), emptyMap(), false) } }
     var table by remember(month) { mutableStateOf(source.cached(month)) }
-    LaunchedEffect(source, month) { table = source.load(month) }
+    // (Should a month fail to be worked out, its skeleton stays; the page does not fall with it.)
+    LaunchedEffect(source, month) { source.loadOrNull(month)?.let { table = it } }
     val shown = table?.takeIf { it.days.size == days.size }
     val filled by animateFloatAsState(if (shown != null) 1f else 0f, tween(NoorMotion.Quick), label = "timetableFill")
 
@@ -475,6 +476,9 @@ private fun MonthPage(
         item(key = "foot") { CompositionLocalProvider(LocalDensity provides phone) { Foot(shown, month.hijri, placeLine, authority, m.side) } }
     }
 }
+
+private suspend fun TableSource.loadOrNull(month: TableMonth): Table? =
+    try { load(month) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
 
 /**
  * A day: its weekday over its number (the other calendar's day small beside it), then the six times. Today's row is
