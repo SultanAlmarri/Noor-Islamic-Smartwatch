@@ -9,13 +9,16 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -51,7 +54,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ScreenScaffold
@@ -141,24 +143,31 @@ fun TasbihScreen(initial: TasbihState, t: WearText, controls: TasbihControls) {
                     else -> Screen.sp(27f, 36f)
                 }
                 Numeral(t.digits(s.count.toString()), size, Modifier.padding(vertical = 3.dp).scale(bump.value))
-                Text(
-                    when {
-                        s.target > 0 && s.preset.steps.size > 1 -> stringResource(R.string.tasbih_target_step, t.digits(s.target.toString()), t.digits((s.stepIndex + 1).toString()), t.digits(s.preset.steps.size.toString()))
-                        s.target > 0 -> stringResource(R.string.tasbih_target, t.digits(s.target.toString()))
-                        else -> stringResource(R.string.tasbih_free)
-                    } + if (s.rounds > 0) "  ·  ×" + t.digits(s.rounds.toString()) else "",
-                    style = Type.detail, color = Quiet, textAlign = TextAlign.Center, maxLines = 1,
-                )
-                Text(
-                    stringResource(R.string.tasbih_today, t.count(s.todayOn(controls.today()).toLong())),
-                    style = Type.detail.copy(fontWeight = FontWeight.SemiBold), color = Gold, textAlign = TextAlign.Center, maxLines = 1,
-                )
+                // The target, and which phrase of the set this is: a dot for each, gold up to this one.
+                val steps = s.preset.steps.size
+                val stepWords = stringResource(R.string.tasbih_target_step, t.digits(s.target.toString()), t.digits((s.stepIndex + 1).toString()), t.digits(steps.toString()))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    modifier = Modifier.height(18.dp).semantics(mergeDescendants = true) { if (s.target > 0 && steps > 1) contentDescription = stepWords }) {
+                    if (s.target > 0) Text(stringResource(R.string.tasbih_target, t.digits(s.target.toString())), style = Type.detail, color = Quiet, maxLines = 1)
+                    if (s.target > 0 && steps > 1) Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        repeat(steps) { i -> Box(Modifier.size(5.dp).background(if (i <= s.stepIndex) Gold else PlatterHigh, CircleShape)) }
+                    }
+                    if (s.rounds > 0) Text("×" + t.digits(s.rounds.toString()), style = Type.detail, color = Quiet, maxLines = 1)
+                }
+                // At nought (in Arabic-Indic digits a lone dot) the line says what to do; after that, today's total.
+                if (s.count == 0) {
+                    Text(stringResource(R.string.tasbih_start), style = Type.note, color = Quiet, textAlign = TextAlign.Center, maxLines = 1)
+                } else {
+                    Text(stringResource(R.string.tasbih_today, t.count(s.todayOn(controls.today()).toLong())),
+                        style = Type.detail.copy(fontWeight = FontWeight.SemiBold), color = Gold, textAlign = TextAlign.Center, maxLines = 1)
+                }
             }
-            // Undo and options flank the number at 9 and 3 o'clock, where a round screen is widest.
-            val button = Screen.dp(32f, 36f)
-            val side = Screen.width() / 2 - button / 2 - 15.dp
-            SideButton(R.drawable.ic_undo, stringResource(R.string.tasbih_undo), button, Modifier.offset(x = -side), undo)
-            SideButton(R.drawable.ic_more, stringResource(R.string.tasbih_options), button, Modifier.offset(x = side), controls.onOpenPresets)
+            // Undo and options flank the number at 9 and 3 o'clock, where a round screen is widest: 44 dp discs
+            // (40 on the smallest watches) inside 48 dp of touch.
+            val side = Screen.width() / 2 - Screen.dp(31f, 33f)
+            SideButton(R.drawable.ic_undo, stringResource(R.string.tasbih_undo), Screen.dp(40f, 44f), Modifier.offset(x = -side), undo)
+            SideButton(R.drawable.ic_more, stringResource(R.string.tasbih_options), Screen.dp(40f, 44f), Modifier.offset(x = side), controls.onOpenPresets)
+            WatchClock()
             RoundDone(celebrate, t)
         }
     }
@@ -166,8 +175,10 @@ fun TasbihScreen(initial: TasbihState, t: WearText, controls: TasbihControls) {
 
 @Composable
 private fun SideButton(@DrawableRes icon: Int, label: String, size: Dp, modifier: Modifier, onClick: () -> Unit) {
-    Box(modifier.size(size).pressable(CircleShape, Platter, onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(painterResource(icon), label, Modifier.size(18.dp), tint = Mist)
+    Box(modifier.size(48.dp).pressable(CircleShape, Color.Transparent, onClick = onClick), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(size).background(Platter, CircleShape), contentAlignment = Alignment.Center) {
+            Icon(painterResource(icon), label, Modifier.size(20.dp), tint = Mist)
+        }
     }
 }
 
@@ -176,15 +187,19 @@ private fun SideButton(@DrawableRes icon: Int, label: String, size: Dp, modifier
 private fun RoundDone(key: Int, t: WearText) {
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(key) { if (key > 0) { visible = true; delay(1600); visible = false } }
-    AnimatedVisibility(visible, enter = fadeIn(tween(200)) + scaleIn(initialScale = 0.85f, animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow)), exit = fadeOut(tween(400))) {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f)), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(56.dp).background(Success, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.ic_check), null, Modifier.size(34.dp), tint = Color.Black)
-                }
-                Text(stringResource(R.string.tasbih_round_done), style = if (t.arabic) Type.kufi(22.sp) else Type.title.copy(fontSize = 20.sp), color = Ink, modifier = Modifier.padding(top = 8.dp))
-                Text(stringResource(R.string.tasbih_round_done_body), style = Type.detail, color = Quiet, textAlign = TextAlign.Center)
+    // The whole screen goes black (nothing of the counter shows through), then three things only: the green check,
+    // "Done", and the prayer for it, each at its own height.
+    AnimatedVisibility(visible, enter = fadeIn(tween(120)), exit = fadeOut(tween(350))) {
+        val h = Screen.height()
+        val disc = Screen.dp(62f, 72f)
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            Box(Modifier.align(Alignment.TopCenter).offset(y = h * 0.38f - disc / 2).size(disc).background(Success, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(painterResource(R.drawable.ic_check), null, Modifier.size(disc * 0.58f), tint = Color.Black)
             }
+            Text(stringResource(R.string.tasbih_round_done), style = if (t.arabic) Type.kufi(24.sp) else Type.title.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold), color = Ink, maxLines = 1,
+                modifier = Modifier.align(Alignment.TopCenter).offset(y = h * 0.62f - 15.dp).height(30.dp).wrapContentHeight(Alignment.CenterVertically, unbounded = true))
+            Text(stringResource(R.string.tasbih_round_done_body), style = Type.body.copy(fontWeight = FontWeight.Normal), color = Quiet, textAlign = TextAlign.Center, maxLines = 1,
+                modifier = Modifier.align(Alignment.TopCenter).offset(y = h * 0.74f - 11.dp).height(22.dp).wrapContentHeight(Alignment.CenterVertically, unbounded = true))
         }
     }
 }
@@ -215,9 +230,9 @@ private fun phraseLabel(step: DhikrStep, t: WearText): String = step.dhikr?.let 
 /** Choose what to count, start again, and see the totals. */
 @Composable
 fun TasbihOptionsScreen(s: TasbihState, t: WearText, vibrate: Boolean, today: LocalDate, onChoose: (TasbihPreset) -> Unit, onReset: () -> Unit, onVibrate: (Boolean) -> Unit) {
-    val list = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
+    PageScaffold(list) {
+        NoorList(list) {
             item { Header(stringResource(R.string.tasbih)) }
             TasbihPreset.entries.forEach { p ->
                 item {

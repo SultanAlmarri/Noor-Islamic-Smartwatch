@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,20 +26,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text
 import com.noor.prayer.HijriDate
 import com.noor.prayer.Prayer
@@ -66,7 +73,7 @@ data class HomeExtras(
 @Composable
 fun NoorWearContent(config: WatchConfig?, clock: () -> Instant = Instant::now, extras: HomeExtras = HomeExtras(), welcome: WelcomeActions = WelcomeActions()) {
     NoorWearTheme(config) { t ->
-        androidx.wear.compose.material3.AppScaffold {
+        NoorScaffold {
             if (config == null) WelcomeScreen(welcome) else HomeScreen(config, t, clock, extras)
         }
     }
@@ -86,6 +93,8 @@ internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extra
     val minuteKey = now.epochSecond / 60
     val st = remember(c, minuteKey) { c.state(now) }
     val untilNext = Duration.between(now, st.next.at)
+    // The ring fills as the interval passes (it does not drain with the countdown): the same reading as the ring on
+    // Minhad's watch faces, where gold is the time gone by. One ring that means two things would be worse than either.
     val progress = st.current?.let {
         val total = Duration.between(it.at, st.next.at).seconds.toFloat()
         (Duration.between(it.at, now).seconds / total).coerceIn(0f, 1f)
@@ -101,14 +110,17 @@ internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extra
     val nextEvent = remember(c, st.today.date) { IslamicCalendar.upcoming(st.today.date, c.hijriAdjust, limit = 1).firstOrNull() }
     // How far the first screenful has been scrolled away (null once it is out of sight).
     val heroOffset by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }?.offset } }
+    val screenPx = with(LocalDensity.current) { Screen.height().toPx() }
+    fun heroAlpha(): Float = heroOffset?.let { (1f + it / (screenPx * 0.75f)).coerceIn(0f, 1f) } ?: 0f
 
-    ScreenScaffold(scrollState = listState) { _ ->
+    ScreenScaffold(
+        scrollState = listState,
+        // The scroll bar runs where the ring is: it belongs to the black part of the page, and comes as the sky goes.
+        scrollIndicator = { ScrollIndicator(listState, Modifier.align(Alignment.CenterEnd).graphicsLayer { alpha = 1f - heroAlpha() }) },
+    ) { _ ->
         Box(Modifier.fillMaxSize()) {
             // The sky and the ring belong to the first screenful: they leave with it, fading into the black below.
-            Box(Modifier.fillMaxSize().graphicsLayer {
-                val o = heroOffset
-                if (o == null) alpha = 0f else { translationY = o.toFloat(); alpha = (1f + o / (size.height * 0.75f)).coerceIn(0f, 1f) }
-            }) {
+            Box(Modifier.fillMaxSize().graphicsLayer { translationY = (heroOffset ?: 0).toFloat(); alpha = heroAlpha() }) {
                 SkyBackdrop(sky, Modifier.fillMaxSize())
                 // The interval to the next prayer, drawn around the edge of the screen (gap at the top for the clock).
                 Ring(progress, Modifier.fillMaxSize().padding(4.dp), track = Color.White.copy(alpha = 0.20f), animate = false)
@@ -118,7 +130,7 @@ internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extra
                 contentPadding = PaddingValues(horizontal = 12.dp), autoCentering = AutoCenteringParams(itemIndex = 0),
                 // No shrinking at the edges here: the first screenful fills the screen edge to edge.
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(edgeScale = 1f, edgeAlpha = 1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Top),
+                verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Top),
             ) {
                 item { Hero(Modifier.fillParentMaxSize(), c, t, st.next.prayer, st.next.at, untilNext, t.name(st.next), HijriDate.of(st.today.date, c.hijriAdjust)) }
                 item { Caption(stringResource(R.string.today), t, Modifier.padding(bottom = 2.dp)) }
@@ -145,16 +157,18 @@ internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extra
                 }
                 item {
                     NoorChip(stringResource(R.string.calendar), R.drawable.ic_calendar, { extras.onOpen(Dest.CALENDAR) }, iconTint = Tint.Indigo,
-                        secondary = nextEvent?.let { e -> t.eventName(e.event) + " · " + daysUntilText(e.daysUntil, t) }, modifier = Modifier.padding(top = 2.dp))
+                        secondary = nextEvent?.let { e -> t.eventName(e.event) + " · " + daysUntilText(e.daysUntil, t) }, modifier = Modifier.padding(top = 4.dp))
                 }
                 item {
                     val label = stringResource(R.string.settings)
-                    Box(Modifier.padding(top = 4.dp).size(48.dp).pressable(CircleShape, Platter) { extras.onOpen(Dest.SETTINGS) }.semantics { contentDescription = label },
+                    Box(Modifier.padding(top = 6.dp).size(48.dp).pressable(CircleShape, Platter) { extras.onOpen(Dest.SETTINGS) }.semantics { contentDescription = label },
                         contentAlignment = Alignment.Center) {
                         Icon(painterResource(R.drawable.ic_settings), null, Modifier.size(24.dp), tint = Mist)
                     }
                 }
             }
+            // The time in the ring's gap, straight on the sky, for as long as the first screenful is in place.
+            WatchClock(visible = listState.atTop())
         }
     }
 }
@@ -170,7 +184,7 @@ private fun Hero(modifier: Modifier, c: WatchConfig, t: WearText, next: Prayer, 
         Column(horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.align(Alignment.Center).offset(y = -h * 0.06f).semantics(mergeDescendants = true) { contentDescription = spoken }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(painterResource(ComplicationBuilder.iconRes(next)), null, Modifier.size(Screen.dp(18f, 21f)), tint = GoldSoft)
+                Icon(painterResource(ComplicationBuilder.iconRes(next)), null, Modifier.size(Screen.dp(20f, 22f)), tint = GoldSoft)
                 Spacer(Modifier.width(6.dp))
                 Text(name, style = if (t.arabic) Type.kufi(Screen.sp(21f, 24f)) else Type.title.copy(fontSize = Screen.sp(18f, 21f)), color = Ink, maxLines = 1)
             }
@@ -180,7 +194,7 @@ private fun Hero(modifier: Modifier, c: WatchConfig, t: WearText, next: Prayer, 
                 countdown.length <= 7 -> Screen.sp(40f, 48f)
                 else -> Screen.sp(35f, 42f)
             }
-            Numeral(countdown, size)
+            Numeral(countdown, size, softColons = c.arabicDigits)
             Text(stringResource(R.string.at_time_watch, t.time(at, c.zone)), style = Type.body.copy(fontWeight = FontWeight.SemiBold), color = Ink, maxLines = 1)
         }
         // On the dunes: the Hijri date, and the place below it where the round screen is narrowest (it is the shorter).
@@ -194,28 +208,40 @@ private fun Hero(modifier: Modifier, c: WatchConfig, t: WearText, next: Prayer, 
 }
 
 /**
- * One of the day's six times. The next one is the gold row, the one we are in is raised, those gone by are quiet.
+ * One of the day's six times. One highlight only: the next prayer's row is tinted gold with gold text. The prayer we
+ * are in has no fill: full white, with a small gold "Now" after its name. Those gone by are grey.
  */
 @Composable
 private fun PrayerRow(p: Prayer, name: String, time: String, isCurrent: Boolean, isNext: Boolean, isPast: Boolean) {
     val text = when {
-        isNext -> OnGold
+        isNext -> Gold
         isCurrent -> Ink
-        isPast -> Quiet.copy(alpha = 0.78f)
-        else -> Ink.copy(alpha = if (p.isPrayer) 1f else 0.82f)
+        isPast -> Quiet
+        else -> Ink.copy(alpha = if (p.isPrayer) 1f else 0.85f)
     }
-    val strong = isCurrent || isNext
+    val style = Type.row.copy(fontSize = 16.sp, fontWeight = if (isNext) FontWeight.SemiBold else FontWeight.Medium)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp),
-        modifier = Modifier.fillMaxWidth()
-            .background(when { isNext -> Gold; isCurrent -> PlatterHigh; else -> Color.Transparent }, RoundedCornerShape(15.dp))
-            .padding(horizontal = 13.dp, vertical = if (strong) 9.dp else 6.dp),
+        modifier = Modifier.fillMaxWidth().height(44.dp)
+            .background(if (isNext) Gold.copy(alpha = 0.20f) else Color.Transparent, RoundedCornerShape(15.dp))
+            .padding(horizontal = 12.dp),
     ) {
-        Icon(painterResource(ComplicationBuilder.iconRes(p)), null, Modifier.size(18.dp),
-            tint = when { isNext -> OnGold; isCurrent -> Gold; isPast -> Quiet.copy(alpha = 0.7f); else -> Mist })
-        Text(name, modifier = Modifier.weight(1f), style = if (strong) Type.row else Type.body, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(time, style = (if (strong) Type.row else Type.body).copy(fontFeatureSettings = "tnum"), color = text, maxLines = 1)
+        Icon(painterResource(ComplicationBuilder.iconRes(p)), null, Modifier.size(20.dp),
+            tint = when { isNext -> Gold; isCurrent -> Ink; isPast -> Quiet.copy(alpha = 0.8f); else -> Mist })
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(name, style = style, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            if (isCurrent) Text(stringResource(R.string.now), style = Type.note.copy(fontWeight = FontWeight.SemiBold), color = Gold, maxLines = 1)
+        }
+        // "3:14" at the row's size, "PM" small and light beside it.
+        val cut = time.indexOf(' ')
+        Text(
+            if (cut > 0) buildAnnotatedString {
+                append(time.substring(0, cut))
+                withStyle(SpanStyle(fontSize = 11.sp, fontWeight = FontWeight.Normal)) { append(time.substring(cut)) }
+            } else buildAnnotatedString { append(time) },
+            style = style.copy(fontFeatureSettings = "tnum"), color = text, maxLines = 1,
+        )
     }
 }
 

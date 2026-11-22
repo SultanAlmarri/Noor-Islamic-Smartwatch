@@ -6,6 +6,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -27,9 +32,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.noor.face.FaceFrame
 import com.noor.face.FaceRenderer
@@ -50,28 +53,39 @@ data class StudioUi(val supported: Boolean, val active: Boolean, val fromPhone: 
  */
 @Composable
 fun FacesScreen(config: WatchConfig?, studio: StudioUi, design: FaceDesign, onShowStudio: () -> Boolean, showClassic: Boolean = true) {
-    val list = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
-            item { Header(stringResource(R.string.settings_face)) }
-            item { Text(stringResource(R.string.studio_face_name), style = Type.row, color = Gold) }
-            if (!studio.supported) {
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
+    PageScaffold(list) {
+        if (!studio.supported) {
+            NoorList(list) {
+                item { Header(stringResource(R.string.settings_face)) }
                 item { Footnote(stringResource(R.string.studio_unsupported)) }
-            } else {
-                // The face itself, with a rim like a watch's own.
-                item { StudioPreview(config, design, Modifier.size(Screen.dp(112f, 128f)).border(2.dp, PlatterHigh, CircleShape).padding(3.dp)) }
+                if (showClassic) item { FaceSection(autoStart = false) }
+            }
+        } else {
+            NoorList(list, centerFirst = true) {
+                // The first screenful: the title a fifth of the way down, and the whole face under it, with a rim like a
+                // watch's own.
                 item {
-                    Text(stringResource(if (studio.active) R.string.studio_in_use else R.string.studio_not_in_use),
-                        style = Type.row, color = if (studio.active) Success else Ink, textAlign = TextAlign.Center)
+                    val h = Screen.height()
+                    val face = Screen.dp(100f, 120f)
+                    Box(Modifier.fillParentMaxSize()) {
+                        Text(stringResource(R.string.settings_face), style = Type.title, color = Ink, maxLines = 1,
+                            modifier = Modifier.align(Alignment.TopCenter).offset(y = h * 0.20f - 14.dp).height(28.dp).wrapContentHeight(Alignment.CenterVertically, unbounded = true))
+                        StudioPreview(config, design, Modifier.align(Alignment.TopCenter).offset(y = h * 0.58f - face / 2).size(face).border(2.dp, PlatterHigh, CircleShape).padding(3.dp))
+                    }
                 }
-                item { Footnote(stringResource(if (studio.fromPhone) R.string.studio_from_phone else R.string.studio_default_design)) }
+                item {
+                    Text(stringResource(R.string.studio_face_name) + " · " + stringResource(if (studio.active) R.string.studio_in_use else R.string.studio_not_in_use),
+                        style = Type.note.copy(fontWeight = FontWeight.Medium), color = if (studio.active) Success else Quiet, textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp))
+                }
                 if (!studio.active) {
                     item { PrimaryButton(stringResource(R.string.studio_show), { onShowStudio() }) }
                     item { Footnote(stringResource(R.string.studio_pick_hint)) }
                 }
                 item { Footnote(stringResource(R.string.studio_design_on_phone)) }
+                if (showClassic) item { FaceSection(autoStart = false) }
             }
-            if (showClassic) item { FaceSection(autoStart = false) }
         }
     }
 }

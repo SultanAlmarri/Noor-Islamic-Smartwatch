@@ -12,7 +12,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
@@ -88,7 +87,7 @@ fun NoorWearNav(vm: WearViewModel, pending: String?, onPendingHandled: () -> Uni
     }
 
     NoorWearTheme(config) { t ->
-        AppScaffold {
+        NoorScaffold {
             SwipeDismissableNavHost(navController = nav, startDestination = Dest.HOME) {
                 composable(Dest.HOME) {
                     val s = state
@@ -113,7 +112,14 @@ fun NoorWearNav(vm: WearViewModel, pending: String?, onPendingHandled: () -> Uni
                         onReset = { vm.saveTasbih(s.reset()); nav.popBackStack() },
                         onVibrate = vm::setTasbihVibrate)
                 }
-                composable(Dest.CALENDAR) { config?.let { CalendarScreen(it, t, today) } }
+                composable(Dest.CALENDAR) {
+                    config?.let { c ->
+                        // 0.25: the place's own date, as on the home screen and the tile (the watch's date can be another
+                        // day for some hours when the place chosen is in another time zone).
+                        val placeToday by produceState(LocalDate.now(c.zone), c.zone) { while (true) { delay(30_000L); value = LocalDate.now(c.zone) } }
+                        CalendarScreen(c, t, placeToday)
+                    }
+                }
                 val settingsActions = SettingsActions(
                     onSync = vm::requestSync,
                     onUseWatch = vm::useWatchSettings,

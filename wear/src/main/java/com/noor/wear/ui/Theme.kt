@@ -7,7 +7,9 @@ import android.os.VibratorManager
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import com.noor.prayer.WatchConfig
@@ -90,9 +93,9 @@ internal object Type {
     val row = base.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp)
     val body = base.copy(fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 19.sp)
     val detail = base.copy(fontWeight = FontWeight.Medium, fontSize = 12.5.sp, lineHeight = 17.sp)
-    val note = base.copy(fontWeight = FontWeight.Normal, fontSize = 11.5.sp, lineHeight = 15.5.sp)
+    val note = base.copy(fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp)
     /** Small tracked capitals for labels (Arabic has no capitals: the same style without the tracking). */
-    val caption = base.copy(fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 15.sp, letterSpacing = 0.9.sp)
+    val caption = base.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.9.sp)
     /** Large numerals: SemiBold, every digit the same width so a running count does not jitter. */
     fun numeral(size: TextUnit, weight: FontWeight = FontWeight.SemiBold) = base.copy(
         fontWeight = weight, fontSize = size, lineHeight = size * 1.12f, fontFeatureSettings = "tnum", letterSpacing = (-0.02).em,
@@ -104,7 +107,19 @@ internal object Type {
 /** A label in small capitals: upper case in English, as written in Arabic. */
 internal fun WearText.caps(s: String): String = if (arabic) s else s.uppercase()
 /** [Type.caption] for the language: Arabic letters join, so they are never tracked apart. */
-internal fun WearText.captionStyle(): TextStyle = if (arabic) Type.caption.copy(letterSpacing = 0.sp, fontSize = 12.sp) else Type.caption
+internal fun WearText.captionStyle(): TextStyle = if (arabic) Type.caption.copy(letterSpacing = 0.sp, fontSize = 13.sp) else Type.caption
+
+/** The words and digits of the language in use ([NoorWearTheme] provides it), for parts that are not handed one. */
+internal val LocalWearText = staticCompositionLocalOf { WearText(null) }
+
+/**
+ * The app's frame. The system's own time text is never drawn by it: pages write the time themselves where they want
+ * it ([WatchClock]), so it cannot appear where a page must not have it (0.25: it used to come back over the compass's
+ * mark when the language changed while the compass was open, because the page's "no clock here" was held by a
+ * scaffold that was rebuilt), and it is written the same way on every page.
+ */
+@Composable
+fun NoorScaffold(content: @Composable BoxScope.() -> Unit) = AppScaffold(timeText = {}, content = content)
 
 internal val NoorWearColors = ColorScheme(
     primary = Gold,
@@ -141,6 +156,7 @@ fun NoorWearTheme(config: WatchConfig?, content: @Composable (WearText) -> Unit)
             LocalContext provides ctx,
             LocalConfiguration provides ctx.resources.configuration,
             LocalLayoutDirection provides if (t.arabic) LayoutDirection.Rtl else LayoutDirection.Ltr,
+            LocalWearText provides t,
         ) { content(t) }
     }
 }

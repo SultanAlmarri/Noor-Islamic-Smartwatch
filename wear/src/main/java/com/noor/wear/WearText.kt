@@ -114,8 +114,8 @@ class WearText(private val config: WatchConfig?, deviceLocale: Locale = Locale.g
         return digits(if (a.month == b.month) "${a.dayOfMonth}–${b.dayOfMonth} $ma" else "${a.dayOfMonth} $ma – ${b.dayOfMonth} $mb")
     }
 
-    /** "1,234" with the chosen digits. */
-    fun count(n: Long): String = digits("%,d".format(Locale.ENGLISH, n))
+    /** "1,234" with the chosen digits ("١٬٢٣٤": Arabic-Indic digits take the Arabic thousands mark). */
+    fun count(n: Long): String = digits("%,d".format(Locale.ENGLISH, n)).let { if (arabicDigits) it.replace(',', '\u066C') else it }
 }
 
 /** Resources in the language chosen on the phone (Arabic or English), or the watch's own language when it says "system". */

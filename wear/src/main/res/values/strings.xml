@@ -12,7 +12,6 @@
     <string name="setup_body">Your location and calculation method come from the Minhad phone app. After the first sync the watch calculates on its own, offline.</string>
     <string name="setup_waiting">Waiting for the phone…</string>
     <string name="synced_from_phone">From phone · %1$s</string>
-    <string name="offline_note">Calculated on the watch</string>
     <string name="watch_face">Minhad watch face</string>
     <string name="face_install">Add to watch</string>
     <string name="face_update">Update watch face</string>
@@ -51,16 +50,15 @@
 
     <string name="qibla">Qibla</string>
     <string name="qibla_from_north">%1$s from North</string>
-    <string name="qibla_true_north">from true North</string>
+    <string name="qibla_true_north">from north</string>
     <string name="qibla_summary">%1$s from North · %2$s km</string>
-    <string name="qibla_summary_short">%1$s · %2$s km</string>
     <string name="qibla_facing">Facing the Qibla</string>
     <string name="qibla_turn_right">Turn right</string>
     <string name="qibla_turn_left">Turn left</string>
     <string name="qibla_starting">Starting the compass…</string>
     <string name="qibla_hold_level">Hold your wrist level</string>
-    <string name="qibla_calibrate">Move your wrist in a figure 8 to calibrate</string>
-    <string name="qibla_no_compass">This watch has no compass. Use the bearing with a landmark or the sun.</string>
+    <string name="qibla_calibrate">Move your wrist in a figure 8</string>
+    <string name="qibla_no_compass">No compass on this watch.</string>
     <string name="qibla_in_makkah">You are in Makkah: face the Kaaba.</string>
 
     <string name="tasbih">Tasbih</string>
@@ -74,13 +72,13 @@
     <string name="tasbih_free_title">Free count</string>
     <string name="tasbih_undo">Take one back</string>
     <string name="tasbih_options">Dhikr and options</string>
-    <string name="tasbih_round_done">Complete</string>
+    <string name="tasbih_round_done">Done</string>
     <string name="tasbih_round_done_body">May Allah accept it</string>
     <string name="tasbih_after_prayer">After prayer</string>
     <string name="tasbih_no_target">No target, a mark every 33</string>
     <string name="tasbih_times">%1$s times</string>
     <string name="tasbih_reset">Start again</string>
-    <string name="tasbih_vibrate">Vibrate on each count</string>
+    <string name="tasbih_vibrate">Vibrate</string>
     <string name="tasbih_totals">Today %1$s · All time %2$s</string>
     <string name="tasbih_private">Counts stay on this watch.</string>
 
@@ -91,25 +89,17 @@
     <string name="calendar_under_way">Now</string>
     <string name="calendar_note">Dates follow the Umm al-Qura calendar with your Hijri adjustment. The actual day can follow the moon-sighting announcement where you live.</string>
 
-    <string name="source_phone">From your phone</string>
     <string name="source_watch">Set on this watch</string>
     <string name="sync_now">Sync with phone</string>
     <string name="sync_working">Asking the phone…</string>
     <string name="sync_done">Up to date</string>
-    <string name="sync_failed">Phone not reachable</string>
-    <string name="sync_failed_body">Open Minhad on the phone, or check the Bluetooth connection. The watch keeps working meanwhile.</string>
-    <string name="use_watch_settings">Use this watch\'s settings</string>
-    <string name="use_watch_settings_body">Instead of the phone\'s</string>
-    <string name="updated_now">Updated just now</string>
-    <string name="updated_min">Updated %1$s min ago</string>
-    <string name="updated_hours">Updated %1$s h ago</string>
-    <string name="updated_days">Updated %1$s days ago</string>
+    <string name="sync_failed">Can\'t reach phone</string>
+    <string name="sync_failed_body">Open Minhad on your phone</string>
     <string name="location">Location</string>
     <string name="location_change">Your location or a city</string>
     <string name="asr">Asr</string>
-    <string name="asr_default">As the authority calculates</string>
-    <string name="asr_standard">Standard (Shafi\'i, Maliki, Hanbali)</string>
-    <string name="asr_hanafi">Hanafi (later)</string>
+    <string name="asr_standard">Standard</string>
+    <string name="asr_hanafi">Hanafi</string>
     <string name="alerts_on_watch">Prayer alerts</string>
     <string name="alert_sound">Sound</string>
     <string name="alert_style_adhan">Opening of the Adhan</string>
@@ -117,17 +107,17 @@
     <string name="alert_style_notification">Notification</string>
     <string name="alert_prayers">Prayers</string>
     <string name="alert_prayers_none">None</string>
-    <string name="get_phone_app">Minhad for your phone</string>
-    <string name="get_phone_app_body">Opens the download page on the phone</string>
+    <string name="get_phone_app">Get the phone app</string>
+    <string name="get_phone_app_body">Opens on your phone</string>
 
     <string name="welcome_title">Minhad</string>
-    <string name="welcome_body">Prayer times, Qibla and dhikr on your wrist. Works without your phone.</string>
+    <string name="welcome_body">Prayer times, Qibla and dhikr. Works without your phone.</string>
     <string name="use_my_location">Use my location</string>
     <string name="use_my_location_body">Stays on this watch</string>
     <string name="locating">Finding your location…</string>
     <string name="locating_body">Outdoors is fastest</string>
-    <string name="location_denied">Location is off for Minhad. Allow it, or choose a city.</string>
-    <string name="location_unavailable">No location yet. Try outdoors, or choose a city.</string>
+    <string name="location_denied">Allow it, or choose a city</string>
+    <string name="location_unavailable">Try outdoors, or choose a city</string>
     <string name="choose_city">Choose a city</string>
     <string name="welcome_phone">Using Minhad on your phone? Open it once and its settings appear here.</string>
     <string name="welcome_phone_waiting">Your phone is connected. Open Minhad on it to send its settings, or set up here.</string>
@@ -136,8 +126,6 @@
     <string name="cities">Cities</string>
 
     <string name="tile_tools_label">Minhad</string>
-    <string name="tile_tools_hint">Qibla · Tasbih · Calendar</string>
-    <string name="tile_open_times">Times</string>
     <string name="face_in_use">In use: %1$s</string>
     <string name="face_pick_hint">Added to your watch faces. To show it, touch and hold your watch face, then choose Minhad.</string>
     <string name="face_design">Design</string>
@@ -145,10 +133,26 @@
     <string name="face_design_horizon">Horizon</string>
     <string name="face_design_dial">Dial</string>
     <string name="face_design_minimal">Minimal</string>
-    <string name="face_design_original">Original (1.3.2)</string>
+    <string name="face_design_original">Original</string>
     <string name="face_colour_gold">Gold</string>
     <string name="face_colour_emerald">Emerald</string>
     <string name="face_colour_turquoise">Turquoise</string>
     <string name="face_colour_rose">Rose</string>
     <string name="face_colour_silver">Silver</string>
+    <string name="asr_auto">Auto · %1$s</string>
+    <string name="qibla_bearing_label">Qibla %1$s</string>
+    <string name="qibla_distance">%1$s km</string>
+    <string name="location_unavailable_title">No location yet</string>
+    <string name="location_denied_title">Location is off</string>
+    <string name="tile_all_times">All times</string>
+    <string name="tile_tasbih_count">Tasbih %1$s</string>
+    <string name="tile_next">%1$s · %2$s</string>
+    <string name="calendar_short">Calendar</string>
+    <string name="times_from_watch">%1$s · This watch</string>
+    <string name="times_from_phone">From phone · %1$s</string>
+    <string name="times_from_phone_plain">From phone</string>
+    <string name="ago_now">just now</string>
+    <string name="ago_min">%1$s min ago</string>
+    <string name="ago_hours">%1$s h ago</string>
+    <string name="ago_days">%1$s days ago</string>
 </resources>

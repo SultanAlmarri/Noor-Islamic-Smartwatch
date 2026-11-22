@@ -5,6 +5,11 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,11 +42,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.noor.prayer.WatchFaces
 import com.noor.wear.R
@@ -126,9 +128,9 @@ fun FaceSection(autoStart: Boolean) {
 @Composable
 fun FaceSetupScreen() {
     val (flow, run, choose) = rememberFaceFlow(autoStart = true)
-    val listState = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = listState) { padding ->
-        ScalingLazyColumn(state = listState, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
+    PageScaffold(listState) {
+        NoorList(listState) {
             item { Icon(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(56.dp), tint = Color.Unspecified) }
             item { Text(stringResource(R.string.watch_face), style = Type.title, color = Ink, textAlign = TextAlign.Center) }
             item {
@@ -203,24 +205,69 @@ internal fun FacePicker(chosen: String, choose: (String) -> Unit) {
         for (d in WatchFaces.Design.entries) {
             val selected = d == c.design
             NoorChip(stringResource(designName(d)), null, { choose(WatchFaces.Choice(d, c.colour).id) },
-                container = if (selected) PlatterHigh else Platter,
                 modifier = Modifier.padding(top = 4.dp).semantics { this.selected = selected },
+                leading = { FaceThumb(d, Color(c.colour.argb)) },
                 trailing = if (selected) ({ Icon(painterResource(R.drawable.ic_check), null, Modifier.size(22.dp), tint = Gold) }) else null)
         }
         if (c.design != WatchFaces.Design.ORIGINAL) {
             Spacer(Modifier.height(10.dp))
             Text(stringResource(R.string.face_colour), style = Type.detail, color = Quiet)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 5.dp)) {
-                for (col in WatchFaces.Colour.entries) {
-                    val selected = col == c.colour
-                    val name = stringResource(colourName(col))
-                    Box(
-                        Modifier.size(26.dp).clip(CircleShape).background(Color(col.argb))
-                            .border(if (selected) 2.5.dp else 0.dp, if (selected) Ink else Color.Transparent, CircleShape)
-                            .clickable { choose(WatchFaces.Choice(c.design, col).id) }
-                            .semantics { contentDescription = name; this.selected = selected },
-                    )
+            // Five 40 dp swatches in two rows, all in view (a row that scrolls sideways would fight the swipe that
+            // closes the page). The chosen one has a ring round it.
+            for (rowOf in WatchFaces.Colour.entries.chunked(3)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    for (col in rowOf) {
+                        val selected = col == c.colour
+                        val name = stringResource(colourName(col))
+                        Box(
+                            Modifier.size(40.dp).clip(CircleShape)
+                                .clickable { choose(WatchFaces.Choice(c.design, col).id) }
+                                .then(if (selected) Modifier.border(2.dp, Ink, CircleShape).padding(5.dp) else Modifier)
+                                .background(Color(col.argb), CircleShape)
+                                .semantics { contentDescription = name; this.selected = selected },
+                        )
+                    }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * A small picture of a design in the chosen colour, at the start of its row: a sketch of the face's main lines
+ * (Horizon: the time over dunes; Dial: hands; Minimal: the time alone; Original: the 1.3.2 face's ring), not the face
+ * itself.
+ */
+@Composable
+private fun FaceThumb(design: WatchFaces.Design, colour: Color) {
+    Canvas(Modifier.size(36.dp)) {
+        val r = size.minDimension / 2f
+        val c = Offset(r, r)
+        drawCircle(Color.Black, r, c)
+        drawCircle(PlatterHigh, r - 0.5.dp.toPx(), c, style = Stroke(1.dp.toPx()))
+        val bar = 3.2.dp.toPx()
+        when (design) {
+            WatchFaces.Design.HORIZON -> {
+                drawArc(colour, 150f, 240f, false, Offset(3.dp.toPx(), 3.dp.toPx()), Size(size.width - 6.dp.toPx(), size.height - 6.dp.toPx()), style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round))
+                drawLine(Ink, Offset(r - 8.dp.toPx(), r - 1.dp.toPx()), Offset(r + 8.dp.toPx(), r - 1.dp.toPx()), bar, StrokeCap.Round)
+                drawArc(colour.copy(alpha = 0.55f), 0f, 180f, true, Offset(r - 13.dp.toPx(), r + 3.dp.toPx()), Size(26.dp.toPx(), 20.dp.toPx()))
+            }
+            WatchFaces.Design.DIAL -> {
+                for (i in 0 until 12) {
+                    val a = Math.toRadians(i * 30.0)
+                    drawCircle(if (i % 3 == 0) colour else Quiet, 0.9.dp.toPx(), Offset(r + ((r - 5.dp.toPx()) * kotlin.math.cos(a)).toFloat(), r + ((r - 5.dp.toPx()) * kotlin.math.sin(a)).toFloat()))
+                }
+                drawLine(Ink, c, Offset(r, r - 9.dp.toPx()), 2.dp.toPx(), StrokeCap.Round)
+                drawLine(Ink, c, Offset(r + 6.dp.toPx(), r + 3.dp.toPx()), 2.dp.toPx(), StrokeCap.Round)
+                drawCircle(colour, 1.8.dp.toPx(), c)
+            }
+            WatchFaces.Design.MINIMAL -> {
+                drawLine(Ink, Offset(r - 10.dp.toPx(), r - 1.dp.toPx()), Offset(r + 10.dp.toPx(), r - 1.dp.toPx()), 4.4.dp.toPx(), StrokeCap.Round)
+                drawLine(colour, Offset(r - 6.dp.toPx(), r + 7.dp.toPx()), Offset(r + 6.dp.toPx(), r + 7.dp.toPx()), 1.8.dp.toPx(), StrokeCap.Round)
+            }
+            WatchFaces.Design.ORIGINAL -> {
+                drawCircle(Gold, r - 4.dp.toPx(), c, style = Stroke(2.4.dp.toPx()))
+                drawLine(Ink, Offset(r - 6.dp.toPx(), r), Offset(r + 6.dp.toPx(), r), bar, StrokeCap.Round)
             }
         }
     }

@@ -1,13 +1,15 @@
 package com.noor.wear.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,12 +22,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.noor.prayer.AsrSchool
 import com.noor.prayer.LocalSetup
@@ -83,26 +83,26 @@ data class SettingsActions(
 fun SettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
     val s = ui.state
     val setup = s.setup ?: LocalSetup()
-    val list = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
+    PageScaffold(list) {
+        NoorList(list) {
             item { Header(stringResource(R.string.settings)) }
 
             if (a.showFace) item {
                 NoorChip(stringResource(R.string.settings_face), R.drawable.ic_watch, { a.onOpen(Dest.FACES) }, secondary = a.faceSummary.ifEmpty { null }, iconTint = Tint.Indigo)
             }
 
-            // Where the times come from: the row opens the details; Sync stays one tap away.
+            // Prayer times: the row is named for the thing, and says where the times come from; Sync stays one tap away.
             if (s.source == ConfigSource.PHONE) {
                 item {
-                    NoorChip(stringResource(R.string.source_phone), R.drawable.ic_phone, { a.onOpen(Dest.SETTINGS_TIMES) }, iconTint = Tint.Blue,
-                        secondary = s.phoneReceivedAt?.let { ago(ui.now - it, t) })
+                    NoorChip(stringResource(R.string.settings_times), R.drawable.ic_phone, { a.onOpen(Dest.SETTINGS_TIMES) }, iconTint = Tint.Blue,
+                        secondary = s.phoneReceivedAt?.let { stringResource(R.string.times_from_phone, ago(ui.now - it, t)) } ?: stringResource(R.string.times_from_phone_plain))
                 }
                 item { SyncChip(ui.sync, a.onSync) }
             } else {
                 item {
-                    NoorChip(stringResource(R.string.source_watch), R.drawable.ic_location, { a.onOpen(Dest.SETTINGS_TIMES) }, iconTint = Tint.Blue,
-                        secondary = s.config?.let { t.placeWithFlag(it) })
+                    NoorChip(stringResource(R.string.settings_times), R.drawable.ic_location, { a.onOpen(Dest.SETTINGS_TIMES) }, iconTint = Tint.Blue,
+                        secondary = s.config?.let { stringResource(R.string.times_from_watch, t.placeWithFlag(it)) })
                 }
             }
 
@@ -128,10 +128,10 @@ fun SettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
             }
 
             item {
+                // The authority or method by its own name (true whether its timetable or its calculation is in use today).
                 val c = s.config
                 Footnote(listOfNotNull(
                     c?.let { (if (t.arabic) it.profile.nameAr else it.profile.nameEn) },
-                    stringResource(R.string.offline_note),
                     stringResource(R.string.version, ui.versionName),
                 ).joinToString("\n"))
             }
@@ -150,7 +150,7 @@ private fun SyncChip(sync: Progress, onSync: () -> Unit) = NoorChip(
     R.drawable.ic_sync, onSync, enabled = sync != Progress.WORKING,
     iconTint = when (sync) { Progress.FAILED -> Tint.Orange; Progress.DONE -> Tint.Green; else -> Tint.Gray },
     secondary = if (sync == Progress.FAILED) stringResource(R.string.sync_failed_body) else null,
-    labelLines = 2, secondaryLines = 4,
+    labelLines = 1, secondaryLines = 2,
 )
 
 @Composable
@@ -168,19 +168,13 @@ private fun languageName(l: String) = stringResource(when (l) { "en" -> R.string
 fun TimesSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
     val s = ui.state
     val setup = s.setup ?: LocalSetup()
-    val list = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
+    PageScaffold(list) {
+        NoorList(list) {
             item { Header(stringResource(R.string.settings_times)) }
-            if (s.source == ConfigSource.PHONE) {
-                item { NoorChip(stringResource(R.string.source_phone), R.drawable.ic_phone, a.onSync, secondary = s.phoneReceivedAt?.let { ago(ui.now - it, t) }, iconTint = Tint.Blue) }
-                item { SyncChip(ui.sync, a.onSync) }
-            }
+            if (s.source == ConfigSource.PHONE) item { SyncChip(ui.sync, a.onSync) }
             if (s.hasPhoneConfig && s.setup?.place != null) {
-                item {
-                    NoorSwitch(s.source == ConfigSource.WATCH, a.onUseWatch, stringResource(R.string.use_watch_settings),
-                        secondary = stringResource(R.string.use_watch_settings_body))
-                }
+                item { NoorSwitch(s.source == ConfigSource.WATCH, a.onUseWatch, stringResource(R.string.source_watch)) }
             }
             if (s.source == ConfigSource.PHONE) {
                 item { Footnote(stringResource(R.string.settings_from_phone_note)) }
@@ -188,8 +182,9 @@ fun TimesSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
                 item { NoorChip(stringResource(R.string.location), R.drawable.ic_location, a.onLocation, iconTint = Tint.Blue, secondary = s.config?.let { t.placeWithFlag(it) } ?: stringResource(R.string.location_change)) }
                 item {
                     NoorChip(stringResource(R.string.asr), R.drawable.ic_prayer_asr, { a.onSetup { it.copy(asrSchool = nextAsr(it.asrSchool)) } }, iconTint = Tint.Orange,
+                        // The school really in use: left to the authority, the one its method uses.
                         secondary = when (setup.asrSchool) {
-                            null -> stringResource(R.string.asr_default)
+                            null -> stringResource(R.string.asr_auto, stringResource(if (s.config?.profile?.asrSchool == AsrSchool.HANAFI) R.string.asr_hanafi else R.string.asr_standard))
                             AsrSchool.STANDARD -> stringResource(R.string.asr_standard)
                             AsrSchool.HANAFI -> stringResource(R.string.asr_hanafi)
                         })
@@ -200,9 +195,7 @@ fun TimesSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
                         else stringResource(R.string.hijri_adjust_days, t.digits((if (setup.hijriAdjust > 0) "+" else "−") + kotlin.math.abs(setup.hijriAdjust))))
                 }
             }
-            item {
-                Footnote(listOfNotNull(s.config?.let { if (t.arabic) it.profile.nameAr else it.profile.nameEn }, stringResource(R.string.offline_note)).joinToString("\n"))
-            }
+            s.config?.let { c -> item { Footnote(if (t.arabic) c.profile.nameAr else c.profile.nameEn) } }
         }
     }
 }
@@ -214,10 +207,10 @@ private fun nextHijri(v: Int): Int = if (v >= 2) -2 else v + 1
 fun AlertSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
     val s = ui.state
     val setup = s.setup ?: LocalSetup()
-    val list = rememberScalingLazyListState()
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
     val notifLauncher = rememberNotificationRequest()
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    PageScaffold(list) {
+        NoorList(list) {
             item { Header(stringResource(R.string.alerts_title)) }
             if (s.source == ConfigSource.WATCH) {
                 item {
@@ -247,9 +240,9 @@ fun AlertSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
 @Composable
 fun DisplaySettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
     val setup = ui.state.setup ?: LocalSetup()
-    val list = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
+    PageScaffold(list) {
+        NoorList(list) {
             item { Header(stringResource(R.string.settings_display)) }
             item {
                 NoorChip(stringResource(R.string.display_language), R.drawable.ic_language, iconTint = Tint.Teal, onClick =
@@ -275,19 +268,19 @@ private fun nextStyle(s: WatchAlertStyle): WatchAlertStyle = WatchAlertStyle.ent
 internal fun ago(ms: Long, t: WearText): String {
     val min = ms / 60_000L
     return when {
-        min < 1 -> stringResource(R.string.updated_now)
-        min < 60 -> stringResource(R.string.updated_min, t.digits(min.toString()))
-        min < 48 * 60 -> stringResource(R.string.updated_hours, t.digits((min / 60).toString()))
-        else -> stringResource(R.string.updated_days, t.digits((min / 1440).toString()))
+        min < 1 -> stringResource(R.string.ago_now)
+        min < 60 -> stringResource(R.string.ago_min, t.digits(min.toString()))
+        min < 48 * 60 -> stringResource(R.string.ago_hours, t.digits((min / 60).toString()))
+        else -> stringResource(R.string.ago_days, t.digits((min / 1440).toString()))
     }
 }
 
 /** Which prayers alert on the watch (when it is set up on its own). */
 @Composable
 fun AlertPrayersScreen(setup: LocalSetup, t: WearText, onToggle: (Prayer, Boolean) -> Unit) {
-    val list = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
+    PageScaffold(list) {
+        NoorList(list) {
             item { Header(stringResource(R.string.alert_prayers)) }
             Prayer.entries.forEach { p ->
                 item {
@@ -310,8 +303,8 @@ data class WelcomeActions(
 fun WelcomeScreen(a: WelcomeActions) {
     // 0.25: the first screenful is whole: Minhad's mark and name, one line of what it is, and the one thing to do.
     val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize(), autoCentering = AutoCenteringParams(itemIndex = 0)) {
+    PageScaffold(list) {
+        NoorList(list, centerFirst = true) {
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -320,8 +313,10 @@ fun WelcomeScreen(a: WelcomeActions) {
                             modifier = Modifier.height(34.dp).wrapContentHeight(Alignment.CenterVertically, unbounded = true))
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(stringResource(R.string.welcome_body), style = Type.note, color = Quiet, textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(start = 6.dp, end = 6.dp, bottom = 8.dp))
+                    // (On the smallest watches the name and the action alone: the three do not fit one screenful.)
+                    if (Screen.scale() > 0.4f) Text(stringResource(R.string.welcome_body), style = Type.note, color = Quiet, textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(start = 6.dp, end = 6.dp))
+                    Spacer(Modifier.height(8.dp))
                     LocateChip(a.locate, a.onUseLocation)
                 }
             }
@@ -333,25 +328,36 @@ fun WelcomeScreen(a: WelcomeActions) {
 
 @Composable
 internal fun LocateChip(status: LocateStatus, onClick: () -> Unit) {
-    when (status) {
-        LocateStatus.Working -> NoorChip(stringResource(R.string.locating), R.drawable.ic_location, {}, enabled = false, secondary = stringResource(R.string.locating_body), prominent = true)
-        else -> NoorChip(
-            stringResource(R.string.use_my_location), R.drawable.ic_location, onClick, secondaryLines = 3, prominent = true,
-            secondary = when (status) {
-                LocateStatus.NoPermission -> stringResource(R.string.location_denied)
-                LocateStatus.Unavailable -> stringResource(R.string.location_unavailable)
-                else -> stringResource(R.string.use_my_location_body)
-            },
-        )
-    }
+    // One card of one height in every state, so the page never jumps: it stays gold while it looks (the pin turns
+    // into a spinner), and says in two short lines when it could not find the place.
+    val working = status == LocateStatus.Working
+    NoorChip(
+        stringResource(when (status) {
+            LocateStatus.Working -> R.string.locating
+            LocateStatus.NoPermission -> R.string.location_denied_title
+            LocateStatus.Unavailable -> R.string.location_unavailable_title
+            else -> R.string.use_my_location
+        }),
+        // (No pin on the smallest watches: the words need the width.)
+        if (Screen.scale() > 0.4f) R.drawable.ic_location else null, onClick, Modifier.height(76.dp), prominent = true, busy = working, labelLines = 2, secondaryLines = 2,
+        secondary = stringResource(when (status) {
+            LocateStatus.Working -> R.string.locating_body
+            LocateStatus.NoPermission -> R.string.location_denied
+            LocateStatus.Unavailable -> R.string.location_unavailable
+            else -> R.string.use_my_location_body
+        }),
+        leading = if (working) ({
+            Box(Modifier.size(30.dp).background(OnGold, CircleShape), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(18.dp)) }
+        }) else null,
+    )
 }
 
 /** Set the place on the watch: its own position, a search, or one of the cities Noor knows best. */
 @Composable
 fun LocationScreen(t: WearText, locate: LocateStatus, results: List<GazPlace>?, searching: Boolean, onLocate: () -> Unit, onSearch: () -> Unit, onPick: (SetupPlace) -> Unit) {
-    val list = rememberScalingLazyListState()
-    ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
+    PageScaffold(list) {
+        NoorList(list) {
             item { Header(stringResource(R.string.location)) }
             item { LocateChip(locate, onLocate) }
             item { NoorChip(stringResource(R.string.search_city), R.drawable.ic_search, onSearch, iconTint = Tint.Gray) }

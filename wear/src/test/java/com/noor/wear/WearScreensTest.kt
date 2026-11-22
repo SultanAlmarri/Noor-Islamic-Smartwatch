@@ -13,7 +13,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
-import androidx.wear.compose.material3.AppScaffold
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
+import com.noor.wear.ui.NoorScaffold
 import androidx.wear.watchface.complications.data.ComplicationType
 import androidx.wear.watchface.complications.data.LongTextComplicationData
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
@@ -81,11 +84,12 @@ class WearScreensTest {
     private var screen by mutableStateOf<(@Composable () -> Unit)?>(null)
     private var config by mutableStateOf<WatchConfig?>(TestConfigs.dubai("en"))
 
-    private fun start() = rule.setContent { NoorWearTheme(config) { _ -> AppScaffold { screen?.invoke() } } }
+    private fun start() = rule.setContent { NoorWearTheme(config) { _ -> NoorScaffold { screen?.invoke() } } }
 
-    private fun shot(name: String, waitFor: String? = null, substring: Boolean = false) {
+    /** [settle]: how long after the last change the picture is taken. 3.5 s is the page at rest (the scroll bar gone). */
+    private fun shot(name: String, waitFor: String? = null, substring: Boolean = false, settle: Long = 3500) {
         if (waitFor != null) rule.waitUntil(10_000) { rule.onAllNodesWithText(waitFor, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        rule.mainClock.advanceTimeBy(1200); rule.waitForIdle()
+        rule.mainClock.advanceTimeBy(settle); rule.waitForIdle()
         Shots.save(Shots.drawView(rule.activity.window.decorView), name)
         checkLanguage(name, config?.language == "ar")
     }
@@ -97,6 +101,11 @@ class WearScreensTest {
 
     private fun has(text: String, substring: Boolean = false) =
         rule.onAllNodesWithText(text, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
+    /** To the true end of a list: its last item as high as it can rise. */
+    private fun toEnd() {
+        repeat(3) { rule.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp() }; rule.mainClock.advanceTimeBy(1500); rule.waitForIdle() }
+    }
 
     /** Something on screen says [text] to a screen reader. */
     private fun described(text: String) =
@@ -119,6 +128,8 @@ class WearScreensTest {
             // (By the time: the next prayer's name is also in the first screenful.)
             rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(time))
             assertTrue(name, has(name)); assertTrue("$name at $time", has(time))
+            // One label, on the prayer we are in (Dhuhr at 14:51); the next one is the tinted row.
+            if (name == "Dhuhr") assertTrue("the current prayer says Now", has("Now"))
         }
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Tasbih"))
         shot("s02_home_tools", "254")
@@ -172,6 +183,8 @@ class WearScreensTest {
         start()
         shot("s10_qibla_turn_right", "Turn right")
         assertTrue(has("40°", substring = true))
+        // The second figure says what it is: the Qibla's bearing, with the distance under it.
+        assertTrue(has("Qibla", substring = true)); assertTrue(has("1,633 km"))
         r = reading(bearing + 2.0)
         shot("s11_qibla_aligned", "Facing the Qibla")
         // Hysteresis: 5° off after being aligned still counts as facing; 8° does not.
@@ -181,11 +194,14 @@ class WearScreensTest {
         assertTrue(has("Turn right"))
         r = reading(bearing + 30, CompassQuality.POOR, setOf(CompassIssue.MAGNETIC_INTERFERENCE), accuracy = 35.0)
         shot("s12_qibla_calibrate", "figure 8", substring = true)
+        // One order at a time: no figure and no "Turn" while the compass cannot be trusted.
+        assertTrue(!has("Turn left") && !has("Turn right") && !has("30°", substring = true))
         r = reading(bearing, issues = setOf(CompassIssue.NOT_FLAT))
         shot("s13_qibla_not_level", "Hold your wrist level")
         assertTrue("never claims alignment while tilted", !has("Facing the Qibla"))
         hasCompass = false
-        shot("s14_qibla_no_compass", "no compass", substring = true)
+        shot("s14_qibla_no_compass", "No compass", substring = true)
+        assertTrue(has("from north"))
         config = TestConfigs.dubai("ar", arabicDigits = true); hasCompass = true; r = reading(bearing + 25)
         shot("s15_qibla_ar", "استدر يسارًا")
     }
@@ -216,17 +232,41 @@ class WearScreensTest {
         screen = { NoorWearTheme(config) { t -> TasbihScreen(s, t, TasbihControls(today = { today }, onChange = { s = it })) } }
         start()
         shot("s22_tasbih_last_phrase_ar", "لا إله إلا الله", substring = true)
+        // At nought (a lone dot in these digits) the screen says what to do.
+        assertTrue(has("اضغط للعدّ"))
         rule.onRoot().performClick()
         rule.mainClock.advanceTimeBy(300)
-        shot("s23_tasbih_round_done_ar", "تمّ")
+        shot("s23_tasbih_round_done_ar", "تمّ", settle = 500)
         assertEquals(1, s.rounds); assertEquals(0, s.stepIndex)
+        // The overlay hides the counter completely: where the two side buttons and the count are, the picture is black.
+        val over = Shots.drawView(rule.activity.window.decorView)
+        for ((x, y) in listOf(66 to 225, 384 to 225, 225 to 400, 120 to 120)) {
+            assertEquals("pixel $x,$y under the round-done overlay", 0xFF000000.toInt(), over.getPixel(x, y))
+        }
 
         config = TestConfigs.dubai("en")
         screen = { NoorWearTheme(config) { t -> TasbihOptionsScreen(s.copy(lifetime = 12_345), t, true, today, {}, {}, {}) } }
         shot("s24_tasbih_options", "After prayer")
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("All time", substring = true))
         assertTrue(has("All time 12,345", substring = true))
-        shot("s25_tasbih_options_end", "Vibrate on each count")
+        assertTrue(has("Vibrate"))
+        toEnd()
+        shot("s25_tasbih_options_end", "Counts stay on this watch", substring = true)
+    }
+
+    /** 0.25: counts of three and four digits, and the counter at nought, on the large and the small watch's width. */
+    @Test fun tasbihLargeCounts() {
+        val free = TasbihPreset.entries.first { it.roundTotal == 0 }
+        var state by mutableStateOf(TasbihState(preset = free, count = 128, day = today, today = 328, lifetime = 9000))
+        screen = { NoorWearTheme(config) { t -> androidx.compose.runtime.key(state) { TasbihScreen(state, t, TasbihControls(today = { today })) } } }
+        start()
+        shot("s26_tasbih_128", "128")
+        state = TasbihState(preset = free, count = 1254, day = today, today = 1254, lifetime = 9000)
+        shot("s27_tasbih_1254", "1254")
+        assertTrue(has("Today 1,254"))
+        state = TasbihState(preset = TasbihPreset.AFTER_PRAYER, stepIndex = 2, count = 0, day = today, today = 66, lifetime = 9000)
+        shot("s28_tasbih_zero", "Tap to count")
+        assertTrue(described("of 33 · 3/4"))
     }
 
     @Test fun calendarEnglishAndArabic() {
@@ -245,19 +285,28 @@ class WearScreensTest {
         var ui by mutableStateOf(SettingsUi(phoneState, PhoneLink.Phone.CONNECTED, Progress.IDLE, "0.7.0"))
         screen = { NoorWearTheme(config) { t -> SettingsScreen(ui, t, SettingsActions(showFace = false)) } }
         start()
-        shot("s40_settings_phone", "Updated 5 min ago")
+        shot("s40_settings_phone", "From phone · 5 min ago")
+        assertTrue("the row is named for the thing", has("Prayer times"))
         ui = ui.copy(sync = Progress.FAILED)
-        shot("s41_settings_sync_failed", "Phone not reachable")
+        shot("s41_settings_sync_failed", "Can't reach phone")
+        // What a list looks like a moment after it moved (the scroll bar showing), for comparison with the pictures at rest.
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Prayer alerts"))
+        shot("x01_scrollbar_just_scrolled", "Prayer alerts", settle = 150)
+        shot("x02_scrollbar_at_rest", "Prayer alerts")
+        repeat(2) { rule.onNode(hasScrollToIndexAction()).performTouchInput { swipeDown() }; rule.mainClock.advanceTimeBy(1500); rule.waitForIdle() }
 
         val place = SetupPlace(GeoPoint(25.2048, 55.2708), "Asia/Dubai", "Dubai", "دبي", "AE", "AE-DU", fromGps = true)
         val setup = LocalSetup(place, alertsOn = true, alertStyle = WatchAlertStyle.ADHAN_SHORT)
         val local = setup.toConfig(System.currentTimeMillis(), java.time.ZoneId.of("Asia/Dubai"), false) { null }!!
         ui = SettingsUi(WatchState(local, ConfigSource.WATCH, setup, false, null), PhoneLink.Phone.NOT_REACHABLE, Progress.IDLE, "0.7.0")
-        shot("s42_settings_watch", "Set on this watch")
+        shot("s42_settings_watch", "This watch", substring = true)
+        assertTrue(has("Prayer times"))
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Opening of the Adhan"))
         shot("s43_settings_watch_alerts", "Opening of the Adhan")
-        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Minhad for your phone"))
-        shot("s44_settings_get_phone_app", "Minhad for your phone")
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Get the phone app"))
+        assertTrue(has("Opens on your phone"))
+        toEnd()
+        shot("s44_settings_get_phone_app", "Version 0.7.0", substring = true)
 
         screen = { NoorWearTheme(config) { t -> AlertPrayersScreen(setup, t) { _, _ -> } } }
         shot("s45_alert_prayers", "Fajr")
@@ -287,15 +336,23 @@ class WearScreensTest {
     @Test fun tilesAndToolComplications() {
         val ctx = RuntimeEnvironment.getApplication()
         val cfg = TestConfigs.dubai("en")
-        val tools = ToolsTileService.layout(ctx, Shots.device(225), cfg, today, 254)
-        Shots.save(Shots.tile(rule.activity, tools, ToolsTileService.resources(), 450), "s60_tile_tools_en")
-        val toolsAr = ToolsTileService.layout(ctx, Shots.device(225), TestConfigs.dubai("ar", arabicDigits = true), today, 0)
-        Shots.save(Shots.tile(rule.activity, toolsAr, ToolsTileService.resources(), 450), "s61_tile_tools_ar")
         val iv = Intervals.upcoming(cfg, TestConfigs.afternoon)
+        val tools = ToolsTileService.layout(ctx, Shots.device(225), cfg, today, 254, iv[0])
+        Shots.save(Shots.tile(rule.activity, tools, ToolsTileService.resources(), 450), "s60_tile_tools_en")
+        val toolsAr = ToolsTileService.layout(ctx, Shots.device(225), TestConfigs.dubai("ar", arabicDigits = true), today, 0, iv[0])
+        Shots.save(Shots.tile(rule.activity, toolsAr, ToolsTileService.resources(), 450), "s61_tile_tools_ar")
+        val toolsSmall = ToolsTileService.layout(ctx, Shots.device(192), cfg, today, 1254, iv[0])
+        Shots.save(Shots.tile(rule.activity, toolsSmall, ToolsTileService.resources(), 384), "s63_tile_tools_small")
+        // 0.25: the next prayer on the top line, a name under each of the three buttons in both languages (the Tasbih's
+        // with today's count), and the same words on both tiles' bottom button.
+        assertTrue(Shots.texts(tools).toString(), Shots.texts(tools).containsAll(listOf("Asr · 3:14 PM", "Qibla  ·  Tasbih 254  ·  Calendar", "All times")))
+        assertTrue(Shots.texts(toolsAr).toString(), Shots.texts(toolsAr).containsAll(listOf("القبلة  ·  التسبيح  ·  التقويم", "كل المواقيت")))
+        assertTrue(Shots.texts(toolsSmall).toString(), "Qibla  ·  1,254  ·  Calendar" in Shots.texts(toolsSmall))
+        assertTrue("before set-up the top line is the app's name", "Minhad" in Shots.texts(ToolsTileService.layout(ctx, Shots.device(225), null, today, 0)))
         val prayers = PrayerTileService.prayerLayout(ctx, Shots.device(192), cfg, iv[0], iv.drop(1).take(2))
         Shots.save(Shots.tile(rule.activity, prayers, androidx.wear.protolayout.ResourceBuilders.Resources.Builder().setVersion("1").build(), 384), "s62_tile_prayers_small")
         // The test renderer drops the large "display" text style, so check the layout itself for the prayer name.
-        assertTrue(Shots.texts(prayers).toString(), "Asr" in Shots.texts(prayers))
+        assertTrue(Shots.texts(prayers).toString(), "Asr" in Shots.texts(prayers) && "All times" in Shots.texts(prayers))
         assertTrue(Shots.texts(tools).toString(), Shots.texts(tools).any { "Jumada al-Ula" in it })
 
         // Countdown text in the tile: dynamic (kept current by the watch), with a static fallback.
@@ -333,10 +390,10 @@ class WearSmallScreenTest {
     @Test fun keyScreensOnASmallWatch() {
         val c = TestConfigs.dubai("en")
         var screen by mutableStateOf<(@Composable () -> Unit)?>(null)
-        rule.setContent { NoorWearTheme(c) { _ -> AppScaffold { screen?.invoke() } } }
+        rule.setContent { NoorWearTheme(c) { _ -> NoorScaffold { screen?.invoke() } } }
         fun shot(name: String, wait: String) {
             rule.waitUntil(10_000) { rule.onAllNodesWithText(wait, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-            rule.mainClock.advanceTimeBy(1200); rule.waitForIdle()
+            rule.mainClock.advanceTimeBy(3500); rule.waitForIdle()
             Shots.save(Shots.drawView(rule.activity.window.decorView), name)
             val wrong = wrongLanguageTexts(rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("any node") { true }, useUnmergedTree = true).fetchSemanticsNodes(), false)
             assertTrue("$name shows text in the wrong language: $wrong", wrong.isEmpty())
@@ -351,6 +408,13 @@ class WearSmallScreenTest {
         shot("m03_qibla_small", "Turn left")
         screen = { NoorWearTheme(c) { t -> CalendarScreen(c, t, day) } }
         shot("m04_calendar_small", "1448")
+        val free = TasbihPreset.entries.first { it.roundTotal == 0 }
+        screen = { NoorWearTheme(c) { t -> TasbihScreen(TasbihState(preset = free, count = 1254, day = day, today = 1254), t, TasbihControls(today = { day })) } }
+        shot("m05_tasbih_1254_small", "1254")
+        screen = { NoorWearTheme(c) { t -> com.noor.wear.ui.SettingsScreen(SettingsUi(WatchState(c, ConfigSource.PHONE, null, true, System.currentTimeMillis() - 60_000L), PhoneLink.Phone.CONNECTED, Progress.IDLE, "0.7.0"), t, SettingsActions()) } }
+        shot("m06_settings_small", "Prayer times")
+        screen = { NoorWearTheme(null) { _ -> WelcomeScreen(WelcomeActions()) } }
+        shot("m07_welcome_small", "Use my location")
     }
 }
 
