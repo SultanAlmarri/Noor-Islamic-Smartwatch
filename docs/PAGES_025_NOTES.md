@@ -202,8 +202,21 @@ Changed, each keeping its meaning:
 - `PagesDesignTest`: the watch page with the way back; the same licence name.
 - New: `QiblaDegreesTest` (2), `AccuracyGroupsTest` (3).
 
-Run (through the shared Gradle lock, `--no-parallel`): see the hand-over message for the exact counts of the last
-run.
+Run on the cloud machine, through the shared Gradle lock, `--no-parallel`, with the Robolectric mirror:
+
+- The whole `:app:testDebugUnitTest`, once, on the finished code: **139 tests in 65 classes, 0 failures, 0 errors,
+  0 skipped** (15 minutes).
+- While working, three times (a first attempt did not compile the tests), the tests of these pages: `ScreenshotTest`, `PagesDesignTest`,
+  `QiblaCalibrateDesignTest`, `QiblaAccuracyTest`, `QiblaDegreesTest`, `AccuracyGroupsTest`, the location tests
+  (`LocationFlowTest`, `LocationSmallScreenTest`, `LocationWideScreenTest`, `TileMapTest`) and the watch tests
+  (`FaceEditorTest`, `StudioEditorTest`, `StudioRenderTest`): 16 tests in 13 classes. One of those runs failed, and
+  rightly: a line height read from a text style that has none stopped the Qibla page ("Only Sp can convert to Px")
+  in three tests; fixed, and the next run and the whole suite passed.
+- Not run: `:core:prayer:test`, `:alerts`, `:wear` (nothing there was touched), the release builds, and anything on
+  an emulator.
+
+Every render of these pages was looked at after each round: English and Arabic, night and day, 412 dp and 360 dp
+wide, text at 1.5 (`PagesDesignTest`, `QiblaCalibrateDesignTest`), and the location pages at 360 × 640 and 840 dp.
 
 ## Not tested
 
