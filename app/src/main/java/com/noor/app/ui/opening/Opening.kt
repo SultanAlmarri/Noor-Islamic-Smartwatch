@@ -277,15 +277,19 @@ fun OpeningVeil(state: OpeningState, modifier: Modifier = Modifier) {
         if (dawn > 0f) {
             val w = size.width; val h = size.height
             val limb = h * 0.84f + (1f - dawn) * 28.dp.toPx()
-            val earthR = max(w, h) * 2.4f
-            val earth = Offset(w / 2f, limb + earthR)
             val glowAt = Offset(w / 2f, limb + 0.04f * h)
             val glowR = max(w * 0.95f, h * 0.42f)
             drawCircle(Brush.radialGradient(0f to DawnCore.copy(alpha = 0.80f * dawn), 0.42f to DawnEdge.copy(alpha = 0.30f * dawn), 1f to Color.Transparent, center = glowAt, radius = glowR), glowR, glowAt)
-            // The lit edge: a bright disc, and the dark Earth a hair lower over it (a filled shape, not a stroked one).
-            drawCircle(Brush.horizontalGradient(0f to Color.Transparent, 0.3f to DawnRim.copy(alpha = 0.7f * dawn), 0.5f to DawnRim.copy(alpha = dawn), 0.7f to DawnRim.copy(alpha = 0.7f * dawn), 1f to Color.Transparent,
-                startX = 0f, endX = w), earthR, earth)
-            drawCircle(Brush.verticalGradient(0f to EarthTop, 1f to EarthLow, startY = limb, endY = h), earthR, earth.copy(y = earth.y + 1.5.dp.toPx()), alpha = dawn)
+            // The Earth: a shallow dome across the foot of the screen (a small filled shape of one curve: nothing
+            // stroked with a gradient, no great circle; see CLAUDE.md on what the emulators' graphics do not survive).
+            // Its lit edge is the same shape a hair higher, in the dawn's light, with the dark Earth over it.
+            val sag = 0.035f * h
+            fun dome(top: Float) = androidx.compose.ui.graphics.Path().apply {
+                moveTo(0f, top + sag); quadraticTo(w / 2f, top - sag, w, top + sag); lineTo(w, h); lineTo(0f, h); close()
+            }
+            drawPath(dome(limb), Brush.horizontalGradient(0f to Color.Transparent, 0.3f to DawnRim.copy(alpha = 0.7f * dawn), 0.5f to DawnRim.copy(alpha = dawn),
+                0.7f to DawnRim.copy(alpha = 0.7f * dawn), 1f to Color.Transparent, startX = 0f, endX = w))
+            drawPath(dome(limb + 1.5.dp.toPx()), Brush.verticalGradient(0f to EarthTop, 1f to EarthLow, startY = limb, endY = h), alpha = dawn)
         }
         // The light gathers round the mark, then leaves it for the place of the Sun in the sky behind (or, at night,
         // the middle of the sky), and it is from there that the dusk opens: the mark's light becomes the day's.

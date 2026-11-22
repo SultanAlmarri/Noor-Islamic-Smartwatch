@@ -127,7 +127,7 @@ object Tints {
         // language and calendar
         "Language" to Blue, "Numbers" to Gray, "AccessTime" to Orange, "CalendarMonth" to Red,
         // the rest
-        "Watch" to Graphite, "Info" to Gray,
+        "Watch" to Graphite, "Info" to Gray, "Lock" to Blue, "Favorite" to Pink,
     )
 
     /** The colour for a sign, by what it shows; Minhad's gold for a sign with no colour of its own. */
@@ -249,7 +249,7 @@ fun NoorSwitch(checked: Boolean, onChange: ((Boolean) -> Unit)?) {
         // (With content, Material keeps the thumb one size on and off, as on iOS.)
         thumbContent = { Spacer(Modifier.size(SwitchDefaults.IconSize)) },
         colors = SwitchDefaults.colors(
-            checkedThumbColor = Color.White, checkedTrackColor = c.gold, checkedBorderColor = Color.Transparent,
+            checkedThumbColor = Color.White, checkedTrackColor = c.goldFill, checkedBorderColor = Color.Transparent,
             uncheckedThumbColor = Color.White, uncheckedTrackColor = off, uncheckedBorderColor = Color.Transparent,
         ),
     )
@@ -310,7 +310,7 @@ fun Stepper(value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
     val more = stringResource(R.string.increase)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(value, style = MaterialTheme.typography.titleMedium.merge(Tabular).copy(fontWeight = FontWeight.SemiBold), color = c.textPrimary,
-            modifier = Modifier.widthIn(min = 36.dp).padding(end = 8.dp), textAlign = TextAlign.Center, maxLines = 1)
+            modifier = Modifier.widthIn(min = 36.dp).padding(end = 10.dp), textAlign = TextAlign.Center, maxLines = 1)
         Row(Modifier.clip(RoundedCornerShape(12.dp)).background(c.textMuted.copy(alpha = if (c.isDark) 0.20f else 0.14f)), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(width = 48.dp, height = 44.dp).clickable(role = Role.Button, onClickLabel = less) { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onMinus() }
                 .semantics { contentDescription = less }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Remove, null, tint = c.textPrimary, modifier = Modifier.size(20.dp)) }

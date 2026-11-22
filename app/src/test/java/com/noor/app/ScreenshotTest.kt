@@ -301,6 +301,8 @@ class ScreenshotTest {
         screen = Screen.WATCH; rule.waitForIdle(); screen = Screen.SETTINGS
         rule.onAllNodes(androidx.compose.ui.test.hasText("About Minhad")).onFirst().performClick()
         shot("97_settings_about_en", "Version")
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Acknowledgements")).onFirst().performClick()
+        shot("99_settings_credits_en", "IBM Plex Sans Arabic")
         // (The preview's configuration is worked out off the main thread: wait for it, as the eye would.)
         screen = Screen.WATCH; rule.waitForIdle(); rule.waitUntil(20_000) { rule.onAllNodesWithText("Dubai").fetchSemanticsNodes().isNotEmpty() }
         shot("09_watch_night_en", "Galaxy")
@@ -313,6 +315,8 @@ class ScreenshotTest {
         screen = Screen.WATCH; rule.waitForIdle(); screen = Screen.SETTINGS
         rule.onAllNodes(androidx.compose.ui.test.hasText("عن منهاد")).onFirst().performClick()
         shot("98_settings_about_ar", "الإصدار")
+        rule.onAllNodes(androidx.compose.ui.test.hasText("شكر وإسناد")).onFirst().performClick()
+        shot("100_settings_credits_ar", "الخطوط")
         screen = Screen.ACCURACY; shot("52_accuracy_night_ar", "دبي")
         screen = Screen.CITIES; shot("53_cities_night_ar", "التصفح حسب الدولة")
         // 0.14: the scenery page in Arabic (the language check had not seen it), Settings by day, and Settings with
@@ -417,6 +421,14 @@ class ScreenshotTest {
     private val latinLetters = Regex("[A-Za-z]")
     private val allowedInEnglish = listOf("منهاد")
     private val allowedInArabic = listOf(
+        // (0.25) The acknowledgements: the names of those credited and of their licences, written as they write them,
+        // and the two notices their licences ask to have shown word for word (Kartverket, Copernicus). (First: they hold
+        // shorter names the rules below would take out of them.)
+        Regex("IBM Plex Sans Arabic|IBM Corp\\.|Reem Kufi|The Reem Kufi Project Authors|SIL Open Font License 1\\.1|Esri|Photon|photon\\.komoot\\.io|Google"),
+        Regex("Singapore Open Data Licence|Solar Position Algorithm|I\\. Reda|A\\. Andreas|NREL|Poly Haven|ambientCG|USGS 3DEP|CGHEVEN"),
+        Regex("NASA/Goddard Space Flight Center Scientific Visualization Studio|Material Symbols|Android Jetpack|Kotlin|Apache License 2\\.0"),
+        Regex("Contains data from Kartverket \\(the Norwegian Mapping Authority\\), Nasjonal høydemodell, CC BY 4\\.0\\."),
+        Regex("Contains modified Copernicus DEM data: © DLR e\\.V\\. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA; all rights reserved\\."),
         Regex("(Galaxy|Pixel) Watch\\S*( Pro| Classic)?( \\([0-9A-F]{4}\\))?"), // a device's own name, as Android reports it
         Regex("Wear OS"), Regex("Galaxy Wearable"), Regex("WGS-84"), Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), // product, standard and format names
         Regex("CC0|CC BY(-SA)? \\d\\.\\d"), // licence names

@@ -10,6 +10,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.ScrollState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Animatable
@@ -214,8 +215,13 @@ internal class HomeLayout(val heroHeight: Dp, val rowHeight: Dp, val shuruqHeigh
             val k = 1f + 0.4f * (textScale.coerceIn(1f, 2f) - 1f)
             fun hero(date: Dp, row: Dp, sh: Dp) = viewport - ((date + if (two) row * 3 else row * 5 + sh) * k + GAP + bottom)
             val regular = hero(58.dp, 54.dp, 44.dp)
-            // (A wide screen has the room for a taller sky: there the path is as wide as the screen.)
-            if (regular >= top + 252.dp) return make(regular.coerceAtMost(top + if (two) 520.dp else 430.dp), 54.dp, 44.dp, false)
+            // (A wide screen has the room for a taller sky, there the path is as wide as the screen; but the sky is not
+            // more than about half the page, or the times look pushed off it.)
+            val cap = if (two) minOf(top + 520.dp, viewport * 0.54f) else top + 430.dp
+            // (0.25) The roomy rows only where they leave the sky its height (a sky of 300 dp under the status bar):
+            // until 0.24 a 360 x 780 dp phone, the commonest size there is, kept them and a sky of 258 dp, in which the
+            // Sun's arch was 30 dp high and ran through the countdown's caption.
+            if (regular >= top + 300.dp) return make(regular.coerceAtMost(cap), 54.dp, 44.dp, false)
             val compact = hero(56.dp, 48.dp, 38.dp)
             if (compact >= top + 214.dp) return make(compact, 48.dp, 38.dp, true)
             // Very short screens: slimmer rows, and the sky header puts the name and the countdown side by side.
@@ -237,6 +243,14 @@ private class HeroGeometry(top: Dp, height: Dp) {
     /** First estimate of where the text ends; replaced by the measured bottom once laid out. */
     val textBottom: Dp = top + 6.dp + place + 2.dp + if (sideBySide) 54.dp else (titleSize * 1.4f).dp + (countdownMax * 1.2f).dp + 16.dp
     val landDepth: Dp = when { sideBySide -> 50.dp; inner >= 300.dp -> 82.dp; else -> 58.dp }
+    /**
+     * (0.25) The line under the countdown that says what it counts ("since Asr began") only where the sky has the
+     * height for it and for the Sun's arch: in a short sky the arch ran through it. The sign says it too (− until,
+     * + since), as on the watch and in the notification, which have no such line.
+     */
+    val caption: Boolean = inner >= 320.dp
+    /** (0.25) The hint's capsule sits lower in a short sky, clear of the horizon and of the path's ends. */
+    val hintBottom: Dp = if (inner >= 320.dp) 18.dp else 5.dp
     val horizon: Dp = height - landDepth
     val ground: Dp = height - 6.dp
     /** The noon Sun sits a little below the text, never behind it, while leaving the arc some height. */
@@ -569,7 +583,16 @@ private fun SkyHeader(
     val totalPx = with(density) { height.toPx() }
 
     Box(
-        Modifier.fillMaxWidth().height(height).onSizeChanged { headerWidth = it.width }.pointerInput(rtl) {
+        Modifier.fillMaxWidth().height(height).onSizeChanged { headerWidth = it.width }
+            // (0.25) The Sun is dragged from one edge of the screen to the other, and its rising and setting stand near
+            // the edges: there Android's back gesture took the drag and left the app (seen on an Android 15 emulator,
+            // where a drag begun 12 dp from the edge closed Minhad). As a seek bar does, the sky keeps its drags: the
+            // band over the horizon, as tall as Android allows an app to keep (200 dp), is taken out of the back gesture.
+            .systemGestureExclusion { c ->
+                val bottom = minOf(currentLayout.horizon * c.size.height + with(density) { 28.dp.toPx() }, c.size.height.toFloat())
+                androidx.compose.ui.geometry.Rect(0f, (bottom - with(density) { 200.dp.toPx() }).coerceAtLeast(0f), c.size.width.toFloat(), bottom)
+            }
+            .pointerInput(rtl) {
             detectHorizontalDragGestures(
                 onDragStart = { o ->
                     if (showScrubHint) onScrubbed()
@@ -641,7 +664,7 @@ private fun SkyHeader(
                         Box(Modifier.arrives(4, Opening.HEADER_AT, lift = 22.dp)) { LiveCountdown(st, clock, u.settings.elapsedAfterPrayer, f, hero.countdownMax) }
                         // 0.15: what the number counts, in words ("until Maghrib", "since Asr began"): a sign alone
                         // had to be learned, and "+15:21" read as a time of day.
-                        Text(
+                        if (hero.caption || !viewingToday) Text(
                             when {
                                 !viewingToday -> stringResource(R.string.cd_today_now)
                                 !cd.elapsed -> stringResource(R.string.cd_until, f.prayerName(cd.event.prayer, cd.event.date))
@@ -657,7 +680,7 @@ private fun SkyHeader(
                 if (readout) AtMoment(shown) { f0 ->
                     val at = caught?.second ?: scene.instantAt(f0).plusSeconds(30).truncatedTo(ChronoUnit.MINUTES)
                     ScrubReadout(
-                        at = at, prayer = caught?.first, elevation = scene.elevationAt(f0), now = clock(), zone = place.zone, date = today, f = f, countdownMax = hero.countdownMax, titleSize = hero.titleSize,
+                        at = at, prayer = caught?.first, elevation = scene.elevationAt(f0), now = clock(), zone = place.zone, date = today, f = f, countdownMax = hero.countdownMax, titleSize = hero.titleSize, tight = !hero.caption,
                         modifier = Modifier.matchParentSize().graphicsLayer { alpha = away; translationY = 12.dp.toPx() * (1f - away) },
                     )
                 }
@@ -672,7 +695,7 @@ private fun SkyHeader(
         val hintAlpha by hintState
         val hintThere by remember { androidx.compose.runtime.derivedStateOf { hintState.value > 0.01f } }
         if (hintThere) Row(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp, start = 24.dp, end = 24.dp).graphicsLayer { alpha = hintAlpha }
+            Modifier.align(Alignment.BottomCenter).padding(bottom = hero.hintBottom, start = 24.dp, end = 24.dp).graphicsLayer { alpha = hintAlpha }
                 .clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.28f)).border(0.75.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
                 .padding(horizontal = 14.dp, vertical = 7.dp).clearAndSetSemantics { },
             verticalAlignment = Alignment.CenterVertically,
@@ -716,6 +739,8 @@ private fun PrayerTitle(name: String, arabic: Boolean, size: Float, time: String
 private fun ScrubReadout(
     at: java.time.Instant, prayer: Prayer?, elevation: Double, now: java.time.Instant, zone: java.time.ZoneId, date: LocalDate, f: Formatter,
     countdownMax: Float, titleSize: Float, modifier: Modifier = Modifier,
+    /** (0.25) The place it stands in has no line of words under the countdown (a short sky): the time a size smaller, so its three lines still fit. */
+    tight: Boolean = false,
 ) {
     // (0.22) The readout takes the place of the next prayer, its countdown and its words, and has their three lines and
     // no more: the prayer the Sun is on, or else how high the Sun stands, in the title's line; the time in the
@@ -734,7 +759,7 @@ private fun ScrubReadout(
                 )
             }
         }
-        val size = (countdownMax * 0.86f).sp
+        val size = (countdownMax * if (tight) 0.64f else 0.86f).sp
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Text(f.timeAt(at, zone), style = MaterialTheme.typography.displayLarge.merge(Tabular).copy(fontSize = size, lineHeight = size * 1.1f, letterSpacing = (-2).sp,
                 fontWeight = FontWeight.Light, shadow = SkyText.Shadow), color = Sky.OnSky, maxLines = 1)
@@ -1033,7 +1058,9 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
             lineAboveDone = passed || isCurrent, lineBelowDone = passed, fillAbove = fillAbove, fillBelow = fillBelow, f = f,
             // Shuruq marks the end of Fajr's time; it is not a prayer, so its row is quieter and slimmer.
             height = if (p == Prayer.SHURUQ) home.shuruqHeight else home.rowHeight, minor = p == Prayer.SHURUQ,
-            bell = when { !alerting -> Icons.Rounded.NotificationsOff; alert.mode.playsAudio -> Icons.Rounded.NotificationsActive; else -> Icons.Rounded.NotificationsNone },
+            // (0.25) While the alerts are off altogether there is no bell: six struck-through bells said "off" six times.
+            // With the alerts on, each row's bell is its switch (gold: it will alert; struck through: this one will not).
+            bell = when { !u.settings.alerts.enabled -> null; !alerting -> Icons.Rounded.NotificationsOff; alert.mode.playsAudio -> Icons.Rounded.NotificationsActive; else -> Icons.Rounded.NotificationsNone },
             bellOn = alerting,
             bellText = stringResource(R.string.today_row_alert, stringResource(if (alerting) com.noor.app.ui.adhan.modeLabel(alert.mode) else R.string.adhan_off)),
             onClick = { onOpenPrayer(p) }, onBell = { on -> onToggleAlert(p, on) },
@@ -1043,7 +1070,7 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
     if (home.columns == 2) {
         // (0.25) A wide screen: the morning's three and the afternoon's three, side by side.
         val half = (list.size + 1) / 2
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp)) {
             Column(Modifier.weight(1f)) { for (i in 0 until half) row(i, first = i == 0, last = i == half - 1) }
             Column(Modifier.weight(1f)) { for (i in half until list.size) row(i, first = i == half, last = i == list.size - 1) }
         }
@@ -1072,14 +1099,16 @@ private fun TimelineRow(
     val sky = PrayerSkies.of(p)
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     // The lit row carries the colour of its own sky, strongest where the disc is.
+    // (0.25: a closed shape, lighter towards its far end; it faded to nothing there and looked cut off on a wide screen.)
+    val litA = if (c.isDark) 0.30f else 0.16f
     val litBg = Brush.horizontalGradient(
-        if (rtl) listOf(Color.Transparent, sky.middle.copy(alpha = if (c.isDark) 0.30f else 0.16f)) else listOf(sky.middle.copy(alpha = if (c.isDark) 0.30f else 0.16f), Color.Transparent),
+        if (rtl) listOf(sky.middle.copy(alpha = litA * 0.4f), sky.middle.copy(alpha = litA)) else listOf(sky.middle.copy(alpha = litA), sky.middle.copy(alpha = litA * 0.4f)),
     )
     Row(
         modifier.fillMaxWidth().heightIn(min = height).height(androidx.compose.foundation.layout.IntrinsicSize.Min).clip(RoundedCornerShape(20.dp))
             .then(if (onClick != null) Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = stringResource(R.string.today_row_open), onClick = onClick) else Modifier)
             .then(if (isCurrent) Modifier.background(litBg).border(0.75.dp, Brush.horizontalGradient(
-                if (rtl) listOf(Color.Transparent, sky.bottom.copy(alpha = 0.35f)) else listOf(sky.bottom.copy(alpha = 0.35f), Color.Transparent)), RoundedCornerShape(22.dp)) else Modifier)
+                if (rtl) listOf(sky.bottom.copy(alpha = 0.14f), sky.bottom.copy(alpha = 0.35f)) else listOf(sky.bottom.copy(alpha = 0.35f), sky.bottom.copy(alpha = 0.14f))), RoundedCornerShape(20.dp)) else Modifier)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1103,7 +1132,8 @@ private fun TimelineRow(
             if (isNext) Box(Modifier.size(if (minor) 30.dp else 38.dp).border(1.5.dp, c.gold, CircleShape))
         }
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
+        // (0.25: with larger text a row grows before its words touch its edge: "Now" sat on the lit row's lower edge.)
+        Column(Modifier.weight(1f).padding(vertical = 3.dp)) {
             Text(name, style = (if (minor) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium).copy(fontWeight = if (isCurrent || isNext) FontWeight.SemiBold else FontWeight.Medium),
                 color = if (minor && !isNext && !isCurrent) c.textSecondary else fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
             RowStatus(status, if (isCurrent) c.textSecondary else c.goldText)

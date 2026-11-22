@@ -37,6 +37,12 @@ data class NoorColors(
     val outline: Color,
     /** Accent for icons, progress, selection. */
     val gold: Color,
+    /**
+     * (0.25) The accent as a fill: switches that are on, the main button, the chosen day or chip. By night it is
+     * [gold]; by day a true gold (until 0.24 the light theme filled these with [gold]'s darker tone, chosen to be
+     * read as a line on white, and they looked mustard brown). What stands on it is [onGold].
+     */
+    val goldFill: Color,
     /** Accent used for text (meets 4.5:1 on the surface). */
     val goldText: Color,
     val goldSoft: Color,
@@ -67,6 +73,7 @@ val NightColors = NoorColors(
     separator = Color(0x1AFFFFFF),
     outline = Color(0x24FFFFFF),
     gold = Color(0xFFE3C27E),
+    goldFill = Color(0xFFE3C27E),
     goldText = Color(0xFFE8CB8E),
     goldSoft = Color(0xFFF4E2B8),
     goldDeep = Color(0xFFB98F45),
@@ -95,6 +102,7 @@ val DayColors = NoorColors(
     separator = Color(0x14000000),
     outline = Color(0x1F000000),
     gold = Color(0xFFA8792C),
+    goldFill = Color(0xFFDDAE4E),
     goldText = Color(0xFF7A5A1E),
     goldSoft = Color(0xFF7C5A1F),
     goldDeep = Color(0xFF8A6424),

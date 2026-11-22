@@ -16,6 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -112,7 +114,7 @@ private const val UNTITLED_6 = -6
 
 /** The pages of Settings (0.15): the first, and two it opens. */
 /** 0.25: also the notification bar's page (its switch and the status-bar timer's options) and About. */
-private enum class SettingsPage { ROOT, TIMES, LANGUAGE, STATUS, ABOUT }
+private enum class SettingsPage { ROOT, TIMES, LANGUAGE, STATUS, ABOUT, CREDITS }
 
 /**
  * Settings (0.15). The first page holds what people come for, in the order they need it, and no more than a phone's
@@ -153,8 +155,10 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     val context = androidx.compose.ui.platform.LocalContext.current
     val profileName = s.profileId?.let { Profiles.byId(it) }?.let { if (ar) it.nameAr else it.nameEn } ?: autoName
     // The name of what the times follow, short: the chosen method, or the authority chosen for the place.
-    val timesName = s.profileId?.let { Profiles.byId(it) }?.let { if (ar) it.nameAr else it.nameEn }
-        ?: autoAuthority?.let { if (ar) it.nameAr else it.nameEn } ?: stringResource(R.string.authority_auto)
+    // (0.25: without what stands in brackets after it: "IACAD — Dubai (Dulook DXB)" broke over two lines on the page's
+    // card and left "DXB)" alone on the second; the full name is in the method's own row and in its list.)
+    val timesName = (s.profileId?.let { Profiles.byId(it) }?.let { if (ar) it.nameAr else it.nameEn }
+        ?: autoAuthority?.let { if (ar) it.nameAr else it.nameEn } ?: stringResource(R.string.authority_auto)).substringBefore(" (").trim()
 
     // Where today's times come from (shown here since 0.9.2, when it left the home screen).
     val app = context.applicationContext as com.noor.app.NoorApplication
@@ -202,7 +206,9 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         else -> asrName(s.asrSchool!!)
     }
     val adj = s.offsets.entries.joinToString("  ") { (p, m) -> "${f.prayerName(p)} ${f.digits(if (m > 0) "+$m" else "$m")}" }
-    val hijriValue = f.digits(if (s.hijriAdjust > 0) "+${s.hijriAdjust}" else "${s.hijriAdjust}")
+    // (0.25: "+1 day", "0 days": a bare "0" beside the stepper said nothing.)
+    val hijriValue = androidx.compose.ui.res.pluralStringResource(R.plurals.days_signed, kotlin.math.abs(s.hijriAdjust),
+        f.digits(when { s.hijriAdjust > 0 -> "+${s.hijriAdjust}"; s.hijriAdjust < 0 -> "\u2212${-s.hijriAdjust}"; else -> "0" }))
     val kwLocation = stringResource(R.string.kw_location)
 
     // Every row once, with the page it lives on and its group there (0.9.4: groups and search; 0.15: pages).
@@ -239,7 +245,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
         add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Notifications, stringResource(R.string.status_setting), null, stringResource(R.string.kw_status), { page = statusPage },
             detail = stringResource(if (statusShown) R.string.settings_on else R.string.settings_off)))
-        add(SettingRow(0, Icons.Rounded.Notifications, stringResource(R.string.status_setting), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status), null, page = statusPage,
+        add(SettingRow(0, Icons.Rounded.Notifications, stringResource(R.string.status_show), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status) + " " + stringResource(R.string.status_setting), null, page = statusPage,
             // (0.22: on by default, but Android shows it only with the notification permission: the switch says what is
             // really there, and turning it on asks for the permission.)
             toggle = (s.statusNotification && (Build.VERSION.SDK_INT < 33 || androidx.core.content.ContextCompat.checkSelfPermission(context,
@@ -279,7 +285,9 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                     else -> R.string.status_chip_desc
                 }), stringResource(R.string.kw_status),
                 when { newEnough && s.statusBarChip && !allowed -> openSettings; newEnough && s.statusBarChip && samsung -> { { dialog = Dialog.SAMSUNG_LIVE } }; else -> null },
-                toggle = if (newEnough) s.statusBarChip to { on -> if (on) com.noor.app.notify.LivePromotion.retry(context); vm.setStatusBarChip(on) } else null, page = statusPage))
+                toggle = if (newEnough) s.statusBarChip to { on -> if (on) com.noor.app.notify.LivePromotion.retry(context); vm.setStatusBarChip(on) } else null, page = statusPage,
+                // (0.25: on a phone before Android 16 the row could do nothing and looked as if it could: search still finds it.)
+                listed = newEnough))
             // (0.24, the owner) The timer in the status bar without Minhad's icon beside it (off by default).
             if (newEnough && s.statusBarChip) add(SettingRow(R.string.status_chip_group, Icons.AutoMirrored.Rounded.Label, stringResource(R.string.status_chip_icon_setting),
                 stringResource(R.string.status_chip_icon_desc), stringResource(R.string.kw_status), null,
@@ -298,20 +306,21 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             val place = PrayerProvider.place(s)
             val t = com.noor.app.sky.Biome.of(s.scenery, place?.countryCode, place?.point?.elevationM, place?.point?.latitude)
             val name = stringResource(sceneryName(t))
-            add(SettingRow(R.string.settings_appearance, Icons.Rounded.Landscape, stringResource(R.string.scenery_title),
-                if (s.scenery == Scenery.AUTO) stringResource(R.string.scenery_auto_short, name) else name,
-                stringResource(R.string.kw_scenery), { onOpenRoute(Routes.SCENERY) }))
+            // (0.25: a row's state in a word or two stands at its end, as Theme's does; a line under the title is kept
+            // for what needs a sentence.)
+            add(SettingRow(R.string.settings_appearance, Icons.Rounded.Landscape, stringResource(R.string.scenery_title), null,
+                stringResource(R.string.kw_scenery) + " " + stringResource(R.string.scenery_auto_short, name), { onOpenRoute(Routes.SCENERY) }, detail = name))
             // (It lives on the home screen's page, where the countdown is seen; search finds it from here.)
             add(SettingRow(R.string.countdown_group, Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc),
                 stringResource(R.string.kw_status), null, toggle = s.elapsedAfterPrayer to { on -> vm.setElapsedAfterPrayer(on) }, listed = false))
         }
         // 0.24: the home screen's widgets, each customised from here too.
-        add(SettingRow(R.string.settings_appearance, Icons.Rounded.Widgets, stringResource(R.string.w_widgets_title), stringResource(R.string.w_widgets_row_note),
-            stringResource(R.string.w_kw_widgets), { onOpenRoute(Routes.WIDGETS) }))
-        add(SettingRow(R.string.settings_appearance, Icons.Rounded.Language, stringResource(R.string.settings_language),
-            listOf(languageLabel(s.language), stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24, f.number(if (s.timeFormat == TimeFormat.H12) 12 else 24))).joinToString(" · "),
-            stringResource(R.string.kw_language) + " " + stringResource(R.string.kw_numerals) + " " + stringResource(R.string.kw_time) + " " + stringResource(R.string.kw_hijri),
-            { page = SettingsPage.LANGUAGE }))
+        add(SettingRow(R.string.settings_appearance, Icons.Rounded.Widgets, stringResource(R.string.w_widgets_title), null,
+            stringResource(R.string.w_kw_widgets) + " " + stringResource(R.string.w_widgets_row_note), { onOpenRoute(Routes.WIDGETS) }))
+        add(SettingRow(R.string.settings_appearance, Icons.Rounded.Language, stringResource(R.string.settings_language), null,
+            stringResource(R.string.kw_language) + " " + stringResource(R.string.kw_numerals) + " " + stringResource(R.string.kw_time) + " " + stringResource(R.string.kw_hijri) + " " +
+                stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24, f.number(if (s.timeFormat == TimeFormat.H12) 12 else 24)),
+            { page = SettingsPage.LANGUAGE }, detail = languageLabel(s.language)))
         // 0.15.2: the watch's page lives here (set up once), no longer a tab.
         add(SettingRow(UNTITLED_4, Icons.Rounded.Watch, stringResource(R.string.watch_title), stringResource(R.string.settings_watch_note), stringResource(R.string.kw_watch), { onOpenRoute(Routes.WATCH) }))
         // 0.25: About is a page (Minhad's mark and name, the version, how the times are checked, the recordings' credits).
@@ -320,6 +329,12 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         val about = SettingsPage.ABOUT
         add(SettingRow(0, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), stringResource(R.string.times_accuracy_note), stringResource(R.string.kw_accuracy), onOpenAccuracy, page = about))
         add(SettingRow(0, Icons.Rounded.LibraryMusic, stringResource(R.string.adhan_library), stringResource(R.string.adhan_library_desc), stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_LIBRARY) }, page = about))
+        // (0.25, for a release: the privacy policy, and whose work Minhad stands on, in the app itself and not only in
+        // the repository: several of the licences ask for exactly that.)
+        add(SettingRow(UNTITLED_3, Icons.Rounded.Lock, stringResource(R.string.privacy_title), null, stringResource(R.string.kw_privacy), {
+            runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(PRIVACY_URL)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }, page = about))
+        add(SettingRow(UNTITLED_3, Icons.Rounded.Favorite, stringResource(R.string.credits_title), null, stringResource(R.string.kw_credits), { page = SettingsPage.CREDITS }, page = about))
         add(SettingRow(UNTITLED_6, Icons.Rounded.Info, stringResource(R.string.about_version_row), null, "", null, detail = f.digits(BuildConfigInfo.versionName), page = about))
         // Testing only (0.14): to be removed before release, with com.noor.app.testing (the owner's word).
         // (0.25: not in a build made for a store, `-Pminhad.store=true`.)
@@ -374,11 +389,11 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
     }
 
     // A page of Settings opens on top of the first, as on iOS; Back (the chevron, the system's back) returns.
-    androidx.activity.compose.BackHandler(enabled = page != SettingsPage.ROOT) { page = SettingsPage.ROOT }
+    androidx.activity.compose.BackHandler(enabled = page != SettingsPage.ROOT) { page = if (page == SettingsPage.CREDITS) SettingsPage.ABOUT else SettingsPage.ROOT }
     androidx.compose.animation.AnimatedContent(
         targetState = page, label = "settingsPage",
         transitionSpec = {
-            val forward = targetState != SettingsPage.ROOT
+            val forward = targetState != SettingsPage.ROOT && !(initialState == SettingsPage.CREDITS && targetState == SettingsPage.ABOUT)
             val dir = if (forward) androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start else androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End
             (slideIntoContainer(dir, androidx.compose.animation.core.tween(com.noor.app.ui.components.NoorMotion.Standard, easing = com.noor.app.ui.components.NoorMotion.Ease)) { it / 5 } +
                 androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(com.noor.app.ui.components.NoorMotion.Standard))) togetherWith
@@ -439,6 +454,14 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             SettingsPage.ABOUT -> NoorPage(stringResource(R.string.about_title), contentPadding, onBack = { page = SettingsPage.ROOT }) {
                 AboutHeader()
                 groups(SettingsPage.ABOUT)
+            }
+            SettingsPage.CREDITS -> NoorPage(stringResource(R.string.credits_title), contentPadding, onBack = { page = SettingsPage.ABOUT }) {
+                Credit(R.string.credits_type, stringResource(R.string.credits_type_body))
+                Credit(R.string.credits_places, stringResource(R.string.geonames_credit) + "\n" + stringResource(R.string.loc_tz_credit) + "\n" + stringResource(R.string.credits_maps_body))
+                Credit(R.string.credits_times, stringResource(R.string.credits_times_body))
+                Credit(R.string.credits_sky, stringResource(R.string.credits_sky_body))
+                Credit(R.string.credits_sounds, stringResource(R.string.credits_sounds_body))
+                Credit(R.string.credits_software, stringResource(R.string.credits_software_body))
             }
         }
     }
@@ -522,6 +545,17 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             },
             dismissButton = { TextButton(onClick = { dialog = Dialog.NONE }) { Text(stringResource(R.string.bg_perm_not_now), color = c.textSecondary) } },
         )
+    }
+}
+
+/** Where the privacy policy is published (docs/PRIVACY.md of the public repository). */
+private const val PRIVACY_URL = "https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/blob/main/docs/PRIVACY.md"
+
+/** One group of the acknowledgements: whose work it is and on what terms, as its licence asks to have it said. */
+@Composable
+private fun Credit(title: Int, body: String) {
+    SettingsSection(stringResource(title)) {
+        Text(body, style = FootnoteStyle.copy(fontSize = 14.sp, lineHeight = 21.sp), color = NoorTheme.colors.textSecondary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp))
     }
 }
 

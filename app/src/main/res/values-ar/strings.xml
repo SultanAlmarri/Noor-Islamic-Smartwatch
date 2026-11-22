@@ -77,6 +77,31 @@
     <string name="about_tagline">مواقيت الصلاة من السماء فوقك.</string>
     <string name="about_version_row">الإصدار</string>
     <string name="status_chip_group">شريط الحالة</string>
+    <string name="privacy_title">سياسة الخصوصية</string>
+    <string name="kw_privacy">الخصوصية البيانات الموقع سياسة</string>
+    <string name="credits_title">شكر وإسناد</string>
+    <string name="kw_credits">إسناد تراخيص مصادر شكر مفتوح المصدر</string>
+    <string name="credits_type">الخطوط</string>
+    <string name="credits_type_body">IBM Plex Sans Arabic، © IBM Corp.، و Reem Kufi، © The Reem Kufi Project Authors، وكلاهما برخصة SIL Open Font License 1.1.</string>
+    <string name="credits_places">الأماكن والخرائط</string>
+    <string name="credits_maps_body">صور الخرائط: Esri ومزوّدو بياناتها، وأسماؤهم على الخريطة. البحث عن الأماكن عبر الإنترنت في الهواتف التي لا تملك بحث Google: ‏Photon ‏(photon.komoot.io)، © مساهمو OpenStreetMap.</string>
+    <string name="credits_times">الجداول والشمس</string>
+    <string name="credits_times_body">الجداول الرسمية: دائرة الشؤون الإسلامية والعمل الخيري بدبي (iacad.gov.ae) والمجلس الإسلامي السنغافوري (data.gov.sg، برخصة Singapore Open Data Licence). موضع الشمس وفق خوارزمية Solar Position Algorithm لـ I. Reda و A. Andreas ‏(NREL).</string>
+    <string name="credits_sky">السماء والأرض</string>
+    <string name="credits_sky_body">مسوح الصخور والأرض والنبات: Poly Haven و ambientCG ‏(CC0). الارتفاعات: USGS 3DEP. خرائط النجوم والقمر: NASA/Goddard Space Flight Center Scientific Visualization Studio. Contains data from Kartverket (the Norwegian Mapping Authority), Nasjonal høydemodell, CC BY 4.0. Contains modified Copernicus DEM data: © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA; all rights reserved. السحب مرسومة من أحجام سحب من CGHEVEN.</string>
+    <string name="credits_sounds">التسجيلات</string>
+    <string name="credits_sounds_body">صاحب كل تسجيل ومصدره ورخصته في مكتبة الأذان، في صفحة التسجيل نفسه.</string>
+    <string name="credits_software">البرمجيات</string>
+    <string name="credits_software_body">الرموز: Material Symbols من Google. بُني بـ Android Jetpack و Kotlin. وكلها برخصة Apache License 2.0.</string>
+    <string name="status_show">إظهاره في شريط الإشعارات</string>
+    <plurals name="days_signed">
+        <item quantity="zero">%s يوم</item>
+        <item quantity="one">%s يوم</item>
+        <item quantity="two">%s يومان</item>
+        <item quantity="few">%s أيام</item>
+        <item quantity="many">%s يومًا</item>
+        <item quantity="other">%s يوم</item>
+    </plurals>
     <string name="news_title">الجديد في منهاد</string>
     <string name="news_look_title">أيقونة جديدة وصفحات أسلس</string>
     <string name="news_look_body">الهلال فوق الأرض عند أول ضوء. الصفحات تنساب وتتبع إصبعك عند الرجوع.</string>
@@ -809,7 +834,7 @@
     <string name="cd_today_now">اليوم، الآن</string>
     <string name="history_fix_dnd">السماح بالمنبّهات في وضع عدم الإزعاج</string>
     <string name="adhan_alert_options">إعدادات أخرى</string>
-    <string name="settings_watch_note">منهاد على معصمك: التثبيت والمزامنة ووجه الساعة</string>
+    <string name="settings_watch_note">التثبيت والمزامنة ووجه الساعة</string>
     <!-- 0.16: the Adhan section redone. -->
     <string name="adhan_voice">صوت الأذان</string>
     <string name="voice_for">صوت %s</string>

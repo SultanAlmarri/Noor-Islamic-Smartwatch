@@ -201,7 +201,7 @@ fun <T> ChoiceChips(options: List<Pair<T, String>>, selected: T, onSelect: (T) -
                 Text(
                     label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, letterSpacing = 0.sp), maxLines = 1,
                     color = if (on) c.onGold else c.textSecondary,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) c.gold else c.glassRaised)
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) c.goldFill else c.glassRaised)
                         .heightIn(min = 36.dp).padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -253,7 +253,7 @@ fun NoorButton(
     val c = NoorTheme.colors
     val shape = RoundedCornerShape(50)
     val bg = when (kind) {
-        ButtonKind.Filled -> c.gold
+        ButtonKind.Filled -> c.goldFill
         ButtonKind.Tonal -> c.gold.copy(alpha = if (c.isDark) 0.16f else 0.14f)
         ButtonKind.Plain -> androidx.compose.ui.graphics.Color.Transparent
     }

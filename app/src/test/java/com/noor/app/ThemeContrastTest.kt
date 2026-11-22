@@ -21,6 +21,8 @@ class ThemeContrastTest {
         // Accent graphics (icons, rings, switches) need 3:1; text on a gold fill needs 4.5:1.
         assertTrue("$name gold on background", Sky.contrast(c.gold, c.background) >= 3.0)
         assertTrue("$name onGold on gold", Sky.contrast(c.onGold, c.gold) >= 4.5)
+        // (0.25) The accent as a fill (the main button, a chosen chip): what stands on it reads.
+        assertTrue("$name onGold on goldFill", Sky.contrast(c.onGold, c.goldFill) >= 4.5)
     }
 
     /**

@@ -78,6 +78,27 @@
     <string name="about_tagline">Prayer times from the sky above you.</string>
     <string name="about_version_row">Version</string>
     <string name="status_chip_group">Status bar</string>
+    <string name="privacy_title">Privacy policy</string>
+    <string name="kw_privacy">privacy data location policy</string>
+    <string name="credits_title">Acknowledgements</string>
+    <string name="kw_credits">credits licences licenses sources thanks open source</string>
+    <string name="credits_type">Typefaces</string>
+    <string name="credits_type_body">IBM Plex Sans Arabic, © IBM Corp., and Reem Kufi, © The Reem Kufi Project Authors, both under the SIL Open Font License 1.1.</string>
+    <string name="credits_places">Places and maps</string>
+    <string name="credits_maps_body">Map pictures: Esri and its data providers, named on the map. Place search on phones without Google services: Photon (photon.komoot.io), © OpenStreetMap contributors.</string>
+    <string name="credits_times">Timetables and the Sun</string>
+    <string name="credits_times_body">Official timetables: IACAD Dubai (iacad.gov.ae) and MUIS Singapore (data.gov.sg, Singapore Open Data Licence). The Sun\'s position follows the Solar Position Algorithm of I. Reda and A. Andreas (NREL).</string>
+    <string name="credits_sky">The sky and the land</string>
+    <string name="credits_sky_body">Scans of rock, ground and plants: Poly Haven and ambientCG (CC0). Elevation: USGS 3DEP. Star and Moon maps: NASA/Goddard Space Flight Center Scientific Visualization Studio. Contains data from Kartverket (the Norwegian Mapping Authority), Nasjonal høydemodell, CC BY 4.0. Contains modified Copernicus DEM data: © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA; all rights reserved. Clouds rendered from cloud volumes by CGHEVEN.</string>
+    <string name="credits_sounds">Recordings</string>
+    <string name="credits_sounds_body">Each recording\'s author, source and licence are in the Adhan library, on the recording\'s own page.</string>
+    <string name="credits_software">Software</string>
+    <string name="credits_software_body">Signs: Material Symbols by Google. Built with Android Jetpack and Kotlin. All under the Apache License 2.0.</string>
+    <string name="status_show">Show in the notification bar</string>
+    <plurals name="days_signed">
+        <item quantity="one">%s day</item>
+        <item quantity="other">%s days</item>
+    </plurals>
     <string name="news_title">What\'s New in Minhad</string>
     <string name="news_look_title">A new icon and smoother pages</string>
     <string name="news_look_body">The crescent over the Earth at first light. Pages glide in and follow your finger back.</string>
@@ -801,7 +822,7 @@
     <string name="cd_today_now">Today, now</string>
     <string name="history_fix_dnd">Let alarms through Do Not Disturb</string>
     <string name="adhan_alert_options">More settings</string>
-    <string name="settings_watch_note">Minhad on your wrist: install, sync, the watch face</string>
+    <string name="settings_watch_note">Install, sync, watch face</string>
     <!-- 0.16: the Adhan section redone. -->
     <string name="adhan_voice">Adhan voice</string>
     <string name="voice_for">Voice for %s</string>
