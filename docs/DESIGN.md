@@ -985,8 +985,9 @@ short:
 
 Every animation has one of three jobs: show where something came from, confirm a change, or keep the sky alive.
 
-- Entrances: the day's path draws itself from midnight to now and the sun travels into place (1.2 s); onboarding
-  opens on a sunrise (3.2 s).
+- Entrances: the day's path draws itself from midnight to now and the sun travels into place (1.2 s); the welcome
+  (0.25, WELCOME_025_NOTES.md) is one picture, the Earth's edge at first light, that lets in more light page by page
+  and leaves on the sunrise.
 - State: countdown digits roll; the next prayer's name slides in when it changes; tabs cross-fade; pages slide in from
   the reading direction; the "Today" pill appears only when another date is shown.
 - Ambient (home screen): clouds drift, stars twinkle, the sun's rays turn, the next prayer's ring breathes, birds and

@@ -11,6 +11,9 @@ One description, written out as everything that shows the mark, so they never dr
 Only what Android's vector drawables can draw is used: paths, linear gradients and circular radial gradients in
 the viewport's own units (no blur, no elliptical gradient, no gradient on a group's transform).
 
+Two places draw the mark in code from the same numbers and must be changed with it: the welcome's own mark
+(app/.../ui/onboarding/WelcomeArt.kt, `Mark`) and the opening's dawn colours (app/.../ui/opening/Opening.kt).
+
 Run from the repository's root:  python3 tools/brand/logo.py
 """
 import math, os, sys
