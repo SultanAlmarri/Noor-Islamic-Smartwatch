@@ -63,6 +63,8 @@ enum class OpeningMode { NONE, BRIEF, FULL }
 object Opening {
     /** The light round the mark. */
     const val GLOW_MS = 950
+    /** (0.25) The Earth's edge rises into the foot of the screen with the dawn behind it. */
+    const val DAWN_MS = 480
     /** The mark dissolves into the light. */
     const val MARK_FADE_AT = 150
     const val MARK_FADE_MS = 330
@@ -218,6 +220,12 @@ val LocalOpening = staticCompositionLocalOf { OpeningState.None }
 /** The colour of the launch screen and of the veil: the sky that holds the scene's place until its first picture. */
 val Dusk: Color get() = RealSky.WAITING_SKY
 private val GlowCore = Color(0xFFFFF6E0)
+// (0.25) The dawn behind the Earth's edge, in the launcher icon's colours (tools/brand/logo.py).
+private val DawnCore = Color(0xFFFFE6B8)
+private val DawnEdge = Color(0xFFFAAA6C)
+private val DawnRim = Color(0xFFFFF6DC)
+private val EarthTop = Color(0xFF1B1838)
+private val EarthLow = Color(0xFF07081A)
 private val GlowEdge = Color(0xFFF2A65A)
 
 /**
@@ -262,6 +270,23 @@ fun OpeningVeil(state: OpeningState, modifier: Modifier = Modifier) {
             return@Canvas
         }
         drawRect(Dusk)
+        // (0.25) Minhad's mark is the crescent over the Earth's edge at first light: as the app takes over from the
+        // launch screen (which can show only the mark on the dusk), the Earth's edge rises into the foot of the screen
+        // with the dawn behind it, so the launch is the icon come to life; the dusk then opens over it all.
+        val dawn = state.part(0, Opening.DAWN_MS, FastOutSlowInEasing)
+        if (dawn > 0f) {
+            val w = size.width; val h = size.height
+            val limb = h * 0.84f + (1f - dawn) * 28.dp.toPx()
+            val earthR = max(w, h) * 2.4f
+            val earth = Offset(w / 2f, limb + earthR)
+            val glowAt = Offset(w / 2f, limb + 0.04f * h)
+            val glowR = max(w * 0.95f, h * 0.42f)
+            drawCircle(Brush.radialGradient(0f to DawnCore.copy(alpha = 0.80f * dawn), 0.42f to DawnEdge.copy(alpha = 0.30f * dawn), 1f to Color.Transparent, center = glowAt, radius = glowR), glowR, glowAt)
+            // The lit edge: a bright disc, and the dark Earth a hair lower over it (a filled shape, not a stroked one).
+            drawCircle(Brush.horizontalGradient(0f to Color.Transparent, 0.3f to DawnRim.copy(alpha = 0.7f * dawn), 0.5f to DawnRim.copy(alpha = dawn), 0.7f to DawnRim.copy(alpha = 0.7f * dawn), 1f to Color.Transparent,
+                startX = 0f, endX = w), earthR, earth)
+            drawCircle(Brush.verticalGradient(0f to EarthTop, 1f to EarthLow, startY = limb, endY = h), earthR, earth.copy(y = earth.y + 1.5.dp.toPx()), alpha = dawn)
+        }
         // The light gathers round the mark, then leaves it for the place of the Sun in the sky behind (or, at night,
         // the middle of the sky), and it is from there that the dusk opens: the mark's light becomes the day's.
         val to = state.focus ?: Offset(size.width / 2f, size.height * 0.3f)
