@@ -196,7 +196,7 @@ private fun FaceStatus(flow: FaceFlow, run: () -> Unit) {
 
 /** Design and colour, chosen on the watch (the phone's editor offers the same, with large previews). */
 @Composable
-private fun FacePicker(chosen: String, choose: (String) -> Unit) {
+internal fun FacePicker(chosen: String, choose: (String) -> Unit) {
     val c = WatchFaces.parse(chosen) ?: WatchFaces.DEFAULT
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(stringResource(R.string.face_design), style = Type.detail, color = Quiet)

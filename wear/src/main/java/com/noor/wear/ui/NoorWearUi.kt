@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -26,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -34,7 +32,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -141,7 +138,8 @@ internal fun HomeScreen(c: WatchConfig, t: WearText, clock: () -> Instant, extra
                         ToolTile(stringResource(R.string.qibla), R.drawable.ic_qibla, Tint.Gold, bearing,
                             stringResource(R.string.qibla) + ", " + stringResource(R.string.qibla_from_north, bearing), Modifier.weight(1f)) { extras.onOpen(Dest.QIBLA) }
                         val count = t.count(extras.tasbihToday.toLong())
-                        ToolTile(stringResource(R.string.tasbih), R.drawable.ic_tasbih, Tint.Green, count,
+                        // (Nothing counted yet: no figure. An Arabic-Indic zero alone is a dot.)
+                        ToolTile(stringResource(R.string.tasbih), R.drawable.ic_tasbih, Tint.Green, if (extras.tasbihToday > 0) count else "",
                             stringResource(R.string.tasbih) + ", " + stringResource(R.string.tasbih_today, count), Modifier.weight(1f)) { extras.onOpen(Dest.TASBIH) }
                     }
                 }
@@ -187,8 +185,8 @@ private fun Hero(modifier: Modifier, c: WatchConfig, t: WearText, next: Prayer, 
         }
         // On the dunes: the Hijri date, and the place below it where the round screen is narrowest (it is the shorter).
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = h * 0.07f)) {
-            Text(t.hijri(hijri), style = Type.detail, color = Ink, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 22.dp))
+            Text(t.hijri(hijri), style = Type.detail.copy(fontSize = Screen.sp(11f, 12.5f)), color = Ink, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = Screen.dp(10f, 20f)))
             Text(t.placeWithFlag(c), style = Type.note.copy(fontWeight = FontWeight.Medium), color = Mist, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 46.dp))
         }

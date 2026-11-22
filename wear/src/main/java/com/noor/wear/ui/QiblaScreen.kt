@@ -202,13 +202,16 @@ private fun Centre(q: QiblaResult, t: WearText, turn: Double?, aligned: Boolean,
         reading.assessment.quality == CompassQuality.POOR -> stringResource(R.string.qibla_calibrate)
         else -> null
     }
+    // 0.25: while the compass is starting or the wrist is tilted there is no figure to trust: the instruction
+    // stands alone. With a poor calibration the figure stays, quiet, under the instruction to calibrate.
+    val notLevel = CompassIssue.NOT_FLAT in issues
     val main = when {
-        turn == null -> "—"
+        turn == null || notLevel -> null
         aligned -> stringResource(R.string.qibla_facing)
         else -> t.degrees(abs(turn))
     }
     val sub = when {
-        turn == null || aligned -> null
+        turn == null || aligned || notLevel -> null
         turn > 0 -> stringResource(R.string.qibla_turn_right)
         else -> stringResource(R.string.qibla_turn_left)
     }
@@ -224,14 +227,15 @@ private fun Centre(q: QiblaResult, t: WearText, turn: Double?, aligned: Boolean,
             contentDescription = listOfNotNull(main, sub, hint ?: spokenSummary).joinToString(". ")
         },
     ) {
-        if (aligned) {
+        if (aligned && main != null) {
             Box(Modifier.padding(bottom = 4.dp).size(38.dp).scale(land).background(Ink, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(painterResource(R.drawable.ic_check), null, Modifier.size(26.dp), tint = ArrivalCentre)
             }
             Text(main, style = Type.title, color = Ink, textAlign = TextAlign.Center, maxLines = 2)
-        } else {
+        } else if (main != null) {
             // Three figures ("120°") a size down, so they stay inside the ring of letters.
-            Numeral(main, if (turn != null && abs(turn) >= 99.5) Screen.sp(38f, 50f) else Screen.sp(46f, 56f), Modifier.padding(bottom = 2.dp))
+            Numeral(main, if (turn != null && abs(turn) >= 99.5) Screen.sp(38f, 50f) else Screen.sp(46f, 56f), Modifier.padding(bottom = 2.dp),
+                color = if (hint != null) Quiet else Ink)
         }
         if (sub != null && turn != null) {
             // The arrow is on the side it points to, whatever the language: right is right.
@@ -245,7 +249,8 @@ private fun Centre(q: QiblaResult, t: WearText, turn: Double?, aligned: Boolean,
         }
         Text(
             hint ?: summary,
-            style = if (hint != null) Type.detail else Type.note, color = if (hint != null) GoldSoft else if (aligned) Ink else Quiet, textAlign = TextAlign.Center,
+            style = if (hint != null && main == null) Type.row else if (hint != null) Type.detail else Type.note,
+            color = if (hint != null) GoldSoft else if (aligned) Ink else Quiet, textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 3.dp), maxLines = 3,
         )
     }

@@ -1,6 +1,7 @@
 package com.noor.wear
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -97,6 +98,18 @@ class StudioWearTest {
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Show Minhad Studio"))
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Touch and hold", substring = true))
         shot("t07_faces_studio_hint", "Touch and hold")
+
+        // 0.25: the Minhad faces' own picker (design and colour), which the page shows under the studio face where
+        // Watch Face Push exists (not in this test's Android): rendered by itself.
+        var picked = ""
+        screen = { NoorWearTheme(config) { _ ->
+            androidx.wear.compose.foundation.lazy.ScalingLazyColumn(androidx.compose.ui.Modifier.fillMaxSize()) {
+                item { com.noor.wear.ui.FacePicker(com.noor.prayer.WatchFaces.DEFAULT.id) { picked = it } }
+            }
+        } }
+        shot("t11_face_picker", "Dial")
+        rule.onNode(hasText("Dial")).performClick(); rule.waitForIdle()
+        assertEquals(com.noor.prayer.WatchFaces.Design.DIAL, com.noor.prayer.WatchFaces.parse(picked)?.design)
 
         config = TestConfigs.dubai("ar")
         screen = { NoorWearTheme(config) { _ -> FacesScreen(config, StudioUi(supported = true, active = true, fromPhone = true), FaceTemplates.KUFI, { true }, showClassic = false) } }

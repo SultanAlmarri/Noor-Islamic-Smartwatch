@@ -1,9 +1,12 @@
 package com.noor.wear.ui
 
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.CircularProgressIndicator
@@ -223,9 +227,9 @@ fun AlertSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
                     }, stringResource(R.string.alerts_on_watch), icon = R.drawable.ic_bell, iconTint = Tint.Red)
                 }
                 if (setup.alertsOn) {
-                    item { NoorChip(stringResource(R.string.alert_sound), null, { a.onSetup { it.copy(alertStyle = nextStyle(it.alertStyle)) } }, secondary = styleName(setup.alertStyle)) }
+                    item { NoorChip(stringResource(R.string.alert_sound), R.drawable.ic_sound, { a.onSetup { it.copy(alertStyle = nextStyle(it.alertStyle)) } }, secondary = styleName(setup.alertStyle), iconTint = Tint.Orange) }
                     item {
-                        NoorChip(stringResource(R.string.alert_prayers), null, a.onPrayers,
+                        NoorChip(stringResource(R.string.alert_prayers), R.drawable.ic_prayer_dhuhr, a.onPrayers,
                             secondary = Prayer.entries.filter { it in setup.alertPrayers }.joinToString(if (t.arabic) "، " else ", ") { t.name(it) }
                                 .ifEmpty { stringResource(R.string.alert_prayers_none) })
                     }
@@ -248,15 +252,15 @@ fun DisplaySettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
         ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
             item { Header(stringResource(R.string.settings_display)) }
             item {
-                NoorChip(stringResource(R.string.display_language), null,
+                NoorChip(stringResource(R.string.display_language), R.drawable.ic_language, iconTint = Tint.Teal, onClick =
                     { a.onSetup { it.copy(language = when (it.language) { "" -> "en"; "en" -> "ar"; else -> "" }) } }, secondary = languageName(setup.language))
             }
             item {
-                NoorChip(stringResource(R.string.display_digits), null, { a.onSetup { it.copy(arabicDigits = !it.arabicDigits) } },
+                NoorChip(stringResource(R.string.display_digits), R.drawable.ic_numbers, { a.onSetup { it.copy(arabicDigits = !it.arabicDigits) } }, iconTint = Tint.Indigo,
                     secondary = stringResource(if (setup.arabicDigits) R.string.display_digits_arabic else R.string.display_digits_western))
             }
             item {
-                NoorChip(stringResource(R.string.display_clock), null,
+                NoorChip(stringResource(R.string.display_clock), R.drawable.ic_clock, iconTint = Tint.Blue, onClick =
                     { a.onSetup { it.copy(use24h = when (it.use24h) { null -> false; false -> true; true -> null }) } },
                     secondary = stringResource(when (setup.use24h) { null -> R.string.display_follow; false -> R.string.display_12; true -> R.string.display_24 }))
             }
@@ -304,16 +308,23 @@ data class WelcomeActions(
 
 @Composable
 fun WelcomeScreen(a: WelcomeActions) {
-    val list = rememberScalingLazyListState()
+    // 0.25: the first screenful is whole: Minhad's mark and name, one line of what it is, and the one thing to do.
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
     ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
-            item { Icon(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(62.dp), tint = Color.Unspecified) }
-            item { Text(stringResource(R.string.welcome_title), style = Type.title.copy(fontSize = 23.sp, lineHeight = 27.sp), color = Ink, textAlign = TextAlign.Center) }
+        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize(), autoCentering = AutoCenteringParams(itemIndex = 0)) {
             item {
-                Text(stringResource(R.string.welcome_body), style = Type.detail, color = Quiet, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 1.dp, bottom = 5.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Icon(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(40.dp), tint = Color.Unspecified)
+                        Text(stringResource(R.string.welcome_title), style = Type.title.copy(fontSize = 23.sp), color = Ink,
+                            modifier = Modifier.height(34.dp).wrapContentHeight(Alignment.CenterVertically, unbounded = true))
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(stringResource(R.string.welcome_body), style = Type.note, color = Quiet, textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(start = 6.dp, end = 6.dp, bottom = 8.dp))
+                    LocateChip(a.locate, a.onUseLocation)
+                }
             }
-            item { LocateChip(a.locate, a.onUseLocation) }
             item { NoorChip(stringResource(R.string.choose_city), R.drawable.ic_city, a.onChooseCity, iconTint = Tint.Gray) }
             item { Footnote(stringResource(if (a.phoneConnected) R.string.welcome_phone_waiting else R.string.welcome_phone)) }
         }

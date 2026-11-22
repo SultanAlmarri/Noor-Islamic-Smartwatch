@@ -43,8 +43,6 @@ internal val Quiet = Color(0xFF9A9AA2)
 /** 0.25: the platter every row and card sits on, and its raised form (the prayer of the moment). */
 internal val Platter = Color(0xFF1C1C1F)
 internal val PlatterHigh = Color(0xFF2E2E33)
-internal val Night = Color(0xFF16233A)
-internal val NightDeep = Color(0xFF0D1626)
 internal val Success = Color(0xFF34D17B)
 
 /**
@@ -79,8 +77,9 @@ private val NoorWearTypography = androidx.wear.compose.material3.Typography(defa
  */
 internal object Type {
     /**
-     * Plex Arabic's own line is 1.6 times its size (room for Arabic's marks), far too airy for a watch: every style
-     * says its line height and has it honoured on single lines too, with the text centred in it.
+     * Plex Arabic's own line is 1.6 times its size (room for Arabic's marks). Every style says its line height, which
+     * sets the distance between the lines of a text; above the first line and below the last the font keeps its own
+     * room (as rendered in the tests), which is why large figures go through [Numeral].
      */
     private val base = TextStyle(
         fontFamily = Plex,

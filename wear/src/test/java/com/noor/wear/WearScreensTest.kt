@@ -135,6 +135,34 @@ class WearScreensTest {
         assertEquals(listOf("tasbih"), opened)
     }
 
+    /** 0.25: the first screenful under each sky of the day (the colours' contrast is locked by WatchSkyTest). */
+    @Test fun homeThroughTheDay() {
+        var at by mutableStateOf(TestConfigs.afternoon)
+        fun dubai(h: Int, m: Int) = java.time.ZonedDateTime.of(2026, 11, 4, h, m, 0, 0, java.time.ZoneId.of("Asia/Dubai")).toInstant()
+        screen = { NoorWearTheme(config) { t -> androidx.compose.runtime.key(at) { HomeScreen(config!!, t, { at }, HomeExtras()) } } }
+        start()
+        // Before dawn (night, stars), first light, just after sunrise, sunset, dusk, night: the next prayer each time.
+        for ((name, h, m, next) in listOf(Shot("h01_home_night", 4, 10, "Fajr"), Shot("h02_home_dawn", 5, 50, "Shuruq"), Shot("h03_home_sunrise", 6, 32, "Dhuhr"),
+            Shot("h04_home_sunset", 17, 36, "Maghrib"), Shot("h05_home_dusk", 18, 5, "Isha"), Shot("h06_home_late", 22, 30, "Fajr"))) {
+            at = dubai(h, m)
+            shot(name, next)
+        }
+        // Past Isha the countdown runs to tomorrow's Fajr with its hours, in the owner's format (no leading zero).
+        val toFajr = WearText(config).countdown(java.time.Duration.between(at, config!!.state(at).next.at))
+        assertTrue(toFajr, Regex("6:[0-9][0-9]:00").matches(toFajr)); assertTrue(toFajr, has(toFajr))
+        config = TestConfigs.dubai("ar", arabicDigits = true)
+        at = dubai(17, 36)
+        shot("h07_home_sunset_ar", "المغرب")
+        // Right to left: the day's times and the tools in Arabic, with Arabic-Indic digits.
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("٦:٢٥ ص"))
+        shot("h08_home_times_ar", "الفجر")
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("التسبيح"))
+        shot("h09_home_tools_ar", "التسبيح")
+        assertTrue(described("الإعدادات"))
+    }
+
+    private data class Shot(val name: String, val h: Int, val m: Int, val next: String)
+
     @Test fun qiblaCompassStates() {
         val c = TestConfigs.dubai("en")
         val bearing = Qibla.from(c.point).bearingDeg

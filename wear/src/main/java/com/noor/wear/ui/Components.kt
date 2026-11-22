@@ -99,7 +99,7 @@ internal fun NoorChip(
     secondary: String? = null,
     enabled: Boolean = true,
     iconTint: Color = Tint.Gold,
-    labelLines: Int = 1,
+    labelLines: Int = 2,
     secondaryLines: Int = 2,
     secondaryColor: Color = Quiet,
     container: Color = Platter,
@@ -195,7 +195,7 @@ internal fun Footnote(text: String, modifier: Modifier = Modifier) {
 
 /**
  * The ring round the edge of the screen: how far through something we are (the interval to the next prayer, a
- * phrase of the tasbih, the Hijri month), with a gap at the top for the clock and a bright head where it has got to.
+ * phrase of the tasbih), with a gap at the top for the clock and a bright head where it has got to.
  * Plain colours only (a gradient brush on a stroke has killed an emulator's graphics before).
  */
 @Composable

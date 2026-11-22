@@ -140,11 +140,11 @@ class PrayerTileService : TileService() {
                     titleSlot = { label(t.placeWithFlag(config), 13f, QUIET) },
                     mainSlot = {
                         column(
-                            label(t.name(iv.next), if (small) 21f else 25f, GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD),
-                            label(t.time(iv.end, zone), if (small) 33f else 40f, INK, LayoutElementBuilders.FONT_WEIGHT_BOLD),
-                            text(countdown(context, t, config, iv), typography = Typography.TITLE_MEDIUM, color = colorScheme.primary),
-                            spacer(height = dp(4f)),
-                            label(following.joinToString("  ·  ") { t.name(it.next) + " " + t.timeShort(it.end, zone) }, 13f, QUIET, maxLines = 2),
+                            label(t.name(iv.next), if (small) 18f else 25f, GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD),
+                            label(t.time(iv.end, zone), if (small) 29f else 40f, INK, LayoutElementBuilders.FONT_WEIGHT_BOLD),
+                            text(countdown(context, t, config, iv), typography = if (small) Typography.TITLE_SMALL else Typography.TITLE_MEDIUM, color = colorScheme.primary),
+                            spacer(height = dp(if (small) 1f else 4f)),
+                            label(following.joinToString("  ·  ") { t.name(it.next) + " " + t.timeShort(it.end, zone) }, if (small) 12f else 13f, QUIET, maxLines = 2),
                         )
                     },
                     bottomSlot = {

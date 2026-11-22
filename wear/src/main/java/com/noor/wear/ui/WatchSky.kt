@@ -45,12 +45,18 @@ internal object WatchSky {
         return (0xFF shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
     }
 
-    /** Where the stars are (fractions of the screen), their size and brightness: always the same sky. */
+    /**
+     * Where the stars are (fractions of the screen), their size and brightness: always the same sky. None stands
+     * where the countdown is written (a star between the figures reads as a stray point), and none below the dunes.
+     */
     val stars: List<FloatArray> = run {
         var seed = 0x2545F491L
         fun next(): Float { seed = seed xor (seed shl 13); seed = seed xor (seed ushr 7); seed = seed xor (seed shl 17); return ((seed ushr 11) and 0xFFFFF).toFloat() / 0xFFFFF }
-        List(34) { floatArrayOf(next(), next() * 0.66f, 0.45f + next() * 0.8f, 0.35f + next() * 0.65f) }
+        List(90) { floatArrayOf(next(), next() * 0.66f, 0.45f + next() * 0.8f, 0.35f + next() * 0.65f) }.filterNot { inText(it[0], it[1]) }
     }
+
+    /** The part of the first screenful the next prayer is written on. */
+    fun inText(x: Float, y: Float) = x in 0.13f..0.87f && y in 0.22f..0.72f
 }
 
 /**

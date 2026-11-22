@@ -64,7 +64,8 @@ class WatchSkyTest {
         val dawn = WatchSky.stops(0.5, evening = false).low
         val dusk = WatchSky.stops(0.5, evening = true).low
         assertTrue(b(dawn).toFloat() / r(dawn) > b(dusk).toFloat() / r(dusk))
-        // The stars keep to the sky: none below the dunes' line.
-        assertTrue(WatchSky.stars.all { it[0] in 0f..1f && it[1] in 0f..0.66f })
+        // The stars keep to the sky: none below the dunes' line, none among the countdown's figures, and still a sky full.
+        assertTrue(WatchSky.stars.all { it[0] in 0f..1f && it[1] in 0f..0.66f && !WatchSky.inText(it[0], it[1]) })
+        assertTrue("${WatchSky.stars.size} stars", WatchSky.stars.size >= 20)
     }
 }

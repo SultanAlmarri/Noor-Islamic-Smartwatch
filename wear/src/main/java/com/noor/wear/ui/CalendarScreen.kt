@@ -13,11 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -25,7 +23,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -58,8 +55,8 @@ fun CalendarScreen(c: WatchConfig, t: WearText, today: LocalDate) {
                     Numeral(t.digits(h.day.toString()), size, Modifier.padding(bottom = 2.dp), color = Gold)
                     Text(
                         (if (t.arabic) h.monthNameAr else h.monthNameEn) + " " + t.digits(h.year.toString()) + if (t.arabic) " هـ" else " AH",
-                        style = if (t.arabic) Type.kufi(18.sp) else Type.title.copy(fontSize = Screen.sp(15.5f, 17f)),
-                        color = Ink, textAlign = TextAlign.Center, maxLines = 2,
+                        style = if (t.arabic) Type.kufi(Screen.sp(16f, 18f)) else Type.title.copy(fontSize = Screen.sp(14f, 17f)),
+                        color = Ink, textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.padding(horizontal = 6.dp),
                     )
                     Text(t.longDate(today), style = Type.detail, color = Quiet, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 1.dp))
                     if (monthLength != null) {
