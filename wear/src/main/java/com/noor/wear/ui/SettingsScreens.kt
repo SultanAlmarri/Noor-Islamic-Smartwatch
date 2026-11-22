@@ -1,9 +1,12 @@
 package com.noor.wear.ui
 
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,13 +19,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
 import com.noor.prayer.AsrSchool
 import com.noor.prayer.LocalSetup
@@ -86,25 +89,25 @@ fun SettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
             item { Header(stringResource(R.string.settings)) }
 
             if (a.showFace) item {
-                NoorChip(stringResource(R.string.settings_face), R.drawable.ic_watch, { a.onOpen(Dest.FACES) }, secondary = a.faceSummary.ifEmpty { null })
+                NoorChip(stringResource(R.string.settings_face), R.drawable.ic_watch, { a.onOpen(Dest.FACES) }, secondary = a.faceSummary.ifEmpty { null }, iconTint = Tint.Indigo)
             }
 
             // Where the times come from: the row opens the details; Sync stays one tap away.
             if (s.source == ConfigSource.PHONE) {
                 item {
-                    NoorChip(stringResource(R.string.source_phone), R.drawable.ic_phone, { a.onOpen(Dest.SETTINGS_TIMES) },
+                    NoorChip(stringResource(R.string.source_phone), R.drawable.ic_phone, { a.onOpen(Dest.SETTINGS_TIMES) }, iconTint = Tint.Blue,
                         secondary = s.phoneReceivedAt?.let { ago(ui.now - it, t) })
                 }
                 item { SyncChip(ui.sync, a.onSync) }
             } else {
                 item {
-                    NoorChip(stringResource(R.string.source_watch), R.drawable.ic_location, { a.onOpen(Dest.SETTINGS_TIMES) },
+                    NoorChip(stringResource(R.string.source_watch), R.drawable.ic_location, { a.onOpen(Dest.SETTINGS_TIMES) }, iconTint = Tint.Blue,
                         secondary = s.config?.let { t.placeWithFlag(it) })
                 }
             }
 
             item {
-                NoorChip(stringResource(R.string.alerts_title), R.drawable.ic_bell, { a.onOpen(Dest.SETTINGS_ALERTS) },
+                NoorChip(stringResource(R.string.alerts_title), R.drawable.ic_bell, { a.onOpen(Dest.SETTINGS_ALERTS) }, iconTint = Tint.Red,
                     secondary = when {
                         s.source == ConfigSource.WATCH && !setup.alertsOn -> stringResource(R.string.settings_alerts_off)
                         s.source == ConfigSource.WATCH -> styleName(setup.alertStyle)
@@ -114,14 +117,14 @@ fun SettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
 
             if (s.source == ConfigSource.WATCH) {
                 item {
-                    NoorChip(stringResource(R.string.settings_display), null, { a.onOpen(Dest.SETTINGS_DISPLAY) },
+                    NoorChip(stringResource(R.string.settings_display), R.drawable.ic_language, { a.onOpen(Dest.SETTINGS_DISPLAY) }, iconTint = Tint.Teal,
                         secondary = listOf(languageName(setup.language), stringResource(if (setup.arabicDigits) R.string.display_digits_arabic else R.string.display_digits_western))
                             .joinToString(" · "))
                 }
             }
 
             if (!s.hasPhoneConfig && ui.phone != PhoneLink.Phone.CONNECTED) {
-                item { NoorChip(stringResource(R.string.get_phone_app), R.drawable.ic_phone, a.onGetPhoneApp, secondary = stringResource(R.string.get_phone_app_body), iconTint = Mist, labelLines = 2, secondaryLines = 3) }
+                item { NoorChip(stringResource(R.string.get_phone_app), R.drawable.ic_phone, a.onGetPhoneApp, secondary = stringResource(R.string.get_phone_app_body), iconTint = Tint.Gray, labelLines = 2, secondaryLines = 3) }
             }
 
             item {
@@ -144,7 +147,8 @@ private fun SyncChip(sync: Progress, onSync: () -> Unit) = NoorChip(
         Progress.FAILED -> stringResource(R.string.sync_failed)
         Progress.IDLE -> stringResource(R.string.sync_now)
     },
-    R.drawable.ic_sync, onSync, enabled = sync != Progress.WORKING, iconTint = Mist,
+    R.drawable.ic_sync, onSync, enabled = sync != Progress.WORKING,
+    iconTint = when (sync) { Progress.FAILED -> Tint.Orange; Progress.DONE -> Tint.Green; else -> Tint.Gray },
     secondary = if (sync == Progress.FAILED) stringResource(R.string.sync_failed_body) else null,
     labelLines = 2, secondaryLines = 4,
 )
@@ -169,22 +173,21 @@ fun TimesSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
         ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
             item { Header(stringResource(R.string.settings_times)) }
             if (s.source == ConfigSource.PHONE) {
-                item { NoorChip(stringResource(R.string.source_phone), R.drawable.ic_phone, a.onSync, secondary = s.phoneReceivedAt?.let { ago(ui.now - it, t) }) }
+                item { NoorChip(stringResource(R.string.source_phone), R.drawable.ic_phone, a.onSync, secondary = s.phoneReceivedAt?.let { ago(ui.now - it, t) }, iconTint = Tint.Blue) }
                 item { SyncChip(ui.sync, a.onSync) }
             }
             if (s.hasPhoneConfig && s.setup?.place != null) {
                 item {
-                    SwitchButton(checked = s.source == ConfigSource.WATCH, onCheckedChange = a.onUseWatch, modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.use_watch_settings)) },
-                        secondaryLabel = { Text(stringResource(R.string.use_watch_settings_body)) })
+                    NoorSwitch(s.source == ConfigSource.WATCH, a.onUseWatch, stringResource(R.string.use_watch_settings),
+                        secondary = stringResource(R.string.use_watch_settings_body))
                 }
             }
             if (s.source == ConfigSource.PHONE) {
                 item { Footnote(stringResource(R.string.settings_from_phone_note)) }
             } else {
-                item { NoorChip(stringResource(R.string.location), R.drawable.ic_location, a.onLocation, secondary = s.config?.let { t.placeWithFlag(it) } ?: stringResource(R.string.location_change)) }
+                item { NoorChip(stringResource(R.string.location), R.drawable.ic_location, a.onLocation, iconTint = Tint.Blue, secondary = s.config?.let { t.placeWithFlag(it) } ?: stringResource(R.string.location_change)) }
                 item {
-                    NoorChip(stringResource(R.string.asr), null, { a.onSetup { it.copy(asrSchool = nextAsr(it.asrSchool)) } },
+                    NoorChip(stringResource(R.string.asr), R.drawable.ic_prayer_asr, { a.onSetup { it.copy(asrSchool = nextAsr(it.asrSchool)) } }, iconTint = Tint.Orange,
                         secondary = when (setup.asrSchool) {
                             null -> stringResource(R.string.asr_default)
                             AsrSchool.STANDARD -> stringResource(R.string.asr_standard)
@@ -192,7 +195,7 @@ fun TimesSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
                         })
                 }
                 item {
-                    NoorChip(stringResource(R.string.hijri_adjust), R.drawable.ic_calendar, { a.onSetup { it.copy(hijriAdjust = nextHijri(it.hijriAdjust)) } },
+                    NoorChip(stringResource(R.string.hijri_adjust), R.drawable.ic_calendar, { a.onSetup { it.copy(hijriAdjust = nextHijri(it.hijriAdjust)) } }, iconTint = Tint.Indigo,
                         secondary = if (setup.hijriAdjust == 0) stringResource(R.string.hijri_adjust_none)
                         else stringResource(R.string.hijri_adjust_days, t.digits((if (setup.hijriAdjust > 0) "+" else "−") + kotlin.math.abs(setup.hijriAdjust))))
                 }
@@ -218,18 +221,15 @@ fun AlertSettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
             item { Header(stringResource(R.string.alerts_title)) }
             if (s.source == ConfigSource.WATCH) {
                 item {
-                    SwitchButton(checked = setup.alertsOn, modifier = Modifier.fillMaxWidth(),
-                        onCheckedChange = { on ->
-                            if (on && android.os.Build.VERSION.SDK_INT >= 33) notifLauncher()
-                            a.onSetup { it.copy(alertsOn = on) }
-                        },
-                        icon = { Icon(painterResource(R.drawable.ic_bell), null) },
-                        label = { Text(stringResource(R.string.alerts_on_watch)) })
+                    NoorSwitch(setup.alertsOn, { on ->
+                        if (on && android.os.Build.VERSION.SDK_INT >= 33) notifLauncher()
+                        a.onSetup { it.copy(alertsOn = on) }
+                    }, stringResource(R.string.alerts_on_watch), icon = R.drawable.ic_bell, iconTint = Tint.Red)
                 }
                 if (setup.alertsOn) {
-                    item { NoorChip(stringResource(R.string.alert_sound), null, { a.onSetup { it.copy(alertStyle = nextStyle(it.alertStyle)) } }, secondary = styleName(setup.alertStyle)) }
+                    item { NoorChip(stringResource(R.string.alert_sound), R.drawable.ic_sound, { a.onSetup { it.copy(alertStyle = nextStyle(it.alertStyle)) } }, secondary = styleName(setup.alertStyle), iconTint = Tint.Orange) }
                     item {
-                        NoorChip(stringResource(R.string.alert_prayers), null, a.onPrayers,
+                        NoorChip(stringResource(R.string.alert_prayers), R.drawable.ic_prayer_dhuhr, a.onPrayers,
                             secondary = Prayer.entries.filter { it in setup.alertPrayers }.joinToString(if (t.arabic) "، " else ", ") { t.name(it) }
                                 .ifEmpty { stringResource(R.string.alert_prayers_none) })
                     }
@@ -252,15 +252,15 @@ fun DisplaySettingsScreen(ui: SettingsUi, t: WearText, a: SettingsActions) {
         ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
             item { Header(stringResource(R.string.settings_display)) }
             item {
-                NoorChip(stringResource(R.string.display_language), null,
+                NoorChip(stringResource(R.string.display_language), R.drawable.ic_language, iconTint = Tint.Teal, onClick =
                     { a.onSetup { it.copy(language = when (it.language) { "" -> "en"; "en" -> "ar"; else -> "" }) } }, secondary = languageName(setup.language))
             }
             item {
-                NoorChip(stringResource(R.string.display_digits), null, { a.onSetup { it.copy(arabicDigits = !it.arabicDigits) } },
+                NoorChip(stringResource(R.string.display_digits), R.drawable.ic_numbers, { a.onSetup { it.copy(arabicDigits = !it.arabicDigits) } }, iconTint = Tint.Indigo,
                     secondary = stringResource(if (setup.arabicDigits) R.string.display_digits_arabic else R.string.display_digits_western))
             }
             item {
-                NoorChip(stringResource(R.string.display_clock), null,
+                NoorChip(stringResource(R.string.display_clock), R.drawable.ic_clock, iconTint = Tint.Blue, onClick =
                     { a.onSetup { it.copy(use24h = when (it.use24h) { null -> false; false -> true; true -> null }) } },
                     secondary = stringResource(when (setup.use24h) { null -> R.string.display_follow; false -> R.string.display_12; true -> R.string.display_24 }))
             }
@@ -291,9 +291,7 @@ fun AlertPrayersScreen(setup: LocalSetup, t: WearText, onToggle: (Prayer, Boolea
             item { Header(stringResource(R.string.alert_prayers)) }
             Prayer.entries.forEach { p ->
                 item {
-                    SwitchButton(checked = p in setup.alertPrayers, onCheckedChange = { onToggle(p, it) }, modifier = Modifier.fillMaxWidth(),
-                        icon = { Icon(painterResource(com.noor.wear.complication.ComplicationBuilder.iconRes(p)), null) },
-                        label = { Text(t.name(p)) })
+                    NoorSwitch(p in setup.alertPrayers, { onToggle(p, it) }, t.name(p), icon = com.noor.wear.complication.ComplicationBuilder.iconRes(p))
                 }
             }
         }
@@ -310,17 +308,24 @@ data class WelcomeActions(
 
 @Composable
 fun WelcomeScreen(a: WelcomeActions) {
-    val list = rememberScalingLazyListState()
+    // 0.25: the first screenful is whole: Minhad's mark and name, one line of what it is, and the one thing to do.
+    val list = rememberScalingLazyListState(initialCenterItemIndex = 0)
     ScreenScaffold(scrollState = list) { padding ->
-        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
-            item { Icon(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(52.dp), tint = Color.Unspecified) }
-            item { Text(stringResource(R.string.welcome_title), style = MaterialTheme.typography.titleMedium, color = Gold, textAlign = TextAlign.Center) }
+        ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize(), autoCentering = AutoCenteringParams(itemIndex = 0)) {
             item {
-                Text(stringResource(R.string.welcome_body), style = MaterialTheme.typography.bodySmall, color = Mist, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Icon(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(40.dp), tint = Color.Unspecified)
+                        Text(stringResource(R.string.welcome_title), style = Type.title.copy(fontSize = 23.sp), color = Ink,
+                            modifier = Modifier.height(34.dp).wrapContentHeight(Alignment.CenterVertically, unbounded = true))
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(stringResource(R.string.welcome_body), style = Type.note, color = Quiet, textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(start = 6.dp, end = 6.dp, bottom = 8.dp))
+                    LocateChip(a.locate, a.onUseLocation)
+                }
             }
-            item { LocateChip(a.locate, a.onUseLocation) }
-            item { NoorChip(stringResource(R.string.choose_city), R.drawable.ic_city, a.onChooseCity) }
+            item { NoorChip(stringResource(R.string.choose_city), R.drawable.ic_city, a.onChooseCity, iconTint = Tint.Gray) }
             item { Footnote(stringResource(if (a.phoneConnected) R.string.welcome_phone_waiting else R.string.welcome_phone)) }
         }
     }
@@ -329,9 +334,9 @@ fun WelcomeScreen(a: WelcomeActions) {
 @Composable
 internal fun LocateChip(status: LocateStatus, onClick: () -> Unit) {
     when (status) {
-        LocateStatus.Working -> NoorChip(stringResource(R.string.locating), null, {}, enabled = false, secondary = stringResource(R.string.locating_body))
+        LocateStatus.Working -> NoorChip(stringResource(R.string.locating), R.drawable.ic_location, {}, enabled = false, secondary = stringResource(R.string.locating_body), prominent = true)
         else -> NoorChip(
-            stringResource(R.string.use_my_location), R.drawable.ic_location, onClick, secondaryLines = 3,
+            stringResource(R.string.use_my_location), R.drawable.ic_location, onClick, secondaryLines = 3, prominent = true,
             secondary = when (status) {
                 LocateStatus.NoPermission -> stringResource(R.string.location_denied)
                 LocateStatus.Unavailable -> stringResource(R.string.location_unavailable)
@@ -349,7 +354,7 @@ fun LocationScreen(t: WearText, locate: LocateStatus, results: List<GazPlace>?, 
         ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
             item { Header(stringResource(R.string.location)) }
             item { LocateChip(locate, onLocate) }
-            item { NoorChip(stringResource(R.string.search_city), R.drawable.ic_search, onSearch, iconTint = Mist) }
+            item { NoorChip(stringResource(R.string.search_city), R.drawable.ic_search, onSearch, iconTint = Tint.Gray) }
             if (searching) item { CircularProgressIndicator(modifier = Modifier.size(28.dp)) }
             if (results != null) {
                 if (results.isEmpty()) item { Footnote(stringResource(R.string.search_none)) }
@@ -362,7 +367,7 @@ fun LocationScreen(t: WearText, locate: LocateStatus, results: List<GazPlace>?, 
                 }
                 item { Spacer(Modifier.height(6.dp)) }
             }
-            item { Header(stringResource(R.string.cities)) }
+            item { Caption(stringResource(R.string.cities), t) }
             Places.ALL.forEach { c ->
                 item {
                     NoorChip((Flags.emoji(c.countryCode)?.let { "$it " } ?: "") + (if (t.arabic) c.nameAr else c.nameEn), null,

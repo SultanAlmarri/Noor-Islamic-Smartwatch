@@ -7,16 +7,46 @@ been verified. Written for maintainers; the user-facing install guide is [INSTAL
 
 | Surface | What it shows / does |
 | --- | --- |
-| **Home** (app) | Next prayer with a live countdown, the interval drawn around the edge, the sky glow of the moment, place and Hijri date, today's six times (current tinted, next outlined), prayer-alert status when alerts are on the watch, then shortcuts with live detail: Qibla (bearing), Tasbih (today's count), Hijri calendar (next event and how far), Settings |
-| **Qibla** (app) | A compass for the wrist: the bezel turns with the world (cardinal letters in English or Arabic), the Kaaba sits on the rim with a beam as wide as the sensor's own uncertainty, a fixed mark at 12 o'clock. Centre: degrees to turn and "Turn right/left", or "Facing the Qibla" (green, success haptic). Hints for tilted wrist and poor calibration; a static bearing on watches without a compass; a plain message inside Makkah. Keeps the screen on for up to 3 minutes, sensors only while visible |
+| **Home** (app) | 0.25: the first screenful is the moment alone: the sky as it is now over the user's place (the phone's sky colours, stars at night, dunes along the bottom), the next prayer's sign and name, the countdown very large, the time it is at, the interval drawn round the edge, the Hijri date and the place on the dunes. Scrolling, the sky leaves with it and the page is black: today's six times (the next one a gold row, the current one raised, those gone by quiet), prayer-alert status when alerts are on the watch, then the tools: Qibla (bearing) and Tasbih (today's count) as two tiles side by side, the Hijri calendar (next event and how far), and a round Settings button |
+| **Qibla** (app) | A compass for the wrist: the bezel turns with the world (cardinal letters in English or Arabic, North in red), the Kaaba rides the rim with a beam as wide as the sensor's own uncertainty, a faint arc shows the way to turn, a fixed mark at 12 o'clock. Centre: degrees to turn, large, and "Turn right/left" with an arrow on that side; on arrival the whole screen turns to a green field with a check and "Facing the Qibla" (success haptic). While the wrist is tilted or the compass is starting only the instruction is shown (no figure that cannot be trusted); with a poor calibration the figure stays, greyed, over the instruction to calibrate. A static bearing on watches without a compass; a plain message inside Makkah. Keeps the screen on for up to 3 minutes, sensors only while visible |
 | **Tasbih** (app) | Whole screen is the button. Tap, or turn the bezel/crown clockwise, to count; counter-clockwise or ↶ to take one back. "After prayer" walks 33 SubhanAllah, 33 Alhamdulillah, 33 Allahu Akbar and the completing tahlil (Sahih Muslim 597); single-phrase presets (33 or 100) and a free counter (mark every 33). Haptics: tick, firmer pulse at a phrase change, celebration at a round. Day total (starts at midnight) and all-time total; stays on the watch. In English the phrase is shown transliterated with its meaning; in Arabic, in Arabic script |
 | **Hijri calendar** (app) | Today's Hijri date large, Gregorian date, day of month; then Ramadan, Eid al-Fitr, Day of Arafah, Eid al-Adha, Islamic New Year, Ashura and the next White Days, each with its date and "in N days". Umm al-Qura with the user's Hijri adjustment, and a note that the actual day can follow local moon sighting |
 | **Settings** (app) | 0.18: one page whose rows say their state and open the details: Watch face (Minhad Studio and the Minhad faces), where the times come from (Sync right there; the phone or this watch, place, Asr, Hijri adjustment), Prayer alerts (set here when the watch is set up on its own, otherwise what the phone chose and whether the watch is ready), Language and numbers (watch set-up only: language, digits, 12/24-hour clock), "Minhad for your phone" when no phone app is found, method and version. The crown or bezel scrolls every page |
 | **Welcome / Location** (app) | First run without a phone: "Use my location" (watch GPS or the phone's position, named offline) or "Choose a city" (voice/keyboard search across ~34,000 places, plus the curated cities) |
-| **Prayer times tile** | Next prayer, its time, a countdown the watch keeps current itself ("in 1 h 23 min", every minute, rounded up like the app; "Now" if the tile has not switched yet), the two prayers after it; switches at each prayer from a two-day timeline |
-| **Noor tile** | Hijri date, three round shortcuts (Qibla, Tasbih, Calendar; ordered right-to-left in Arabic), today's tasbih count, "Times" edge button |
+| **Prayer times tile** | 0.25: the next prayer in gold, its time very large, under it a countdown the watch keeps current itself ("in 1 h 23 min", every minute, rounded up like the app; "Now" if the tile has not switched yet), the two prayers after it in one quiet line; switches at each prayer from a two-day timeline (the countdown expression and the timeline are unchanged) |
+| **Noor tile** | Hijri date, three round shortcuts each in its colour (Qibla gold, Tasbih green, Calendar indigo; ordered right-to-left in Arabic), today's tasbih count, "Times" edge button |
 | **Complications** | Next prayer (short, long, ranged; countdown drawn by the watch face), Hijri date (short: day + month; long: full date; switches at midnight), Qibla (short: bearing; monochrome image; opens the compass), Tasbih (short: today's count; opens the counter; resets at midnight) |
 | **Ongoing Activity** | While an Adhan plays on the watch, Noor's icon appears on the watch face and in Recents, one tap from the Stop button |
+
+## The look of the watch app (0.25)
+
+The owner asked (22 November 2026) for the app "as if it was made by Apple themselves". The watch app is on one
+system of its own since then, in place of stock Wear Material's navy pills; what each screen computes, its gestures
+and haptics, the tiles' timelines and the complications did not change. The details, the decisions the owner may want
+to change and what was and was not tested are in [WATCH_025_NOTES.md](WATCH_025_NOTES.md).
+
+- **Black, platters, one accent.** Pages are pure black. Every row and card sits on a neutral dark platter with an
+  18 dp corner (`Platter`, `PlatterShape`; `NoorChip` is the row). Gold is the accent: the next prayer, the page's
+  one main action (`PrimaryButton`, or a row with `prominent = true`), the rings. Green means done (the Qibla found, a
+  round complete, a switch that is on).
+- **Round signs.** Settings rows and the home screen's tools carry their icon on a disc of colour, one meaning each
+  (`RoundSign`, `Tint`): blue for where the times come from, red for alerts, indigo for the calendar and the face,
+  green for the tasbih and a finished sync, orange for the Asr choice and sound, teal for language, grey for
+  secondary things.
+- **Type.** IBM Plex Sans Arabic with real SemiBold (`plex_arabic_semibold.ttf`, the phone's file), from one scale
+  (`Type`). Large figures go through `Numeral`: tabular, always left to right, in a box as tall as the figures (Plex
+  Arabic's own line is 1.6 times its size). Quiet labels are small tracked capitals in English (`Caption`), untracked
+  in Arabic. Arabic display names stay in Reem Kufi.
+- **The sky of the moment** (`WatchSky.kt`). The home screen's first screenful is drawn over the phone's own sky
+  colours for the Sun's height at the user's place (`SkyPalette`), zenith to horizon, each darkened only as far as
+  needed for the text (`WatchSky.readable`: 5:1 for white, the same hue and saturation), with stars as night comes
+  (never among the countdown's figures) and two dunes along the bottom that end in the page's black. Nature only. No
+  ambient motion: nothing on the watch app animates by itself.
+- **The ring** (`Ring`). One drawing for the interval to the next prayer and a phrase of the tasbih: a track, the
+  part done in gold, a bright head, a gap at the top for the clock. Plain colours (no gradient on a stroke).
+- **Motion.** Things that can be pressed give a little and spring back (`pressable`); the tasbih ring glides to each
+  count; the Qibla's check lands with a spring. All of it follows the watch's "Remove animations" setting, because
+  Compose scales its animations by the system's animator scale.
 
 ## The Noor watch face (0.9.8)
 
@@ -198,7 +228,8 @@ The watch is declared standalone (`com.google.android.wearable.standalone = true
 | `ui/WearViewModel.kt` | State and actions: config, tasbih, phone status, sync, locate, search, setup changes |
 | `ui/NoorWearUi.kt` | Home screen (`HomeScreen`) and `NoorWearContent` (no-navigation entry for tests) |
 | `ui/QiblaScreen.kt`, `ui/TasbihScreen.kt`, `ui/CalendarScreen.kt`, `ui/SettingsScreens.kt` | The screens; each takes plain state so tests render them directly |
-| `ui/Theme.kt`, `ui/Components.kt` | Colours, fonts, screen-size scaling, haptics, shared chips and headers |
+| `ui/Theme.kt`, `ui/Components.kt` | Colours (`Platter`, `Tint`), the type scale (`Type`), screen-size scaling, haptics; the shared parts of 0.25: the platter row (`NoorChip`), `RoundSign`, `NoorSwitch`, `PrimaryButton`, `Numeral`, `Ring`, `Header`, `Caption` |
+| `ui/WatchSky.kt` | 0.25: the sky behind the home screen: its colours for a Sun height (pure functions, tested), the stars, the dunes |
 | `data/ConfigRepository.kt` | Phone config, watch setup, the choice between them, rebuilding, refreshing tiles and complications |
 | `data/TasbihRepository.kt`, `data/WatchLocation.kt`, `data/PhoneLink.kt` | Counter storage, own location, phone link |
 | `tile/PrayerTileService.kt`, `tile/ToolsTileService.kt` | Tiles |
@@ -224,6 +255,14 @@ Core additions: `dhikr/Tasbih.kt` (counter state machine), `calendar/IslamicCale
 - Renders are in `wear/build/screenshots` (CI artifact). They are software renders: the test renderer for tiles drops
   ProtoLayout's large "display" and "label large" text styles (the prayer name and the edge-button label), so the tests
   check those texts in the layout itself instead.
+
+- 0.25: `WatchSkyTest` (4, plain JVM: white text reads at 4.5:1 or better on every colour of the sky at every Sun
+  height from -90° to 90° in quarter degrees, morning and evening; a sky that already reads is left as the phone has
+  it; darkening keeps the hue; the sky is still blue by day, warm at the evening horizon, near black at night; no
+  star among the countdown's figures). `WearScreensTest.homeThroughTheDay` renders the first screenful at six
+  moments of a day and in Arabic (`h01`–`h09`), and the home test now also checks the first screenful's texts, each
+  of the six times by name and time, and what the tools say to a screen reader. `StudioWearTest` renders the Minhad
+  faces' picker by itself (`t11`).
 
 - 0.9.8: `FacePushTest` (5, against a stand-in for Watch Face Push: switching designs is an in-place update, never a
   second face; the activation is asked for at most once and "attempts used" becomes guidance, not an error; 0.9.7's
@@ -255,6 +294,7 @@ Not verifiable here (no emulator or device in this environment):
 
 ## Credits
 
-- Watch icons for settings, location, city, search, sync, undo, more, phone, watch, bell, check, reset, vibrate and
-  calendar are Google's Material icons (Apache License 2.0). The prayer-bead, Kaaba and crescent marks are Noor's own.
+- Watch icons for settings, location, city, search, sync, undo, more, phone, watch, bell, check, reset, vibrate,
+  calendar and the arrow (0.25) are Google's Material icons (Apache License 2.0). The prayer-bead, Kaaba and crescent
+  marks, and 0.25's globe, clock, number sign and speaker, are Noor's own.
 - Place names: GeoNames (CC BY 4.0), as on the phone.

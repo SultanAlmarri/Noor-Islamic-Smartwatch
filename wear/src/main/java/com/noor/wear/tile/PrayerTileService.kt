@@ -24,7 +24,9 @@ import androidx.wear.protolayout.types.LayoutString
 import androidx.wear.protolayout.TypeBuilders.StringLayoutConstraint
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
+import androidx.wear.protolayout.ColorBuilders
 import androidx.wear.protolayout.DimensionBuilders.dp
+import androidx.wear.protolayout.DimensionBuilders.sp
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
@@ -85,16 +87,33 @@ class PrayerTileService : TileService() {
     companion object {
         private const val RESOURCES_VERSION = "1"
 
+        internal const val GOLD = 0xFFE3C27E.toInt()
+        internal const val ON_GOLD = 0xFF241A08.toInt()
+        internal const val INK = 0xFFF7F2E7.toInt()
+        internal const val QUIET = 0xFF9A9AA2.toInt()
+        internal const val PLATTER = 0xFF1C1C1F.toInt()
+
         val Scheme = ColorScheme(
-            primary = 0xFFE3C27E.toInt().argb,
-            onPrimary = 0xFF241A08.toInt().argb,
+            primary = GOLD.argb,
+            onPrimary = ON_GOLD.argb,
             primaryContainer = 0xFF3A2E17.toInt().argb,
             onPrimaryContainer = 0xFFF4E2B8.toInt().argb,
-            surfaceContainer = 0xFF16233A.toInt().argb,
-            onSurface = 0xFFF7F2E7.toInt().argb,
-            onSurfaceVariant = 0xFFB7C0D2.toInt().argb,
+            surfaceContainer = PLATTER.argb,
+            onSurface = INK.argb,
+            onSurfaceVariant = QUIET.argb,
             background = 0xFF000000.toInt().argb,
         )
+
+        /**
+         * 0.25: a line of text at an exact size and weight. The tiles' large texts are written this way rather than
+         * with the Material type tokens, so the next prayer's time can be as large as the tile allows (and so the
+         * test renders show them: the test renderer drops the "display" tokens).
+         */
+        internal fun label(text: String, sizeSp: Float, color: Int, weight: Int = LayoutElementBuilders.FONT_WEIGHT_MEDIUM, maxLines: Int = 1): LayoutElement =
+            LayoutElementBuilders.Text.Builder().setText(text).setMaxLines(maxLines)
+                .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE)
+                .setFontStyle(LayoutElementBuilders.FontStyle.Builder().setSize(sp(sizeSp)).setWeight(weight).setColor(ColorBuilders.argb(color)).build())
+                .build()
 
         private fun openApp(context: Context) = clickable(
             ActionBuilders.LaunchAction.Builder()
@@ -114,24 +133,22 @@ class PrayerTileService : TileService() {
             val context = base.localizedFor(config)
             val t = WearText(config)
             val zone = config.zone
+            // 0.25: the prayer in gold, its time very large, the countdown under it, the two after it quiet.
+            val small = device.screenWidthDp < 210
             return scope(context, device) {
                 primaryLayout(
-                    titleSlot = { text(t.placeWithFlag(config).layoutString, color = colorScheme.onSurfaceVariant) },
+                    titleSlot = { label(t.placeWithFlag(config), 13f, QUIET) },
                     mainSlot = {
                         column(
-                            text(context.getString(R.string.next).uppercase().layoutString, typography = Typography.LABEL_SMALL, color = colorScheme.onSurfaceVariant),
-                            text(t.name(iv.next).layoutString, typography = Typography.DISPLAY_SMALL, color = colorScheme.primary),
-                            text(t.time(iv.end, zone).layoutString, typography = Typography.TITLE_LARGE, color = colorScheme.onSurface),
-                            text(countdown(context, t, config, iv), typography = Typography.LABEL_MEDIUM, color = colorScheme.primary),
-                            spacer(height = dp(4f)),
-                            text(
-                                following.joinToString("   ") { t.name(it.next) + " " + t.timeShort(it.end, zone) }.layoutString,
-                                typography = Typography.BODY_SMALL, color = colorScheme.onSurfaceVariant, maxLines = 2,
-                            ),
+                            label(t.name(iv.next), if (small) 18f else 25f, GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD),
+                            label(t.time(iv.end, zone), if (small) 29f else 40f, INK, LayoutElementBuilders.FONT_WEIGHT_BOLD),
+                            text(countdown(context, t, config, iv), typography = if (small) Typography.TITLE_SMALL else Typography.TITLE_MEDIUM, color = colorScheme.primary),
+                            spacer(height = dp(if (small) 1f else 4f)),
+                            label(following.joinToString("  ·  ") { t.name(it.next) + " " + t.timeShort(it.end, zone) }, if (small) 12f else 13f, QUIET, maxLines = 2),
                         )
                     },
                     bottomSlot = {
-                        textEdgeButton(onClick = openApp(context)) { text(context.getString(R.string.today).layoutString) }
+                        textEdgeButton(onClick = openApp(context)) { label(context.getString(R.string.today), 15f, ON_GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD) }
                     },
                 )
             }
@@ -159,12 +176,12 @@ class PrayerTileService : TileService() {
 
         fun setupLayout(context: Context, device: DeviceParameters): LayoutElement = scope(context, device) {
             primaryLayout(
-                titleSlot = { text(context.getString(R.string.app_name).layoutString, color = colorScheme.primary) },
+                titleSlot = { label(context.getString(R.string.app_name), 14f, GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD) },
                 mainSlot = {
                     text(context.getString(R.string.setup_title).layoutString, typography = Typography.TITLE_MEDIUM, maxLines = 3)
                 },
                 bottomSlot = {
-                    textEdgeButton(onClick = openApp(context)) { text(context.getString(R.string.open).layoutString) }
+                    textEdgeButton(onClick = openApp(context)) { label(context.getString(R.string.open), 15f, ON_GOLD, LayoutElementBuilders.FONT_WEIGHT_BOLD) }
                 },
             )
         }

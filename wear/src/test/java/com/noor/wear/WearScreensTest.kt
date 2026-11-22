@@ -98,6 +98,10 @@ class WearScreensTest {
     private fun has(text: String, substring: Boolean = false) =
         rule.onAllNodesWithText(text, substring = substring, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
+    /** Something on screen says [text] to a screen reader. */
+    private fun described(text: String) =
+        rule.onAllNodes(androidx.compose.ui.test.hasContentDescription(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
     private fun reading(heading: Double, quality: CompassQuality = CompassQuality.GOOD, issues: Set<CompassIssue> = emptySet(), accuracy: Double? = 6.0) =
         CompassReading(heading, 1.6, accuracy, 3, 45.0, 45.0, 4.0, CompassAssessment(quality, issues), CompassReading.Source.ROTATION_VECTOR)
 
@@ -106,15 +110,58 @@ class WearScreensTest {
         screen = { NoorWearTheme(config) { t -> HomeScreen(config!!, t, { TestConfigs.afternoon }, HomeExtras(tasbihToday = 254) { opened += it }) } }
         start()
         shot("s01_home_top", "Asr")
+        // 0.25: the first screenful is the moment alone (the countdown in the owner's format, the time, the place and date).
+        assertTrue(has("23:00")); assertTrue(has("at 3:14 PM")); assertTrue(has("Dubai", substring = true)); assertTrue(has("23 Jumada al-Ula 1448"))
+        // Then the day's six times, each by name.
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Dhuhr"))
+        shot("s03_home_times", "Fajr")
+        for ((name, time) in listOf("Fajr" to "5:09 AM", "Shuruq" to "6:25 AM", "Dhuhr" to "12:05 PM", "Asr" to "3:14 PM", "Maghrib" to "5:40 PM", "Isha" to "6:55 PM")) {
+            // (By the time: the next prayer's name is also in the first screenful.)
+            rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(time))
+            assertTrue(name, has(name)); assertTrue("$name at $time", has(time))
+        }
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Tasbih"))
-        shot("s02_home_tools", "Today 254")
-        assertTrue("Qibla bearing shown", has("° from North", substring = true) || has("°\u2069 from North", substring = true))
-        // The calendar chip names the next event and how far it is.
+        shot("s02_home_tools", "254")
+        // 0.25: the two tools are tiles that show their figure (the bearing, today's count) and say the rest aloud.
+        val bearing = "%.0f°".format(Qibla.from(config!!.point).bearingDeg)
+        assertTrue("Qibla bearing shown", has(bearing, substring = true))
+        assertTrue("Qibla bearing spoken", described("from North"))
+        assertTrue("today's count spoken", described("Today 254"))
+        // The calendar row names the next event and how far it is.
         assertTrue(has("White Days · in", substring = true))
+        assertTrue("Settings is a round button with a spoken name", described("Settings"))
         rule.onAllNodesWithText("Tasbih", useUnmergedTree = true).fetchSemanticsNodes()
         rule.onNode(hasText("Tasbih")).performClick()
         assertEquals(listOf("tasbih"), opened)
     }
+
+    /** 0.25: the first screenful under each sky of the day (the colours' contrast is locked by WatchSkyTest). */
+    @Test fun homeThroughTheDay() {
+        var at by mutableStateOf(TestConfigs.afternoon)
+        fun dubai(h: Int, m: Int) = java.time.ZonedDateTime.of(2026, 11, 4, h, m, 0, 0, java.time.ZoneId.of("Asia/Dubai")).toInstant()
+        screen = { NoorWearTheme(config) { t -> androidx.compose.runtime.key(at) { HomeScreen(config!!, t, { at }, HomeExtras()) } } }
+        start()
+        // Before dawn (night, stars), first light, just after sunrise, sunset, dusk, night: the next prayer each time.
+        for ((name, h, m, next) in listOf(Shot("h01_home_night", 4, 10, "Fajr"), Shot("h02_home_dawn", 5, 50, "Shuruq"), Shot("h03_home_sunrise", 6, 32, "Dhuhr"),
+            Shot("h04_home_sunset", 17, 36, "Maghrib"), Shot("h05_home_dusk", 18, 5, "Isha"), Shot("h06_home_late", 22, 30, "Fajr"))) {
+            at = dubai(h, m)
+            shot(name, next)
+        }
+        // Past Isha the countdown runs to tomorrow's Fajr with its hours, in the owner's format (no leading zero).
+        val toFajr = WearText(config).countdown(java.time.Duration.between(at, config!!.state(at).next.at))
+        assertTrue(toFajr, Regex("6:[0-9][0-9]:00").matches(toFajr)); assertTrue(toFajr, has(toFajr))
+        config = TestConfigs.dubai("ar", arabicDigits = true)
+        at = dubai(17, 36)
+        shot("h07_home_sunset_ar", "المغرب")
+        // Right to left: the day's times and the tools in Arabic, with Arabic-Indic digits.
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("٦:٢٥ ص"))
+        shot("h08_home_times_ar", "الفجر")
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("التسبيح"))
+        shot("h09_home_tools_ar", "التسبيح")
+        assertTrue(described("الإعدادات"))
+    }
+
+    private data class Shot(val name: String, val h: Int, val m: Int, val next: String)
 
     @Test fun qiblaCompassStates() {
         val c = TestConfigs.dubai("en")

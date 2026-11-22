@@ -40,11 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
-import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.noor.prayer.WatchFaces
@@ -118,8 +115,8 @@ fun FaceSection(autoStart: Boolean) {
     val s = flow.state ?: return
     if (s is FaceState.Unsupported || s is FaceState.NotBundled) return // Nothing the user can act on here.
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(stringResource(R.string.watch_face), style = MaterialTheme.typography.labelMedium, color = Gold)
-        Spacer(Modifier.height(4.dp))
+        Text(stringResource(R.string.watch_face), style = Type.row, color = Ink)
+        Spacer(Modifier.height(5.dp))
         FaceStatus(flow, run)
         if (s is FaceState.Ready && !flow.busy) FacePicker(s.chosen, choose)
     }
@@ -132,8 +129,8 @@ fun FaceSetupScreen() {
     val listState = rememberScalingLazyListState()
     ScreenScaffold(scrollState = listState) { padding ->
         ScalingLazyColumn(state = listState, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
-            item { Icon(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(52.dp), tint = Color.Unspecified) }
-            item { Text(stringResource(R.string.watch_face), style = MaterialTheme.typography.titleMedium, color = Gold) }
+            item { Icon(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(56.dp), tint = Color.Unspecified) }
+            item { Text(stringResource(R.string.watch_face), style = Type.title, color = Ink, textAlign = TextAlign.Center) }
             item {
                 when (val s = flow.state) {
                     null -> CircularProgressIndicator(Modifier.size(28.dp))
@@ -148,7 +145,7 @@ fun FaceSetupScreen() {
 }
 
 @Composable
-private fun Info(text: String) = Text(text, style = MaterialTheme.typography.bodySmall, color = Mist, textAlign = TextAlign.Center)
+private fun Info(text: String) = Text(text, style = Type.detail, color = Quiet, textAlign = TextAlign.Center)
 
 /** "Horizon · Gold" (the original face has its own colours). */
 @Composable
@@ -180,9 +177,7 @@ private fun FaceStatus(flow: FaceFlow, run: () -> Unit) {
         flow.busy -> Column(horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(Modifier.size(20.dp)); Info(stringResource(R.string.face_working)) }
         s is FaceState.Failed -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Info(stringResource(R.string.face_error, s.message))
-            Button(onClick = run, colors = ButtonDefaults.filledTonalButtonColors(), modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                Text(stringResource(R.string.try_again))
-            }
+            PrimaryButton(stringResource(R.string.try_again), run, Modifier.padding(top = 6.dp))
         }
         s is FaceState.Ready && s.active && !s.updateAvailable -> Info(stringResource(R.string.face_in_use, faceName(s.installedVariant)))
         // Wear OS lets an app make its face active only once: from here the user chooses it, and that is no error.
@@ -194,32 +189,28 @@ private fun FaceStatus(flow: FaceFlow, run: () -> Unit) {
                 s.updateAvailable -> R.string.face_update
                 else -> R.string.face_activate
             }
-            Button(onClick = run, colors = ButtonDefaults.filledTonalButtonColors(), modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(label), maxLines = 2)
-            }
+            PrimaryButton(stringResource(label), run)
         }
     }
 }
 
 /** Design and colour, chosen on the watch (the phone's editor offers the same, with large previews). */
 @Composable
-private fun FacePicker(chosen: String, choose: (String) -> Unit) {
+internal fun FacePicker(chosen: String, choose: (String) -> Unit) {
     val c = WatchFaces.parse(chosen) ?: WatchFaces.DEFAULT
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(stringResource(R.string.face_design), style = MaterialTheme.typography.labelSmall, color = Mist)
+        Text(stringResource(R.string.face_design), style = Type.detail, color = Quiet)
         for (d in WatchFaces.Design.entries) {
             val selected = d == c.design
-            Button(
-                onClick = { choose(WatchFaces.Choice(d, c.colour).id) },
-                colors = if (selected) ButtonDefaults.filledTonalButtonColors(containerColor = Gold.copy(alpha = 0.22f), contentColor = Gold)
-                else ButtonDefaults.filledTonalButtonColors(containerColor = Night, contentColor = Ink),
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp).semantics { this.selected = selected },
-            ) { Text(stringResource(designName(d)), maxLines = 1) }
+            NoorChip(stringResource(designName(d)), null, { choose(WatchFaces.Choice(d, c.colour).id) },
+                container = if (selected) PlatterHigh else Platter,
+                modifier = Modifier.padding(top = 4.dp).semantics { this.selected = selected },
+                trailing = if (selected) ({ Icon(painterResource(R.drawable.ic_check), null, Modifier.size(22.dp), tint = Gold) }) else null)
         }
         if (c.design != WatchFaces.Design.ORIGINAL) {
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.face_colour), style = MaterialTheme.typography.labelSmall, color = Mist)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.face_colour), style = Type.detail, color = Quiet)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 5.dp)) {
                 for (col in WatchFaces.Colour.entries) {
                     val selected = col == c.colour
                     val name = stringResource(colourName(col))

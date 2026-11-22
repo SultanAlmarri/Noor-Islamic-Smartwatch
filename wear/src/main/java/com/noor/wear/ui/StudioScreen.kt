@@ -2,9 +2,9 @@ package com.noor.wear.ui
 
 import android.graphics.Rect
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -29,9 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.noor.face.FaceFrame
@@ -57,21 +54,19 @@ fun FacesScreen(config: WatchConfig?, studio: StudioUi, design: FaceDesign, onSh
     ScreenScaffold(scrollState = list) { padding ->
         ScalingLazyColumn(state = list, contentPadding = padding, modifier = Modifier.fillMaxSize()) {
             item { Header(stringResource(R.string.settings_face)) }
-            item { Text(stringResource(R.string.studio_face_name), style = MaterialTheme.typography.labelMedium, color = Gold) }
+            item { Text(stringResource(R.string.studio_face_name), style = Type.row, color = Gold) }
             if (!studio.supported) {
                 item { Footnote(stringResource(R.string.studio_unsupported)) }
             } else {
-                item { StudioPreview(config, design, Modifier.size(118.dp)) }
+                // The face itself, with a rim like a watch's own.
+                item { StudioPreview(config, design, Modifier.size(Screen.dp(112f, 128f)).border(2.dp, PlatterHigh, CircleShape).padding(3.dp)) }
                 item {
                     Text(stringResource(if (studio.active) R.string.studio_in_use else R.string.studio_not_in_use),
-                        style = MaterialTheme.typography.bodyMedium, color = if (studio.active) Success else Ink, textAlign = TextAlign.Center)
+                        style = Type.row, color = if (studio.active) Success else Ink, textAlign = TextAlign.Center)
                 }
                 item { Footnote(stringResource(if (studio.fromPhone) R.string.studio_from_phone else R.string.studio_default_design)) }
                 if (!studio.active) {
-                    item {
-                        Button(onClick = { onShowStudio() }, colors = ButtonDefaults.filledTonalButtonColors(),
-                            modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.studio_show), maxLines = 2) }
-                    }
+                    item { PrimaryButton(stringResource(R.string.studio_show), { onShowStudio() }) }
                     item { Footnote(stringResource(R.string.studio_pick_hint)) }
                 }
                 item { Footnote(stringResource(R.string.studio_design_on_phone)) }

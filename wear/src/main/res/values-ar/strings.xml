@@ -44,6 +44,14 @@
         <item quantity="many">بعد %1$s يومًا</item>
         <item quantity="other">بعد %1$s يوم</item>
     </plurals>
+    <plurals name="days_unit">
+        <item quantity="zero">يوم</item>
+        <item quantity="one">يوم</item>
+        <item quantity="two">يومان</item>
+        <item quantity="few">أيام</item>
+        <item quantity="many">يومًا</item>
+        <item quantity="other">يوم</item>
+    </plurals>
     <string name="a11y_next_prayer">الصلاة القادمة %1$s، بعد %2$s، الساعة %3$s</string>
     <string name="settings">الإعدادات</string>
     <string name="version">الإصدار %1$s</string>
@@ -52,6 +60,7 @@
     <string name="qibla_from_north">%1$s من الشمال</string>
     <string name="qibla_true_north">من الشمال الحقيقي</string>
     <string name="qibla_summary">%1$s من الشمال · %2$s كم</string>
+    <string name="qibla_summary_short">%1$s · %2$s كم</string>
     <string name="qibla_facing">أنت باتجاه القبلة</string>
     <string name="qibla_turn_right">استدر يمينًا</string>
     <string name="qibla_turn_left">استدر يسارًا</string>
