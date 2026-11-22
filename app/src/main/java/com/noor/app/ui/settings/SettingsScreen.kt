@@ -360,16 +360,18 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             detail = stringResource(if (s.numerals == Numerals.WESTERN) R.string.numerals_western else R.string.numerals_arabic), page = lang))
         add(SettingRow(0, Icons.Rounded.AccessTime, stringResource(R.string.time_format), null, stringResource(R.string.kw_time), { dialog = Dialog.TIME },
             detail = stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24, f.number(if (s.timeFormat == TimeFormat.H12) 12 else 24)), page = lang))
-        add(SettingRow(R.string.settings_calendar, Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust),
-            // (0.15: the date it gives today, which is what is being set; the stepper shows the days added.)
-            stringResource(R.string.hijri_today_is, f.hijri(com.noor.prayer.HijriDate.of(java.time.LocalDate.now(currentPlace?.zone ?: java.time.ZoneId.systemDefault()), s.hijriAdjust))),
+        // (0.25: the date it gives today stands under the group, with the note on the calendar: beside the stepper it
+        // broke over three lines.)
+        add(SettingRow(R.string.settings_calendar, Icons.Rounded.CalendarMonth, stringResource(R.string.hijri_adjust), null,
             stringResource(R.string.kw_hijri), null, page = lang) {
             Stepper(hijriValue, { vm.setHijriAdjust(s.hijriAdjust - 1) }, { vm.setHijriAdjust(s.hijriAdjust + 1) })
         })
     }
+    val hijriFooter = stringResource(R.string.hijri_today_is, f.hijri(com.noor.prayer.HijriDate.of(java.time.LocalDate.now(currentPlace?.zone ?: java.time.ZoneId.systemDefault()), s.hijriAdjust))) +
+        "\n" + stringResource(R.string.calendar_hijri_note)
     val footers = mapOf(
         UNTITLED_2 to stringResource(R.string.high_latitude_note),
-        R.string.settings_calendar to stringResource(R.string.calendar_hijri_note),
+        R.string.settings_calendar to hijriFooter,
     )
     var query by rememberSaveable { mutableStateOf("") }
 
