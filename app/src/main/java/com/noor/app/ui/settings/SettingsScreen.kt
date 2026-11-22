@@ -322,7 +322,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         add(SettingRow(0, Icons.Rounded.LibraryMusic, stringResource(R.string.adhan_library), stringResource(R.string.adhan_library_desc), stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_LIBRARY) }, page = about))
         add(SettingRow(UNTITLED_6, Icons.Rounded.Info, stringResource(R.string.about_version_row), null, "", null, detail = f.digits(BuildConfigInfo.versionName), page = about))
         // Testing only (0.14): to be removed before release, with com.noor.app.testing (the owner's word).
-        add(SettingRow(R.string.settings_testing, Icons.Rounded.Tune, stringResource(R.string.testing_row), stringResource(R.string.testing_row_note),
+        // (0.25: not in a build made for a store, `-Pminhad.store=true`.)
+        if (com.noor.app.BuildConfig.TESTER) add(SettingRow(R.string.settings_testing, Icons.Rounded.Tune, stringResource(R.string.testing_row), stringResource(R.string.testing_row_note),
             stringResource(R.string.kw_testing), { onOpenRoute(Routes.TESTING) }))
 
         // ---- Prayer times: how they are worked out. Set once by most people, so a page of its own (progressive
