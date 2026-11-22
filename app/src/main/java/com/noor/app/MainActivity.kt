@@ -278,6 +278,9 @@ internal object Routes {
     const val WIDGETS = "widgets"
     /** Testing only (0.14): to be removed before release, with com.noor.app.testing. */
     const val TESTING = "testing"
+    /** The month's timetable (ui/timetable): "timetable/now", or a month, "timetable/2026-11", "timetable/h1448-9". */
+    const val TIMETABLE = "timetable/{month}"
+    fun timetable(month: com.noor.app.ui.timetable.TableMonth? = null) = "timetable/${month?.arg ?: "now"}"
     const val ADHAN = "adhan"
     const val ADHAN_PRAYER = "adhan/prayer/{p}"
     const val ADHAN_LIBRARY = "adhan/library"
@@ -400,7 +403,11 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?,
                 // 0.14: the place on the home screen opens the location page itself (it opened Settings before), and
                 // a prayer's row opens that prayer's alert.
                 TodayScreen(content, onOpenLocation = { nav.navigate(Routes.CITIES) }, onOpenSource = { nav.navigate(Routes.ACCURACY) },
-                    onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) })
+                    onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) }, onOpenTimetable = { nav.navigate(Routes.timetable(it)) })
+            }
+            composable(Routes.TIMETABLE) { e ->
+                com.noor.app.ui.timetable.TimetableScreen(content, com.noor.app.ui.timetable.TableMonth.parse(e.arguments?.getString("month")),
+                    onBack = { nav.popBackStack() }, onOpenLocation = { nav.navigate(Routes.CITIES) })
             }
             composable(Routes.QIBLA) { QiblaScreen(content, onOpenLocation = { nav.navigate(Routes.CITIES) }) }
             composable(Routes.ADHAN) {
