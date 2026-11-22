@@ -18,7 +18,7 @@ class NumeralsInStringsTest {
         val res = File("src/main/res")
         val files = res.listFiles()!!.filter { it.name.startsWith("values-ar") }.flatMap { d -> d.listFiles()!!.filter { it.name.endsWith(".xml") } }
         assertTrue("no Arabic resources found", files.isNotEmpty())
-        val entry = Regex("<(string|item)[^>]*?(?:name=\"([^\"]+)\")?[^>]*>(.*?)</(string|item)>", RegexOption.DOT_MATCHES_ALL)
+        val entry = Regex("<(string|item)(?:\\s+name=\"([^\"]+)\")?[^>]*>(.*?)</(string|item)>", RegexOption.DOT_MATCHES_ALL)
         val indic = Regex("[٠-٩۰-۹]")
         val problems = mutableListOf<String>()
         for (f in files) {
