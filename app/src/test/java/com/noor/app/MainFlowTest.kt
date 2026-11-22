@@ -18,7 +18,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The app itself, started as a phone starts it (0.14): a first run opens on the welcome page behind the launch
- * screen's dissolving veil, and "Choose a city instead" leads to the location page and stays there. Before 0.14 the
+ * screen's dissolving veil (0.25: on its cover; "Continue" leads to the location's page), and "Choose a city instead"
+ * leads to the location page and stays there. Before 0.14 the
  * navigation was rebuilt on the home screen the moment the welcome page was recorded as done, so that button could
  * never reach the list of ways to choose a place. Robolectric: the app's real code and navigation, no phone.
  */
@@ -34,9 +35,16 @@ class MainFlowTest {
         Opening.playedInThisProcess = false
         val app = RuntimeEnvironment.getApplication() as NoorApplication
         ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntil(30_000) { rule.onAllNodesWithText("Choose a city instead").fetchSemanticsNodes().isNotEmpty() }
+            // 0.25: the welcome opens on its cover (what Minhad is), which asks for nothing; the location's page is next.
+            rule.waitUntil(30_000) { rule.onAllNodesWithText("Continue").fetchSemanticsNodes().isNotEmpty() }
             // A first run is not the home screen's opening: the launch screen only dissolves, once for the process.
             assertTrue(Opening.playedInThisProcess)
+            assertTrue("The cover asks for nothing yet", rule.onAllNodesWithText("Use my location").fetchSemanticsNodes().isEmpty())
+            rule.waitForIdle()
+            rule.onAllNodesWithText("Continue").onFirst().performClick()
+            rule.waitUntil(30_000) { rule.onAllNodesWithText("Choose a city instead").fetchSemanticsNodes().isNotEmpty() }
+            // (The reason is said on the page itself, before Android is asked: Google Play's prominent disclosure.)
+            assertTrue(rule.onAllNodesWithText("Minhad uses your location to work out your prayer times. It has no account and no server of its own: your location is never sent to Minhad.").fetchSemanticsNodes().isNotEmpty())
             rule.waitForIdle()
             rule.onAllNodesWithText("Choose a city instead").onFirst().performClick()
             // 0.15: the welcome offers the Adhan before the place is chosen; "Not now" leaves the alerts off.

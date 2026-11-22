@@ -117,11 +117,11 @@
     <string name="reset">Reset</string>
 
     <string name="perm_title">Prayer times for where you are</string>
-    <string name="perm_body">Minhad uses your location to work out prayer times. It stays on this phone.</string>
+    <string name="perm_body">Minhad uses your location to work out your prayer times. It has no account and no server of its own: your location is never sent to Minhad.</string>
     <string name="perm_allow">Use my location</string>
     <string name="perm_manual">Choose a city instead</string>
     <string name="bg_perm_title">Keep times right when you travel</string>
-    <string name="bg_perm_body">To keep times right when you travel, choose “Allow all the time”. Minhad checks rarely and uses little battery.</string>
+    <string name="bg_perm_body">Minhad uses your location in the background, even when the app is closed or not in use, to keep prayer times right when you travel. To allow it, choose “Allow all the time”.</string>
     <string name="bg_perm_continue">Continue</string>
     <string name="bg_perm_not_now">Not now</string>
     <string name="permission_denied">Location permission not granted. Choose a city or allow location in system settings.</string>
@@ -361,8 +361,7 @@
     <string name="watch_feature_editor">Minhad watch faces</string>
     <string name="watch_feature_editor_desc">Three designs in five colours, and the original face: choose with a preview, and your watch changes at once</string>
     <string name="offline_watch_footer">Same times as this phone, even without it.</string>
-    <string name="onboarding_tagline">Prayer times from the sky above you, the Qibla and the Adhan, on your phone and your watch.</string>
-    <string name="onboarding_private">Your location stays on this phone.</string>
+    <string name="onboarding_tagline">Prayer times from the sky above you</string>
     <string name="adhan_custom_empty_title">Your own sounds</string>
     <string name="today_suhoor">Suhoor ends</string>
     <string name="today_iftar">Iftar</string>
@@ -783,7 +782,7 @@
     <string name="sky_scrub_hint_short">Drag the sky to follow the Sun</string>
     <string name="theme_sun_short">Follow the sun</string>
     <string name="onb_adhan_title">Hear the Adhan at each prayer</string>
-    <string name="onb_adhan_body">Hear the Adhan at each prayer, even with the phone locked. Change it any time on the Adhan tab.</string>
+    <string name="onb_adhan_body">Even with the phone locked. Change it any time on the Adhan tab.</string>
     <string name="onb_adhan_on">Turn on the Adhan</string>
     <string name="cd_until">until %s</string>
     <string name="cd_since">since %s began</string>
@@ -930,4 +929,18 @@
     <string name="alarm_warn_volume">Your alarm volume is at zero, so alarms will be silent.</string>
     <string name="alarm_unit_hours">h</string>
     <string name="alarm_unit_minutes">min</string>
+    <!-- The welcome (0.25) -->
+    <string name="welcome_continue">Continue</string>
+    <string name="welcome_not_now">Not now</string>
+    <string name="welcome_times">Exact prayer times</string>
+    <string name="welcome_times_line">For the very place you are.</string>
+    <string name="welcome_sky">The sky is your clock</string>
+    <string name="welcome_sky_line">Your own sky, from dawn to night.</string>
+    <string name="welcome_adhan">The Adhan, on time</string>
+    <string name="welcome_adhan_line">At each prayer, if you want it.</string>
+    <string name="welcome_qibla">Qibla and Galaxy Watch</string>
+    <string name="welcome_qibla_line">A true compass. Times on your wrist.</string>
+    <string name="welcome_exact_title">The Adhan, on the minute</string>
+    <string name="welcome_exact_body">Android lets Minhad sound the Adhan at the exact minute only if you allow “Alarms &amp; reminders”. Without it, the Adhan may come late.</string>
+    <string name="welcome_exact_allow">Allow exact alarms</string>
 </resources>

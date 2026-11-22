@@ -435,7 +435,7 @@ class ScreenshotTest {
         shot("49_adhan_history_night_en", "Alert history")
         arabic = true; shot("50_adhan_history_night_ar", "سجل التنبيهات")
         arabic = false
-        screen = Screen.ONBOARDING; shot("42_onboarding_en", "Use my location")
+        screen = Screen.ONBOARDING; shot("42_onboarding_en", "Prayer times from the sky above you")
         arabic = true; shot("43_onboarding_ar", "منهاد")
         arabic = false
         assertTrue("Text in the wrong language:\n" + languageProblems.joinToString("\n"), languageProblems.isEmpty())

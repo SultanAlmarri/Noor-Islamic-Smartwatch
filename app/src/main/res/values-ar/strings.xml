@@ -120,11 +120,11 @@
     <string name="reset">إعادة الضبط</string>
 
     <string name="perm_title">مواقيت الصلاة حيث تكون</string>
-    <string name="perm_body">يستخدم منهاد موقعك لحساب أوقات الصلاة، ويبقى على هذا الهاتف.</string>
+    <string name="perm_body">يستخدم منهاد موقعك لحساب أوقات صلاتك. لا حساب له ولا خادم خاصّ به: موقعك لا يُرسَل إلى منهاد أبدًا.</string>
     <string name="perm_allow">استخدام موقعي</string>
     <string name="perm_manual">اختيار مدينة بدلًا من ذلك</string>
     <string name="bg_perm_title">أوقات صحيحة أثناء السفر</string>
-    <string name="bg_perm_body">لتبقى الأوقات صحيحة أثناء السفر، اختر «السماح طوال الوقت». يتحقق منهاد نادرًا ويستهلك قليلًا من البطارية.</string>
+    <string name="bg_perm_body">يستخدم منهاد موقعك في الخلفية، حتى والتطبيق مغلق أو غير مستخدَم، لتبقى أوقات الصلاة صحيحة أثناء السفر. للسماح بذلك اختر «السماح طوال الوقت».</string>
     <string name="bg_perm_continue">متابعة</string>
     <string name="bg_perm_not_now">ليس الآن</string>
     <string name="permission_denied">لم يُمنح إذن الموقع. اختر مدينة أو اسمح بالموقع من إعدادات النظام.</string>
@@ -367,8 +367,7 @@
     <string name="watch_feature_editor">واجهات منهاد</string>
     <string name="watch_feature_editor_desc">ثلاثة تصاميم بخمسة ألوان والواجهة الأصلية: اختر مع المعاينة فتتغير ساعتك فوراً</string>
     <string name="offline_watch_footer">الأوقات نفسها التي على هذا الهاتف، حتى من دونه.</string>
-    <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك، واتجاه القبلة، والأذان، على هاتفك وساعتك.</string>
-    <string name="onboarding_private">يبقى موقعك على هذا الهاتف.</string>
+    <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك</string>
     <string name="adhan_custom_empty_title">أصواتك الخاصة</string>
     <string name="today_suhoor">نهاية السحور</string>
     <string name="today_iftar">الإفطار</string>
@@ -795,7 +794,7 @@
     <string name="sky_scrub_hint_short">اسحب السماء لتتبّع الشمس</string>
     <string name="theme_sun_short">مع الشمس</string>
     <string name="onb_adhan_title">استمع إلى الأذان عند كل صلاة</string>
-    <string name="onb_adhan_body">استمع إلى الأذان عند كل صلاة، حتى والهاتف مقفل. وغيّره متى شئت من تبويب الأذان.</string>
+    <string name="onb_adhan_body">حتى والهاتف مقفل. وغيّره متى شئت من تبويب الأذان.</string>
     <string name="onb_adhan_on">تشغيل الأذان</string>
     <string name="cd_until">حتى %s</string>
     <string name="cd_since">منذ دخول %s</string>
@@ -950,4 +949,18 @@
     <string name="alarm_warn_volume">مستوى صوت المنبه صفر، فلن تُسمع المنبهات.</string>
     <string name="alarm_unit_hours">س</string>
     <string name="alarm_unit_minutes">د</string>
+    <!-- الترحيب (0.25) -->
+    <string name="welcome_continue">متابعة</string>
+    <string name="welcome_not_now">ليس الآن</string>
+    <string name="welcome_times">أوقات صلاة دقيقة</string>
+    <string name="welcome_times_line">محسوبة للمكان الذي أنت فيه.</string>
+    <string name="welcome_sky">السماء ساعتك</string>
+    <string name="welcome_sky_line">سماء مكانك، من الفجر إلى الليل.</string>
+    <string name="welcome_adhan">الأذان في وقته</string>
+    <string name="welcome_adhan_line">عند كل صلاة، إن شئت.</string>
+    <string name="welcome_qibla">القبلة وساعة Galaxy Watch</string>
+    <string name="welcome_qibla_line">بوصلة دقيقة، والأوقات على معصمك.</string>
+    <string name="welcome_exact_title">الأذان في دقيقته</string>
+    <string name="welcome_exact_body">لا يسمح أندرويد لمنهاد برفع الأذان في دقيقته إلا إذا سمحتَ بـ«المنبّهات والتذكيرات». من دون ذلك قد يتأخر الأذان.</string>
+    <string name="welcome_exact_allow">السماح بالمنبّهات الدقيقة</string>
 </resources>
