@@ -40,6 +40,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- (0.25) Quick actions on the launcher icon: the Qibla, the Adhan. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- The Adhan screen, over the lock screen while the Adhan plays. -->

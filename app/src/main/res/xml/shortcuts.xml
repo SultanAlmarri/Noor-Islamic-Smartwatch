@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- (0.25) Quick actions: touch and hold Minhad's icon on the home screen to go straight to the Qibla or the Adhan.
+     They open the app's pages the way a widget's tap does (Widgets.EXTRA_OPEN, read by MainActivity). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="qibla" android:enabled="true" android:icon="@drawable/ic_shortcut_qibla"
+        android:shortcutShortLabel="@string/tab_qibla" android:shortcutLongLabel="@string/tab_qibla">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.noor.smartwatch" android:targetClass="com.noor.app.MainActivity">
+            <extra android:name="com.noor.app.widget.OPEN" android:value="QIBLA" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="adhan" android:enabled="true" android:icon="@drawable/ic_shortcut_adhan"
+        android:shortcutShortLabel="@string/tab_adhan" android:shortcutLongLabel="@string/tab_adhan">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.noor.smartwatch" android:targetClass="com.noor.app.MainActivity">
+            <extra android:name="com.noor.app.widget.OPEN" android:value="ADHAN" />
+        </intent>
+    </shortcut>
+</shortcuts>

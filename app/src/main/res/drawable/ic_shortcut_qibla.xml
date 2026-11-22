@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- (0.25) The Kaaba: for the launcher icon's quick actions (touch and hold Minhad's icon). The mark's night sky and pale gold. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:pathData="M24,24m-22,0a22,22 0 1,0 44,0a22,22 0 1,0 -44,0">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="2" android:endX="0" android:endY="46">
+                <item android:offset="0" android:color="#FF0B1338"/>
+                <item android:offset="0.6" android:color="#FF2A3384"/>
+                <item android:offset="1" android:color="#FF6A5598"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group android:translateX="12" android:translateY="12">
+        <path android:fillColor="#FFFFF1CF" android:fillType="evenOdd"
+            android:pathData="M4,7.2 L12,4 L20,7.2 L12,10.4 Z M3.4,8.3 L11.4,11.5 L11.4,21 L3.4,17.8 Z M12.6,11.5 L20.6,8.3 L20.6,17.8 L12.6,21 Z M3.4,10.6 L11.4,13.8 L11.4,15 L3.4,11.8 Z M12.6,13.8 L20.6,10.6 L20.6,11.8 L12.6,15 Z"/>
+    </group>
+</vector>

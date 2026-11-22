@@ -647,6 +647,55 @@ letters of the other script, apart from names that are not language (devices, li
 Every text colour meets WCAG AA (4.5:1) on every surface in both themes, white on the sky meets 7:1 at every solar
 elevation, and gold on the sky 4.5:1 (`ThemeContrastTest`, `SkyPaletteTest`).
 
+## The interface of 0.25: as if Apple had made it
+
+The owner (22 November 2026): "totally improve the app in every way possible ... really focus on Apple's design
+philosophy. Really, make this application as if it was made by Apple themselves ... everything from the opening
+animation to how settings are organized ... The app's logo ... You have full freedom." Every screen of 0.24 was
+rendered and looked at first. The phone's pages already stood on one system (0.14) in the sky (0.15), so 0.25 does
+not change the look again; it goes for what still told Minhad from an app of Apple's: one-colour signs, pages that
+only faded, a first page of Settings that grew with every option, a mark that was a clip-art crescent on flat navy,
+a watch app in stock Material, a wide screen treated as a tall phone, and no way to see a month.
+
+- **The mark** (`tools/brand/logo.py`, which writes every file that shows it): the crescent and its eight-pointed
+  star (the khatam) in pale gold over the Earth's edge at first light: a sky from ink through indigo and violet to
+  the dawn's amber, the Sun's glow behind the dark Earth, a lit rim. It is Minhad in one picture: the crescent (the
+  calendar), the horizon and the Sun under it (the times: Fajr is the first light). Launcher icons of phone and watch
+  (adaptive: the sky and the Earth are the background, the crescent and star the foreground, so a launcher's parallax
+  moves them apart; a one-colour layer for themed icons), the launch screen's mark, the status bar's sign. Six
+  candidates were drawn and compared at launcher sizes beside the old icon before this one was chosen.
+- **The opening** follows the mark: as the app takes over from the launch screen, the Earth's edge rises into the
+  foot of the screen with the dawn behind it (`Opening.DAWN_MS`), then, as before, the light gathers at the mark,
+  travels to where the Sun is and the dusk opens from there. The launch is the icon come to life. Still 2.3 s at
+  most; a touch still finishes it.
+- **A colour for every kind of sign** (`Tints`, `IconTile` in `ui/settings/SettingsComponents.kt`): as in an
+  iPhone's Settings, the sign at the start of a row is white on a small tile of its kind's colour, lit from above:
+  where one is in blue, the times in Minhad's gold, what is heard in red and pink, what is seen in indigo, teal and
+  purple, the calendar in red, the watch in graphite, what is checked in green, warnings in orange and red. A row
+  is found by its colour before its words are read. The colour comes from the sign itself (`Tints.of(icon)`), so
+  every list of the app has it without saying so. Gold stays the one colour of what can be acted on (links,
+  switches, the chosen thing, the main button).
+- **Motion, as on an iPhone** (`MainActivity`'s transitions, `NoorMotion.Page`/`Glide`, `Modifier.pressScale`):
+  a page pushed from another slides in from the side one reads towards while the page under it draws back a little
+  and dims; going back is the same film backwards, and with Android's predictive back (Android 14 and later;
+  `android:enableOnBackInvokedCallback`) the back gesture pulls the page off by hand and shows the one under it.
+  What is touched gives under the finger: buttons, hero cards and tabs draw in a little and spring back.
+- **Settings in fewer rows.** The notification bar has a page of its own (its switch and, on Android 16, the
+  status-bar timer's three options: on such a phone they were four rows of the first page); its row says On or Off.
+  **About Minhad** is a page: the mark as the launcher shows it, the name, what Minhad is in a line, how the times
+  are checked, the recordings' sources and licences, the version. Widgets stands with Theme and Home screen (what is
+  seen), before Language and region. Search finds the rows of the new pages and says where they live.
+- **What's New, once** (`ui/components/WhatsNew.kt`): after an update that has something to show, a sheet over the
+  home screen, as the apps of an iPhone do it: a few rows, each a coloured sign, a few bold words and a quiet line,
+  and Continue. Only to someone who had Minhad before (`AppSettings.newsSeen` below `WhatsNew.EDITION`), never after
+  the welcome, never twice. Rewrite its rows and raise `EDITION` when a later version has news.
+- **A wide screen is not a tall phone** (`HomeLayout.columns`): from 600 dp of width (a folding phone opened out,
+  a tablet, a phone on its side) the day's times stand in two columns of three (Fajr, Shuruq, Dhuhr | Asr, Maghrib,
+  Isha) and the sky is taller. Until 0.24 the opened Galaxy Fold left the sky so little height that the Sun's path
+  lay flat and ran through the countdown's caption (`TodayFoldDesignTest` renders it).
+- **What fixes a problem reads as a button**: on the Adhan tab's "Needs your attention", the action of each row is
+  a capsule in the accent under the sentence, not a line of coloured text.
+
 ## The interface of 0.15: the app lives in the sky
 
 The owner (16 November 2026), of 0.14: "I see absolutely nothing changed with the user interface. I want you to

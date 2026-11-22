@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- (0.25) A bell: for the launcher icon's quick actions (touch and hold Minhad's icon). The mark's night sky and pale gold. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:pathData="M24,24m-22,0a22,22 0 1,0 44,0a22,22 0 1,0 -44,0">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="2" android:endX="0" android:endY="46">
+                <item android:offset="0" android:color="#FF0B1338"/>
+                <item android:offset="0.6" android:color="#FF2A3384"/>
+                <item android:offset="1" android:color="#FF6A5598"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group android:translateX="12" android:translateY="12">
+        <path android:fillColor="#FFFFF1CF"
+            android:pathData="M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.89,2 2,2zM18,16v-5c0,-3.07 -1.64,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.63,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z"/>
+    </group>
+</vector>
