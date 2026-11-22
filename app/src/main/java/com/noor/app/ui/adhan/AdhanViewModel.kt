@@ -167,7 +167,8 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     fun tryAlarm(alarm: PrayerAlarm) {
         val ctx = getApplication<Application>()
         stopPreview()
-        _message.value = ctx.getString(if (AlertScheduler.tryAlarm(ctx, alarm, 5)) com.noor.app.R.string.alarm_try_sent else com.noor.app.R.string.adhan_test_failed)
+        _message.value = if (AlertScheduler.tryAlarm(ctx, alarm, 5)) ctx.getString(com.noor.app.R.string.alarm_try_sent, digits(5))
+            else ctx.getString(com.noor.app.R.string.adhan_test_failed)
     }
 
     /** A recording added for an alarm: [onAdded] gets its id. */
@@ -340,12 +341,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
                 if (replaceId != null) container.watchSounds.syncIfNeeded(repo.current().alerts, resend = setOf(replaceId))
                 ctx.getString(com.noor.app.R.string.adhan_import_ok, result.sound.name)
             }
-            is ImportResult.Rejected -> ctx.getString(when (result.reason) {
-                ImportResult.Reason.UNSUPPORTED_TYPE -> com.noor.app.R.string.adhan_import_unsupported
-                ImportResult.Reason.TOO_LARGE -> com.noor.app.R.string.adhan_import_too_large
-                ImportResult.Reason.NOT_AUDIO -> com.noor.app.R.string.adhan_import_not_audio
-                ImportResult.Reason.UNREADABLE -> com.noor.app.R.string.adhan_import_unreadable
-            })
+            is ImportResult.Rejected -> rejected(result.reason)
         }
     }
 
@@ -409,12 +405,19 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun importSoundResult(result: ImportResult) {
         val ctx = getApplication<Application>()
-        if (result is ImportResult.Rejected) _message.value = ctx.getString(when (result.reason) {
-            ImportResult.Reason.UNSUPPORTED_TYPE -> com.noor.app.R.string.adhan_import_unsupported
-            ImportResult.Reason.TOO_LARGE -> com.noor.app.R.string.adhan_import_too_large
-            ImportResult.Reason.NOT_AUDIO -> com.noor.app.R.string.adhan_import_not_audio
-            ImportResult.Reason.UNREADABLE -> com.noor.app.R.string.adhan_import_unreadable
-        })
+        if (result is ImportResult.Rejected) _message.value = rejected(result.reason)
+    }
+
+    /** Why a file was refused, in a sentence (the largest size in the digits the user chose). */
+    private fun rejected(reason: ImportResult.Reason): String {
+        val ctx = getApplication<Application>()
+        return when (reason) {
+            ImportResult.Reason.UNSUPPORTED_TYPE -> ctx.getString(com.noor.app.R.string.adhan_import_unsupported)
+            ImportResult.Reason.TOO_LARGE -> ctx.getString(com.noor.app.R.string.adhan_import_too_large,
+                digits((com.noor.alerts.CustomSounds.MAX_BYTES / (1024 * 1024)).toInt()))
+            ImportResult.Reason.NOT_AUDIO -> ctx.getString(com.noor.app.R.string.adhan_import_not_audio)
+            ImportResult.Reason.UNREADABLE -> ctx.getString(com.noor.app.R.string.adhan_import_unreadable)
+        }
     }
 
     fun setDays(p: Prayer, days: Int) = setPrayer(p) { it.copy(days = days) }

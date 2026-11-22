@@ -50,6 +50,7 @@ import com.noor.app.NoorApplication
 import com.noor.app.R
 import com.noor.app.data.ThemeMode
 import com.noor.app.ui.adhan.ClockText
+import com.noor.app.ui.adhan.FactsLine
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.theme.NoorTheme
 import com.noor.app.ui.theme.Sky
@@ -87,6 +88,16 @@ class AdhanAlertActivity : AppCompatActivity() {
 }
 
 /**
+ * The facts under what is sounding. The alert's line is "time · place" for the Adhan (`AlertText.body`) and "[relation
+ * ·] prayer time · place" for an alarm (`AlertText.alarmBody`), written for the notification; here, under the clock, the
+ * Adhan's own time would say the time twice, so its first fact is left out.
+ */
+internal fun ringingFacts(p: AdhanService.Playing): List<String> {
+    val facts = p.body.split(" · ").map { it.trim() }.filter { it.isNotEmpty() }
+    return if (p.alarmId == 0) facts.drop(1) else facts
+}
+
+/**
  * What the screen shows (0.25, as a clock's ringing screen is laid out): at the top the time it is now, large and
  * light, and under it what is sounding (the prayer, or the alarm and the prayer it belongs to); in the lower third,
  * where the thumb is, Stop, an alarm's Snooze, and a quiet third way that says what it does ("Hide and keep playing":
@@ -108,17 +119,21 @@ internal fun AdhanScreen(now: AdhanService.Playing?, onStop: () -> Unit, onClose
             Spacer(Modifier.height(6.dp))
             Text(now?.title ?: "", style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp), color = Sky.OnSky, textAlign = TextAlign.Center,
                 maxLines = 3, overflow = TextOverflow.Ellipsis)
-            if (!now?.body.isNullOrBlank()) Text(now!!.body, style = MaterialTheme.typography.bodyLarge, color = Sky.OnSkySecondary, textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp))
+            // (Second review) The line under it: for the Adhan the place only ("Dubai"): the alert's line, "5:33 PM · Dubai",
+            // repeated the time standing large above it; for an alarm, its prayer's time and the place. Facts break
+            // between them, never after a dot.
+            val facts = now?.let { ringingFacts(it) }.orEmpty()
+            if (facts.isNotEmpty()) FactsLine(facts, MaterialTheme.typography.bodyLarge, Sky.OnSkySecondary, Modifier.padding(top = 4.dp), center = true)
             Spacer(Modifier.weight(1f).heightIn(min = 24.dp))
             Button(onClick = onStop, shape = CircleShape, modifier = Modifier.size(132.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Sky.GoldOnSky, contentColor = Color(0xFF14110A))) {
                 Text(stringResource(R.string.adhan_screen_stop), fontSize = 22.sp, style = MaterialTheme.typography.titleLarge, maxLines = 1)
             }
-            // 0.17: an alarm's Snooze ("Snooze 10 min"), wide and easy to hit half asleep.
+            // 0.17: an alarm's Snooze ("Snooze 10 min"), wide and easy to hit half asleep. (Second review: 28 dp under
+            // Stop and 52 dp high, so a half-awake thumb does not take one for the other.)
             now?.snoozeLabel?.let { label ->
-                Spacer(Modifier.height(24.dp))
-                OutlinedButton(onClick = onSnooze, shape = CircleShape, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                Spacer(Modifier.height(28.dp))
+                OutlinedButton(onClick = onSnooze, shape = CircleShape, modifier = Modifier.fillMaxWidth().height(52.dp),
                     border = BorderStroke(1.5.dp, Sky.GoldOnSky), colors = ButtonDefaults.outlinedButtonColors(contentColor = Sky.GoldOnSky)) {
                     Text(label, style = MaterialTheme.typography.titleMedium)
                 }

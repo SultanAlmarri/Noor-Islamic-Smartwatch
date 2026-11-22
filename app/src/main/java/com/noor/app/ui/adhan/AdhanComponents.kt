@@ -284,9 +284,12 @@ fun SoundRow(
     onPreview: (() -> Unit)?,
     badge: String? = null,
     add: Boolean = false,
+    /** A sign at the end where the others have their button, in the same column (Random's shuffle). */
+    sign: ImageVector? = null,
 ) {
     val c = NoorTheme.colors
     Row(
+        // (A row with a button or a sign at its end is 64 dp: the 48 dp column and the padding round it.)
         Modifier.fillMaxWidth().heightIn(min = 60.dp)
             .then(if (onSelect != null) Modifier.clickable(role = if (add) Role.Button else Role.RadioButton, onClick = withTick(onSelect)).semantics { if (!add) this.selected = selected } else Modifier)
             .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
@@ -317,6 +320,77 @@ fun SoundRow(
                 }
             }
             onPreview != null -> { Spacer(Modifier.width(8.dp)); PreviewButton(playing, previewLabel, onPreview) }
+            sign != null -> { Spacer(Modifier.width(8.dp)); Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(sign, null, tint = c.textSecondary, modifier = Modifier.size(22.dp)) } }
+        }
+    }
+}
+
+/** A no-break space: what is written with it ("Fajr 5:20 AM", "25 min") never breaks across two lines. */
+internal const val NBSP = ' '
+
+/** [this] as one piece that a line never breaks inside (its spaces made no-break spaces). */
+internal fun String.together(): String = replace(' ', NBSP)
+
+/**
+ * A few facts on one line joined by " · " (0.25, second review): when they do not fit, the line breaks before a fact,
+ * never inside a short one and never after a dot (a dot left at the end of a line, "…Exact alarms were" / "off", read
+ * as a fault). Each fact longer than the whole width still wraps by itself. [center]: each line centred (the alarm
+ * editor's line under its time). Read out by TalkBack as one text, without the dots.
+ */
+@Composable
+fun FactsLine(facts: List<String>, style: TextStyle, color: Color, modifier: Modifier = Modifier, center: Boolean = false) {
+    val parts = facts.filter { it.isNotBlank() }
+    if (parts.isEmpty()) return
+    val align = if (center) TextAlign.Center else TextAlign.Start
+    androidx.compose.ui.layout.Layout(
+        content = {
+            parts.forEach { Text(it, style = style, color = color, textAlign = align) }
+            repeat(parts.size - 1) { Text(" · ", style = style, color = color, maxLines = 1, softWrap = false, modifier = Modifier.clearAndSetSemantics { }) }
+        },
+        modifier = modifier.semantics(mergeDescendants = true) { },
+    ) { measurables, cs ->
+        val n = parts.size
+        val room = if (cs.hasBoundedWidth) cs.maxWidth else Int.MAX_VALUE
+        val items = measurables.take(n).map { it.measure(androidx.compose.ui.unit.Constraints(maxWidth = room)) }
+        val dots = measurables.drop(n).map { it.measure(androidx.compose.ui.unit.Constraints()) }
+        // (Lines filled fact by fact: a fact goes on the line if it fits there with the dot before it.)
+        val lines = mutableListOf<MutableList<Int>>()
+        var x = 0
+        items.forEachIndexed { i, p ->
+            val dot = if (i > 0) dots[i - 1].width else 0
+            if (lines.isEmpty() || x + dot + p.width > room) { lines.add(mutableListOf(i)); x = p.width } else { lines.last().add(i); x += dot + p.width }
+        }
+        val widths = lines.map { l -> l.sumOf { items[it].width } + l.drop(1).sumOf { dots[it - 1].width } }
+        val heights = lines.map { l -> l.maxOf { items[it].height } }
+        val w = maxOf(widths.max(), cs.minWidth).coerceAtMost(room)
+        val h = maxOf(heights.sum(), cs.minHeight)
+        layout(w, h) {
+            var y = 0
+            lines.forEachIndexed { li, l ->
+                var px = if (center) (w - widths[li]) / 2 else 0
+                l.forEachIndexed { k, i ->
+                    if (k > 0) { dots[i - 1].placeRelative(px, y); px += dots[i - 1].width }
+                    items[i].placeRelative(px, y); px += items[i].width
+                }
+                y += heights[li]
+            }
+        }
+    }
+}
+
+/**
+ * What a page shows when it has nothing in it yet (0.25, second review: one style for every such page): a card with
+ * the gold seal, what the page is for in a title and a sentence, and the one thing to do.
+ */
+@Composable
+fun EmptyCard(icon: ImageVector, title: String, text: String, action: String, onAction: () -> Unit, actionEnabled: Boolean = true) {
+    val c = NoorTheme.colors
+    com.noor.app.ui.components.GlassCard(Modifier.fillMaxWidth(), corner = 30.dp, highlighted = true) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+            com.noor.app.ui.components.Medallion(androidx.compose.ui.graphics.vector.rememberVectorPainter(icon))
+            Text(title, style = MaterialTheme.typography.titleLarge, color = c.textPrimary, textAlign = TextAlign.Center)
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = c.textSecondary, textAlign = TextAlign.Center)
+            com.noor.app.ui.components.NoorButton(action, onAction, Modifier.fillMaxWidth().padding(top = 6.dp), icon = Icons.Rounded.Add, enabled = actionEnabled)
         }
     }
 }

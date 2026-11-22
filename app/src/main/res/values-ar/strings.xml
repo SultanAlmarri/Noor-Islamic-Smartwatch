@@ -302,7 +302,7 @@
     <string name="adhan_stop_seconds">%1$s ث</string>
     <string name="adhan_stop_minutes">%1$s د</string>
     <string name="adhan_test">تجربة هذا التنبيه</string>
-    <string name="adhan_test_desc">يأتي بعد ١٠ ثوانٍ، تمامًا كما في وقت الصلاة.</string>
+    <string name="adhan_test_desc">يأتي بعد %1$s ثوانٍ، تمامًا كما في وقت الصلاة.</string>
     <string name="adhan_test_sent">تنبيه تجريبي بعد %1$s ثوانٍ</string>
     <string name="adhan_test_failed">تعذّر ضبط التنبيه التجريبي.</string>
     <string name="adhan_notification_desc">إشعار عادي بصوت إشعارات هاتفك، ويتبع «عدم الإزعاج» مثل أي إشعار آخر.</string>
@@ -319,7 +319,7 @@
     <string name="adhan_more">المزيد</string>
     <string name="adhan_import_ok">تم استيراد «%1$s»</string>
     <string name="adhan_import_unsupported">نوع الملف غير مدعوم. استخدم MP3 أو M4A أو AAC أو WAV.</string>
-    <string name="adhan_import_too_large">حجم الملف أكبر من ٤٠ ميغابايت.</string>
+    <string name="adhan_import_too_large">حجم الملف أكبر من %1$s ميغابايت.</string>
     <string name="adhan_import_not_audio">تعذّر تشغيل الملف كصوت.</string>
     <string name="adhan_import_unreadable">تعذّرت قراءة الملف.</string>
     <string name="adhan_rename">إعادة التسمية</string>
@@ -374,7 +374,7 @@
     <string name="history_row_empty">لم يحن أي تنبيه بعد</string>
     <string name="history_intro">ما حدث عند كل تنبيه.</string>
     <string name="history_empty">لا شيء بعد. سيظهر هنا كل تنبيه.</string>
-    <string name="history_test">جرّب الأذان بعد %1$s ثوانٍ</string>
+    <string name="history_test">جرّب الأذان بعد %1$s&#160;ثوانٍ</string>
     <string name="history_test_hint">اقفل الهاتف بعد الضغط.</string>
     <string name="history_share">مشاركة التقرير</string>
     <string name="history_test_tag">تجربة</string>
@@ -851,8 +851,8 @@
     <!-- 0.17: alarms before and after a prayer, as in the Clock app. -->
     <string name="alarms_title">المنبهات</string>
     <string name="alarm_add">إضافة منبه</string>
-    <string name="alarm_full">٢٠ منبهًا: أقصى ما يتسع له منهاد</string>
-    <string name="alarms_empty_footer">استيقظ قبل الفجر، أو تذكَّر بعد الأذان: مثلًا ٢٥ دقيقة قبل الفجر.</string>
+    <string name="alarm_full">%1$s منبهًا: أقصى ما يتسع له منهاد</string>
+    <string name="alarms_empty_footer">استيقظ قبل الفجر، أو تذكَّر بعد الأذان: مثلًا %1$s دقيقة قبل الفجر.</string>
     <string name="alarms_footer">ترن المنبهات على هذا الهاتف، حتى إن كان الأذان متوقفًا.</string>
     <string name="alarm_new">منبه جديد</string>
     <string name="alarm_edit">تعديل المنبه</string>
@@ -874,8 +874,8 @@
     <string name="alarm_snooze">الغفوة</string>
     <string name="alarm_save">حفظ</string>
     <string name="alarm_delete">حذف المنبه</string>
-    <string name="alarm_try">جرّبه بعد %1$s ثوانٍ</string>
-    <string name="alarm_try_sent">يرن المنبه بعد ٥ ثوانٍ.</string>
+    <string name="alarm_try">جرّبه بعد %1$s&#160;ثوانٍ</string>
+    <string name="alarm_try_sent">يرن المنبه بعد %1$s ثوانٍ.</string>
     <plurals name="alarm_minutes">
         <item quantity="zero">%s دقيقة</item>
         <item quantity="one">دقيقة</item>
@@ -930,7 +930,7 @@
     <string name="loc_chosen">مختار</string>
     <string name="face_sample_note">صورة توضيحية. تعرض ساعتك الوقت والتاريخ والصلاة القادمة في حينها.</string>
     <!-- 0.25 adhan -->
-    <string name="adhan_hero_next_at">التالي: %1$s %2$s</string>
+    <string name="adhan_hero_next_at">التالي: %1$s&#160;%2$s</string>
     <string name="adhan_all_prayers">كل الصلوات</string>
     <string name="adhan_fix">إصلاح</string>
     <plurals name="adhan_fix_count">
@@ -960,4 +960,9 @@
     <string name="welcome_exact_title">الأذان في دقيقته</string>
     <string name="welcome_exact_body">لا يسمح أندرويد لمنهاد برفع الأذان في دقيقته إلا إذا سمحتَ بـ«المنبّهات والتذكيرات». من دون ذلك قد يتأخر الأذان.</string>
     <string name="welcome_exact_allow">السماح بالمنبّهات الدقيقة</string>
+    <!-- 0.25 review 2: adhan -->
+    <string name="voice_add_named">أضف أذان %1$s</string>
+    <string name="voice_add_named_detail">من تسجيل لديك</string>
+    <string name="alarm_length_title">المدة</string>
+    <string name="alarm_length_note">لأصوات منهاد والأذان أدناه: التسجيل كاملًا، أو مطلعه.</string>
 </resources>

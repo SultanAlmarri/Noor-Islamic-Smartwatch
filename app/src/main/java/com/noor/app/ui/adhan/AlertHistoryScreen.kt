@@ -135,19 +135,19 @@ private fun HistoryRow(r: AlertRecord, f: Formatter, zone: ZoneId, fixable: Bool
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             val due = Instant.ofEpochMilli(r.dueAtMs)
             val day = due.atZone(zone).toLocalDate()
-            val whenText = (if (day == LocalDate.now(zone)) stringResource(R.string.history_today) else f.gregorianDate(day)) +
-                " · " + f.timeAt(due, zone)
             val name = r.prayer?.let { f.prayerName(it, day) } ?: "—"
             Text(if (r.test) "$name · ${stringResource(R.string.history_test_tag)}" else name, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
             Text(outcomeText(r, f), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
             val late = (r.delayMs / 60_000.0).roundToInt()
             val timing = if (late <= 0) stringResource(R.string.history_on_time) else pluralStringResource(R.plurals.history_late, late, f.number(late))
+            // (Second review: each fact whole on its line, the line breaking before a fact, never after a dot; the time
+            // with its AM or PM in one piece.)
             val extras = buildList {
-                add(whenText); add(timing)
+                add(if (day == LocalDate.now(zone)) stringResource(R.string.history_today) else f.gregorianDate(day)); add(f.timeAt(due, zone).together()); add(timing)
                 if (!r.exactAlarms) add(stringResource(R.string.history_exact_off))
                 if (r.alarmVolumePercent == 0) add(stringResource(R.string.history_volume_zero))
             }
-            Text(extras.joinToString(" · "), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textMuted)
+            FactsLine(extras, com.noor.app.ui.settings.FootnoteStyle, c.textMuted)
             // What went wrong, with its fix (0.15): a way to the one setting that caused it.
             val fix: Pair<Int, () -> Unit>? = if (!fixable) null else when {
                 r.outcome == AlertOutcome.DND_BLOCKS_ALARMS -> R.string.history_fix_dnd to {
@@ -160,8 +160,9 @@ private fun HistoryRow(r: AlertRecord, f: Formatter, zone: ZoneId, fixable: Bool
                 r.alarmVolumePercent == 0 -> R.string.adhan_action_volume to { context.open(android.content.Intent(android.provider.Settings.ACTION_SOUND_SETTINGS)) }
                 else -> null
             }
-            if (fix != null) Text(stringResource(fix.first), style = MaterialTheme.typography.labelLarge, color = c.goldText,
-                modifier = Modifier.padding(top = 4.dp).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = fix.second))
+            // (Second review: the app's second kind of button, small, as the Fix sheet's; it was a line of gold text.)
+            if (fix != null) com.noor.app.ui.components.NoorButton(stringResource(fix.first), fix.second, Modifier.padding(top = 4.dp),
+                kind = com.noor.app.ui.components.ButtonKind.Tonal, compact = true)
         }
     }
 }

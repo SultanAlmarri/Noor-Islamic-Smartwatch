@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -93,8 +94,8 @@ internal fun sharedVoice(a: AlertSettings, vm: AdhanViewModel, custom: List<Cust
  * One prayer's voice (0.16; 0.18: only the five voices and Random, the user's own recordings, and, for a prayer set to a
  * sound, the sound effects). [target] null: every prayer at once (0.25: the one place for that choice; the Adhan tab's
  * six tiles were the same choice a second time). A touch chooses a voice and plays its opening, as the tiles did (a
- * second touch stops it); the round button plays the whole recording. A voice Noor has no recording of says so and has
- * a plus where the others have their button: the row adds the user's own.
+ * second touch stops it); the round button plays the whole recording. A voice Minhad has no recording of is not in the
+ * list: "Add the Al-Quds Adhan" stands under My sounds, and the user's own recording makes it a voice like the others.
  */
 @Composable
 fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Unit, vm: AdhanViewModel = viewModel()) {
@@ -150,27 +151,33 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
                     onSelect = { if (current != e.id) vm.setPrayer(target!!) { it.copy(mode = AlertMode.SOUND, soundId = e.id) }; hear(e.id) }, onPreview = { whole(e.id) })
             }
         } else SettingsSection(if (target == null) stringResource(R.string.adhan_all_prayers) else "") {
-            ClockVoice.entries.forEachIndexed { i, v ->
-                if (i > 0) SettingsDivider()
-                val id = v.soundId(vm, custom)
+            // (Second review: only the voices there is a recording of. One Minhad has no licensed recording of (Al-Quds)
+            // is not offered among them as if it were there: it waits under "My sounds" for the user's own recording,
+            // and is a voice like the others once there is one.)
+            ClockVoice.entries.mapNotNull { v -> v.soundId(vm, custom)?.let { v to it } }.forEach { (v, id) ->
                 // (At Fajr, the voice's own Fajr recording when it has one.)
-                val play = if (target == Prayer.FAJR) id?.let { fajrOf(it, vm, custom) } else id
-                val name = stringResource(v.label)
-                val chosen = id != null && (current == id || current == play)
-                if (id == null || play == null) SoundRow(name, stringResource(R.string.voice_add), false, false, previewLabel,
-                    onSelect = { adding = v.names[0]; picker.launch(CustomSounds.PICKER_TYPES) }, onPreview = null, add = true)
-                else SoundRow(name, null, selected = chosen, playing = preview?.id == play, previewLabel = previewLabel,
+                val play = if (target == Prayer.FAJR) fajrOf(id, vm, custom) else id
+                val chosen = current == id || current == play
+                SoundRow(stringResource(v.label), null, selected = chosen, playing = preview?.id == play, previewLabel = previewLabel,
                     onSelect = { if (!chosen) vm.applyVoice(target, id); hear(play) }, onPreview = { whole(play) })
+                SettingsDivider()
             }
-            SettingsDivider()
+            // (As tall as the voices, with a sign where they have their button: it plays one of them each time.)
             SoundRow(stringResource(R.string.voice_random), stringResource(R.string.voice_random_detail), current == SoundIds.RANDOM, false, previewLabel,
-                onSelect = { vm.stopPreview(); vm.applyVoice(target, SoundIds.RANDOM) }, onPreview = null)
+                onSelect = { vm.stopPreview(); vm.applyVoice(target, SoundIds.RANDOM) }, onPreview = null, sign = Icons.Rounded.Shuffle)
         }
 
-        // The user's own sounds (those not standing for a voice), and adding one.
+        // The user's own sounds (those not standing for a voice), a voice of the owner's to add a recording of, and
+        // adding any other sound.
         val voiceOwn = ClockVoice.entries.flatMap { listOfNotNull(it.ownSound(custom)?.id, it.ownFajr(custom)?.id) }.toSet()
         val mine = custom.filter { it.id !in voiceOwn }
+        val missing = if (effects) emptyList() else ClockVoice.entries.filter { it.soundId(vm, custom) == null }
         SettingsSection(stringResource(R.string.adhan_my_sounds)) {
+            missing.forEach { v ->
+                SettingsItem(Icons.Rounded.Add, stringResource(R.string.voice_add_named, stringResource(v.label)), stringResource(R.string.voice_add_named_detail),
+                    onClick = { adding = v.names[0]; picker.launch(CustomSounds.PICKER_TYPES) })
+                SettingsDivider()
+            }
             mine.forEachIndexed { i, cs ->
                 if (i > 0) SettingsDivider()
                 SoundRow(cs.name, f.duration(cs.seconds), current == cs.id, preview == PreviewKey(cs.id, false), previewLabel,
