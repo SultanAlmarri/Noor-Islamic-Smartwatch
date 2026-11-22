@@ -503,7 +503,7 @@ private fun OptionsPanel(d: FaceDesign, a: StudioActions) {
     ChoiceChips(listOf(FaceDigits.FOLLOW to follow, FaceDigits.WESTERN to stringResource(R.string.studio_digits_western), FaceDigits.ARABIC to stringResource(R.string.studio_digits_arabic)),
         d.digits, { v -> a.edit { it.copy(digits = v) } })
     Label(stringResource(R.string.studio_clock))
-    ChoiceChips(listOf(FaceClock.FOLLOW to follow, FaceClock.H12 to stringResource(R.string.studio_clock_12), FaceClock.H24 to stringResource(R.string.studio_clock_24)),
+    ChoiceChips(listOf(FaceClock.FOLLOW to follow, FaceClock.H12 to stringResource(R.string.studio_clock_12, com.noor.app.ui.components.rememberAppFormatter().number(12)), FaceClock.H24 to stringResource(R.string.studio_clock_24, com.noor.app.ui.components.rememberAppFormatter().number(24))),
         d.clock, { v -> a.edit { it.copy(clock = v) } })
 }
 

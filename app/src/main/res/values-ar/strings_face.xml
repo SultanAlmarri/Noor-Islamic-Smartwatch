@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="studio_title">استوديو منهاد</string>
-    <string name="studio_card_body">صمّم واجهة ساعتك بنفسك: ما تعرضه وأين، وألوانها وخطها وعقاربها وشكلها في وضع العرض الدائم. بلمسة واحدة تصل إلى ساعتك.</string>
+    <string name="studio_card_body">صمّم واجهة ساعتك بنفسك وأرسلها بلمسة واحدة.</string>
     <string name="studio_card_open">صمّم واجهة ساعتك</string>
     <string name="studio_card_edit">عدّل تصميمك</string>
     <string name="studio_hint">انقر مكانًا لتختار ما فيه، والمس مطوّلًا لتنقله.</string>
@@ -135,8 +135,8 @@
     <string name="studio_digits_western">غربية</string>
     <string name="studio_digits_arabic">عربية مشرقية</string>
     <string name="studio_clock">الساعة</string>
-    <string name="studio_clock_12">١٢ ساعة</string>
-    <string name="studio_clock_24">٢٤ ساعة</string>
+    <string name="studio_clock_12">%1$s ساعة</string>
+    <string name="studio_clock_24">%1$s ساعة</string>
 
     <string name="studio_send">ضعها على ساعتي</string>
     <string name="studio_sending">جارٍ الإرسال…</string>

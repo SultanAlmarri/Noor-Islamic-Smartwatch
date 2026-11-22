@@ -38,7 +38,7 @@
     <string name="settings_calculation">أوقات الصلاة</string>
     <string name="authority">طريقة الحساب</string>
     <string name="authority_auto">تلقائي حسب موقعي</string>
-    <string name="asr_method">العصر</string>
+    <string name="asr_method">طريقة العصر</string>
     <string name="asr_standard">الجمهور (الشافعي والمالكي والحنبلي)</string>
     <string name="asr_hanafi">الحنفي</string>
     <string name="asr_profile_default">افتراضي الطريقة</string>
@@ -64,7 +64,7 @@
     <string name="theme_system">حسب النظام</string>
     <string name="theme_dark">ليلي</string>
     <string name="theme_light">نهاري</string>
-    <string name="hijri_adjust">التاريخ الهجري</string>
+    <string name="hijri_adjust">ضبط التاريخ الهجري</string>
     <string name="hijri_adjust_value">التعديل: %1$s أيام</string>
     <string name="settings_about">حول التطبيق</string>
     <string name="settings_testing">الاختبار</string>
@@ -77,6 +77,8 @@
     <string name="about_tagline">مواقيت الصلاة من السماء فوقك.</string>
     <string name="about_version_row">الإصدار</string>
     <string name="status_chip_group">شريط الحالة</string>
+    <string name="face_choose_ready">اختر واجهة من واجهات منهاد بدلًا منها</string>
+    <string name="scenery_group">المشهد</string>
     <string name="privacy_title">سياسة الخصوصية</string>
     <string name="kw_privacy">الخصوصية البيانات الموقع سياسة</string>
     <string name="credits_title">شكر وإسناد</string>
@@ -93,7 +95,7 @@
     <string name="credits_sounds_body">صاحب كل تسجيل ومصدره ورخصته في مكتبة الأذان، في صفحة التسجيل نفسه.</string>
     <string name="credits_software">البرمجيات</string>
     <string name="credits_software_body">الرموز: ⁦Material Symbols⁩ من ⁦Google⁩.\nبُني بـ ⁦Android Jetpack⁩ و ⁦Kotlin⁩.\nالرخصة: ⁦Apache License 2.0⁩.</string>
-    <string name="status_show">إظهاره في شريط الإشعارات</string>
+    <string name="status_show">إظهار العدّ التنازلي في الإشعارات</string>
     <plurals name="days_signed">
         <item quantity="zero">%s يوم</item>
         <item quantity="one">%s يوم</item>
@@ -191,7 +193,7 @@
     <string name="step_app_dev">لم تُثبَّت هذه النسخة من منهاد من متجر Play. يبيّن الدليل طريقة وضعه على ساعتك.</string>
     <string name="step_app_todo">يفتح منهاد في متجر Play على ساعتك: ضغطة واحدة هناك تثبّته.</string>
     <string name="step_app_button">التثبيت على الساعة</string>
-    <string name="step_app_again">فتح متجر Play على الساعة مجدداً</string>
+    <string name="step_app_again">فتح متجر Play مجدداً</string>
     <string name="step_app_guide">فتح دليل التثبيت</string>
     <string name="step_sync_title">إعدادات الصلاة على الساعة</string>
     <string name="step_after_install">متاح بعد تثبيت منهاد على الساعة.</string>
@@ -406,11 +408,11 @@
     </plurals>
     <string name="adhan_public_domain">ملكية عامة</string>
     <string name="settings_notification_bar">شريط الإشعارات</string>
-    <string name="status_setting">شريط الإشعارات</string>
+    <string name="status_setting">إشعار العدّ التنازلي</string>
     <string name="status_setting_desc">الصلاة التالية مع عدّ تنازلي حيّ، على بُعد سحبة.</string>
     <string name="status_chip_setting">العدّ التنازلي في شريط الحالة</string>
     <string name="status_chip_desc">كالمؤقّت: يبقى الوقت المتبقّي للصلاة التالية أعلى الشاشة.</string>
-    <string name="status_chip_needs_16">يتطلّب أندرويد 16 أو أحدث.</string>
+    <string name="status_chip_needs_16">يتطلّب أندرويد %1$s أو أحدث.</string>
     <string name="status_chip_blocked">موقوف لمنهاد في إعدادات أندرويد. اضغط للسماح به.</string>
     <string name="status_chip_refused">لم يعرضه هاتفك في شريط الحالة، فبقي إشعار منهاد بعدّه التنازلي الكبير. بعض الهواتف لا تعرضه إلا للتطبيقات التي تختارها.</string>
     <string name="status_chip_promoted">قبِله أندرويد لشريط الحالة: يظهر العدّ التنازلي هناك كمؤقّت.</string>
@@ -421,7 +423,7 @@
     <string name="status_chip_system_off">متوقف: يعدّه منهاد بأرقامه مع علامة − أو +.</string>
     <string name="status_chip_samsung">على هواتف سامسونج يلزم أيضًا تشغيل مفتاح واحد في خيارات المطوّر. اضغط لمعرفة الخطوات.</string>
     <string name="samsung_live_title">إظهار العدّ التنازلي في شريط الحالة</string>
-    <string name="samsung_live_steps">لا تعرض سامسونج العدّ التنازلي للتطبيقات الأخرى أعلى الشاشة إلا عند تشغيل هذا المفتاح:\n\n١. افتح الإعدادات ← حول الهاتف ← معلومات البرنامج.\n٢. اضغط على «رقم الإصدار» ٧ مرات حتى يخبرك الهاتف بأن خيارات المطوّر قد شُغّلت (قد يطلب رمزك السري).\n٣. عُد إلى الإعدادات وافتح «خيارات المطوّر» في أسفل القائمة.\n٤. ابحث عن «الإشعارات المباشرة» وشغّل «الإشعارات المباشرة لجميع التطبيقات» (Live notifications for all apps).\n٥. عُد إلى منهاد: يظهر العدّ التنازلي أعلى الشاشة.</string>
+    <string name="samsung_live_steps">لا تعرض سامسونج العدّ التنازلي للتطبيقات الأخرى أعلى الشاشة إلا عند تشغيل هذا المفتاح:\n\n1. افتح الإعدادات ← حول الهاتف ← معلومات البرنامج.\n2. اضغط على «رقم الإصدار» 7 مرات حتى يخبرك الهاتف بأن خيارات المطوّر قد شُغّلت (قد يطلب رمزك السري).\n3. عُد إلى الإعدادات وافتح «خيارات المطوّر» في أسفل القائمة.\n4. ابحث عن «الإشعارات المباشرة» وشغّل «الإشعارات المباشرة لجميع التطبيقات» (Live notifications for all apps).\n5. عُد إلى منهاد: يظهر العدّ التنازلي أعلى الشاشة.</string>
     <string name="samsung_live_open">افتح الإعدادات</string>
     <string name="samsung_live_done">تم</string>
     <string name="status_setting_note">صامت، ولا يكاد يستهلك البطارية: أندرويد نفسه يعدّ الثواني، ومنهاد يحدّثه فقط عند كل صلاة وعند منتصف الليل. في أندرويد %1$s وما بعده يمكنك إزاحته، فيعود عند الصلاة التالية.</string>
@@ -451,7 +453,7 @@
     <string name="kw_hijri">هجري تاريخ هلال رؤية تقويم شهر تعديل</string>
     <string name="kw_language">عربي إنجليزي لغة</string>
     <string name="kw_numerals">أرقام هندية عربية</string>
-    <string name="kw_time">ساعة ١٢ ٢٤ صباحا مساء</string>
+    <string name="kw_time">ساعة 12 24 ١٢ ٢٤ صباحا مساء</string>
     <string name="kw_theme">داكن فاتح ليلي نهاري مظهر مع الشمس</string>
     <string name="kw_watch">ساعة ذكية واجهة بلاطة جالكسي</string>
     <string name="kw_accuracy">مصادر دقة جدول رسمي ترخيص</string>
@@ -530,7 +532,7 @@
     <string name="loc_neighbourhood">حي</string>
     <!-- 0.9.8 -->
     <string name="elapsed_setting">الوقت منذ دخول الصلاة</string>
-    <string name="elapsed_setting_desc">لمدة ٣٠ دقيقة بعد دخول الصلاة، اعرض الوقت منذ دخولها.</string>
+    <string name="elapsed_setting_desc">لمدة %1$s دقيقة بعد دخول الصلاة، اعرض الوقت منذ دخولها.</string>
     <string name="loc_largest_cities">أكبر المدن</string>
     <string name="loc_other_places">أماكن أخرى</string>
     <string name="loc_region_sub">أكبرها: %1$s · %2$s مكانًا</string>
@@ -560,17 +562,16 @@
     <string name="sun_path_simple_desc">القوس نفسه دائمًا، من مشرق الشمس إلى مغربها</string>
     <string name="sun_path_real_desc">مسار الشمس الحقيقي لمكانك وتاريخك</string>
     <string name="sky_graphics_title">الرسومات</string>
-    <string name="sky_graphics_note">الرسومات الأعلى تستهلك بطارية أكثر. يختار الوضع التلقائي ما يناسب هاتفك، وينخفض من تلقاء نفسه إن ثقلت على هاتفك.</string>
+    <string name="sky_graphics_note">الإعدادات الأعلى تستهلك بطارية أكثر.</string>
     <string name="sky_graphics_auto">تلقائي</string>
     <string name="sky_graphics_auto_short">تلقائي</string>
-    <string name="sky_graphics_auto_now">المختار لهاتفك: %1$s</string>
+    <string name="sky_graphics_auto_now">اختار الوضع التلقائي «%1$s» لهذا الهاتف.</string>
     <string name="sky_graphics_high">عالية</string>
     <string name="sky_graphics_high_desc">السماء الواقعية: مناظر وسحب ومياه مرسومة بدقة</string>
     <string name="sky_graphics_medium">متوسطة</string>
     <string name="sky_graphics_medium_desc">السماء ذات الطبقات، أخف على هاتفك</string>
     <string name="sky_graphics_low">منخفضة</string>
     <string name="sky_graphics_low_desc">أبسط سماء: خفيفة جدًا، لأي هاتف</string>
-    <string name="scenery_note">طبيعة فقط: لا مبانٍ ولا أشخاص.</string>
     <string name="kw_scenery">مشهد طبيعة خلفية كثبان غابة مطيرة قطب جليد محيط بحر سافانا صخور حمراء صحراء جودة السماء رسوم غيوم</string>
     <string name="face_editor_title">واجهة الساعة</string>
     <string name="face_preview_desc">واجهة منهاد: %1$s</string>
@@ -668,8 +669,8 @@
     <string name="w_count_words">بالكلمات</string>
     <string name="w_time_format">تنسيق الوقت</string>
     <string name="w_as_app">كما في التطبيق</string>
-    <string name="w_12h">١٢ ساعة</string>
-    <string name="w_24h">٢٤ ساعة</string>
+    <string name="w_12h">%1$s ساعة</string>
+    <string name="w_24h">%1$s ساعة</string>
     <string name="w_ampm">ص/م</string>
     <string name="w_digits">الأرقام</string>
     <string name="w_digits_western">غربية (123)</string>
@@ -755,7 +756,6 @@
     <string name="widget_tap_home">اليوم</string>
     <string name="widget_tap_qibla">القبلة</string>
     <string name="widget_tap_adhan">الأذان</string>
-    <string name="widget_you_note">تحتاج ألوان الخلفية إلى أندرويد ١٢ أو أحدث؛ هنا تظهر الأداة داكنة.</string>
     <!-- 0.23: معاينات الأدوات (أمثلة ثابتة) -->
     <string name="widget_preview_fajr">الفجر</string>
     <string name="widget_preview_shuruq">الشروق</string>

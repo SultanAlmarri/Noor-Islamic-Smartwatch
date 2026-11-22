@@ -204,10 +204,8 @@ private fun GregorianPicker(
 
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.calendar_range, f.number(DateWindow.FIRST.year), f.number(DateWindow.LAST.year)),
-                style = MaterialTheme.typography.bodySmall, color = c.textMuted, modifier = Modifier.weight(1f).padding(start = 12.dp),
-            )
+            // (0.25, second review: "Dates from 2021 to 2035" said how the app is made; the arrows and the years simply stop there.)
+            Spacer(Modifier.weight(1f))
             TextButton(onClick = { onPick(today) }) { Text(stringResource(R.string.go_to_today), color = c.goldText, style = MaterialTheme.typography.titleSmall) }
         }
         if (onTimetable != null) com.noor.app.ui.timetable.TimetableEntry({ onTimetable(com.noor.app.ui.timetable.TableMonth.Gregorian(month)) }, Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp))

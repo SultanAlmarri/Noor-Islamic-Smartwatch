@@ -694,7 +694,8 @@ private fun SkyHeader(
         // a capsule of glass low on the sky. It goes at the first drag and does not come back.
         // (Whether the opening is over, not where it is: read at every frame of it, it recomposed the header each frame.)
         val opened by remember { androidx.compose.runtime.derivedStateOf { opening.value >= 1f } }
-        val hintShown = showScrubHint && !scrubbing && opened
+        // (0.25, second review: not in a sky too short for it, where it sat on the date bar.)
+        val hintShown = showScrubHint && !scrubbing && opened && !hero.sideBySide
         val hintState = animateFloatAsState(if (hintShown) 1f else 0f, tween(if (hintShown) 900 else 250), label = "scrubHint")
         val hintAlpha by hintState
         val hintThere by remember { androidx.compose.runtime.derivedStateOf { hintState.value > 0.01f } }
@@ -1099,7 +1100,8 @@ private fun TimelineRow(
     onClick: (() -> Unit)? = null, onBell: ((Boolean) -> Unit)? = null, modifier: Modifier = Modifier,
 ) {
     val c = NoorTheme.colors
-    val fg = if (passed) c.textMuted else c.textPrimary
+    // (0.25, second review: by day the passed prayers were too faint on the pale glass; textSecondary reads there.)
+    val fg = if (passed) (if (c.isDark) c.textMuted else c.textSecondary) else c.textPrimary
     val sky = PrayerSkies.of(p)
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     // The lit row carries the colour of its own sky, strongest where the disc is.

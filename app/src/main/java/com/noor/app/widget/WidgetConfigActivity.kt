@@ -276,7 +276,8 @@ internal fun WidgetSettings(kind: WidgetKind, initial: WidgetOptions, sizeDp: Pa
                 Chips(listOf(DigitChoice.APP to R.string.w_as_app, DigitChoice.WESTERN to R.string.w_digits_western, DigitChoice.ARABIC_INDIC to R.string.w_digits_indic).map { it.first to stringResource(it.second) }, o.digits) { set(o.copy(digits = it)) }
                 if (prayers) {
                     Label(stringResource(R.string.w_time_format))
-                    Chips(listOf(TimeChoice.APP to R.string.w_as_app, TimeChoice.H12 to R.string.w_12h, TimeChoice.H24 to R.string.w_24h).map { it.first to stringResource(it.second) }, o.timeFormat) { set(o.copy(timeFormat = it)) }
+                    val nf = com.noor.app.ui.components.rememberAppFormatter()
+                    Chips(listOf(TimeChoice.APP to stringResource(R.string.w_as_app), TimeChoice.H12 to stringResource(R.string.w_12h, nf.number(12)), TimeChoice.H24 to stringResource(R.string.w_24h, nf.number(24))), o.timeFormat) { set(o.copy(timeFormat = it)) }
                 }
             }
         }

@@ -50,7 +50,7 @@ import com.noor.prayer.face.FaceDesign
  * itself) or what the Studio is, and the way into the editor. The watch itself opens the editor too.
  */
 @Composable
-fun StudioCard(design: FaceDesign, config: WatchConfig?, showing: Boolean, glow: Color? = null, onOpen: () -> Unit) {
+fun StudioCard(design: FaceDesign, config: WatchConfig?, showing: Boolean, glow: Color? = null, compact: Boolean = false, onOpen: () -> Unit) {
     val c = NoorTheme.colors
     val action = stringResource(if (showing) R.string.studio_card_edit else R.string.studio_card_open)
     val source = remember { MutableInteractionSource() }
@@ -70,7 +70,8 @@ fun StudioCard(design: FaceDesign, config: WatchConfig?, showing: Boolean, glow:
             Text(stringResource(R.string.studio_status_showing), style = FootnoteStyle, color = c.textSecondary)
         } else Text(stringResource(R.string.studio_card_body), style = FootnoteStyle, color = c.textSecondary, textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(max = 340.dp).padding(horizontal = 16.dp))
-        // (Tonal: the page's one filled button belongs to the set-up step that waits, when one does.)
-        NoorButton(action, onOpen, Modifier.padding(top = 14.dp), kind = ButtonKind.Tonal, icon = Icons.Rounded.Palette)
+        // (Tonal: the page's one filled button belongs to the set-up step that waits, when one does. [compact], while the
+        // watch is set up: the picture and the name; the watch itself opens the editor.)
+        if (!compact) NoorButton(action, onOpen, Modifier.padding(top = 14.dp), kind = ButtonKind.Tonal, icon = Icons.Rounded.Palette)
     }
 }

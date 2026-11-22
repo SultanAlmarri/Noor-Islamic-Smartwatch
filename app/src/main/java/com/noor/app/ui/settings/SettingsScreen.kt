@@ -211,6 +211,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         f.digits(when { s.hijriAdjust > 0 -> "+${s.hijriAdjust}"; s.hijriAdjust < 0 -> "\u2212${-s.hijriAdjust}"; else -> "0" }))
     val kwLocation = stringResource(R.string.kw_location)
 
+    val statusOn = s.statusNotification && (Build.VERSION.SDK_INT < 33 || androidx.core.content.ContextCompat.checkSelfPermission(context,
+        Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
     // Every row once, with the page it lives on and its group there (0.9.4: groups and search; 0.15: pages).
     // [listed] = false: found by search only (it has a home elsewhere: the hero card, the Adhan tab).
     val rows = buildList {
@@ -241,8 +243,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         // 0.25: the notification bar has a page of its own (on a phone with Android 16 its switch and the status-bar
         // timer's options were four rows of the first page); the row says whether it is on.
         val statusPage = SettingsPage.STATUS
-        val statusShown = s.statusNotification && (Build.VERSION.SDK_INT < 33 || androidx.core.content.ContextCompat.checkSelfPermission(context,
-            Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+        val statusShown = statusOn
         add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Notifications, stringResource(R.string.status_setting), null, stringResource(R.string.kw_status), { page = statusPage },
             detail = stringResource(if (statusShown) R.string.settings_on else R.string.settings_off)))
         add(SettingRow(0, Icons.Rounded.Notifications, stringResource(R.string.status_show), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status) + " " + stringResource(R.string.status_setting), null, page = statusPage,
@@ -273,8 +274,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 Unit
             }
             add(SettingRow(R.string.status_chip_group, Icons.Rounded.Timer, stringResource(R.string.status_chip_setting),
-                stringResource(when {
-                    !newEnough -> R.string.status_chip_needs_16
+                if (!newEnough) stringResource(R.string.status_chip_needs_16, f.number(16)) else stringResource(when {
                     s.statusBarChip && !allowed -> R.string.status_chip_blocked
                     s.statusBarChip && seen == com.noor.app.notify.LivePromotion.State.REFUSED -> R.string.status_chip_refused
                     // (0.22.2) Android accepts it, but a Samsung phone shows other apps' countdowns in the status bar
@@ -311,7 +311,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             add(SettingRow(R.string.settings_appearance, Icons.Rounded.Landscape, stringResource(R.string.scenery_title), null,
                 stringResource(R.string.kw_scenery) + " " + stringResource(R.string.scenery_auto_short, name), { onOpenRoute(Routes.SCENERY) }, detail = name))
             // (It lives on the home screen's page, where the countdown is seen; search finds it from here.)
-            add(SettingRow(R.string.countdown_group, Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc),
+            add(SettingRow(R.string.countdown_group, Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc, f.number(30)),
                 stringResource(R.string.kw_status), null, toggle = s.elapsedAfterPrayer to { on -> vm.setElapsedAfterPrayer(on) }, listed = false))
         }
         // 0.24: the home screen's widgets, each customised from here too.
@@ -327,7 +327,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         add(SettingRow(UNTITLED_5, Icons.Rounded.Info, stringResource(R.string.about_title), null, stringResource(R.string.kw_accuracy) + " " + stringResource(R.string.about_version_row),
             { page = SettingsPage.ABOUT }, detail = f.digits(BuildConfigInfo.versionName)))
         val about = SettingsPage.ABOUT
-        add(SettingRow(0, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), stringResource(R.string.times_accuracy_note), stringResource(R.string.kw_accuracy), onOpenAccuracy, page = about))
+        // (0.25, second review: prayer-time accuracy has one home, the Prayer times page, where the question arises.)
         add(SettingRow(0, Icons.Rounded.LibraryMusic, stringResource(R.string.adhan_library), stringResource(R.string.adhan_library_desc), stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_LIBRARY) }, page = about))
         // (0.25, for a release: the privacy policy, and whose work Minhad stands on, in the app itself and not only in
         // the repository: several of the licences ask for exactly that.)
@@ -451,6 +451,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 groups(SettingsPage.LANGUAGE)
             }
             SettingsPage.STATUS -> NoorPage(stringResource(R.string.status_setting), contentPadding, onBack = { page = SettingsPage.ROOT }) {
+                // (0.25, second review) The notification itself, counting, over its switch.
+                StatusPreview(s, statusOn)
                 groups(SettingsPage.STATUS)
             }
             SettingsPage.ABOUT -> NoorPage(stringResource(R.string.about_title), contentPadding, onBack = { page = SettingsPage.ROOT }) {

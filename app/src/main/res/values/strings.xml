@@ -38,7 +38,7 @@
     <string name="settings_calculation">Prayer times</string>
     <string name="authority">Calculation method</string>
     <string name="authority_auto">Automatic for my location</string>
-    <string name="asr_method">Asr</string>
+    <string name="asr_method">Asr method</string>
     <string name="asr_standard">Standard (Shafi\'i, Maliki, Hanbali)</string>
     <string name="asr_hanafi">Hanafi</string>
     <string name="asr_profile_default">Method default</string>
@@ -64,7 +64,7 @@
     <string name="theme_system">System</string>
     <string name="theme_dark">Night</string>
     <string name="theme_light">Day</string>
-    <string name="hijri_adjust">Hijri date</string>
+    <string name="hijri_adjust">Adjust Hijri date</string>
     <string name="hijri_adjust_value">Adjustment: %1$s days</string>
     <string name="settings_about">About</string>
     <!-- Testing only (0.14): to be removed before release, with com.noor.app.testing. -->
@@ -78,6 +78,8 @@
     <string name="about_tagline">Prayer times from the sky above you.</string>
     <string name="about_version_row">Version</string>
     <string name="status_chip_group">Status bar</string>
+    <string name="face_choose_ready">Choose a Minhad face instead</string>
+    <string name="scenery_group">Scenery</string>
     <string name="privacy_title">Privacy policy</string>
     <string name="kw_privacy">privacy data location policy</string>
     <string name="credits_title">Acknowledgements</string>
@@ -94,7 +96,7 @@
     <string name="credits_sounds_body">Each recording\'s author, source and licence are in the Adhan library, on the recording\'s own page.</string>
     <string name="credits_software">Software</string>
     <string name="credits_software_body">Signs: Material Symbols by Google. Built with Android Jetpack and Kotlin. All under the Apache License 2.0.</string>
-    <string name="status_show">Show in the notification bar</string>
+    <string name="status_show">Show the countdown in notifications</string>
     <plurals name="days_signed">
         <item quantity="one">%s day</item>
         <item quantity="other">%s days</item>
@@ -188,7 +190,7 @@
     <string name="step_app_dev">This copy of Minhad was not installed from the Play Store. The guide shows how to put it on your watch.</string>
     <string name="step_app_todo">Opens Minhad in the Play Store on your watch: one tap there installs it.</string>
     <string name="step_app_button">Install on watch</string>
-    <string name="step_app_again">Open Play Store on watch again</string>
+    <string name="step_app_again">Open Play Store again</string>
     <string name="step_app_guide">Open the install guide</string>
     <string name="step_sync_title">Prayer settings on the watch</string>
     <string name="step_after_install">Available once Minhad is on the watch.</string>
@@ -396,11 +398,11 @@
     </plurals>
     <string name="adhan_public_domain">Public domain</string>
     <string name="settings_notification_bar">Notification bar</string>
-    <string name="status_setting">Notification bar</string>
+    <string name="status_setting">Countdown notification</string>
     <string name="status_setting_desc">The next prayer and a live countdown, one swipe away.</string>
     <string name="status_chip_setting">Countdown in the status bar</string>
     <string name="status_chip_desc">Like a timer: the time to the next prayer stays at the top of the screen.</string>
-    <string name="status_chip_needs_16">Needs Android 16 or later.</string>
+    <string name="status_chip_needs_16">Needs Android %1$s or later.</string>
     <string name="status_chip_blocked">Turned off for Minhad in Android’s settings. Tap to allow it.</string>
     <string name="status_chip_refused">Your phone did not show it in the status bar, so the notification keeps Minhad’s own large countdown. Some phones show it only for the apps they choose.</string>
     <string name="status_chip_promoted">Android accepted it for the status bar: the countdown shows there as a timer.</string>
@@ -520,7 +522,7 @@
     <string name="loc_neighbourhood">District</string>
     <!-- 0.9.8 -->
     <string name="elapsed_setting">Time since each prayer</string>
-    <string name="elapsed_setting_desc">For 30 minutes after a prayer begins, show the time since it began.</string>
+    <string name="elapsed_setting_desc">For %1$s minutes after a prayer begins, show the time since it began.</string>
     <string name="loc_largest_cities">Largest cities</string>
     <string name="loc_other_places">Other places</string>
     <string name="loc_region_sub">Largest: %1$s · %2$s places</string>
@@ -551,17 +553,16 @@
     <string name="sun_path_simple_desc">Always the same arc, from where the Sun rises to where it sets</string>
     <string name="sun_path_real_desc">The Sun\'s true path for your place and date</string>
     <string name="sky_graphics_title">Graphics</string>
-    <string name="sky_graphics_note">Higher graphics use more battery. Automatic chooses for your phone, and steps down by itself if your phone finds it heavy.</string>
+    <string name="sky_graphics_note">Higher settings use more battery.</string>
     <string name="sky_graphics_auto">Automatic</string>
     <string name="sky_graphics_auto_short">Auto</string>
-    <string name="sky_graphics_auto_now">Chosen for your phone: %1$s</string>
+    <string name="sky_graphics_auto_now">Automatic chose %1$s for this phone.</string>
     <string name="sky_graphics_high">High</string>
     <string name="sky_graphics_high_desc">The realistic sky: rendered sceneries, clouds and water</string>
     <string name="sky_graphics_medium">Medium</string>
     <string name="sky_graphics_medium_desc">The layered sky, lighter on your phone</string>
     <string name="sky_graphics_low">Low</string>
     <string name="sky_graphics_low_desc">The simplest sky: very light, for any phone</string>
-    <string name="scenery_note">Only nature: no buildings and no people.</string>
     <string name="kw_scenery">scenery landscape background dunes rainforest forest arctic ice ocean sea savanna canyon red rock desert home sky quality graphics clouds</string>
     <string name="face_editor_title">Watch face</string>
     <string name="face_preview_desc">The Minhad watch face: %1$s</string>
@@ -659,8 +660,8 @@
     <string name="w_count_words">In words</string>
     <string name="w_time_format">Time format</string>
     <string name="w_as_app">As in the app</string>
-    <string name="w_12h">12-hour</string>
-    <string name="w_24h">24-hour</string>
+    <string name="w_12h">%1$s-hour</string>
+    <string name="w_24h">%1$s-hour</string>
     <string name="w_ampm">AM/PM</string>
     <string name="w_digits">Digits</string>
     <string name="w_digits_western">Western (123)</string>
@@ -742,7 +743,6 @@
     <string name="widget_tap_home">Today</string>
     <string name="widget_tap_qibla">Qibla</string>
     <string name="widget_tap_adhan">Adhan</string>
-    <string name="widget_you_note">The wallpaper’s colours need Android 12 or later; here the widget is dark.</string>
     <!-- 0.23: the widget picker's previews (fixed examples) -->
     <string name="widget_preview_fajr">Fajr</string>
     <string name="widget_preview_shuruq">Shuruq</string>

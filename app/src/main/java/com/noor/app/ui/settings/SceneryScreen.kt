@@ -145,9 +145,10 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
         Text(stringResource(R.string.scenery_intro), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
             modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 12.dp))
         GraphicsPicker(s.skyGraphics, level, autoLevel) { vm.setSkyGraphics(it) }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
         SunPathPicker(s.sunPath) { vm.setSunPath(it) }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
+        com.noor.app.ui.settings.SectionHeader(stringResource(R.string.scenery_group))
         SceneryCard(
             image = sceneryImage(auto, level), title = stringResource(R.string.scenery_auto),
             subtitle = stringResource(R.string.scenery_auto_now, stringResource(sceneryName(auto)), placeName ?: "—"),
@@ -169,8 +170,8 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
                 }
             }
         }
-        Text(stringResource(R.string.scenery_note), style = FootnoteStyle, color = c.textMuted,
-            modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 24.dp))
+        // (0.25, second review: "Only nature: no buildings and no people." was the project's own rule, said to the user.)
+        Spacer(Modifier.height(12.dp))
 
         // The seasons: followed or not (not, unless asked). The stars: where they truly are, or the finest night sky.
         SettingsSection("") {
@@ -183,7 +184,7 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
         // 0.15: the countdown's way after a prayer begins lives here, with the home screen it is seen on (the
         // notification bar follows it too).
         SettingsSection(stringResource(R.string.countdown_group)) {
-            SettingsSwitch(Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc), s.elapsedAfterPrayer) { on -> vm.setElapsedAfterPrayer(on) }
+            SettingsSwitch(Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc, com.noor.app.ui.components.rememberAppFormatter().number(30)), s.elapsedAfterPrayer) { on -> vm.setElapsedAfterPrayer(on) }
         }
         Spacer(Modifier.height(24.dp))
     }
@@ -196,18 +197,16 @@ fun SceneryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Setting
 @Composable
 private fun GraphicsPicker(choice: SkyGraphics, level: SkyLevel, autoLevel: SkyLevel, onChoose: (SkyGraphics) -> Unit) {
     val c = NoorTheme.colors
-    Text(stringResource(R.string.sky_graphics_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary,
-        modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 8.dp))
+    // (0.25, second review: the page's headings are all the one section header of the app's lists.)
+    com.noor.app.ui.settings.SectionHeader(stringResource(R.string.sky_graphics_title))
     // (0.25) The app's one segmented control (it was a gold-filled one of this page's own).
     com.noor.app.ui.adhan.Segmented(SkyGraphics.entries.map { g -> g to stringResource(if (g == SkyGraphics.AUTO) R.string.sky_graphics_auto_short else graphicsName(g)) }, choice, onChoose)
-    val what = if (choice == SkyGraphics.AUTO) stringResource(R.string.sky_graphics_auto_now, stringResource(levelName(autoLevel))) + " · " + stringResource(levelDesc(level))
-        else stringResource(levelDesc(level))
+    val what = (if (choice == SkyGraphics.AUTO) stringResource(R.string.sky_graphics_auto_now, stringResource(levelName(autoLevel)))
+        else stringResource(levelDesc(level))) + " " + stringResource(R.string.sky_graphics_note)
     androidx.compose.animation.AnimatedContent(what, label = "graphicsWhat") { t ->
         Text(t, style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp).padding(top = 8.dp))
     }
-    Text(stringResource(R.string.sky_graphics_note), style = FootnoteStyle, color = c.textMuted,
-        modifier = Modifier.padding(horizontal = 4.dp).padding(top = 4.dp))
 }
 
 /**
@@ -218,8 +217,7 @@ private fun GraphicsPicker(choice: SkyGraphics, level: SkyLevel, autoLevel: SkyL
 @Composable
 private fun SunPathPicker(choice: com.noor.app.data.SunPathMode, onChoose: (com.noor.app.data.SunPathMode) -> Unit) {
     val c = NoorTheme.colors
-    Text(stringResource(R.string.sun_path_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary,
-        modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 8.dp))
+    com.noor.app.ui.settings.SectionHeader(stringResource(R.string.sun_path_title))
     com.noor.app.ui.adhan.Segmented(com.noor.app.data.SunPathMode.entries.map { m ->
         m to stringResource(if (m == com.noor.app.data.SunPathMode.SIMPLE) R.string.sun_path_simple else R.string.sun_path_real) }, choice, onChoose)
     val what = stringResource(if (choice == com.noor.app.data.SunPathMode.SIMPLE) R.string.sun_path_simple_desc else R.string.sun_path_real_desc)

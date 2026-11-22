@@ -149,10 +149,11 @@ fun WatchContent(
     com.noor.app.ui.components.NoorPage(stringResource(R.string.watch_title), contentPadding, onBack = onBack) {
         // 0.25: one watch at the top, and it shows the face: the user's own design, drawn by the face's renderer (this
         // moment's time, today's date, the app's language). It says "on your watch" only when the watch reports it.
-        actions.studioDesign?.let { d ->
-            val studioOn = state?.reports?.values?.any { it.studioActive == true } == true
-            com.noor.app.ui.watch.studio.StudioCard(d, actions.studioConfig, studioOn, actions.glow, actions.openStudio)
-        }
+        // (0.25, second review) While the watch is still being set up, the set-up comes first and the Studio waits under
+        // it, its picture and name only: the page led with an invitation to design a face before the watch had Minhad.
+        val studioOn = state?.reports?.values?.any { it.studioActive == true } == true
+        val setUp = state != null && state.reports.values.any { r -> r.configReceivedAtMs != null && (r.faceActive == true || r.studioActive == true) }
+        if (setUp) actions.studioDesign?.let { d -> com.noor.app.ui.watch.studio.StudioCard(d, actions.studioConfig, studioOn, actions.glow, onOpen = actions.openStudio) }
 
         when {
             state == null -> GlassCard(Modifier.fillMaxWidth(), corner = 24.dp, padding = 16.dp) {
@@ -171,6 +172,8 @@ fun WatchContent(
                     configAvailable, lastSent, installs[node.id], faces[node.id], syncing, syncFailed, fromPlay, f, actions, now)
             }
         }
+
+        if (!setUp) actions.studioDesign?.let { d -> com.noor.app.ui.watch.studio.StudioCard(d, actions.studioConfig, studioOn, actions.glow, compact = true, onOpen = actions.openStudio) }
 
         // 0.25: the one row here that leads somewhere stands in a group of its own (it sat among rows that say what
         // the watch does and go nowhere, the only one with a chevron).
@@ -289,7 +292,14 @@ private fun WatchCard(
             },
             working = sending,
         ) {}
-        if (hasNoor && report?.facePushSupported == true) {
+        // (0.25, second review) While the user's own Studio face is the one on the watch (drawn live at the top of the
+        // page), the ready-made faces' sample pictures wait behind one button: shown at once, a sample in English with
+        // another date looked like a second, different watch.
+        var choosing by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+        if (hasNoor && report?.facePushSupported == true && studioShowing && !choosing) {
+            com.noor.app.ui.components.NoorButton(stringResource(R.string.face_choose_ready), { choosing = true }, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp).fillMaxWidth(),
+                kind = com.noor.app.ui.components.ButtonKind.Tonal)
+        } else if (hasNoor && report?.facePushSupported == true) {
             Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 FaceEditor(chosen, actions.selectFace)
                 Spacer(Modifier.height(6.dp))

@@ -348,7 +348,8 @@ internal const val WELCOME_BAR = "welcomeBar"
 internal val WelcomeText = Sky.OnSky
 internal val WelcomeTextQuiet = Color(0xE0FFFFFF)
 /** The main button: gold, with ink on it. */
-internal val ButtonGold = listOf(Color(0xFFFFEBC0), Color(0xFFEDC57C))
+// (0.25, second review) The main button's gold is the app's one (`NoorColors.goldFill` by night), flat as everywhere else.
+internal val ButtonGold = listOf(Color(0xFFE3C27E), Color(0xFFE3C27E))
 internal val ButtonInk = Color(0xFF1B1407)
 private val ButtonShape = RoundedCornerShape(28.dp)
 

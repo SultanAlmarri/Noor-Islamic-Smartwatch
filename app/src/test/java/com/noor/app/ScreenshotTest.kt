@@ -321,7 +321,7 @@ class ScreenshotTest {
         shot("81_settings_language_en", "Numerals")
         // 0.25: the notification bar's page and About (Minhad's mark, the version, the accuracy, the recordings).
         screen = Screen.WATCH; rule.waitForIdle(); screen = Screen.SETTINGS
-        rule.onAllNodes(androidx.compose.ui.test.hasText("Notification bar")).onFirst().performClick()
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Countdown notification")).onFirst().performClick()
         shot("96_settings_status_en", "one swipe away")
         screen = Screen.WATCH; rule.waitForIdle(); screen = Screen.SETTINGS
         rule.onAllNodes(androidx.compose.ui.test.hasText("About Minhad")).onFirst().performClick()

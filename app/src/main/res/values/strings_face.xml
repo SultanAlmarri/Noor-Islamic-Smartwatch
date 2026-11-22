@@ -2,7 +2,7 @@
 <!-- Minhad Studio, the watch-face editor (0.18). Kept apart from strings.xml, which other work edits. -->
 <resources>
     <string name="studio_title">Minhad Studio</string>
-    <string name="studio_card_body">Design your own watch face: what it shows and where, its colours, font, hands and always-on look. One tap puts it on your watch.</string>
+    <string name="studio_card_body">Design your own watch face and send it with one tap.</string>
     <string name="studio_card_open">Design your watch face</string>
     <string name="studio_card_edit">Edit your design</string>
     <string name="studio_hint">Tap a place to choose what goes there; hold to move it.</string>
@@ -136,8 +136,8 @@
     <string name="studio_digits_western">Western</string>
     <string name="studio_digits_arabic">Arabic-Indic</string>
     <string name="studio_clock">Clock</string>
-    <string name="studio_clock_12">12-hour</string>
-    <string name="studio_clock_24">24-hour</string>
+    <string name="studio_clock_12">%1$s-hour</string>
+    <string name="studio_clock_24">%1$s-hour</string>
 
     <string name="studio_send">Set on my watch</string>
     <string name="studio_sending">Sending…</string>
