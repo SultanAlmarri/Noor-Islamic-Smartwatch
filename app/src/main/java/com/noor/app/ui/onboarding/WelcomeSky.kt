@@ -129,8 +129,9 @@ internal fun DawnSky(light: () -> Float, crest: () -> Float, modifier: Modifier 
             }
         }
 
-        // The Earth is a very large circle; its edge crosses the screen as a shallow arc.
-        val earthR = w * 1.7f
+        // The Earth is a very large circle; its edge crosses the screen as a shallow arc (on a wide screen a larger
+        // circle, so that the edge falls no more than 34 dp toward the sides and the buttons stay on the Earth).
+        val earthR = maxOf(w * 1.7f, w * w / (8f * 34.dp.toPx()))
         val earth = Offset(w / 2f, cy + earthR)
 
         // First light gathers behind the edge, where the Sun will rise.

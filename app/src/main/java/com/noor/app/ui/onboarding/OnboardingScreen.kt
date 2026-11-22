@@ -242,7 +242,8 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
         if (!arrived && ambient) {
             delay(160)
             launch { carry.animateTo(1f, spring(dampingRatio = 0.86f, stiffness = 62f)) }
-            launch { enter.animateTo(1f, tween(1400, delayMillis = 200, easing = LinearEasing)) }
+            // (The name and the rest wait until the mark has gone up past their place.)
+            launch { enter.animateTo(1f, tween(1250, delayMillis = 400, easing = LinearEasing)) }
         }
         arrived = true
     }
