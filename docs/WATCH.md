@@ -66,7 +66,8 @@ Each design comes in gold, emerald, turquoise, rose and silver (16 faces). On th
 the face) the user can turn the seconds on or off and, on the Dial, choose its two complications. Ambient mode keeps
 the time and the next prayer, dimmed, and drops the background, ring and dunes.
 
-**Choosing a face.** On the phone: Watch page → Noor watch face: large previews, design, colour, "Show on my watch". The
+**Choosing a face.** On the phone: Watch page → Noor watch face: a picture of each (0.25: said to be a sample; the
+page's one large watch is the user's Minhad Studio face, drawn live), design, colour, "Show on my watch". The
 phone publishes the choice (`/noor/face`, Data Layer); the watch app replaces the face in its slot in place
 (`updateWatchFace`, same package and slot), so the face stays active, the user's watch-editor settings are kept, and
 the change shows at once. The same choice is available on the watch (Settings → Noor watch face, or the face screen).

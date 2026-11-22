@@ -920,9 +920,17 @@ short:
   under the dial over a glass card that shows the gesture: a phone gliding along a figure 8 with a fading gold trail
   (2.8 s a loop; a still drawing when animations are off), and one line, "Move your phone in a figure 8"; tapping it
   opens the calibration guide, and it folds away once the compass is sure (`CalibrateNudge`, renders in
-  `QiblaCalibrateDesignTest`).
-- **The watch preview** (Watch tab) is a drawn watch showing exactly what the Noor watch app shows now, with the glow
-  of the current sky under it.
+  `QiblaCalibrateDesignTest`). 0.25 ([PAGES_025_NOTES.md](PAGES_025_NOTES.md)): what the phone's compass says is in
+  whole degrees ("Turn right 83°", "258°", "175°"), as a compass good to a few degrees can honestly say; the Qibla's
+  own bearing, which is calculated, stands once under the readings to a tenth ("258.3° from true north"). The dial's
+  letters and figures are in Plex. "Hold your phone flat" is said once, in the dial. The page is the shared tab page
+  (`NoorPage`); the accuracy card is as tall as its words; the calibration guide is the app's sheet with three steps
+  and Done.
+- **The watch page's one watch** (0.25; `WatchCase`, `StudioCard`) is the user's own watch face in a drawn watch's
+  case, drawn by the renderer the watch draws it with (this moment's time, today's date, the app's language), with
+  the glow of the current sky under it; it says "on your watch" only when the watch reports it. (Until 0.24 a
+  hand-drawn copy of the watch app's home screen stood there, and the face further down as a second watch.) The
+  ready-made faces under step 3 are chosen from small pictures that say they are samples.
 - **The countdown** (0.9.7): "−1:23:45" before a prayer (a true minus sign), "+04:12" for a while after it, the same
   on the home screen and in the notification; the title then names the prayer that has come.
 - **Choosing a location** (0.9.7, [LOCATION.md](LOCATION.md)): one search box first; then four calm rows (current

@@ -167,8 +167,9 @@ fun NavBar(title: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
         Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = NoorTheme.colors.textPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 56.dp).semantics { heading() })
         BackButton(onBack, Modifier.align(Alignment.CenterStart).layout { m, cs ->
-            // Pages keep their own margin; the chevron hangs a little into it, so it lines up with the content's edge.
-            val p = m.measure(cs); layout(p.width, p.height) { p.placeRelative(-8.dp.roundToPx(), 0) }
+            // Pages keep their own margin (16 dp); the chevron hangs into it and stands 4 dp from the screen's edge,
+            // exactly where [NoorPage] puts it (0.25: it stood 4 dp further in, so going from page to page it shifted).
+            val p = m.measure(cs); layout(p.width, p.height) { p.placeRelative(-12.dp.roundToPx(), 0) }
         })
     }
 }

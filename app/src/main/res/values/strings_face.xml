@@ -53,9 +53,9 @@
     <string name="studio_el_hijri">Hijri date</string>
     <string name="studio_el_next">Next prayer</string>
     <string name="studio_el_countdown">Countdown</string>
-    <string name="studio_el_times">Today\'s times</string>
+    <string name="studio_el_times">Today’s times</string>
     <string name="studio_el_gauge">Prayer gauge</string>
-    <string name="studio_el_sun">Sun\'s arc</string>
+    <string name="studio_el_sun">Sun’s arc</string>
     <string name="studio_el_qibla">Qibla</string>
     <string name="studio_el_battery">Battery</string>
     <string name="studio_el_label">Words</string>
@@ -111,8 +111,8 @@
     <string name="studio_edge">Round the edge</string>
     <string name="studio_edge_none">Nothing</string>
     <string name="studio_edge_ring">Prayer ring</string>
-    <string name="studio_edge_day">The day\'s dial</string>
-    <string name="studio_edge_desc">The prayer ring fills from one prayer to the next. The day\'s dial shows the whole day, midnight at the bottom and noon at the top, with the six times and the Sun now.</string>
+    <string name="studio_edge_day">The day’s dial</string>
+    <string name="studio_edge_desc">The prayer ring fills from one prayer to the next. The day’s dial shows the whole day, midnight at the bottom and noon at the top, with the six times and the Sun now.</string>
     <string name="studio_seconds">Seconds</string>
     <string name="studio_seconds_desc">A ticking second hand, or seconds beside the time. Uses a little more battery.</string>
 

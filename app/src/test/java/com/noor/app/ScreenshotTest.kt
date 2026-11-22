@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -179,18 +181,27 @@ class ScreenshotTest {
                                 val place = PrayerProvider.place(s)
                                 QiblaContent(pad, QiblaPlace(s, place, place?.let { Qibla.from(it.point) }), reading, false, {})
                             }
-                            Screen.CALIBRATION -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(NoorTheme.colors.surface).padding(top = 24.dp)) {
+                            // (The sheet opens in a window of its own, which this capture cannot see: its content is shown
+                            // on a stand-in with the sheet's corners and grabber, 36 by 5 dp, as NoorSheet draws them.)
+                            Screen.CALIBRATION -> Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.BottomCenter) {
+                                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)).background(NoorTheme.colors.surface),
+                                    horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(Modifier.padding(top = 10.dp, bottom = 6.dp).size(width = 36.dp, height = 5.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(NoorTheme.colors.textMuted.copy(alpha = 0.35f)))
                                     CalibrationGuide(reading)
                                 }
                             }
+                            // (As the app opens it: from Settings, with the way back; at its top the user's watch face,
+                            // here Minhad Studio's first design, drawn from the configuration the phone sends the watch.)
                             Screen.WATCH_STATE -> watch?.let { w ->
                                 WatchContent(pad, w.state, true, w.lastSent, w.installs, w.faces, false, false, w.fromPlay,
-                                    Formatter(arabic, Numerals.WESTERN, TimeFormat.H12), WatchActions({}, {}, {}, {}, {}), now = w.now,
-                                    preview = com.noor.app.ui.watch.watchPreview(s, clock, Formatter(arabic, Numerals.WESTERN, TimeFormat.H12)))
+                                    Formatter(arabic, Numerals.WESTERN, TimeFormat.H12),
+                                    WatchActions({}, {}, {}, {}, {}, studioDesign = com.noor.prayer.face.FaceTemplates.DEFAULT,
+                                        studioConfig = remember(s) { com.noor.app.data.WearSync.configFor(s, clock.toEpochMilli()) }),
+                                    now = w.now, onBack = {})
                             }
                             Screen.SETTINGS -> SettingsScreen(pad, {}, {})
-                            Screen.WATCH -> WatchScreen(pad)
+                            Screen.WATCH -> WatchScreen(pad, onBack = {})
                             Screen.ACCURACY -> AccuracyScreen(pad, {})
                             Screen.ADHAN -> com.noor.app.ui.adhan.AdhanScreen(pad, {}, {}, {})
                             Screen.ADHAN_FAJR -> com.noor.app.ui.adhan.PrayerAlertScreen(pad, com.noor.prayer.Prayer.FAJR, {}, {})
@@ -241,13 +252,20 @@ class ScreenshotTest {
         theme = ThemeMode.DARK
         val qibla = Qibla.from(PrayerProvider.place(base)!!.point).bearingDeg
         reading = reading(174.82, 7.5, 3, 44.0, 3.0)
+        fun shown(text: String) = rule.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().size
         screen = Screen.QIBLA; shot("11_qibla_turn_night_en", "Turn right")
+        // 0.25: whole degrees where the phone's compass speaks (the turn, the two readings); the Qibla's own bearing,
+        // which is calculated, to a tenth, once.
+        assertTrue("the turn, the Qibla and the heading are in whole degrees", shown("83°") == 1 && shown("258°") == 1 && shown("175°") == 1)
+        assertTrue("hundredths of a degree are shown", shown("83.49") == 0 && shown("258.31") == 0 && shown("174.82") == 0)
+        assertTrue("the Qibla's calculated bearing is given once", shown("258.3°") == 1)
         reading = reading(qibla - 1.2, 6.0, 3, 44.0, 2.0)
         shot("12_qibla_aligned_night_en", "Facing the Qibla")
         reading = reading(301.4, 34.0, 1, 71.0, 4.0)
         shot("13_qibla_poor_night_en", "Poor")
         reading = reading(250.0, 8.0, 3, 44.0, 62.0)
         shot("14_qibla_not_flat_night_en", "Hold your phone flat")
+        assertTrue("\"Hold your phone flat\" is said once, in the dial", shown("Hold your phone flat") == 1)
         arabic = true; reading = reading(174.82, 7.5, 3, 44.0, 3.0)
         shot("15_qibla_turn_night_ar", "القبلة")
         arabic = false; theme = ThemeMode.LIGHT; reading = reading(qibla - 1.2, 6.0, 3, 44.0, 2.0)
@@ -263,7 +281,10 @@ class ScreenshotTest {
         val doneReport = WatchReport(2, "0.3.0", 36, true, 1, 1, true, t0 - 60_000, t0)
         screen = Screen.WATCH_STATE
         watch = WatchScene(WatchSetupState(false, emptyList(), emptySet(), emptyMap())); shot("18_watch_none_night_en", "Your watch is not connected yet")
-        watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap()), fromPlay = false); shot("19_watch_dev_build_night_en", "development build")
+        watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap()), fromPlay = false); shot("19_watch_dev_build_night_en", "not installed from the Play Store")
+        // (A copy that did come from the Play Store never says so: it offers to install the watch app from there.)
+        watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap())); rule.waitForIdle()
+        assertTrue("a Play Store install is told it is not one", shown("not installed from the Play Store") == 0 && shown("Install on watch") == 1)
         watch = WatchScene(WatchSetupState(false, listOf(gw), emptySet(), emptyMap()), installs = mapOf("node1" to Pending(t0 - 30_000, true)), now = t0)
         shot("20_watch_installing_night_en", "Tap Install there")
         watch = WatchScene(WatchSetupState(false, listOf(gw), setOf("node1"), mapOf("node1" to doneReport.copy(faceInstalledVersion = 1, faceActive = false))), now = t0)
@@ -304,7 +325,8 @@ class ScreenshotTest {
         rule.onAllNodes(androidx.compose.ui.test.hasText("Acknowledgements")).onFirst().performClick()
         shot("99_settings_credits_en", "IBM Plex Sans Arabic")
         // (The preview's configuration is worked out off the main thread: wait for it, as the eye would.)
-        screen = Screen.WATCH; rule.waitForIdle(); rule.waitUntil(20_000) { rule.onAllNodesWithText("Dubai").fetchSemanticsNodes().isNotEmpty() }
+        screen = Screen.WATCH; rule.waitForIdle()
+        rule.waitUntil(20_000) { androidx.lifecycle.ViewModelProvider(rule.activity)[com.noor.app.ui.watch.WatchViewModel::class.java].config.value != null }
         shot("09_watch_night_en", "Galaxy")
         screen = Screen.ACCURACY; shot("10_accuracy_night_en", "IACAD")
         // Arabic versions of the text-heavy pages, so the language check covers them (0.9).
@@ -431,7 +453,7 @@ class ScreenshotTest {
         Regex("Contains modified Copernicus DEM data: © DLR e\\.V\\. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA; all rights reserved\\."),
         Regex("(Galaxy|Pixel) Watch\\S*( Pro| Classic)?( \\([0-9A-F]{4}\\))?"), // a device's own name, as Android reports it
         Regex("Wear OS"), Regex("Galaxy Wearable"), Regex("WGS-84"), Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), // product, standard and format names
-        Regex("CC0|CC BY(-SA)? \\d\\.\\d"), // licence names
+        Regex("CC0|CC[ \u00A0]BY(-SA)?[ \u00A0]\\d\\.\\d"), // licence names
         Regex("\\b[a-z0-9-]+(\\.[a-z0-9-]+)*\\.(ae|sg|org|com|gov)\\b"), Regex("GeoNames"), // web addresses and the gazetteer's name
         Regex("timezone-boundary-builder|OpenStreetMap|ODbL"), // the time-zone map's source and licence (0.9.7)
     ) + creditedPeople()

@@ -164,7 +164,6 @@
     <string name="qibla_turn_left">استدر يساراً %1$s</string>
     <string name="qibla_bearing">اتجاه القبلة</string>
     <string name="qibla_heading">اتجاه الهاتف</string>
-    <string name="qibla_difference">الفرق</string>
     <string name="acc_title">دقة البوصلة</string>
     <string name="acc_good">جيدة</string>
     <string name="acc_fair">متوسطة</string>
@@ -173,14 +172,10 @@
     <string name="acc_interference">معدن أو مغناطيس قريب يشوّش على البوصلة.</string>
     <string name="acc_needs_calibration">البوصلة تحتاج إلى معايرة: اضغط لمعرفة الطريقة.</string>
     <string name="acc_status_only">بحسب حالة المستشعر التي يبلّغ عنها الهاتف. اضغط لنصائح المعايرة.</string>
-    <string name="qibla_method_note">الاتجاهات بالنسبة إلى الشمال الحقيقي. القبلة هي أقصر مسار على شكل الأرض الإهليلجي (WGS-84) إلى الكعبة. تُعرض الدرجات بمنزلتين عشريتين، أما الدقة الفعلية فهي دقة المستشعر المعروضة أعلاه.</string>
-    <string name="qibla_declination_note">الانحراف المغناطيسي هنا: %1$s، وقد طُبّق.</string>
     <string name="cal_title">معايرة البوصلة</string>
-    <string name="cal_step1">ابتعد عن المعادن والأجهزة الإلكترونية ومكبرات الصوت وداخل السيارات.</string>
-    <string name="cal_step2">أخرج الهاتف من أي غلاف أو حامل فيه مغناطيس.</string>
-    <string name="cal_step3">أمسك الهاتف وارسم في الهواء رقم ثمانية عدة مرات مع تدوير معصمك.</string>
-    <string name="cal_step4">ثم أدر الهاتف ببطء دورة كاملة وهو مستوٍ.</string>
-    <string name="cal_step5">ضعه مستوياً وانتظر بضع ثوانٍ حتى تستقر القراءة.</string>
+    <string name="cal_step1">ابتعد عن المعادن والمغناطيس: سيارة أو مكبّر صوت أو غلاف مغناطيسي.</string>
+    <string name="cal_step2">ارسم بالهاتف الرقم 8 في الهواء عدة مرات مع تدوير معصمك.</string>
+    <string name="cal_step3">ضع الهاتف مستويًا وانتظر بضع ثوانٍ.</string>
     <string name="cal_live">الدقة الحالية: %1$s</string>
     <string name="watch_no_wear_os_title">اضبط ساعتك أولًا</string>
     <string name="watch_none_title">ساعتك غير متصلة بعد</string>
@@ -193,7 +188,7 @@
     <string name="step_app_unreached">لم تستجب الساعة. تأكد أنها متصلة ونشطة ثم أعد المحاولة.</string>
     <string name="step_app_waiting">متجر Play مفتوح على ساعتك. اضغط تثبيت هناك؛ تتحدث هذه الصفحة تلقائياً عند الانتهاء.</string>
     <string name="step_app_timeout">لم يُثبَّت بعد. إذا أُغلقت صفحة المتجر فافتحها مرة أخرى.</string>
-    <string name="step_app_dev">نسخة تطوير: ثبّت تطبيق الساعة باتباع الدليل.</string>
+    <string name="step_app_dev">لم تُثبَّت هذه النسخة من منهاد من متجر Play. يبيّن الدليل طريقة وضعه على ساعتك.</string>
     <string name="step_app_todo">يفتح منهاد في متجر Play على ساعتك: ضغطة واحدة هناك تثبّته.</string>
     <string name="step_app_button">التثبيت على الساعة</string>
     <string name="step_app_again">فتح متجر Play على الساعة مجدداً</string>
@@ -207,7 +202,7 @@
     <string name="step_face_done">قيد الاستخدام.</string>
     <string name="step_face_waiting">أكّد على ساعتك. يطلب Wear OS الإذن مرة واحدة لتغيير الواجهة.</string>
     <string name="step_face_installed">أُضيفت إلى واجهات ساعتك. لم تتغير الواجهات الأخرى.</string>
-    <string name="step_face_todo">يضيف وجه منهاد إلى ساعتك بعد تأكيدك عليها.</string>
+    <string name="step_face_todo">تُضاف واجهة منهاد إلى ساعتك بعد تأكيدك عليها.</string>
     <string name="step_face_button">استخدام واجهة منهاد</string>
     <string name="watch_open_on_watch">فتح منهاد على الساعة</string>
     <string name="step_face_open_first">افتح منهاد على الساعة مرة واحدة لإكمال الإعداد.</string>
@@ -219,7 +214,7 @@
     <string name="source_manual_method">محسوبة بالطريقة التي اخترتها في الإعدادات.</string>
     <string name="source_user_adjusted">تشمل تعديلاتك (بالدقائق): %1$s</string>
     <string name="search_city_world">ابحث عن أي مدينة أو حي</string>
-    <string name="geonames_credit">أسماء الأماكن: GeoNames ‏(geonames.org)، برخصة CC BY 4.0.</string>
+    <string name="geonames_credit">أسماء الأماكن: &#x2066;GeoNames (geonames.org)&#x2069;، برخصة &#x2066;CC&#160;BY&#160;4.0&#x2069;.</string>
     <string name="location_precision">دقة الموقع</string>
     <string name="location_precise">دقيق: أسماء الأحياء وأدق اتجاه للقبلة</string>
     <string name="location_approximate">تقريبي: أسماء المدن فقط. غيّرها من إعدادات أندرويد.</string>
@@ -228,7 +223,7 @@
     <string name="kind_parameters">المعايير المنشورة للجهة</string>
     <string name="kind_recognised">طريقة شائعة الاستخدام</string>
     <string name="sources_title">مصادر البيانات وتراخيصها</string>
-    <string name="sources_body">الجداول الرسمية: دائرة الشؤون الإسلامية بدبي (iacad.gov.ae؛ صفحات 2021–2023 محفوظة في أرشيف الإنترنت، ونوفمبر 2026 من موقع الدائرة)؛ المجلس الإسلامي في سنغافورة 2024–2026 (data.gov.sg، رخصة البيانات المفتوحة لسنغافورة). أسماء الأماكن: GeoNames ‏(geonames.org)، برخصة CC BY 4.0. الانحراف المغناطيسي: النموذج المغناطيسي العالمي عبر أندرويد. معايير كل جهة ومصادرها مدرجة في وثائق مستودع منهاد.</string>
+    <string name="sources_body">الجداول الرسمية: دائرة الشؤون الإسلامية بدبي (&#x2066;iacad.gov.ae&#x2069;؛ صفحات 2021–2023 محفوظة في أرشيف الإنترنت، ونوفمبر 2026 من موقع الدائرة)؛ المجلس الإسلامي في سنغافورة 2024–2026 (&#x2066;data.gov.sg&#x2069;، رخصة البيانات المفتوحة لسنغافورة). أسماء الأماكن: &#x2066;GeoNames (geonames.org)&#x2069;، برخصة &#x2066;CC&#160;BY&#160;4.0&#x2069;. الانحراف المغناطيسي: النموذج المغناطيسي العالمي عبر أندرويد. معايير كل جهة ومصادرها مدرجة في وثائق منهاد.</string>
 
     <!-- Adhan & alerts -->
     <string name="tab_adhan">الأذان</string>
@@ -358,19 +353,18 @@
     <string name="today_set_location_title">أوقات الصلاة تبدأ من مكانك</string>
     <string name="today_set_location_body">اختر موقعك لترى أوقات اليوم والسماء فوقك واتجاه القبلة.</string>
     <string name="today_until">حتى %1$s</string>
-    <string name="watch_preview_desc">معاينة تطبيق منهاد على الساعة</string>
     <string name="watch_feature_app">تطبيق منهاد</string>
     <string name="watch_feature_app_desc">الصلاة القادمة وأوقات اليوم وبوصلة القبلة والتسبيح والتقويم الهجري</string>
     <string name="watch_feature_tile">بطاقتان</string>
     <string name="watch_feature_tile_desc">أوقات الصلاة مع عدّ تنازلي حيّ، واختصارات منهاد. اسحب من واجهة الساعة</string>
     <string name="watch_feature_complication">أربع إضافات</string>
     <string name="watch_feature_complication_desc">الصلاة القادمة والتاريخ الهجري والقبلة والتسبيح، على أي واجهة ساعة</string>
-    <string name="watch_feature_alerts">تنبيهات الصلاة</string>
+    <string name="watch_feature_alerts">تنبيهات الصلاة على الساعة</string>
     <string name="watch_feature_alerts_desc">اختر «الساعة» أو «كلاهما» من تبويب الأذان</string>
-    <string name="watch_feature_standalone">تعمل وحدها</string>
-    <string name="watch_feature_standalone_desc">تعمل وحدها، بموقعها الخاص</string>
+    <string name="watch_feature_standalone">تعمل من دون هاتفك</string>
+    <string name="watch_feature_standalone_desc">تحسب أوقات الصلاة بموقعها الخاص</string>
     <string name="step_sync_own">الساعة تستخدم إعداداتها. أوقف «استخدام إعدادات هذه الساعة» على الساعة لتتبع هذا الهاتف.</string>
-    <string name="watch_feature_editor">محرّر الواجهة</string>
+    <string name="watch_feature_editor">واجهات منهاد</string>
     <string name="watch_feature_editor_desc">ثلاثة تصاميم بخمسة ألوان والواجهة الأصلية: اختر مع المعاينة فتتغير ساعتك فوراً</string>
     <string name="offline_watch_footer">الأوقات نفسها التي على هذا الهاتف، حتى من دونه.</string>
     <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك، واتجاه القبلة، والأذان، على هاتفك وساعتك.</string>
@@ -534,7 +528,7 @@
     <string name="loc_coords_invalid">هذه ليست إحداثيات صحيحة.</string>
     <string name="loc_continue">متابعة</string>
     <string name="loc_naming">جارٍ تحديد اسم المكان…</string>
-    <string name="loc_tz_credit">المناطق الزمنية: timezone-boundary-builder، © مساهمو OpenStreetMap (ODbL).</string>
+    <string name="loc_tz_credit">المناطق الزمنية: &#x2066;timezone-boundary-builder&#x2069;، © مساهمو &#x2066;OpenStreetMap (ODbL)&#x2069;.</string>
     <string name="loc_zoom_in">تكبير</string>
     <string name="loc_zoom_out">تصغير</string>
     <string name="loc_neighbourhood">حي</string>
@@ -930,4 +924,13 @@
     <string name="timetable_day">اليوم</string>
     <string name="timetable_ramadan_note">رمضان: ينتهي السحور عند الفجر، والإفطار عند المغرب.</string>
     <string name="timetable_basis_some">أوقاتها المنشورة نفسها حيث نشرتها، وبقية الأيام بطريقتها.</string>
+    <!-- 0.25 pages -->
+    <string name="qibla_exact">اتجاه القبلة بدقة: %1$s من الشمال الحقيقي.</string>
+    <string name="accuracy_group_own">جهات وطرق أخرى</string>
+    <string name="accuracy_group_published">معايير منشورة</string>
+    <string name="accuracy_note_published">محسوبة وفق المعايير المنشورة لكل طريقة.</string>
+    <string name="accuracy_group_documented">معايير موثّقة في المراجع</string>
+    <string name="accuracy_note_documented">محسوبة بالمعايير الموثّقة لكل جهة في المراجع الشائعة لمواقيت الصلاة؛ لم تُقارن بجداولها الرسمية بعد.</string>
+    <string name="loc_chosen">مختار</string>
+    <string name="face_sample_note">صورة توضيحية. تعرض ساعتك الوقت والتاريخ والصلاة القادمة في حينها.</string>
 </resources>
