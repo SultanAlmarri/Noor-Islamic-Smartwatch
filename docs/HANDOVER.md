@@ -2135,3 +2135,35 @@ UI shows only for apps on its list. Next if both fail: the coming prayer's symbo
 Also: the Adhan starts at full volume by default (`AlertSettings.gradualSeconds` 0; the owner); phones that still had
 the old default, 10 seconds, are changed once (`noor_migrations`/`adhan_full_from_start`).
 
+
+## 42. As if Apple had made it: a new mark, the watch redesigned, a month's timetable, a new welcome, the phone's finish (0.25.0, 22 November 2026, phone and watch)
+
+**The owner** (22 November 2026, a new cloud session): "take over the Minhad app ... totally improve the app in every way
+possible. All the features, the user interface ... from the widgets to the smartwatch app, to the settings ... really
+focus on Apple's design philosophy. Really, make this application as if it was made by Apple themselves ... everything
+from the opening animation to how settings are organized ... The app's logo, anything you can think of ... You have
+full freedom, and I give you permission to do anything you want."
+
+**How it was done.** The lead first rendered every phone and watch screen of 0.24.1 and looked at each (the tests'
+software renders; all tests passed before anything was touched). Finding: the phone's pages were already one system
+(0.14) in the sky (0.15) with good widgets (0.24); what still told Minhad from an app of Apple's was listed (DESIGN.md,
+"The interface of 0.25") and each item done. Three helpers worked in git worktrees of their own at the same time, on
+parts that stand alone: the watch app, the month's timetable, the welcome. Gradle ran through one lock
+(`flock /tmp/noor-gradle.lock ./gradlew --no-parallel ...`): two builds at once do not fit in this machine's memory.
+
+**What 0.25.0 is**
+
+- **A new mark** (`tools/brand/logo.py` writes all of it: run it after changing it): the crescent and the khatam star
+  in pale gold over the Earth's edge at first light. Phone and watch launcher icons (adaptive, with a one-colour layer),
+  the launch screen's mark, the status bar's sign and its transparent twin (`ic_notification_clear`). The old flat navy
+  icon with the off-centre crescent is gone. Six candidates were compared at launcher sizes first.
+- **The opening** shows the Earth's edge rising with the dawn under the mark before the dusk opens (`Opening.DAWN_MS`).
+- **The phone's finish** (DESIGN.md, "The interface of 0.25"): a colour for every kind of sign in the lists (`Tints`);
+  pages that slide over one another and follow Android's predictive back gesture; touches that give (`pressScale`);
+  Settings with a page for the notification bar and a page About Minhad; "What's New" once after the update
+  (`WhatsNew.EDITION`: raise it and rewrite the rows when a later version has news); quick actions on the launcher icon
+  (touch and hold Minhad's icon: Qibla, Adhan; `res/xml/shortcuts.xml`, opened like a widget's tap); the action of each
+  "Needs your attention" row as a capsule.
+- **A wide screen** (`HomeLayout.columns`, from 600 dp): the day's times in two columns and a taller sky. The lead
+  rendered the home screen at the size of the owner's Galaxy Fold opened out (`TodayFoldDesignTest`, 690 × 830 dp) and
+  found the Sun's path flat and running through the countdown's caption; that is what this mends.
