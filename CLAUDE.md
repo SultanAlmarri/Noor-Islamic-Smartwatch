@@ -20,9 +20,9 @@ Minhad, while package ids (`com.noor.smartwatch`), code packages (`com.noor.*`),
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.24.1** (versionCode 49), watch **0.24.1** (versionCode 35); 0.9.7, 0.9.9–0.9.11,
+Current version: phone **0.25.0** (versionCode 50), watch **0.25.0** (versionCode 36); 0.9.7, 0.9.9–0.9.11,
 0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone (0.16.0 to 0.24.1 rebuilt the watch with the shared alert
-engine and, in 0.18, its new sounds; the alarms ring on the phone only). Everything is on `main`. The merged work
+engine and, in 0.18, its new sounds; the alarms ring on the phone only; 0.25.0 redesigned the watch app). Everything is on `main`. The merged work
 branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
 branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
 Android 17 emulator experiments: that image does not run reliably on GitHub's machines) and `noor/0912` (a first
@@ -54,7 +54,11 @@ which the owner follows from his phone. Everything the PC did works there (HANDO
   `python3 tools/sky3d/serve.py`, then drive the page with `tools/cloud/bench.cjs <script.js> '<json args>'`
   (it waits for "ready" and runs the script's text in the page). A sheet of a dozen tiles takes about a minute.
 - **Helpers.** A piece of work that stands by itself (a scenery, a set of clouds, the interface) can be given to
-  a helper agent in a git worktree of its own, on a branch the lead merges. Never two bakes at once.
+  a helper agent in a git worktree of its own, on a branch the lead merges. Never two bakes at once. Never two
+  Gradle builds at once either: everyone runs Gradle through one lock,
+  `flock /tmp/noor-gradle.lock ./gradlew --no-parallel -Dorg.gradle.jvmargs=-Xmx3g ...` (0.25: four agents shared
+  the machine this way). A worktree needs its own `local.properties` (`sdk.dir=/opt/noortools/sdk`). The worktrees
+  live in `.claude/worktrees/` (git-ignored: commit with `git add -u` and named files, not `git add -A`).
 - **Nothing outside the repository survives a session**: commit and push the work branch often. The data the
   sceneries are built from (scans, elevation models) must be fetched again when it is needed; every scenery's
   script says where from.
@@ -76,6 +80,15 @@ in this file's history.
   the links once you release a new update"), not in progress reports:
   - Phone: https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/download/dev-latest/Noor-phone.apk
   - Watch: https://github.com/SultanAlmarri/Noor-Islamic-Smartwatch/releases/download/dev-latest/Noor-watch.apk
+- 22 November 2026, his words: "you don't have to follow all the rules 100% ... you can break some of the rules if
+  you see fit ... You are free to do what you see fit. Just improve the app. And I want you to also criticize the app
+  and criticize your decisions ... is this the best we can do? Is this what Apple would do? ... I want you to finish
+  the job. Really finish the job. I'm getting close to publishing this app." How the session of that day read it
+  (its reading, not his words): the rules that limit design (rule 5's "change only what the task needs", "the Qibla
+  screen: fix, do not redesign") give way to judgment; the rules that protect him and a store release stay (accuracy
+  and honest reports, no private key in this public repository, licensed recordings only, no scraping, Android's
+  permissions respected, tests not weakened, the frozen v1.3.2 face). Every release gets an independent "would Apple
+  ship this?" review of its renders, and its findings are acted on before the release is called done.
 - Demands honesty: say exactly what was tested and how. Software renders and unit tests are not device tests. Never
   claim that something works on a phone or watch unless it has been run there.
 - Time zone: Asia/Dubai. Languages in the app: English and Arabic (right-to-left), Western and Arabic-Indic digits.
@@ -121,6 +134,7 @@ in this file's history.
 | `legacy/` | Frozen watch face v1.3.2: source and APK. **Read-only** |
 | `tools/sky3d` | The real sky's design bench: the phone's own shaders and pictures in a web page (WebGL 2) |
 | `tools/scenery` | Makes the real sky's pictures (Blender Cycles on the owner's PC): each scenery's land, each kind of cloud, the Milky Way |
+| `tools/brand` | 0.25: Minhad's mark (`logo.py` writes the launcher icons of phone and watch, the launch screen's mark and the status bar's signs: change the mark there, never in the XML) |
 | `tools/` | Watch-face packaging and validation, sound pipeline, gazetteer, world places and time-zone map builders (`tools/geo`), SPA table generators, device tests, verification |
 | `accuracy/` | Official IACAD datasets, research tools, the blind test (scored monthly by a GitHub workflow) |
 | `docs/` | `HANDOVER.md`, `ARCHITECTURE.md`, `DESIGN.md`, `WATCH.md`, `ALERTS.md`, `SOUNDS.md`, `AUTHORITIES.md`, `PRAYER_ACCURACY.md`, `INSTALL.md` |
