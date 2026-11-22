@@ -225,17 +225,11 @@ fun MySoundsScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: AdhanV
     NoorPage(stringResource(R.string.adhan_my_sounds), contentPadding, onBack = onBack,
         floating = { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
         if (custom.isEmpty()) {
-            // Empty state: what this is for, and the one thing to do.
-            Column(Modifier.fillMaxWidth().padding(top = 36.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(84.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.gold.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.GraphicEq, null, tint = c.gold, modifier = Modifier.size(38.dp))
-                }
-                Spacer(Modifier.height(18.dp))
-                Text(stringResource(R.string.adhan_custom_empty_title), style = MaterialTheme.typography.titleLarge, color = c.textPrimary)
-                Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.adhan_custom_empty), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 12.dp))
-            }
+            // Empty state: what this is for, and the one thing to do (second review: in the card the alarms' page has
+            // when it has none; it was a grey disc on the bare page, a second style for the same moment).
+            EmptyCard(Icons.Rounded.GraphicEq, stringResource(R.string.adhan_custom_empty_title), stringResource(R.string.adhan_custom_empty),
+                stringResource(R.string.adhan_import), { replaceTarget = null; picker.launch(CustomSounds.PICKER_TYPES) })
+            Footnote(stringResource(R.string.adhan_custom_privacy))
         }
         if (custom.isNotEmpty()) SettingsSection("", footer = stringResource(R.string.adhan_custom_privacy)) {
             custom.forEachIndexed { i, cs ->
@@ -259,9 +253,8 @@ fun MySoundsScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: AdhanV
                 }
             }
         }
-        com.noor.app.ui.components.NoorButton(stringResource(R.string.adhan_import), { replaceTarget = null; picker.launch(CustomSounds.PICKER_TYPES) },
+        if (custom.isNotEmpty()) com.noor.app.ui.components.NoorButton(stringResource(R.string.adhan_import), { replaceTarget = null; picker.launch(CustomSounds.PICKER_TYPES) },
             Modifier.fillMaxWidth(), icon = Icons.Rounded.Add)
-        if (custom.isEmpty()) Footnote(stringResource(R.string.adhan_custom_privacy))
     }
 
     renaming?.let { cs ->

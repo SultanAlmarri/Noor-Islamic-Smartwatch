@@ -151,3 +151,29 @@ tests and software renders only.
 - TalkBack was not run; what it reads was reasoned from the semantics in the code (a dimmed block is hidden from it).
 - The Fix sheet itself is a window of its own, which the renders do not see; its content is rendered inside a stand-in
   (`fix_list_*.png`).
+
+## Second review
+
+22 November 2026, a helper on `worktree-agent-a99ea7e69fd298cfa`, for the lead to merge. A second independent
+reviewer judged the renders against "is this what Apple would do?". What was done in this area, by the reviewer's
+numbers. Software renders and unit tests only: nothing here has been run on a phone.
+
+| # | Finding | Done? | What was done |
+|---|---|---|---|
+| 3 (the lead's, a must) | Numbers written into strings ignore the numerals setting (the Arabic ones held "١٠" among Western digits) | Done in this area | `adhan_test_desc`, `adhan_import_too_large`, `alarm_full`, `alarms_empty_footer`, `alarm_try_sent` take the number as `%1$s` in both languages, edited in place; the pages and the view model pass it through `Formatter.number` (`f.number(25)`, `f.number(PrayerAlarm.MAX)`, `digits(5)`, and the size from `CustomSounds.MAX_BYTES`). The Arabic nouns stay as they are: each string is only ever given its one number (10 and 5 seconds "ثوانٍ", 20 "منبهًا", 25 "دقيقة", 40 "ميغابايت"), and each form is the right one for it. None of this area's Arabic strings holds an Arabic-Indic digit now. (`adhan_test_desc` is used by no code; changed all the same.) |
+| 12 | Alarm rows change structure when an alarm has a name | Done | The time first on every row; the name, when there is one, the first line under it (15 sp SemiBold, the primary ink, one line); then "10 min after Dhuhr · Mon–Fri" (13 sp, secondary). Gold is no longer used for names. |
+| 13 | Prayer rows give no sign that they open a page | Done | A split row: sign, name, time, a chevron; a thin upright line (1 × 24 dp, the separator's colour); the switch. What is left of the line opens the prayer's page; the switch toggles it. Mirrored in Arabic; at 360 dp with text at 1.3 "Maghrib 5:32 PM ›" still fits on one line. The chevron keeps its strength on a quiet row (the page opens either way). |
+| 14 | Ringing screen repeats the time; Snooze too close to Stop | Done | Under what is sounding, the Adhan shows the place only ("Dubai"). The line comes from the alert's text (`AlertText.body`, "5:33 PM · Dubai", shared with the notification and in `alerts`, not mine): the screen leaves out its first fact for the Adhan (`ringingFacts`). An alarm keeps "Fajr 5:12 AM · Dubai" (its prayer's time is not the time now). Snooze: 28 dp under Stop, 52 dp high. |
+| 17 | The voice list offers Al-Quds, of which Minhad has no recording | Done | The voices list shows only voices there is a recording of. A voice without one (Al-Quds today) is a row under **My sounds**: "Add the Al-Quds Adhan / From a recording of your own" (أضف أذان القدس / من تسجيل لديك) with the green "+" sign of the rows that add; it opens the file picker as before and the recording is named for the voice, so it then stands among the voices as a preset like the others (the logic of 0.18 is unchanged). Not on the sound-effects page (Shuruq, a prayer set to a sound). Random: a shuffle sign in the column where the others have their button, so the row is 64 dp like them. |
+| 23 (part) | Separators left dangling when a line wraps | Done in this area | `FactsLine` (AdhanComponents.kt): facts joined by " · " that break before a fact, never after a dot, each fact whole unless it is wider than the line; TalkBack reads it as one text without the dots. Used on the history's line of facts (its "Isha · Test" title stays one text: two words), an alarm's row, the "next alarm" line, the alarm editor's line (centred), a prayer's line on the tab and the ringing screen. No-break spaces keep "Fajr 5:20 AM" in one piece on the hero (`adhan_hero_next_at` joins with `&#160;`; at 1.3 it now reads "Next:" over "Fajr 5:20 AM", where it was "Next: Fajr" over "5:20 AM"), a time and its AM/PM in the history and in "Today at 4:55 AM", and "10 seconds" in "Test the Adhan in 10 seconds" and "Try it in 5 seconds" (both strings edited in place). |
+| 24 | Unlabelled Full / Short in the alarm sound picker | Done | Under a **LENGTH** header (المدة), with a line under it: "For Minhad’s sounds and the Adhan below: the whole recording, or its opening." |
+| 26 | Two empty-state styles | Done | One: the card with the gold seal, a title, a sentence and the one action (`EmptyCard`), on the alarms' page and on My sounds (where the grey disc on the bare page was); My sounds keeps "Your sounds stay on this phone." under the card. |
+| — | Secondary buttons that read as disabled | Checked | "Try it in 5 seconds", "Test this alert", "Share report" and the Fix sheet's actions were already the neutral kind. The history's "Let alarms through Do Not Disturb" / "Allow exact alarms" were lines of gold text: now `NoorButton(kind = Tonal, compact = true)`. The Fix row's gold **Fix** stays: it is that row's main action. |
+
+Strings added at the end of both files under `<!-- 0.25 review 2: adhan -->`: `voice_add_named`,
+`voice_add_named_detail`, `alarm_length_title`, `alarm_length_note`. Edited in place: the five with numbers above,
+`adhan_hero_next_at`, `history_test`, `alarm_try`. `voice_add` is still used (a prayer's page, when its voice has no
+recording). No test was changed.
+
+What a person would want otherwise: "Next:" alone on the hero's first line at 1.3 is honest but not pretty; the hero's
+title and line are `HeroCard`'s (shared) and were left as they are.
