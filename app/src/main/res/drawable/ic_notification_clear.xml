@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- (0.24) Minhad's crescent and star, transparent: the Live Update's small icon when the owner's setting leaves the
-     icon out of the status-bar timer (AppSettings.statusChipIcon), so the chip shows the countdown alone. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp"
-    android:viewportWidth="64" android:viewportHeight="64">
-    <group android:translateX="-18.75" android:translateY="-22.75">
-        <path android:fillColor="#00FFFFFF" android:pathData="M45.17 30.15 A26.0 26.0 0 1 0 71.88 66.29 A22.5 22.5 0 0 1 45.17 30.15 Z"/>
-        <path android:fillColor="#00FFFFFF" android:pathData="M71.00 27.50 L72.49 32.40 L77.01 29.99 L74.60 34.51 L79.50 36.00 L74.60 37.49 L77.01 42.01 L72.49 39.60 L71.00 44.50 L69.51 39.60 L64.99 42.01 L67.40 37.49 L62.50 36.00 L67.40 34.51 L64.99 29.99 L69.51 32.40 Z"/>
+<!-- Minhad's mark. Written by tools/brand/logo.py: change it there. Transparent: the Live Update's small icon when AppSettings.statusChipIcon is off. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp" android:height="24dp" android:viewportWidth="48" android:viewportHeight="48">
+    <group android:translateX="-28.5" android:translateY="-22">
+        <path android:fillColor="#00FFFFFF" android:pathData="M74.02 50.57 A22 22 0 1 1 51.74 24.01 A18.2 18.2 0 1 0 74.02 50.57 Z"/>
+        <path android:fillColor="#00FFFFFF" android:pathData="M68.40 31.40 L69.62 34.24 L72.50 33.10 L71.36 35.98 L74.20 37.20 L71.36 38.42 L72.50 41.30 L69.62 40.16 L68.40 43.00 L67.18 40.16 L64.30 41.30 L65.44 38.42 L62.60 37.20 L65.44 35.98 L64.30 33.10 L67.18 34.24 Z"/>
     </group>
 </vector>
