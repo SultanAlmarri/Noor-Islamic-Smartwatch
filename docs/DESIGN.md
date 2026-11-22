@@ -693,8 +693,22 @@ a watch app in stock Material, a wide screen treated as a tall phone, and no way
   a tablet, a phone on its side) the day's times stand in two columns of three (Fajr, Shuruq, Dhuhr | Asr, Maghrib,
   Isha) and the sky is taller. Until 0.24 the opened Galaxy Fold left the sky so little height that the Sun's path
   lay flat and ran through the countdown's caption (`TodayFoldDesignTest` renders it).
-- **What fixes a problem reads as a button**: on the Adhan tab's "Needs your attention", the action of each row is
-  a capsule in the accent under the sentence, not a line of coloured text.
+- **After an independent review** (the owner, the same day: "criticize the app and criticize your decisions ... is
+  this what Apple would do?"; a reviewer given only the renders ranked 39 findings, "about four-fifths of the way"):
+  the Adhan and alarms area was reorganised ("The Adhan and alarms area (0.25)" below); the Qibla shows whole degrees,
+  the watch page one watch, the accuracy page three grouped lists (PAGES_025_NOTES.md); and on the home screen: the
+  compact rows wherever the roomy ones would leave the sky under 300 dp (a 360 × 780 dp phone, the commonest size,
+  had a Sun's arch 30 dp high running through the caption), no caption in a short sky (`HeroGeometry.caption`), no
+  bells while the alerts are off altogether (six struck-through bells said "off" six times), the lit row a closed
+  shape, and the Sun's drag kept from Android's back gesture (`systemGestureExclusion`: on an emulator a drag begun
+  12 dp from the edge closed the app). By day filled controls are a true gold (`NoorColors.goldFill`; they were
+  mustard brown). A row's state in a word stands at its end; a line under the title is kept for what needs a sentence.
+- **For a release**: Settings → About Minhad has the privacy policy (docs/PRIVACY.md) and Acknowledgements (whose
+  work Minhad stands on, with the notices the licences ask for, in both languages); the welcome tells the truth
+  about where the location goes and leads to exact alarms (WELCOME_025_NOTES.md); the tester's options are out of a
+  store build (`-Pminhad.store=true`). What remains before Google Play is in docs/RELEASE.md.
+- **A month's timetable** (TIMETABLE_NOTES.md): from the date sheet, every time of the month in one table, by
+  Gregorian or Hijri month, shared as text; its times are the home screen's own (`TimetableTest`).
 
 ## The interface of 0.15: the app lives in the sky
 

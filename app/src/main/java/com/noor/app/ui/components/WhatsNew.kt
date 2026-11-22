@@ -18,7 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Swipe
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,8 +79,8 @@ fun WhatsNewContent(onContinue: () -> Unit) {
         listOf(
             NewsItem(Icons.Rounded.AutoAwesome, Tints.Indigo, R.string.news_look_title, R.string.news_look_body),
             NewsItem(Icons.Rounded.CalendarMonth, Tints.Red, R.string.news_month_title, R.string.news_month_body),
-            NewsItem(Icons.Rounded.Tune, Tints.Gold, R.string.news_settings_title, R.string.news_settings_body),
-            NewsItem(Icons.Rounded.Swipe, Tints.Blue, R.string.news_motion_title, R.string.news_motion_body),
+            NewsItem(Icons.Rounded.NotificationsActive, Tints.Gold, R.string.news_settings_title, R.string.news_settings_body),
+            NewsItem(Icons.Rounded.Tune, Tints.Blue, R.string.news_motion_title, R.string.news_motion_body),
             NewsItem(Icons.Rounded.Watch, Tints.Graphite, R.string.news_watch_title, R.string.news_watch_body),
         )
     }

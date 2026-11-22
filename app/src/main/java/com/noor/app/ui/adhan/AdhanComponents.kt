@@ -200,7 +200,7 @@ fun NoorSlider(
                 val r = CornerRadius(size.height / 2)
                 drawRoundRect(rest, size = size, cornerRadius = r)
                 val w = size.width * f
-                drawRoundRect(c.gold, topLeft = Offset(if (layoutDirection == LayoutDirection.Rtl) size.width - w else 0f, 0f), size = Size(w, size.height), cornerRadius = r)
+                drawRoundRect(c.goldFill, topLeft = Offset(if (layoutDirection == LayoutDirection.Rtl) size.width - w else 0f, 0f), size = Size(w, size.height), cornerRadius = r)
             }
         },
     )
@@ -261,7 +261,7 @@ fun PreviewButton(playing: Boolean, label: String, onClick: () -> Unit) {
         Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = withTick(onClick)).semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.size(36.dp).clip(CircleShape).background(if (playing) c.gold else c.gold.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(36.dp).clip(CircleShape).background(if (playing) c.goldFill else c.gold.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Icon(if (playing) Icons.Rounded.Stop else Icons.Rounded.PlayArrow, null, tint = if (playing) c.onGold else c.gold, modifier = Modifier.size(22.dp))
         }
     }

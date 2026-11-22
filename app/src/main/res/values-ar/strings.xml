@@ -103,14 +103,14 @@
         <item quantity="other">%s يوم</item>
     </plurals>
     <string name="news_title">الجديد في منهاد</string>
-    <string name="news_look_title">أيقونة جديدة وصفحات أسلس</string>
-    <string name="news_look_body">الهلال فوق الأرض عند أول ضوء. الصفحات تنساب وتتبع إصبعك عند الرجوع.</string>
+    <string name="news_look_title">أيقونة جديدة</string>
+    <string name="news_look_body">الهلال فوق الأرض عند أول ضوء، وافتتاحية تشبهها.</string>
     <string name="news_month_title">الشهر كله</string>
-    <string name="news_month_body">كل مواقيت الصلاة للشهر في جدول واحد. افتح التاريخ ثم الجدول.</string>
-    <string name="news_settings_title">إعدادات تجدها بسهولة</string>
-    <string name="news_settings_body">لون لكل نوع من الإعدادات، وصفحتان لشريط الإشعارات وعن منهاد.</string>
-    <string name="news_motion_title">اسحب للرجوع</string>
-    <string name="news_motion_body">في أندرويد 14 وما بعده، تُظهر إيماءة الرجوع الصفحة السابقة وأنت تسحب.</string>
+    <string name="news_month_body">كل مواقيت الصلاة للشهر في جدول واحد. اضغط على التاريخ لتجده.</string>
+    <string name="news_settings_title">صفحة أذان أهدأ</string>
+    <string name="news_settings_body">مفتاح واحد، وصوت واحد لكل الصلوات، وزر إصلاح واحد إن وُجد ما يمنع.</string>
+    <string name="news_motion_title">أسهل في الوصول وأسلس في الاستخدام</string>
+    <string name="news_motion_body">إعدادات ملوّنة، وصفحات تتبع إصبعك عند الرجوع، واختصارات على الأيقونة.</string>
     <string name="news_watch_title">تصميم جديد على معصمك</string>
     <string name="news_watch_body">تطبيق الساعة بمظهر جديد، وسماء اللحظة خلف العدّ التنازلي.</string>
     <string name="news_continue">متابعة</string>

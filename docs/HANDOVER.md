@@ -2167,3 +2167,57 @@ parts that stand alone: the watch app, the month's timetable, the welcome. Gradl
 - **A wide screen** (`HomeLayout.columns`, from 600 dp): the day's times in two columns and a taller sky. The lead
   rendered the home screen at the size of the owner's Galaxy Fold opened out (`TodayFoldDesignTest`, 690 × 830 dp) and
   found the Sun's path flat and running through the countdown's caption; that is what this mends.
+- **The watch app redesigned** (a helper; `docs/WATCH_025_NOTES.md`, WATCH.md "The look of the watch app (0.25)"):
+  the home screen's first screenful is the next prayer alone over the sky of the moment with a much larger countdown;
+  black pages with dark platters, a coloured disc for each sign, green switches, one type scale in Plex with the real
+  SemiBold; the Qibla's arrival a green field; both tiles redrawn. What it computes, its formats and its tiles' logic
+  are untouched. An independent reviewer then ranked 20 findings ("three-quarters of the way": engineer's wording in
+  Settings, craft at the round screen's edges, two highlight styles); the helper worked through them (the notes say
+  which, and what still falls short).
+- **A month's timetable** (a helper; `docs/TIMETABLE_NOTES.md`; `ui/timetable/`, route `timetable/{month}`): from the
+  date sheet's "Month's timetable" button, a whole Gregorian or Hijri month as a table (today lit, the next prayer in
+  gold, Fridays and Ramadan marked), swiped month to month, shared as text. Each day comes from
+  `PrayerProvider.resolve` as the home screen's does; `TimetableTest` compares 797 days with the home screen's path
+  (Dubai's official IACAD month among them). It was in the owner's first brief and had never been built.
+- **The Adhan and alarms area** (a helper, on the review's findings; `docs/ADHAN_025_NOTES.md`, DESIGN.md "The Adhan
+  and alarms area (0.25)"): the tab opens on one switch always named "Prayer alerts"; what is in the way is one row
+  with one Fix button (a sheet lists several); one row "Adhan voice" for every prayer in place of the six tiles; the
+  prayers with coloured signs; one segmented control in the whole app, readable by night (`SegmentedContrastTest`);
+  Minhad's own slider; a prayer's kinds of alert as a list with a check; everything under a switch that is off looks
+  off; alarms as one grouped list; the editor with units in the wheel's band and Cancel and Save in the bar; the
+  ringing screen with the time at the top.
+- **Qibla, the watch page, accuracy, location** (a helper, on the review's findings; `docs/PAGES_025_NOTES.md`): whole
+  degrees ("Turn right 83°"; the exact bearing once, quietly: 258.3°), the dial's letters and numbers in Plex, one
+  line where there were two, a calibration sheet of three steps with Done; the watch page shows one watch (the user's
+  Minhad Studio face, drawn live); the accuracy page's dozen cards are two cards and three grouped lists, each
+  statement word for word as before (`AccuracyGroupsTest`); the location page's rows are the Settings ones.
+- **The welcome** (a helper; `docs/WELCOME_025_NOTES.md`): see that file; it also carries the release audit's three
+  corrections (the location sentence made true, the background-location disclosure as Google Play asks for it, a
+  step that leads to exact alarms on Android 12 and later).
+- **For a release** (a helper read the code; `docs/RELEASE_AUDIT.md`, `docs/RELEASE.md`, `docs/PRIVACY.md`,
+  `docs/STORE_LISTING.md`): what Google Play will ask, what the apps send and store, every licence's obligations, and
+  a checklist from today to "published" with nine decisions that are the owner's (D1 to D9). Done in 0.25 from it:
+  the privacy policy's row and the Acknowledgements page under About, the true location sentence, the exact-alarm
+  step, the tester's options out of a store build (`-Pminhad.store=true`, `BuildConfig.TESTER`). **Not done, and
+  waiting for his answers**: the rest of RELEASE.md Part 2, first of all D1 (proof of the rights to the two Dubai
+  Adhan recordings, one of which is the default Fajr Adhan), then the private upload key, the target API level, the
+  bundles, and whether Minhad Studio's face may ship.
+
+**The owner, later the same day:** "you don't have to follow all the rules 100% ... you can break some of the rules if
+you see fit ... criticize the app and criticize your decisions ... is this the best we can do? Is this what Apple would
+do? ... I want you to finish the job." How this was read is in CLAUDE.md ("The owner"). So: independent reviewers who
+saw only the renders judged the phone (39 findings) and the watch (20); every "must" and nearly every "should" was acted
+on (the notes files say what was not, and why); the Qibla page, until then protected, was corrected (not restyled).
+
+**Seen on Android itself** (GitHub's emulators, software GPU; `home-sky.yml` on the work branch, Android 14 and 15):
+the new launcher icon in a real launcher; the opening (the Earth's edge and the dawn rise under the mark, the dusk
+opens); the home screen with the real sky at eleven moments in two places; the Qibla page. The first run's Android 14
+job lost its emulator after the first launch ("Pixel Launcher isn't responding" before Minhad had started; the second
+run of both passed). That run also showed a drag of the Sun begun at the screen's edge taken by the back gesture and
+closing the app: hence `systemGestureExclusion` on the sky (the second run's Qibla pictures follow the drag, so the app
+stayed). **Smoothness** (`smooth.yml`, main thread CPU per set of moves, ms): 0.24.1 on `main`, three rounds: tabs 330,
+290, 310; Adhan 120, 170, 140; Settings 150, 160, 200; home scrolled 140, 150, 150; sky dragged 160, 300, 420. The work
+branch, five rounds after a first run on a visibly slower machine: tabs 270, 850, 330, 300, 310; Adhan 120, 130, 140,
+150, 140; Settings 160, 180, 160, 170, 160; home scrolled 120, 200, 150, 150, 200; sky dragged 340, 540, 160, 280, 310.
+Level within the emulator's noise (one outlier in the tabs): the new motion and signs cost nothing that can be measured
+there.

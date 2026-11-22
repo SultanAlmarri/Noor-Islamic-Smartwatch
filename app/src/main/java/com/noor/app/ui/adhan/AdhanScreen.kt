@@ -357,7 +357,7 @@ internal fun FixCard(issues: List<Issue>, headline: String?, f: Formatter) {
             }
             Spacer(Modifier.width(12.dp))
             Text(fix, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, letterSpacing = 0.sp, fontWeight = FontWeight.SemiBold), color = c.onGold, maxLines = 1,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(c.gold).padding(horizontal = 18.dp, vertical = 8.dp))
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(c.goldFill).padding(horizontal = 18.dp, vertical = 8.dp))
         }
     }
     // (The sheet, once open, stays until it is closed or nothing is left: also with one thing left of several.)
