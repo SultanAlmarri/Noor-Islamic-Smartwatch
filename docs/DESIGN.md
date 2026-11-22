@@ -950,9 +950,14 @@ Every animation has one of three jobs: show where something came from, confirm a
 
 ## The watch
 
-Same family on a black OLED screen: the same typeface, the same order (prayer, countdown, time), gold for what matters,
-and a soft glow in the colour of the current sky behind the countdown (blue by day, amber at sunrise and sunset, none at
-night). The interval ring keeps a gap at the top for the system clock.
+(0.25: redesigned; the account, screen by screen, is in [WATCH_025_NOTES.md](WATCH_025_NOTES.md) and WATCH.md, "The
+look of the watch app (0.25)".) Same family on a black OLED screen: the same typeface in SemiBold, the same order
+(prayer, countdown, time), gold for what matters. The home screen's first screenful is the next prayer alone over the
+sky of the moment, in the phone's own sky colours darkened just enough for white text (5:1, `WatchSkyTest`), with
+stars at night and dunes along the bottom; everything else is black with dark platters (18 dp corners), a coloured
+disc for each sign, green switches, and one type scale. The interval ring keeps a gap at the top for the system clock.
+Facing the Qibla is an arrival: the whole field turns green with a check. The two tiles follow (the prayer in gold,
+its time very large; three coloured tools).
 
 ## Arabic and right-to-left
 
