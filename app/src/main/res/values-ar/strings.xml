@@ -332,7 +332,7 @@
     <string name="watch_feature_editor">محرّر الواجهة</string>
     <string name="watch_feature_editor_desc">ثلاثة تصاميم بخمسة ألوان والواجهة الأصلية: اختر مع المعاينة فتتغير ساعتك فوراً</string>
     <string name="offline_watch_footer">الأوقات نفسها التي على هذا الهاتف، حتى من دونه.</string>
-    <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك، واتجاه القبلة، والأذان، على هاتفك وساعتك.</string>
+    <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك</string>
     <string name="onboarding_private">يبقى موقعك على هذا الهاتف.</string>
     <string name="adhan_custom_empty_title">أصواتك الخاصة</string>
     <string name="today_suhoor">نهاية السحور</string>
@@ -760,7 +760,7 @@
     <string name="sky_scrub_hint_short">اسحب السماء لتتبّع الشمس</string>
     <string name="theme_sun_short">مع الشمس</string>
     <string name="onb_adhan_title">استمع إلى الأذان عند كل صلاة</string>
-    <string name="onb_adhan_body">استمع إلى الأذان عند كل صلاة، حتى والهاتف مقفل. وغيّره متى شئت من تبويب الأذان.</string>
+    <string name="onb_adhan_body">حتى والهاتف مقفل. وغيّره متى شئت من تبويب الأذان.</string>
     <string name="onb_adhan_on">تشغيل الأذان</string>
     <string name="cd_until">حتى %s</string>
     <string name="cd_since">منذ دخول %s</string>
@@ -878,4 +878,17 @@
     <string name="alarm_length_short">قصير</string>
     <string name="alarm_adhan_before_warn">إذا سُمع قبل الصلاة فقد يُظنّ الأذان دخولًا لوقتها.</string>
     <string name="adhan_warn_fullscreen">لا يمكن لشاشة الأذان أن تظهر فوق شاشة القفل.</string>
+    <!-- الترحيب (0.25) -->
+    <string name="welcome_continue">متابعة</string>
+    <string name="welcome_not_now">ليس الآن</string>
+    <string name="welcome_times">أوقات صلاة دقيقة</string>
+    <string name="welcome_times_line">محسوبة للمكان الذي أنت فيه.</string>
+    <string name="welcome_sky">السماء ساعتك</string>
+    <string name="welcome_sky_line">سماء مكانك، من الفجر إلى الليل.</string>
+    <string name="welcome_adhan">الأذان في وقته</string>
+    <string name="welcome_adhan_line">عند كل صلاة، إن شئت.</string>
+    <string name="welcome_qibla">القبلة وساعة Galaxy Watch</string>
+    <string name="welcome_qibla_line">بوصلة دقيقة، والأوقات على معصمك.</string>
+    <string name="welcome_travel_title">أوقات صحيحة أينما سافرت</string>
+    <string name="welcome_travel_body">اختر «السماح طوال الوقت» في الشاشة التالية. يتحقق منهاد نادرًا ويستهلك قليلًا من البطارية.</string>
 </resources>

@@ -330,7 +330,7 @@
     <string name="watch_feature_editor">Watch face editor</string>
     <string name="watch_feature_editor_desc">Three designs in five colours, and the original face: choose with a preview, and your watch changes at once</string>
     <string name="offline_watch_footer">Same times as this phone, even without it.</string>
-    <string name="onboarding_tagline">Prayer times from the sky above you, the Qibla and the Adhan, on your phone and your watch.</string>
+    <string name="onboarding_tagline">Prayer times from the sky above you</string>
     <string name="onboarding_private">Your location stays on this phone.</string>
     <string name="adhan_custom_empty_title">Your own sounds</string>
     <string name="today_suhoor">Suhoor ends</string>
@@ -752,7 +752,7 @@
     <string name="sky_scrub_hint_short">Drag the sky to follow the Sun</string>
     <string name="theme_sun_short">Follow the sun</string>
     <string name="onb_adhan_title">Hear the Adhan at each prayer</string>
-    <string name="onb_adhan_body">Hear the Adhan at each prayer, even with the phone locked. Change it any time on the Adhan tab.</string>
+    <string name="onb_adhan_body">Even with the phone locked. Change it any time on the Adhan tab.</string>
     <string name="onb_adhan_on">Turn on the Adhan</string>
     <string name="cd_until">until %s</string>
     <string name="cd_since">since %s began</string>
@@ -866,4 +866,17 @@
     <string name="alarm_length_short">Short</string>
     <string name="alarm_adhan_before_warn">Heard before the prayer, the Adhan may be taken for its time.</string>
     <string name="adhan_warn_fullscreen">The Adhan screen cannot show over the lock screen.</string>
+    <!-- The welcome (0.25) -->
+    <string name="welcome_continue">Continue</string>
+    <string name="welcome_not_now">Not now</string>
+    <string name="welcome_times">Exact prayer times</string>
+    <string name="welcome_times_line">For the very place you are.</string>
+    <string name="welcome_sky">The sky is your clock</string>
+    <string name="welcome_sky_line">Your own sky, from dawn to night.</string>
+    <string name="welcome_adhan">The Adhan, on time</string>
+    <string name="welcome_adhan_line">At each prayer, if you want it.</string>
+    <string name="welcome_qibla">Qibla and Galaxy Watch</string>
+    <string name="welcome_qibla_line">A true compass. Times on your wrist.</string>
+    <string name="welcome_travel_title">Right wherever you travel</string>
+    <string name="welcome_travel_body">Choose “Allow all the time” on the next screen. Minhad checks rarely and uses little battery.</string>
 </resources>
