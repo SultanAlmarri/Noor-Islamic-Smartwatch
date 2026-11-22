@@ -152,7 +152,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
-fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpenSource: () -> Unit, vm: TodayViewModel = viewModel(), onOpenPrayer: (Prayer) -> Unit = {}) {
+fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpenSource: () -> Unit, vm: TodayViewModel = viewModel(), onOpenPrayer: (Prayer) -> Unit = {},
+                onOpenTimetable: ((com.noor.app.ui.timetable.TableMonth) -> Unit)? = null) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.refreshTimetables() }
     // (0.22) Each time the app comes back to the front, not only when the home screen is first composed: until 0.22 an
@@ -182,7 +183,7 @@ fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpe
             // (The first alert turned on asks for Android's notification permission, at the moment its reason is plain.)
             if (on && !m.settings.alerts.enabled && android.os.Build.VERSION.SDK_INT >= 33) notifications()
             vm.setAlert(p, on)
-        }, clock = clock, fresh = fresh)
+        }, clock = clock, fresh = fresh, onOpenTimetable = onOpenTimetable)
 }
 
 /**
@@ -263,6 +264,8 @@ fun TodayContent(
     clock: () -> java.time.Instant = { u.now },
     /** Whether a moment on show is this moment (false for the old state shown a frame or two after a return, see [TodayScreen]). */
     fresh: (java.time.Instant) -> Boolean = { true },
+    /** The date sheet's button for the month's timetable (ui/timetable); null: the sheet has no such button. */
+    onOpenTimetable: ((com.noor.app.ui.timetable.TableMonth) -> Unit)? = null,
 ) {
     val ar = isArabicUi()
     // (Kept between the screen's once-a-second updates: a new formatter each second made every row of the day's
@@ -388,6 +391,7 @@ fun TodayContent(
                             scope.launch { sheet.hide() }.invokeOnCompletion { calendarOpen = false }
                         },
                         modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
+                        onTimetable = onOpenTimetable?.let { open -> { month -> calendarOpen = false; open(month) } },
                     )
                 }
             }

@@ -878,4 +878,15 @@
     <string name="alarm_length_short">قصير</string>
     <string name="alarm_adhan_before_warn">إذا سُمع قبل الصلاة فقد يُظنّ الأذان دخولًا لوقتها.</string>
     <string name="adhan_warn_fullscreen">لا يمكن لشاشة الأذان أن تظهر فوق شاشة القفل.</string>
+    <!-- The month's timetable (ui/timetable). -->
+    <string name="timetable_title">الجدول الشهري</string>
+    <string name="timetable_open">جدول الشهر</string>
+    <string name="timetable_this_month">هذا الشهر</string>
+    <string name="timetable_previous_month">الشهر السابق</string>
+    <string name="timetable_next_month">الشهر التالي</string>
+    <string name="timetable_share">مشاركة هذا الشهر</string>
+    <string name="timetable_share_title">أوقات الصلاة</string>
+    <string name="timetable_day">اليوم</string>
+    <string name="timetable_ramadan_note">رمضان: ينتهي السحور عند الفجر، والإفطار عند المغرب.</string>
+    <string name="timetable_basis_some">أوقاتها المنشورة نفسها حيث نشرتها، وبقية الأيام بطريقتها.</string>
 </resources>

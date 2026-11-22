@@ -80,13 +80,15 @@ fun CalendarPicker(
     onPick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
     startHijri: Boolean? = null,
+    /** The month's timetable is asked for, for the month on show (ui/timetable); null: no such button. */
+    onTimetable: ((com.noor.app.ui.timetable.TableMonth) -> Unit)? = null,
 ) {
     // Gregorian or Hijri (0.9.4): browse by either; any day picked opens that day's prayer times.
     var hijri by rememberSaveable { mutableStateOf(startHijri ?: CalendarChoice.hijri) }
     Column(modifier.fillMaxWidth()) {
         CalendarSwitch(hijri, f) { hijri = it; CalendarChoice.hijri = it }
         Spacer(Modifier.height(10.dp))
-        if (hijri) HijriPicker(selected, today, hijriAdjust, f, onPick) else GregorianPicker(selected, today, hijriAdjust, f, onPick)
+        if (hijri) HijriPicker(selected, today, hijriAdjust, f, onPick, onTimetable) else GregorianPicker(selected, today, hijriAdjust, f, onPick, onTimetable = onTimetable)
     }
 }
 
@@ -107,6 +109,7 @@ private fun GregorianPicker(
     f: Formatter,
     onPick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
+    onTimetable: ((com.noor.app.ui.timetable.TableMonth) -> Unit)? = null,
 ) {
     val c = NoorTheme.colors
     var month by rememberSaveable(stateSaver = YearMonthSaver) { mutableStateOf(YearMonth.from(selected)) }
@@ -207,6 +210,7 @@ private fun GregorianPicker(
             )
             TextButton(onClick = { onPick(today) }) { Text(stringResource(R.string.go_to_today), color = c.goldText, style = MaterialTheme.typography.titleSmall) }
         }
+        if (onTimetable != null) com.noor.app.ui.timetable.TimetableEntry({ onTimetable(com.noor.app.ui.timetable.TableMonth.Gregorian(month)) }, Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp))
     }
 }
 
@@ -217,7 +221,7 @@ private fun yearRange(page: Int): IntRange = (DateWindow.FIRST.year + page * 12)
  * small beneath; the title opens the twelve months, then the years. Only days inside [DateWindow] can be chosen.
  */
 @Composable
-private fun HijriPicker(selected: LocalDate, today: LocalDate, adjust: Int, f: Formatter, onPick: (LocalDate) -> Unit) {
+private fun HijriPicker(selected: LocalDate, today: LocalDate, adjust: Int, f: Formatter, onPick: (LocalDate) -> Unit, onTimetable: ((com.noor.app.ui.timetable.TableMonth) -> Unit)? = null) {
     val c = NoorTheme.colors
     val first = remember(adjust) { com.noor.prayer.HijriMonth.of(DateWindow.FIRST, adjust) }
     val last = remember(adjust) { com.noor.prayer.HijriMonth.of(DateWindow.LAST, adjust) }
@@ -287,6 +291,7 @@ private fun HijriPicker(selected: LocalDate, today: LocalDate, adjust: Int, f: F
                 modifier = Modifier.weight(1f).padding(start = 12.dp))
             TextButton(onClick = { onPick(today) }) { Text(stringResource(R.string.go_to_today), color = c.goldText, style = MaterialTheme.typography.titleSmall) }
         }
+        if (onTimetable != null) com.noor.app.ui.timetable.TimetableEntry({ onTimetable(com.noor.app.ui.timetable.TableMonth.Hijri(month)) }, Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp))
     }
 }
 

@@ -866,4 +866,15 @@
     <string name="alarm_length_short">Short</string>
     <string name="alarm_adhan_before_warn">Heard before the prayer, the Adhan may be taken for its time.</string>
     <string name="adhan_warn_fullscreen">The Adhan screen cannot show over the lock screen.</string>
+    <!-- The month's timetable (ui/timetable). -->
+    <string name="timetable_title">Timetable</string>
+    <string name="timetable_open">Month’s timetable</string>
+    <string name="timetable_this_month">This month</string>
+    <string name="timetable_previous_month">Previous month</string>
+    <string name="timetable_next_month">Next month</string>
+    <string name="timetable_share">Share this month</string>
+    <string name="timetable_share_title">Prayer times</string>
+    <string name="timetable_day">Day</string>
+    <string name="timetable_ramadan_note">Ramadan: Suhoor ends at Fajr, Iftar is at Maghrib.</string>
+    <string name="timetable_basis_some">Its own published times where it has given them; the other days by its method.</string>
 </resources>
