@@ -680,7 +680,8 @@ a watch app in stock Material, a wide screen treated as a tall phone, and no way
   and dims; going back is the same film backwards, and with Android's predictive back (Android 14 and later;
   `android:enableOnBackInvokedCallback`) the back gesture pulls the page off by hand and shows the one under it.
   What is touched gives under the finger: buttons, hero cards and tabs draw in a little and spring back.
-- **Settings in fewer rows.** The notification bar has a page of its own (its switch and, on Android 16, the
+- **Settings in fewer rows.** (After the second review the row is "Countdown notification" and its page shows the
+  notification itself, counting; prayer-time accuracy lives on the Prayer times page only.) The notification bar has a page of its own (its switch and, on Android 16, the
   status-bar timer's three options: on such a phone they were four rows of the first page); its row says On or Off.
   **About Minhad** is a page: the mark as the launcher shows it, the name, what Minhad is in a line, how the times
   are checked, the recordings' sources and licences, the version. Widgets stands with Theme and Home screen (what is
@@ -703,6 +704,8 @@ a watch app in stock Material, a wide screen treated as a tall phone, and no way
   shape, and the Sun's drag kept from Android's back gesture (`systemGestureExclusion`: on an emulator a drag begun
   12 dp from the edge closed the app). By day filled controls are a true gold (`NoorColors.goldFill`; they were
   mustard brown). A row's state in a word stands at its end; a line under the title is kept for what needs a sentence.
+- **The second review** (REVIEW2_025_NOTES.md): bars that hide what scrolls under them, one second kind of button, no
+  letter-spaced sentences, every number in the chosen numerals, the accuracy page as results first.
 - **For a release**: Settings → About Minhad has the privacy policy (docs/PRIVACY.md) and Acknowledgements (whose
   work Minhad stands on, with the notices the licences ask for, in both languages); the welcome tells the truth
   about where the location goes and leads to exact alarms (WELCOME_025_NOTES.md); the tester's options are out of a

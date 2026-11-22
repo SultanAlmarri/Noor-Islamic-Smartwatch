@@ -2221,3 +2221,10 @@ branch, five rounds after a first run on a visibly slower machine: tabs 270, 850
 150, 140; Settings 160, 180, 160, 170, 160; home scrolled 120, 200, 150, 150, 200; sky dragged 340, 540, 160, 280, 310.
 Level within the emulator's noise (one outlier in the tabs): the new motion and signs cost nothing that can be measured
 there.
+
+**The second review** (`docs/REVIEW2_025_NOTES.md`). With everything merged, a second independent reviewer judged the
+finished phone app "about nine-tenths of the way" and listed 30 findings; all the "must" and "should" ones were done
+the same evening (see that file, and ADHAN_025_NOTES.md and PAGES_025_NOTES.md, "Second review"). Halfway through, the
+session's model reached its usage limit; the owner switched the session to Claude Opus, which finished the work from
+where it had stopped (a helper's half-done changes were read, compiled, kept and completed). New tests:
+`NumeralsInStringsTest`, `ButtonContrastTest`, `AccuracyStatementsTest`, `PlaceTextTest`, `QiblaKaabaContrastTest`.
