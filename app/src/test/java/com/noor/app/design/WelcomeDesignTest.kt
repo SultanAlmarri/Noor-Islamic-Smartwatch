@@ -1,6 +1,8 @@
 package com.noor.app.design
 
 import android.Manifest
+import android.app.Activity
+import android.provider.Settings
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -67,6 +69,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowAlarmManager
 import java.io.File
 import java.util.Locale
 
@@ -77,10 +80,12 @@ import java.util.Locale
  *
  * - the words on the sky meet 4.5:1 against the sky's own drawn pixels, at every stage of the dawn (the whole part of
  *   the sky that can hold words, and under every text of every page drawn here);
- * - no button is cut off, on any size, in either language; each page has one heading; each language shows its own
- *   script only;
+ * - no button is cut off, on any size, in either language; on the pages that ask for something every word is on
+ *   the screen without scrolling; each page has one heading; each language shows its own script only;
  * - the welcome asks what it asked before and does what it did: the three answers are recorded, "Not now" and
  *   "Choose a city instead" lead where they led, and the way back returns to the page before;
+ * - the exact alarms' page (0.25) is met only when the Adhan was turned on and Android does not allow exact alarms;
+ *   its button opens Android's page for this app, and either answer ends the welcome;
  * - with ambient motion off nothing moves.
  *
  * Robolectric: software renders and the app's real code, not a phone. Android's own permission dialogs do not exist
@@ -113,6 +118,7 @@ class WelcomeDesignTest {
         dir.deleteRecursively(); dir.mkdirs()
         Shadows.shadowOf(app).grantPermissions(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.ACCESS_BACKGROUND_LOCATION, Manifest.permission.POST_NOTIFICATIONS)
+        ShadowAlarmManager.setCanScheduleExactAlarms(true)
         rule.setContent {
             val base = LocalContext.current
             val locale = if (arabic) Locale.forLanguageTag("ar") else Locale.ENGLISH
@@ -155,8 +161,15 @@ class WelcomeDesignTest {
             page("2_travel_$tag", 2, primary = t("Continue", "متابعة"), secondary = t("Not now", "ليس الآن"))
             click("Continue", "متابعة")
             page("3_adhan_$tag", 3, primary = t("Turn on the Adhan", "تشغيل الأذان"), secondary = t("Not now", "ليس الآن"))
+            // The page that is only met when Android does not yet let Minhad ring at an exact time.
+            ShadowAlarmManager.setCanScheduleExactAlarms(false)
+            click("Turn on the Adhan", "تشغيل الأذان")
+            page("4_minute_$tag", 4, primary = t("Allow exact alarms", "السماح بالمنبّهات الدقيقة"), secondary = t("Not now", "ليس الآن"))
+            ShadowAlarmManager.setCanScheduleExactAlarms(true)
         }
         frameW = 412; frameH = 915; fontScale = 1f; arabic = false
+        // (Those pages turned the Adhan on without ending the welcome: off again, as on a first run.)
+        runBlocking { repo.updateAlerts { it.copy(enabled = false) } }
 
         // ---- Every stage of the dawn: the part of the sky that can hold words ------------------------------------
         val density = rule.activity.resources.displayMetrics.density
@@ -189,21 +202,55 @@ class WelcomeDesignTest {
         assertTrue("The welcome is not done before its last answer", !runBlocking { repo.current() }.onboardingDone)
         click("Turn on the Adhan", "تشغيل الأذان")
         wait("the answers recorded") { runBlocking { repo.current() }.let { it.onboardingDone && it.alerts.enabled && it.backgroundUpdates && it.locationMode == LocationMode.AUTO } }
-        assertEquals("The home screen is opened", 1, finished); assertEquals(0, city)
+        wait("the home screen opened") { finished == 1 }
+        assertEquals(0, city)
+
+        // Exact alarms (0.25). Allowed already (above): the Adhan's answer ended the welcome, no page more. Not allowed:
+        // one page more, which opens Android's own page for this app; coming back from it ends the welcome.
+        ShadowAlarmManager.setCanScheduleExactAlarms(false)
+        finished = 0; city = 0
+        open(); click("Continue", ""); click("Use my location", ""); click("Continue", ""); click("Turn on the Adhan", "")
+        has("The Adhan, on the minute")
+        assertEquals("The welcome waits for the answer", 0, finished)
+        val shadow = Shadows.shadowOf(rule.activity)
+        while (shadow.nextStartedActivityForResult != null) { /* (what was started before) */ }
+        click("Allow exact alarms", "")
+        val asked = shadow.nextStartedActivityForResult
+        assertEquals(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, asked?.intent?.action)
+        assertEquals("package:" + rule.activity.packageName, asked?.intent?.dataString)
+        assertEquals("The welcome waits while Android's page is open", 0, finished)
+        rule.runOnUiThread { shadow.receiveResult(asked!!.intent, Activity.RESULT_CANCELED, null) }
+        settle()
+        wait("the home screen opened after Android's page") { finished == 1 }
+        assertTrue("The Adhan stays on", runBlocking { repo.current() }.alerts.enabled)
+        // "Not now" there: the welcome ends, the Adhan stays on (the Adhan tab says what is missing).
+        finished = 0
+        open(); click("Continue", ""); click("Use my location", ""); click("Continue", ""); click("Turn on the Adhan", ""); click("Not now", "")
+        wait("the home screen opened") { finished == 1 }
+        assertTrue("The Adhan stays on", runBlocking { repo.current() }.alerts.enabled)
+        // Back from there to the Adhan's page, and "Not now" on it: the Adhan is off again.
+        finished = 0
+        open(); click("Continue", ""); click("Use my location", ""); click("Continue", ""); click("Turn on the Adhan", "")
+        has("The Adhan, on the minute"); back(); has("Hear the Adhan at each prayer"); click("Not now", "")
+        wait("the home screen opened") { finished == 1 }
+        wait("the Adhan off again") { !runBlocking { repo.current() }.alerts.enabled }
+        ShadowAlarmManager.setCanScheduleExactAlarms(true)
 
         // The way back: each page returns to the one before, and from the cover nothing holds the back gesture.
         open(); click("Continue", "متابعة"); click("Choose a city instead", "")
         has("Hear the Adhan at each prayer"); back(); has("Use my location")
-        click("Use my location", ""); has("Right wherever you travel"); back(); has("Use my location"); back(); has("Prayer times from the sky above you")
+        click("Use my location", ""); has("Keep times right when you travel"); back(); has("Use my location"); back(); has("Prayer times from the sky above you")
         assertTrue("On the cover the back gesture is Android's own (it leaves the app)", !rule.activity.onBackPressedDispatcher.hasEnabledCallbacks())
         // "Choose a city instead", then "Not now": the location page is opened, not the home screen.
         finished = 0; city = 0
         click("Continue", "متابعة"); click("Choose a city instead", ""); click("Not now", "")
-        assertEquals("The location page is opened", 1, city); assertEquals(0, finished)
+        wait("the location page opened") { city == 1 }
+        assertEquals(0, finished)
         // "Use my location" after having gone back from "Choose a city instead": the home screen, not the location page.
         finished = 0; city = 0
         open(); click("Continue", ""); click("Choose a city instead", ""); back(); click("Use my location", ""); click("Not now", ""); click("Not now", "")
-        assertEquals("The home screen is opened", 1, finished); assertEquals(0, city)
+        wait("the home screen opened") { finished == 1 }
+        assertEquals(0, city)
 
         // ---- With ambient motion off nothing moves ----------------------------------------------------------------
         open()
@@ -304,8 +351,13 @@ class WelcomeDesignTest {
         save(shot, name)
         val barTop = rule.onNodeWithTag(WELCOME_BAR).fetchSemanticsNode().boundsInRoot.top
         val crest = barTop + Dawn.Band.value * d
-        val texts = rule.onAllNodes(SemanticsMatcher("text") { it.config.getOrNull(SemanticsProperties.Text) != null }, useUnmergedTree = true).fetchSemanticsNodes()
-            .map { it.config[SemanticsProperties.Text].joinToString(" ") { t -> t.text } to it.boundsInRoot }
+        val nodes = rule.onAllNodes(SemanticsMatcher("text") { it.config.getOrNull(SemanticsProperties.Text) != null }, useUnmergedTree = true).fetchSemanticsNodes()
+        val texts = nodes.map { it.config[SemanticsProperties.Text].joinToString(" ") { t -> t.text } to it.boundsInRoot }
+        // A page that asks for something says why in full, without scrolling, before Android is asked (on every size here).
+        if (step > 0) nodes.forEach { n ->
+            if (n.boundsInRoot.height < n.size.height - 1f || n.boundsInRoot.width < n.size.width - 1f)
+                problems += "$name: \"${n.config[SemanticsProperties.Text].joinToString(" ") { t -> t.text }}\" is not whole on the screen"
+        }
         // The sky alone, as this page has it (the same light, the same edge), without its stars.
         skyOnly = Dawn.lightFor(step) to crest; settle()
         val sky = capture()

@@ -144,10 +144,12 @@ internal fun DawnSky(light: () -> Float, crest: () -> Float, modifier: Modifier 
         }
         // The Sun's own edge, on the way out.
         if (sunrise > 0f) {
-            val sr = 26.dp.toPx()
-            val sc = Offset(w / 2f, cy + sr * (1.05f - 1.25f * sunrise))
-            drawCircle(Brush.radialGradient(0f to Color.White.copy(alpha = 0.9f * sunrise), 0.35f to GlowCore.copy(alpha = 0.55f * sunrise), 1f to Color.Transparent, center = sc, radius = sr * 4f), sr * 4f, sc)
-            drawCircle(Sky.SunCore, sr, sc, alpha = sunrise)
+            val sr = 20.dp.toPx()
+            val sc = Offset(w / 2f, cy + sr * (1.05f - 1.3f * sunrise))
+            scale(1.7f, 1f, sc) {
+                drawCircle(Brush.radialGradient(0f to Color.White.copy(alpha = 0.85f * sunrise), 0.3f to GlowCore.copy(alpha = 0.5f * sunrise), 1f to Color.Transparent, center = sc, radius = sr * 4.5f), sr * 4.5f, sc)
+            }
+            drawCircle(Brush.radialGradient(0f to Color.White, 0.7f to Color(0xFFFFF7E2), 1f to Sky.SunCore, center = sc, radius = sr), sr, sc, alpha = sunrise)
         }
 
         // The air along the edge: a thin blue line of atmosphere, then the lit rim, brightest where the light gathers.

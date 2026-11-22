@@ -79,11 +79,11 @@
     <string name="reset">إعادة الضبط</string>
 
     <string name="perm_title">مواقيت الصلاة حيث تكون</string>
-    <string name="perm_body">يستخدم منهاد موقعك لحساب أوقات الصلاة، ويبقى على هذا الهاتف.</string>
+    <string name="perm_body">يستخدم منهاد موقعك لحساب أوقات صلاتك. لا حساب له ولا خادم خاصّ به: موقعك لا يُرسَل إلى منهاد أبدًا.</string>
     <string name="perm_allow">استخدام موقعي</string>
     <string name="perm_manual">اختيار مدينة بدلًا من ذلك</string>
     <string name="bg_perm_title">أوقات صحيحة أثناء السفر</string>
-    <string name="bg_perm_body">لتبقى الأوقات صحيحة أثناء السفر، اختر «السماح طوال الوقت». يتحقق منهاد نادرًا ويستهلك قليلًا من البطارية.</string>
+    <string name="bg_perm_body">يستخدم منهاد موقعك في الخلفية، حتى والتطبيق مغلق أو غير مستخدَم، لتبقى أوقات الصلاة صحيحة أثناء السفر. للسماح بذلك اختر «السماح طوال الوقت».</string>
     <string name="bg_perm_continue">متابعة</string>
     <string name="bg_perm_not_now">ليس الآن</string>
     <string name="permission_denied">لم يُمنح إذن الموقع. اختر مدينة أو اسمح بالموقع من إعدادات النظام.</string>
@@ -333,7 +333,6 @@
     <string name="watch_feature_editor_desc">ثلاثة تصاميم بخمسة ألوان والواجهة الأصلية: اختر مع المعاينة فتتغير ساعتك فوراً</string>
     <string name="offline_watch_footer">الأوقات نفسها التي على هذا الهاتف، حتى من دونه.</string>
     <string name="onboarding_tagline">أوقات الصلاة من السماء فوقك</string>
-    <string name="onboarding_private">يبقى موقعك على هذا الهاتف.</string>
     <string name="adhan_custom_empty_title">أصواتك الخاصة</string>
     <string name="today_suhoor">نهاية السحور</string>
     <string name="today_iftar">الإفطار</string>
@@ -889,6 +888,7 @@
     <string name="welcome_adhan_line">عند كل صلاة، إن شئت.</string>
     <string name="welcome_qibla">القبلة وساعة Galaxy Watch</string>
     <string name="welcome_qibla_line">بوصلة دقيقة، والأوقات على معصمك.</string>
-    <string name="welcome_travel_title">أوقات صحيحة أينما سافرت</string>
-    <string name="welcome_travel_body">اختر «السماح طوال الوقت» في الشاشة التالية. يتحقق منهاد نادرًا ويستهلك قليلًا من البطارية.</string>
+    <string name="welcome_exact_title">الأذان في دقيقته</string>
+    <string name="welcome_exact_body">لا يسمح أندرويد لمنهاد برفع الأذان في دقيقته إلا إذا سمحتَ بـ«المنبّهات والتذكيرات». من دون ذلك قد يتأخر الأذان.</string>
+    <string name="welcome_exact_allow">السماح بالمنبّهات الدقيقة</string>
 </resources>

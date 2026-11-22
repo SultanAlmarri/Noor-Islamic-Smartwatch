@@ -65,7 +65,7 @@ internal fun DrawScope.drawMark(mark: Painter, field: Float, at: Offset, alpha: 
     translate(at.x - field * Mark.CX / Mark.FIELD, at.y - field * Mark.CY / Mark.FIELD) { with(mark) { draw(Size(field, field), alpha = alpha) } }
 }
 
-internal enum class Symbol { PLACE, TRAVEL, ADHAN }
+internal enum class Symbol { PLACE, TRAVEL, ADHAN, MINUTE }
 
 private val GoldLight = Color(0xFFFFF6DE)
 private val Gold = Color(0xFFF3D08C)
@@ -80,6 +80,8 @@ internal fun SymbolArt(symbol: Symbol, modifier: Modifier = Modifier, phase: () 
     val mark = painterResource(R.drawable.ic_splash_mark)
     Canvas(modifier.clearAndSetSemantics { }) {
         val s = size.minDimension
+        // (Too little room to be a picture: the page's words have it.)
+        if (s < 64.dp.toPx()) return@Canvas
         val c = center
         val disc = s * 0.33f
         val hair = 1.25.dp.toPx()
@@ -108,9 +110,9 @@ internal fun SymbolArt(symbol: Symbol, modifier: Modifier = Modifier, phase: () 
                 fun on(deg: Float) = Offset(ground.x + gr * cos(Math.toRadians(deg.toDouble())).toFloat(), ground.y + gr * sin(Math.toRadians(deg.toDouble())).toFloat())
                 drawArc(Color.White.copy(alpha = 0.42f), 234f, 72f, false, Offset(ground.x - gr, ground.y - gr), Size(gr * 2f, gr * 2f), style = Stroke(hair * 1.4f, cap = StrokeCap.Round))
                 val from = on(249f); val to = on(291f)
-                val over = Offset(c.x - disc * 0.02f, c.y - disc * 0.62f)
+                val over = Offset(c.x - disc * 0.03f, c.y - disc * 0.42f)
                 drawCircle(Color.White, disc * 0.07f, from)
-                val steps = 6
+                val steps = 5
                 for (i in 1..steps) {
                     val f = i / (steps + 1f)
                     val p = Offset((1 - f) * (1 - f) * from.x + 2 * f * (1 - f) * over.x + f * f * to.x, (1 - f) * (1 - f) * from.y + 2 * f * (1 - f) * over.y + f * f * to.y)
@@ -128,6 +130,22 @@ internal fun SymbolArt(symbol: Symbol, modifier: Modifier = Modifier, phase: () 
                     for (start in listOf(-30f, 150f)) drawArc(Color.White.copy(alpha = a * wave), start, 60f, false, box.topLeft, box.size, style = Stroke(hair * 2f, cap = StrokeCap.Round))
                 }
                 drawMark(mark, disc * 0.92f * Mark.FIELD / (2f * Mark.R), Offset(c.x - disc * 0.04f, c.y + disc * 0.02f))
+            }
+            Symbol.MINUTE -> {
+                // The very minute: a clock, its twelve marks round the glass, its hands on the hour.
+                fun at(deg: Float, r: Float) = Offset(c.x + r * cos(Math.toRadians(deg.toDouble())).toFloat(), c.y + r * sin(Math.toRadians(deg.toDouble())).toFloat())
+                for (i in 0 until 12) {
+                    val quarter = i % 3 == 0
+                    // (The mark the signal passes shines.)
+                    val round = ((t * 12f - i) % 12f + 12f) % 12f
+                    val lit = if (t >= 0f) (1f - minOf(round, 12f - round)).coerceIn(0f, 1f) else 0f
+                    drawCircle(Color.White, hair * (if (quarter) 2.1f else 1.35f) * (1f + 0.35f * lit), at(i * 30f - 90f, r1), alpha = ((if (quarter) 0.9f else 0.55f) + 0.45f * lit).coerceAtMost(1f))
+                }
+                ring(c, r2, 0.16f, hair)
+                drawLine(Gold, c, at(-150f, disc * 0.42f), strokeWidth = disc * 0.14f, cap = StrokeCap.Round)
+                drawLine(GoldLight, c, at(-90f, disc * 0.66f), strokeWidth = disc * 0.105f, cap = StrokeCap.Round)
+                drawCircle(gold, disc * 0.13f, c)
+                drawCircle(Color(0xFF3A3560), disc * 0.048f, c)
             }
         }
     }
@@ -153,9 +171,9 @@ private fun DrawScope.pin(head: Offset, r: Float, tipY: Float, brush: Brush) {
 
 /** A small tile of colour with a white sign on it, as the rows of an iPhone's Settings have: what Minhad gives. */
 @Composable
-internal fun SignTile(sign: Painter, top: Color, low: Color, modifier: Modifier = Modifier) {
+internal fun SignTile(sign: Painter, top: Color, low: Color, side: Dp = 46.dp, modifier: Modifier = Modifier) {
     Box(
-        modifier.size(46.dp).clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(top, low))).clearAndSetSemantics { },
+        modifier.size(side).clip(RoundedCornerShape(side * 0.285f)).background(Brush.verticalGradient(listOf(top, low))).clearAndSetSemantics { },
         contentAlignment = Alignment.Center,
-    ) { Icon(sign, null, tint = Color.White, modifier = Modifier.size(27.dp)) }
+    ) { Icon(sign, null, tint = Color.White, modifier = Modifier.size(side * 0.59f)) }
 }
