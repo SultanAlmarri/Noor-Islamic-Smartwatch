@@ -307,7 +307,7 @@ private fun MonthBar(title: String, span: String, canPrev: Boolean, canNext: Boo
             MonthArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.timetable_next_month), canNext, onNext)
         }
         // (Under the arrows, the width of the page: beside them "Jumada al-Ula – Jumada al-Akhirah 1448 AH" broke its year off.)
-        if (span.isNotEmpty()) FittedLine(span, MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp, letterSpacing = 0.1.sp), c.goldText, listOf(13.5f, 12.5f, 11.5f), Modifier.fillMaxWidth())
+        if (span.isNotEmpty()) FittedLine(span, MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp, letterSpacing = 0.sp), c.goldText, listOf(13.5f, 12.5f, 11.5f), Modifier.fillMaxWidth())
     }
 }
 
@@ -456,7 +456,7 @@ private fun MonthPage(
             when (val item = rows[i]) {
                 is TableItem.Section -> CompositionLocalProvider(LocalDensity provides phone) {
                     Text(
-                        item.text, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.5.sp, letterSpacing = 0.2.sp), color = c.goldText,
+                        item.text, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.5.sp, letterSpacing = 0.sp), color = c.goldText,
                         modifier = Modifier.fillMaxWidth().padding(start = m.side + 2.dp, end = m.side, top = 14.dp, bottom = 6.dp).semantics { heading() },
                     )
                 }

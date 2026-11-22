@@ -92,10 +92,12 @@ fun WarningRow(text: String, action: String?, onAction: (() -> Unit)?, icon: Ima
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(text, style = FootnoteStyle.copy(fontSize = 14.sp, lineHeight = 20.sp), color = if (warn || danger) c.textPrimary else c.textSecondary)
-            // (0.25) What fixes it reads as a button (a capsule in the accent), not as a line of coloured text; the whole
-            // row is still the touch target.
-            if (action != null && onAction != null) Text(action, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold), color = c.goldText,
-                modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(50)).background(c.gold.copy(alpha = if (c.isDark) 0.18f else 0.14f)).padding(horizontal = 14.dp, vertical = 6.dp))
+            // (0.25) What fixes it reads as a button, not as a line of coloured text; the whole row is still the touch
+            // target. (Second review: the app's one second kind of button, the text's ink on a neutral pill 36 dp high.)
+            if (action != null && onAction != null) Box(
+                Modifier.padding(top = 8.dp).heightIn(min = 36.dp).clip(RoundedCornerShape(50)).background(com.noor.app.ui.components.TonalColors.fill(c)).padding(horizontal = 16.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text(action, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold), color = com.noor.app.ui.components.TonalColors.label(c)) }
         }
     }
 }

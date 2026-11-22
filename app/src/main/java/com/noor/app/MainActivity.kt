@@ -1,5 +1,7 @@
 package com.noor.app
 
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.zIndex
 import android.app.Activity
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
@@ -389,7 +391,10 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?,
     // 0.15: the tab bar floats over the page (a capsule of glass, as on iOS 26), and the pages run on under it: their
     // last line can still be scrolled clear of it.
     CompositionLocalProvider(LocalTabReselect provides reselect.intValue) {
-    AppFrame(topLevel, tabBar = { NoorTabBar(inTab, ::openTab) }) { content ->
+    AppFrame(topLevel, tabBar = { NoorTabBar(inTab, ::openTab, fade = route != Routes.PRAYERS) }) { content ->
+        // (Second review) A page that scrolls keeps 24 dp free over the tab bar; the home screen and the pages without
+        // the bar take the frame's padding as it is.
+        val page = remember(content) { PaddingValues(top = content.calculateTopPadding(), bottom = content.calculateBottomPadding() + TabBarClear) }
         NavHost(
             navController = nav, startDestination = start,
             enterTransition = tabEnter, exitTransition = tabExit, popEnterTransition = popEnter, popExitTransition = popExit,
@@ -406,37 +411,37 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?,
                     onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) }, onOpenTimetable = { nav.navigate(Routes.timetable(it)) })
             }
             composable(Routes.TIMETABLE) { e ->
-                com.noor.app.ui.timetable.TimetableScreen(content, com.noor.app.ui.timetable.TableMonth.parse(e.arguments?.getString("month")),
+                com.noor.app.ui.timetable.TimetableScreen(page, com.noor.app.ui.timetable.TableMonth.parse(e.arguments?.getString("month")),
                     onBack = { nav.popBackStack() }, onOpenLocation = { nav.navigate(Routes.CITIES) })
             }
-            composable(Routes.QIBLA) { QiblaScreen(content, onOpenLocation = { nav.navigate(Routes.CITIES) }) }
+            composable(Routes.QIBLA) { QiblaScreen(page, onOpenLocation = { nav.navigate(Routes.CITIES) }) }
             composable(Routes.ADHAN) {
-                AdhanScreen(content, onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) },
+                AdhanScreen(page, onOpenPrayer = { nav.navigate(Routes.adhanPrayer(it)) },
                     onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) },
                     onOpenHistory = { nav.navigate(Routes.ADHAN_HISTORY) }, onOpenLocation = { nav.navigate(Routes.CITIES) },
                     onOpenVoice = { nav.navigate(Routes.adhanVoice(null)) }, onOpenAlarm = { nav.navigate(Routes.adhanAlarm(it)) })
             }
             composable(Routes.ADHAN_PRAYER) { e ->
                 val p = e.arguments?.getString("p")?.let { n -> Prayer.entries.firstOrNull { it.name == n } } ?: Prayer.FAJR
-                PrayerAlertScreen(content, p, onBack = { nav.popBackStack() }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) },
+                PrayerAlertScreen(page, p, onBack = { nav.popBackStack() }, onOpenMySounds = { nav.navigate(Routes.ADHAN_SOUNDS) },
                     onOpenLibrary = { nav.navigate(Routes.ADHAN_LIBRARY) }, onOpenVoice = { nav.navigate(Routes.adhanVoice(p)) })
             }
             composable(Routes.ADHAN_VOICE) { e ->
                 val p = e.arguments?.getString("p")?.let { n -> Prayer.entries.firstOrNull { it.name == n } }
-                com.noor.app.ui.adhan.VoiceScreen(content, p, onBack = { nav.popBackStack() })
+                com.noor.app.ui.adhan.VoiceScreen(page, p, onBack = { nav.popBackStack() })
             }
             composable(Routes.ADHAN_ALARM) { e ->
-                com.noor.app.ui.adhan.AlarmScreen(content, e.arguments?.getString("id")?.toIntOrNull() ?: 0, onBack = { nav.popBackStack() })
+                com.noor.app.ui.adhan.AlarmScreen(page, e.arguments?.getString("id")?.toIntOrNull() ?: 0, onBack = { nav.popBackStack() })
             }
-            composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(content, onBack = { nav.popBackStack() }) }
-            composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(content, onBack = { nav.popBackStack() }) }
-            composable(Routes.ADHAN_HISTORY) { com.noor.app.ui.adhan.AlertHistoryScreen(content, onBack = { nav.popBackStack() }) }
+            composable(Routes.ADHAN_LIBRARY) { SoundLibraryScreen(page, onBack = { nav.popBackStack() }) }
+            composable(Routes.ADHAN_SOUNDS) { MySoundsScreen(page, onBack = { nav.popBackStack() }) }
+            composable(Routes.ADHAN_HISTORY) { com.noor.app.ui.adhan.AlertHistoryScreen(page, onBack = { nav.popBackStack() }) }
             composable(Routes.WATCH) {
-                WatchScreen(content, onOpenAdhan = { openTab(Routes.ADHAN) }, onBack = { nav.popBackStack() }, onOpenStudio = { nav.navigate(Routes.WATCH_STUDIO) })
+                WatchScreen(page, onOpenAdhan = { openTab(Routes.ADHAN) }, onBack = { nav.popBackStack() }, onOpenStudio = { nav.navigate(Routes.WATCH_STUDIO) })
             }
             composable(Routes.WATCH_STUDIO) { com.noor.app.ui.watch.studio.StudioScreen(content, onBack = { nav.popBackStack() }) }
             composable(Routes.SETTINGS) {
-                SettingsScreen(content, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) },
+                SettingsScreen(page, onOpenCities = { nav.navigate(Routes.CITIES) }, onOpenAccuracy = { nav.navigate(Routes.ACCURACY) },
                     onOpenRoute = { r ->
                         // Another tab opens as a tab (keeping each tab's place); other pages open on top of Settings.
                         if (r in Routes.tabs) openTab(r) else nav.navigate(r)
@@ -448,16 +453,16 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?,
                     if (nav.previousBackStackEntry != null) nav.popBackStack() else nav.navigate(Routes.PRAYERS) { popUpTo(Routes.CITIES) { inclusive = true } }
                 })
             }
-            composable(Routes.ACCURACY) { AccuracyScreen(content, onBack = { nav.popBackStack() }) }
-            composable(Routes.SCENERY) { com.noor.app.ui.settings.SceneryScreen(content, onBack = { nav.popBackStack() }) }
-            composable(Routes.WIDGETS) { com.noor.app.ui.settings.WidgetsScreen(content, onBack = { nav.popBackStack() }) }
+            composable(Routes.ACCURACY) { AccuracyScreen(page, onBack = { nav.popBackStack() }) }
+            composable(Routes.SCENERY) { com.noor.app.ui.settings.SceneryScreen(page, onBack = { nav.popBackStack() }) }
+            composable(Routes.WIDGETS) { com.noor.app.ui.settings.WidgetsScreen(page, onBack = { nav.popBackStack() }) }
             // Testing only (0.14): to be removed before release.
             composable(Routes.TESTING) {
                 val vm: com.noor.app.ui.settings.SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
                 val s = vm.settings.collectAsState().value
                 val app = androidx.compose.ui.platform.LocalContext.current
                 com.noor.app.testing.TestingScreen(
-                    content, scenery = s?.scenery ?: com.noor.app.data.Scenery.AUTO,
+                    page, scenery = s?.scenery ?: com.noor.app.data.Scenery.AUTO,
                     // (Through the app's own store, not this page's view model: the demo goes on after the page has gone.)
                     setScenery = { sc -> com.noor.app.testing.Tester.launch { (app.applicationContext as NoorApplication).container.settings.setScenery(sc) } },
                     onBack = { nav.popBackStack() }, onShowHome = { openTab(Routes.PRAYERS) }, onOpenLocation = { nav.navigate(Routes.CITIES) },
@@ -482,8 +487,9 @@ internal fun AppFrame(topLevel: Boolean, tabBar: @Composable () -> Unit, page: @
         var banner by remember { mutableStateOf(0.dp) }
         page(PaddingValues(top = bars.calculateTopPadding(), bottom = bars.calculateBottomPadding() + (if (topLevel) TabBarSpace else 0.dp) + banner))
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-            // (Testing only, 0.14: says so on every page while the tester's options change what the sky shows.)
-            Box(Modifier.fillMaxWidth().onSizeChanged { banner = with(density) { it.height.toDp() } }) { com.noor.app.testing.TesterBanner() }
+            // (Testing only, 0.14: says so on every page while the tester's options change what the sky shows. Drawn
+            // over the fade that the tab bar lays on the foot of the page, which reaches up past the bar.)
+            Box(Modifier.fillMaxWidth().zIndex(1f).onSizeChanged { banner = with(density) { it.height.toDp() } }) { com.noor.app.testing.TesterBanner() }
             if (topLevel) tabBar() else Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBars))
         }
     }
@@ -499,13 +505,37 @@ val LocalTabReselect = androidx.compose.runtime.compositionLocalOf { 0 }
 internal val TabBarSpace = 64.dp + 10.dp + 8.dp
 
 /**
+ * (0.25, second review) What a page that scrolls keeps free over the bar besides: with [TabBarSpace]'s 8 dp, 24 dp, so
+ * that its last row can be scrolled clear of the bar and of the fade over the page's foot ([TabBarFade]). The home
+ * screen does not scroll and keeps its day right over the bar, so it is not given this.
+ */
+internal val TabBarClear = 16.dp
+
+/**
+ * (0.25, second review) The foot of a scrolling page fades into the page's own colour before it reaches the floating
+ * tab bar, as what scrolls under an iPhone's bar loses itself in it: at 78% of glass the rows of a table were read
+ * through the bar and ran into the tabs' names. No blur: it cannot be checked without a phone. The fade begins
+ * [ABOVE] over the bar, is half there at the bar's upper edge and all but whole from its middle down.
+ */
+internal object TabBarFade {
+    val ABOVE = 32.dp
+    /** How much of the page's colour lies over the page [f] of the way from the fade's top (0) to the bar's middle (1). */
+    fun alpha(f: Float): Float { val x = f.coerceIn(0f, 1f); return 0.94f * x * x * (3f - 2f * x) }
+}
+
+/**
  * Five destinations (0.15: a capsule of glass floating over the page, as the tab bar of iOS 26). The icon and its name;
  * the one on show sits in a lens of light that slides to the tab chosen, the others are quiet. A light tick confirms
  * the change. On a wide screen the capsule keeps to the middle. During the opening it rises into place.
+ *
+ * [fade]: the page under the bar scrolls, so its foot fades out behind the bar ([TabBarFade]); not on the home
+ * screen, which fits its day above the bar and whose times stand right over it.
  */
 @Composable
-internal fun NoorTabBar(route: String?, onSelect: (String) -> Unit) {
+internal fun NoorTabBar(route: String?, onSelect: (String) -> Unit, fade: Boolean = true) {
     val c = NoorTheme.colors
+    val foot = com.noor.app.ui.theme.LocalBackdrop.current.at(1f)
+    val fading by animateFloatAsState(if (fade) 1f else 0f, tween(NoorMotion.Quick), label = "tabFade")
     val view = LocalView.current
     val opening = LocalOpening.current
     fun go(r: String) {
@@ -521,6 +551,17 @@ internal fun NoorTabBar(route: String?, onSelect: (String) -> Unit) {
                 val p = opening.part(Opening.TAB_AT, Opening.RISE_MS)
                 translationY = (1f - p) * size.height; alpha = p
             } else Modifier)
+            .drawBehind {
+                if (fading <= 0f) return@drawBehind
+                // From ABOVE over the bar's upper edge to the bar's middle, then the same to the foot of the screen.
+                val barTop = 8.dp.toPx(); val mid = barTop + 32.dp.toPx(); val top = barTop - TabBarFade.ABOVE.toPx()
+                val steps = 8
+                val stops = Array(steps + 1) { i -> (i / steps.toFloat()) to foot.copy(alpha = TabBarFade.alpha(i / steps.toFloat()) * fading) }
+                drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(*stops, startY = top, endY = mid),
+                    topLeft = androidx.compose.ui.geometry.Offset(0f, top), size = androidx.compose.ui.geometry.Size(size.width, mid - top))
+                drawRect(foot.copy(alpha = TabBarFade.alpha(1f) * fading), topLeft = androidx.compose.ui.geometry.Offset(0f, mid),
+                    size = androidx.compose.ui.geometry.Size(size.width, size.height - mid))
+            }
             .windowInsetsPadding(WindowInsets.navigationBars).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -558,7 +599,7 @@ private fun RowScope.Tab(selected: Boolean, icon: Painter, label: String, onClic
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp).graphicsLayer { val k = 1f + 0.08f * lift; scaleX = k; scaleY = k })
         Spacer(Modifier.height(2.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, letterSpacing = 0.1.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
+        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, letterSpacing = 0.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
             color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

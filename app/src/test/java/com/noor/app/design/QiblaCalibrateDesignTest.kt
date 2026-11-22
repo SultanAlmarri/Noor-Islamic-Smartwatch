@@ -57,6 +57,7 @@ class QiblaCalibrateDesignTest {
     @Test fun calibrate() {
         val h = RenderHarness(rule)
         h.tabRoute = com.noor.app.Routes.QIBLA
+        h.tabFade = true
         h.screen = { pad ->
             if (strip) Column(Modifier.fillMaxWidth().padding(pad).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 for (i in 0 until 5) CalibrateNudge({}, phase = i / 5f)

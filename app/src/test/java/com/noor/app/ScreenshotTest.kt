@@ -223,7 +223,7 @@ class ScreenshotTest {
                             Screen.SCENERY -> com.noor.app.ui.settings.SceneryScreen(pad, {})
                             Screen.SHELL -> Column(Modifier.fillMaxSize()) {
                                 Box(Modifier.weight(1f)) { TodayContent(u, PaddingValues(top = 28.dp), { cache.resolved(s, u.place!!, u.profile!!, it) }, {}, {}, {}) }
-                                NoorTabBar(Routes.PRAYERS) {}
+                                NoorTabBar(Routes.PRAYERS, {}, fade = false)
                             }
                         }
                     }

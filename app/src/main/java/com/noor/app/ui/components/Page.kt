@@ -83,7 +83,10 @@ object Page {
  * A page (0.14), as on iOS. A tab's page opens on a large title that scrolls away with the content; once it has gone
  * under the top of the screen, a slim bar carries the title so the page always says where one is. A page pushed from
  * a tab ([onBack] given) has the slim bar from the start, with a back chevron in Noor's accent and the title centred;
- * the bar turns solid, with a hairline, only once something has scrolled under it.
+ * the bar turns solid, with a hairline, only once something has scrolled under it. (0.25, second review: solid means
+ * solid. At 94% a segmented control that had scrolled under the bar still showed through the title, and the bar came
+ * in over 12 dp of scrolling, half there with the page under it. It is now the sky's own colour at the top of the
+ * page, opaque, and there within the first 2 dp; on a tab, within the 8 dp in which the large title goes under.)
  *
  * [floating] is drawn over the page (a snackbar, a button held at the bottom).
  *
@@ -107,8 +110,8 @@ fun NoorPage(
     val large = onBack == null && barStart == null && barEnd == null
     val density = LocalDensity.current
     // How far the bar has come in: with the large title's leaving on a tab, with the first scrolled pixels otherwise.
-    val from = with(density) { (if (large) 30.dp else 0.dp).toPx() }
-    val over = with(density) { (if (large) 22.dp else 12.dp).toPx() }
+    val from = with(density) { (if (large) 28.dp else 0.dp).toPx() }
+    val over = with(density) { (if (large) 8.dp else 2.dp).toPx() }
     val bar: () -> Float = { ((scroll.value - from) / over).coerceIn(0f, 1f) }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -123,9 +126,9 @@ fun NoorPage(
                 Spacer(Modifier.height(8.dp))
             }
         }
-        // The bar: the sky at the top of the page, almost opaque (what scrolls under it stays a hint), and a hairline.
+        // The bar: the sky at the top of the page, opaque (nothing that scrolls under it is seen), and a hairline.
         val sky = com.noor.app.ui.theme.LocalBackdrop.current.top
-        Box(Modifier.fillMaxWidth().height(top + Page.BarHeight).graphicsLayer { alpha = bar() }.background(sky.copy(alpha = 0.94f))) {
+        Box(Modifier.fillMaxWidth().height(top + Page.BarHeight).graphicsLayer { alpha = bar() }.background(sky)) {
             Hairline(Modifier.align(Alignment.BottomCenter))
         }
         Box(Modifier.fillMaxWidth().padding(top = top).height(Page.BarHeight), contentAlignment = Alignment.Center) {
@@ -252,30 +255,59 @@ fun NoorSearchField(value: String, onChange: (String) -> Unit, hint: String, mod
 /** How a button weighs: the one main action of a page, a second action beside it, or a quiet one. */
 enum class ButtonKind { Filled, Tonal, Plain }
 
-/** Noor's button (0.14): 50 dp tall, softly rounded, a single line that shrinks before it wraps. */
+/**
+ * The second kind of button (0.25, second review), in one place so that a test can measure it (`ButtonContrastTest`):
+ * a neutral fill (white at 12% by night, black at 6% by day) and the label in the ink of the text. Until then it was
+ * gold text on a wash of gold (a dark khaki at night), which read as a button that was switched off, and a disabled one
+ * hardly differed from it. Gold is the one main action of a page ([ButtonKind.Filled]); a button that cannot be used is
+ * the whole button at [DISABLED].
+ */
+object TonalColors {
+    fun fill(c: com.noor.app.ui.theme.NoorColors): androidx.compose.ui.graphics.Color =
+        if (c.isDark) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.06f)
+    fun label(c: com.noor.app.ui.theme.NoorColors): androidx.compose.ui.graphics.Color = c.textPrimary
+    const val DISABLED = 0.38f
+}
+
+/**
+ * Noor's button (0.14): 50 dp tall, softly rounded, a single line that shrinks before it wraps. [compact]: the same
+ * button as a pill inside a row or a card, 36 dp high (with the full 48 dp to touch around it).
+ */
 @Composable
 fun NoorButton(
     text: String, onClick: () -> Unit, modifier: Modifier = Modifier, kind: ButtonKind = ButtonKind.Filled,
-    icon: ImageVector? = null, enabled: Boolean = true, danger: Boolean = false,
+    icon: ImageVector? = null, enabled: Boolean = true, danger: Boolean = false, compact: Boolean = false,
 ) {
     val c = NoorTheme.colors
     val shape = RoundedCornerShape(50)
     val bg = when (kind) {
         ButtonKind.Filled -> c.goldFill
-        ButtonKind.Tonal -> c.gold.copy(alpha = if (c.isDark) 0.16f else 0.14f)
+        ButtonKind.Tonal -> TonalColors.fill(c)
         ButtonKind.Plain -> androidx.compose.ui.graphics.Color.Transparent
     }
-    val fg = when { danger -> c.danger; kind == ButtonKind.Filled -> c.onGold; else -> c.goldText }
+    val fg = when { danger -> c.danger; kind == ButtonKind.Filled -> c.onGold; kind == ButtonKind.Tonal -> TonalColors.label(c); else -> c.goldText }
     val source = remember { MutableInteractionSource() }
-    Row(
-        modifier.pressScale(source).heightIn(min = 50.dp).clip(shape).background(bg)
-            .clickable(interactionSource = source, indication = ripple(color = fg), enabled = enabled, role = Role.Button, onClick = withTick(onClick))
-            .graphicsLayer { alpha = if (enabled) 1f else 0.45f }.padding(horizontal = 20.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) { Icon(icon, null, tint = fg, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)) }
-        Text(text, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 16.sp), color = fg, textAlign = TextAlign.Center)
+    val face: @Composable (Modifier) -> Unit = { m ->
+        Row(
+            // (The whole button dims when it cannot be used, its fill too: with only the label dimmed, the fill of a
+            // button that was off looked like the fill of one that was on.)
+            m.graphicsLayer { alpha = if (enabled) 1f else TonalColors.DISABLED }.heightIn(min = if (compact) 36.dp else 50.dp).clip(shape).background(bg)
+                .then(if (compact) Modifier else Modifier.clickable(interactionSource = source, indication = ripple(color = fg), enabled = enabled, role = Role.Button, onClick = withTick(onClick)))
+                .padding(horizontal = if (compact) 16.dp else 20.dp, vertical = if (compact) 6.dp else 10.dp),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) { Icon(icon, null, tint = fg, modifier = Modifier.size(if (compact) 18.dp else 20.dp)); Spacer(Modifier.width(if (compact) 6.dp else 8.dp)) }
+            Text(text, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = if (compact) 15.sp else 16.sp), color = fg, textAlign = TextAlign.Center,
+                maxLines = if (compact) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
+        }
     }
+    if (!compact) face(modifier.pressScale(source))
+    // A pill: 36 dp to see, 48 dp to touch.
+    else Box(
+        modifier.pressScale(source).heightIn(min = 48.dp).clip(shape)
+            .clickable(interactionSource = source, indication = null, enabled = enabled, role = Role.Button, onClick = withTick(onClick)),
+        contentAlignment = Alignment.Center,
+    ) { face(Modifier) }
 }
 
 /** A sheet that rises from the bottom, with Noor's surface, corners and grabber. */

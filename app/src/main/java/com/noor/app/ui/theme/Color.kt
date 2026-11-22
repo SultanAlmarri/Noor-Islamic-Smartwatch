@@ -30,7 +30,12 @@ data class NoorColors(
     /** The lit upper edge of a pane of glass, fading to [glassEdgeLow] at its foot. */
     val glassEdge: Color,
     val glassEdgeLow: Color,
-    /** The floating tab bar and the page bars: a thicker glass, mixed with the sky behind. */
+    /**
+     * The floating tab bar: the surface's colour, all but solid (0.25, after the second review: at 78% the page's
+     * figures and names were read through the bar and ran into the tabs' own names; Apple's bars blur what is behind
+     * them, and a blur cannot be checked without a phone, so the bar hides what is behind it and the page fades out
+     * before it reaches the bar: `TabBarFade`).
+     */
     val chrome: Color,
     /** Hairline separators and card edges. */
     val separator: Color,
@@ -69,7 +74,7 @@ val NightColors = NoorColors(
     glassRaised = Color(0x21FFFFFF),
     glassEdge = Color(0x40FFFFFF),
     glassEdgeLow = Color(0x0DFFFFFF),
-    chrome = Color(0xC70B111D),
+    chrome = Color(0xF7101623),
     separator = Color(0x1AFFFFFF),
     outline = Color(0x24FFFFFF),
     gold = Color(0xFFE3C27E),
@@ -98,7 +103,7 @@ val DayColors = NoorColors(
     glassRaised = Color(0xE6FFFFFF),
     glassEdge = Color(0xF2FFFFFF),
     glassEdgeLow = Color(0x14000000),
-    chrome = Color(0xD1FFFFFF),
+    chrome = Color(0xF7FFFFFF),
     separator = Color(0x14000000),
     outline = Color(0x1F000000),
     gold = Color(0xFFA8792C),

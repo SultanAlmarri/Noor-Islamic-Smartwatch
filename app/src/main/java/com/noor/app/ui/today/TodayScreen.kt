@@ -675,7 +675,7 @@ private fun SkyHeader(
                                 cd.event.prayer == com.noor.prayer.Prayer.SHURUQ -> stringResource(R.string.cd_since_sunrise)
                                 else -> stringResource(R.string.cd_since, f.prayerName(cd.event.prayer, cd.event.date))
                             },
-                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, letterSpacing = 0.2.sp, shadow = SkyText.Shadow),
+                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, letterSpacing = 0.sp, shadow = SkyText.Shadow),
                             color = Sky.OnSkySecondary, maxLines = 1,
                             modifier = Modifier.offset(y = (-4).dp).arrives(5, Opening.HEADER_AT, lift = 22.dp).clearAndSetSemantics { },
                         )
@@ -775,7 +775,7 @@ private fun ScrubReadout(
                 d.isNegative -> stringResource(R.string.time_ago, durationText(d.negated(), f))
                 else -> stringResource(R.string.today_in, durationText(d, f))
             },
-            style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp, shadow = SkyText.Shadow),
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, lineHeight = 16.sp, letterSpacing = 0.sp, shadow = SkyText.Shadow),
             color = if (prayer != null) Sky.GoldOnSky else Sky.OnSkySecondary, maxLines = 1,
         )
     }
@@ -962,7 +962,7 @@ private fun DateBar(
             }
             // (0.15: and the day's name when it is one of the year's great days: "1 Shawwal 1448 AH · Eid al-Fitr".)
             val occasion = occasionOf(hijri)
-            Text(f.hijri(hijri) + (occasion?.let { " · " + if (f.arabic) it.ar else it.en } ?: ""), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, letterSpacing = 0.2.sp),
+            Text(f.hijri(hijri) + (occasion?.let { " · " + if (f.arabic) it.ar else it.en } ?: ""), style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, letterSpacing = 0.sp),
                 // (0.21: two lines if it must, as the date above: with large text one line cut the year, "144...".)
                 color = c.goldText, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         }
@@ -1173,7 +1173,7 @@ private val NoFill: () -> Float = { 0f }
 @Composable
 private fun RowStatus(status: @Composable () -> String?, color: Color) {
     val text = status() ?: return
-    Text(text, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.2.sp), color = color)
+    Text(text, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.sp), color = color)
 }
 
 /** No location yet: a dawn sky and one clear action. */

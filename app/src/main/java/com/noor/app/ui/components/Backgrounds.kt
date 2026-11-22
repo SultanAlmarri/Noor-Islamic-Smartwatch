@@ -1,5 +1,6 @@
 package com.noor.app.ui.components
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -94,7 +95,10 @@ fun ScreenTitle(title: String, subtitle: String? = null, leading: (@Composable (
     }
 }
 
-/** Noor's small action: gold text on a soft gold pill, with a full 48 dp touch target around it. */
+/**
+ * Noor's small action: a pill 36 dp high with a full 48 dp touch target around it. (0.25, second review: the second
+ * kind of button, [TonalColors]: the text's ink on a neutral fill. It was gold on a wash of gold.)
+ */
 @Composable
 fun PillButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = NoorTheme.colors
@@ -103,8 +107,11 @@ fun PillButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit)
             indication = null, interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }),
         contentAlignment = androidx.compose.ui.Alignment.Center,
     ) {
-        androidx.compose.material3.Text(text, style = androidx.compose.material3.MaterialTheme.typography.labelLarge, color = c.goldText, maxLines = 1,
-            modifier = Modifier.clip(RoundedCornerShape(50)).background(c.gold.copy(alpha = if (c.isDark) 0.16f else 0.14f)).padding(horizontal = 16.dp, vertical = 8.dp))
+        Box(Modifier.heightIn(min = 36.dp).clip(RoundedCornerShape(50)).background(TonalColors.fill(c)).padding(horizontal = 16.dp, vertical = 6.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            androidx.compose.material3.Text(text, style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(
+                fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp), fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                color = TonalColors.label(c), maxLines = 1)
+        }
     }
 }
 

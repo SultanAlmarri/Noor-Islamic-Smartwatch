@@ -48,6 +48,8 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
     var fontScale by mutableStateOf(1f)
     var clock by mutableStateOf(DEFAULT_NOW)
     var tabRoute by mutableStateOf<String?>(null)
+    /** Whether the page under the tab bar scrolls, so its foot fades out behind the bar (not the home screen). */
+    var tabFade by mutableStateOf(false)
     var settings by mutableStateOf(DUBAI)
     var screen by mutableStateOf<(@Composable (PaddingValues) -> Unit)?>(null)
     /** Ambient motion on (animations as on a phone with "Remove animations" off); off by default for still renders. */
@@ -78,7 +80,7 @@ class RenderHarness(private val rule: AndroidComposeTestRule<ActivityScenarioRul
                         val pad = PaddingValues(top = 28.dp, bottom = if (tab != null) 112.dp else 16.dp)
                         screen?.invoke(pad)
                         if (tab != null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                            com.noor.app.NoorTabBar(tab) {}
+                            com.noor.app.NoorTabBar(tab, {}, fade = tabFade)
                         }
                         opening?.let { com.noor.app.ui.opening.OpeningVeil(it) }
                     }

@@ -90,6 +90,7 @@ private class TimetableScene(val rule: ComposeRule) {
 
     fun begin() {
         h.tabRoute = com.noor.app.Routes.PRAYERS
+        h.tabFade = true
         h.screen = { pad -> Page(pad) }
         h.start()
     }

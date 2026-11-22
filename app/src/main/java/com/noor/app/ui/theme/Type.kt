@@ -23,6 +23,9 @@ val Tabular = TextStyle(fontFeatureSettings = "tnum")
 /** Reem Kufi for Arabic display names. */
 val Kufi = FontFamily(Font(R.font.reem_kufi, FontWeight.Normal))
 
+// (0.25, second review) No sentence-case style is letter-spaced: Material's own label styles are (0.3 to 0.8 sp), and it
+// was the one thing that still told these pages from an iPhone's. Only the ALL-CAPS section headers are spaced, and they
+// say so themselves (`SectionHeader`); the large figures keep their tightening.
 val NoorTypography = Typography(
     displayLarge = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Light, fontSize = 64.sp, letterSpacing = (-1.5).sp),
     displayMedium = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Light, fontSize = 46.sp, letterSpacing = (-0.5).sp),
@@ -32,11 +35,11 @@ val NoorTypography = Typography(
     headlineSmall = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 22.sp),
     titleLarge = TextStyle(fontFamily = Plex, fontWeight = FontWeight.SemiBold, fontSize = 20.sp),
     titleMedium = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 17.sp),
-    titleSmall = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 14.sp, letterSpacing = 0.4.sp),
+    titleSmall = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 14.sp, letterSpacing = 0.sp),
     bodyLarge = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
     bodyMedium = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 21.sp),
     bodySmall = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 17.sp),
-    labelLarge = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 14.sp, letterSpacing = 0.3.sp),
-    labelMedium = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 0.6.sp),
-    labelSmall = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 0.8.sp),
+    labelLarge = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 14.sp, letterSpacing = 0.sp),
+    labelMedium = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 0.sp),
+    labelSmall = TextStyle(fontFamily = Plex, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 0.sp),
 )

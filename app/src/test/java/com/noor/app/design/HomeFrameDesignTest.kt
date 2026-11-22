@@ -86,7 +86,7 @@ class HomeFrameDesignTest {
                 val s = settings.copy(theme = theme)
                 NoorTheme(theme) {
                     NoorBackground {
-                        com.noor.app.AppFrame(topLevel = true, tabBar = { com.noor.app.NoorTabBar(com.noor.app.Routes.PRAYERS) {} }) { frame ->
+                        com.noor.app.AppFrame(topLevel = true, tabBar = { com.noor.app.NoorTabBar(com.noor.app.Routes.PRAYERS, {}, fade = false) }) { frame ->
                             // (No status bar under Robolectric: 28 dp stands for it, as in the other renders.)
                             val pad = PaddingValues(top = frame.calculateTopPadding() + 28.dp, bottom = frame.calculateBottomPadding())
                             val clock = RenderHarness.DEFAULT_NOW
