@@ -148,8 +148,7 @@ fun QiblaContent(
         // The place and how far the Kaaba is: one quiet line that belongs to the title, so it sits close under it.
         if (place != null && q != null) Row(Modifier.padding(start = 4.dp).pullUp(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Flags.emoji(place.countryCode)?.let { e -> Text(e, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp)) }
-            Text((if (ar) place.nameAr ?: place.nameEn else place.nameEn) + "  ·  " + stringResource(R.string.qibla_distance, f.kilometres(q.distanceKm)),
-                style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
+            PlaceAndDistance(if (ar) place.nameAr ?: place.nameEn else place.nameEn, stringResource(R.string.qibla_distance, f.kilometres(q.distanceKm)))
         }
         if (place == null || q == null) {
             GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onOpenLocation)) {
@@ -192,20 +191,32 @@ fun QiblaContent(
             val measurer = androidx.compose.ui.text.rememberTextMeasurer()
             val density = LocalDensity.current
             val lineHeight = remember(lineStyle, density, measurer) { with(density) { measurer.measure(" ", lineStyle).size.height.toDp() } }
-            Row(Modifier.fillMaxWidth().heightIn(min = lineHeight).then(if (unsure) Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button) { showCalibration = true } else Modifier),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(22.dp))
-                if (status != null) Text(status, style = MaterialTheme.typography.titleMedium, color = statusColor, textAlign = TextAlign.Center)
-                else Text(stringResource(R.string.qibla_hold_flat_body), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary, textAlign = TextAlign.Center)
+            // (0.25, second review) When the compass is unsure the card below says it, with its title, and the line
+            // gives it its place: "Calibrate the compass" was said three times (the line, the card, the accuracy card),
+            // and the accuracy card was pushed off a 915 dp screen.
+            AnimatedVisibility(!unsure,
+                enter = fadeIn(tween(NoorMotion.Standard)) + expandVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
+                exit = fadeOut(tween(NoorMotion.Standard)) + shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
+            ) {
+                Row(Modifier.fillMaxWidth().heightIn(min = lineHeight), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(22.dp))
+                    if (status != null) Text(status, style = MaterialTheme.typography.titleMedium, color = statusColor, textAlign = TextAlign.Center)
+                    else Text(stringResource(R.string.qibla_hold_flat_body), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary, textAlign = TextAlign.Center)
+                }
             }
             // 0.15: when the compass itself is unsure, the direction is not to be trusted yet: said here, where the eye
             // is, and not only in the accuracy card below. 0.22.1: shown, not only written (the owner: "it should display
-            // the figure 8"): a phone gliding along a figure 8, with one line; it folds away once the compass is sure.
+            // the figure 8"): a phone gliding along a figure 8, with what to do; it folds away once the compass is sure.
             AnimatedVisibility(unsure,
                 enter = fadeIn(tween(NoorMotion.Standard)) + expandVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
                 exit = fadeOut(tween(NoorMotion.Standard)) + shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
-            ) { CalibrateNudge(onOpen = { showCalibration = true }, modifier = Modifier.padding(top = 16.dp)) }
+            ) { CalibrateNudge(onOpen = { showCalibration = true }) }
         }
+
+        // (0.25, second review) While the compass is unsure, how sure it is comes straight under what to do about it:
+        // at the foot of the page it was under the tab bar of a 915 dp phone. Its card then leaves the calibration to
+        // the card above (it said "needs calibrating" a third time).
+        if (unsure) AccuracyCard(reading!!, f, calibrationSaidAbove = true) { showCalibration = true }
 
         // Readings, side by side: where the Qibla is and where the phone points, in whole degrees. (0.25: the third,
         // "Difference", is gone: the line under the dial says it, and three rounded figures side by side do not always
@@ -215,15 +226,18 @@ fun QiblaContent(
             GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
                 Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Readout(stringResource(R.string.qibla_bearing), f.wholeDegrees(q.bearingDeg), c.goldText, Modifier.weight(1f))
-                    VerticalHairline()
-                    Readout(stringResource(R.string.qibla_heading), reading?.let { f.wholeDegrees(it.trueHeadingDeg) } ?: "—", if (aligned) c.success else c.textPrimary, Modifier.weight(1f))
+                    // (0.25, second review: a phone without a compass has no heading: no half of the card waits for one.)
+                    if (!noSensor) {
+                        VerticalHairline()
+                        Readout(stringResource(R.string.qibla_heading), reading?.let { f.wholeDegrees(it.trueHeadingDeg) } ?: "—", if (aligned) c.success else c.textPrimary, Modifier.weight(1f))
+                    }
                 }
             }
             SectionFooter(stringResource(R.string.qibla_exact, f.tenthDegrees(q.bearingDeg)))
         }
 
         // Accuracy
-        if (reading != null && !noSensor) AccuracyCard(reading, f) { showCalibration = true }
+        if (reading != null && !noSensor && !unsure) AccuracyCard(reading, f) { showCalibration = true }
 
         // (0.16: the note on the method (true north, the ellipsoid, the decimals, the declination) is gone: the owner,
         // "is this really even necessary to tell the user?" The method is in the docs; the screen says what to do.)
@@ -235,6 +249,28 @@ fun QiblaContent(
         val scope = rememberCoroutineScope()
         NoorSheet(onDismiss = { showCalibration = false }, state = sheet) {
             CalibrationGuide(reading, onDone = { scope.launch { sheet.hide() }.invokeOnCompletion { showCalibration = false } }, f = f)
+        }
+    }
+}
+
+/**
+ * Where the user is and how far the Kaaba is: on one line, "Dubai · 1,633 km to the Kaaba", when it fits; otherwise
+ * the distance on a line of its own, without the dot (0.25, second review: a long place name broke the line after the
+ * dot, which then hung at the end of the first line).
+ */
+@Composable
+private fun PlaceAndDistance(place: String, distance: String) {
+    val c = NoorTheme.colors
+    val style = MaterialTheme.typography.bodyMedium
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    androidx.compose.foundation.layout.BoxWithConstraints {
+        val one = "$place  ·  $distance"
+        val room = constraints.maxWidth
+        val fits = remember(one, style, room, measurer) { measurer.measure(one, style, maxLines = 1, softWrap = false).size.width <= room }
+        if (fits) Text(one, style = style, color = c.textSecondary)
+        else Column {
+            Text(place, style = style, color = c.textSecondary)
+            Text(distance, style = style, color = c.textSecondary)
         }
     }
 }
@@ -287,7 +323,7 @@ private fun VerticalHairline() = Box(Modifier.width(0.5.dp).height(40.dp).backgr
  * so nothing under it moves, and its own edge glides to the new height instead of jumping.
  */
 @Composable
-internal fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: () -> Unit) {
+internal fun AccuracyCard(reading: CompassReading, f: Formatter, calibrationSaidAbove: Boolean = false, onCalibrate: () -> Unit) {
     val c = NoorTheme.colors
     val shown = reading.assessment
     val label = accuracyLabel(shown)
@@ -315,7 +351,7 @@ internal fun AccuracyCard(reading: CompassReading, f: Formatter, onCalibrate: ()
         val detail = buildList {
             (reading.shownAccuracyDeg ?: reading.headingAccuracyDeg?.let { com.noor.prayer.qibla.CompassDisplay.displayedEstimate(it) })?.let { add(stringResource(R.string.acc_estimate, f.number(it))) }
             if (CompassIssue.MAGNETIC_INTERFERENCE in shown.issues) add(stringResource(R.string.acc_interference))
-            if (CompassIssue.SENSOR_UNRELIABLE in shown.issues || CompassIssue.LOW_SENSOR_ACCURACY in shown.issues)
+            if (!calibrationSaidAbove && (CompassIssue.SENSOR_UNRELIABLE in shown.issues || CompassIssue.LOW_SENSOR_ACCURACY in shown.issues))
                 add(stringResource(R.string.acc_needs_calibration))
             if (isEmpty()) add(stringResource(R.string.acc_status_only))
         }.joinToString(" ")
@@ -450,7 +486,7 @@ fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter,
         drawCircle(accent, 21.dp.toPx(), kaabaPos)
         val iconSize = 22.dp.toPx()
         translate(kaabaPos.x - iconSize / 2, kaabaPos.y - iconSize / 2) {
-            with(kaaba) { draw(androidx.compose.ui.geometry.Size(iconSize, iconSize), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(c.onGold)) }
+            with(kaaba) { draw(androidx.compose.ui.geometry.Size(iconSize, iconSize), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(kaabaGlyph(c))) }
         }
         // Centre hub.
         drawCircle(c.background, 9.dp.toPx(), centre)
@@ -466,6 +502,13 @@ fun CompassDial(heading: Double?, qibla: Double, aligned: Boolean, f: Formatter,
         drawPath(notch, if (aligned) c.success else c.textPrimary)
     }
 }
+
+/**
+ * The colour of the Kaaba's sign on its disc (0.25, second review). By night the disc is a light gold or a light green
+ * and the sign dark on it; by day the disc is the day's deep gold or deep green, and the sign is white (it was black,
+ * and the dark cube all but vanished into the dark green of "Facing the Qibla"). `QiblaKaabaContrastTest` measures it.
+ */
+internal fun kaabaGlyph(c: com.noor.app.ui.theme.NoorColors): Color = if (c.isDark) c.onGold else Color.White
 
 /** A two-colour radial gradient, made again only when its colours, centre or radius change (the dial's draw phase). */
 private class RadialCache {
@@ -543,37 +586,43 @@ private const val NUDGE_LOOP_MS = 2800
 internal fun CalibrateNudge(onOpen: () -> Unit, modifier: Modifier = Modifier, phase: Float? = null) {
     val c = NoorTheme.colors
     val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
-    val line = stringResource(R.string.qibla_figure8)
+    // (0.25, second review) One card that says it once: its title is what to do ("Calibrate the compass", which the
+    // line under the dial said over it until then), the drawing and a line say how, and the chevron opens the guide.
+    // The drawing stands beside the words, so the card is about as tall as a row and the accuracy card under the
+    // readings stays on the screen.
     GlassCard(
         modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius))
             .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onOpen)
             .semantics(mergeDescendants = true) {},
         padding = 0.dp,
     ) {
-        val drawing = Modifier.fillMaxWidth().height(98.dp).padding(top = 10.dp)
-        when {
-            phase != null -> FigureEightCanvas({ phase }, rtl, drawing)
-            LocalAmbientMotion.current -> {
-                val t = rememberInfiniteTransition(label = "nudge")
-                val p = t.animateFloat(0f, 1f, infiniteRepeatable(tween(NUDGE_LOOP_MS, easing = LinearEasing), RepeatMode.Restart), label = "nudgePhase")
-                // (Read in the draw phase only: each frame draws again, nothing is composed again.)
-                FigureEightCanvas({ p.value }, rtl, drawing)
+        Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            val drawing = Modifier.width(132.dp).height(84.dp)
+            when {
+                phase != null -> FigureEightCanvas({ phase }, rtl, drawing, small = true)
+                LocalAmbientMotion.current -> {
+                    val t = rememberInfiniteTransition(label = "nudge")
+                    val p = t.animateFloat(0f, 1f, infiniteRepeatable(tween(NUDGE_LOOP_MS, easing = LinearEasing), RepeatMode.Restart), label = "nudgePhase")
+                    // (Read in the draw phase only: each frame draws again, nothing is composed again.)
+                    FigureEightCanvas({ p.value }, rtl, drawing, small = true)
+                }
+                else -> FigureEightCanvas({ NUDGE_STILL_PHASE }, rtl, drawing, small = true)
             }
-            else -> FigureEightCanvas({ NUDGE_STILL_PHASE }, rtl, drawing)
-        }
-        // The line centred in the card, the chevron (it opens the guide) at the card's end, as on a row.
-        Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 14.dp), contentAlignment = Alignment.CenterEnd) {
-            Text(line, style = MaterialTheme.typography.titleSmall, color = c.warning, textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 36.dp))
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.padding(end = 12.dp).size(20.dp))
+            Spacer(Modifier.width(6.dp))
+            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+                Text(stringResource(R.string.cal_title), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = c.warning)
+                Spacer(Modifier.height(2.dp))
+                Text(stringResource(R.string.qibla_figure8), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
+            }
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.padding(start = 4.dp).size(20.dp))
         }
     }
 }
 
 @Composable
-private fun FigureEightCanvas(phase: () -> Float, rtl: Boolean, modifier: Modifier) {
+private fun FigureEightCanvas(phase: () -> Float, rtl: Boolean, modifier: Modifier, small: Boolean = false) {
     val c = NoorTheme.colors
-    Canvas(modifier) { nudgeFigure(phase(), rtl, c.gold, c.textMuted.copy(alpha = 0.30f), c.textPrimary, c.surface) }
+    Canvas(modifier) { nudgeFigure(phase(), rtl, c.gold, c.textMuted.copy(alpha = 0.30f), c.textPrimary, c.surface, if (small) 0.8f else 1f) }
 }
 
 /**
@@ -581,9 +630,9 @@ private fun FigureEightCanvas(phase: () -> Float, rtl: Boolean, modifier: Modifi
  * travels it and tilts as it goes, with a trail that fades behind it. Strokes in plain colours, faded with alpha (a gradient brush on a stroke
  * stops the emulator's graphics: HANDOVER.md section 28).
  */
-private fun DrawScope.nudgeFigure(phase: Float, rtl: Boolean, trail: Color, track: Color, body: Color, screen: Color) {
+private fun DrawScope.nudgeFigure(phase: Float, rtl: Boolean, trail: Color, track: Color, body: Color, screen: Color, scale: Float = 1f) {
     val cx = size.width / 2; val cy = size.height / 2
-    val phoneH = 26.dp.toPx(); val phoneW = 15.dp.toPx()
+    val phoneH = 26.dp.toPx() * scale; val phoneW = 15.dp.toPx() * scale
     // Half the width, so the figure (about 0.46 of it high on each side of the middle) leaves room for the phone.
     val a = minOf(size.width * 0.30f, (size.height / 2 - phoneH * 0.55f) / 0.46f, 96.dp.toPx())
     val dir = if (rtl) -1f else 1f

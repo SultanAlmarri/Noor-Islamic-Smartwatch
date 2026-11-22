@@ -46,6 +46,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.MyLocation
@@ -83,6 +84,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -100,6 +102,7 @@ import com.noor.app.data.LocationMode
 import com.noor.app.data.PickedPlace
 import com.noor.app.data.WorldStore
 import com.noor.app.ui.components.GlassCard
+import com.noor.app.ui.components.glassEdge
 import com.noor.app.ui.components.Noor
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.theme.NoorTheme
@@ -158,10 +161,10 @@ fun LocationScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Locati
         val dir = (if (forward) 1 else -1) * (if (rtl) -1 else 1)
         (slideInHorizontally(tween(260)) { it / 5 * dir } + fadeIn(tween(220))) togetherWith (slideOutHorizontally(tween(220)) { -it / 6 * dir } + fadeOut(tween(160)))
     }, label = "locStep") { step ->
-        // Lists and cards keep a readable width on wide screens (a foldable's inner screen, tablets); the map fills it.
+        // Lists and cards keep a readable width on wide screens (a foldable's inner screen, tablets: [Pane]); the map
+        // fills it.
         if (step is LocStep.MapPick) MapPane(vm, step.start, step.zoom, onBack = { pop() }, onPinned = { p -> vm.pin(p); push(LocStep.Confirm) })
-        else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) { Box(Modifier.widthIn(max = 640.dp).fillMaxSize()) {
-        when (step) {
+        else when (step) {
             LocStep.Home -> HomePane(contentPadding, vm, onBack = { pop() }, onCountries = { push(LocStep.Countries) },
                 onMap = { push(LocStep.MapPick(it, if (it == null) 2.5 else 12.0)) }, onCoords = { coordsDialog = true },
                 onPicked = { push(LocStep.Confirm) }, onAutomatic = onDone)
@@ -182,7 +185,6 @@ fun LocationScreen(contentPadding: PaddingValues, onDone: () -> Unit, vm: Locati
             LocStep.Confirm -> ConfirmPane(contentPadding, vm, onBack = { pop() },
                 onAdjust = { p -> push(LocStep.MapPick(p, 16.0)) }, onSaved = onDone)
         }
-        } }
     }
     if (coordsDialog) CoordinatesDialog(onDismiss = { coordsDialog = false }, onPoint = { p -> coordsDialog = false; vm.pin(p); push(LocStep.Confirm) })
 }
@@ -212,12 +214,11 @@ private fun HomePane(
         }
     }
     val current = s?.let { com.noor.app.data.PrayerProvider.place(it) }
-    Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
-        Header(stringResource(R.string.loc_title), onBack)
+    Pane(contentPadding, stringResource(R.string.loc_title), onBack) {
         SearchField(search.query, stringResource(R.string.loc_search_hint), onChange = { vm.setQuery(it, ar) })
         if (search.query.isNotBlank()) {
             SearchResults(vm, search, ar, onPoint = { p, title -> vm.pin(p, title); onPicked() }, onPlace = { vm.pick(it); onPicked() })
-            return@Column
+            return@Pane
         }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (current != null) GlassCard(Modifier.fillMaxWidth(), padding = 16.dp, corner = 24.dp) {
@@ -226,11 +227,13 @@ private fun HomePane(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(Flags.emoji(current.countryCode) ?: "", fontSize = 20.sp, modifier = Modifier.padding(end = 10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (ar) current.nameAr ?: current.nameEn else current.nameEn, style = MaterialTheme.typography.titleMedium, color = c.textPrimary)
+                        val cc = current.countryCode
+                        Text(if (ar) current.nameAr ?: PlaceText.en(current.nameEn, cc) else PlaceText.en(current.nameEn, cc), style = MaterialTheme.typography.titleMedium, color = c.textPrimary)
                         // (0.25: no coordinates here: five decimals under a city's name say nothing to the eye. They are
                         // shown where a point is chosen or confirmed: the coordinates' own dialog, the map, the confirmation.)
                         val sub = if (s.locationMode == LocationMode.AUTO) stringResource(R.string.loc_now_auto)
-                            else (if (ar) current.contextAr ?: current.contextEn else current.contextEn) ?: stringResource(R.string.loc_label_manual)
+                            else (if (ar) current.contextAr ?: current.contextEn?.let { PlaceText.en(it, cc) } else current.contextEn?.let { PlaceText.en(it, cc) })
+                                ?: stringResource(R.string.loc_label_manual)
                         Text(sub, style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
                     }
                 }
@@ -248,8 +251,8 @@ private fun HomePane(
                 com.noor.app.ui.settings.SettingsDivider()
                 OptionRow(Icons.Rounded.Public, stringResource(R.string.loc_browse), null, onClick = onCountries)
             }
-            Text(stringResource(R.string.geonames_credit) + " " + stringResource(R.string.loc_tz_credit), style = com.noor.app.ui.settings.FootnoteStyle,
-                color = c.textMuted, modifier = Modifier.padding(horizontal = 16.dp))
+            // (0.25, second review: the place names' and time zones' licences are no longer under the ways to choose:
+            // they are in Settings → About Minhad → Acknowledgements, with every other source. The map keeps its own.)
         }
     }
 }
@@ -300,8 +303,7 @@ private fun CountriesPane(contentPadding: PaddingValues, vm: LocationViewModel, 
         val f = WorldPlaces.fold(filter.trim())
         if (f.isEmpty()) all else all.filter { (cc, name) -> WorldPlaces.fold(name).contains(f) || WorldPlaces.fold(WorldStore.countryName(cc, false)).contains(f) || cc.equals(filter.trim(), true) }
     }
-    Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
-        Header(stringResource(R.string.loc_browse), onBack)
+    Pane(contentPadding, stringResource(R.string.loc_browse), onBack) {
         SearchField(filter, stringResource(R.string.loc_countries_filter), onChange = { filter = it })
         if (world == null) Loading()
         LazyColumn(Modifier.fillMaxSize()) {
@@ -313,7 +315,7 @@ private fun CountriesPane(contentPadding: PaddingValues, vm: LocationViewModel, 
             // two rows can be told apart.
             items(shown, key = { it.first }) { (cc, name) ->
                 val twin = all.count { it.second == name } > 1
-                val sub = if (twin) remember(world, cc, ar) { world?.largest(cc, 3)?.joinToString(if (ar) "، " else ", ") { if (ar) it.nameAr ?: it.name else it.name } } else null
+                val sub = if (twin) remember(world, cc, ar) { world?.largest(cc, 3)?.joinToString(if (ar) "، " else ", ") { PlaceText.of(it, ar) } } else null
                 PlaceRow(flag = Flags.emoji(cc), title = name, subtitle = sub, chevron = true) { onCountry(cc) }
             }
             item { Spacer(Modifier.height(32.dp)) }
@@ -361,10 +363,10 @@ private fun RegionsPane(contentPadding: PaddingValues, vm: LocationViewModel, co
     val largest by produceState<List<WorldPlaces.Place>>(emptyList(), world, countryCode) { value = world?.let { w -> withContext(Dispatchers.Default) { w.largest(countryCode, 6) } }.orEmpty() }
     val found by produceState<List<WorldPlaces.Place>?>(null, world, filter) {
         val f = filter.trim()
-        value = if (f.length < 2) null else world?.let { w -> withContext(Dispatchers.Default) { w.search(f, 200, countryCode) } }
+        value = if (f.length < 2) null else world?.let { w -> withContext(Dispatchers.Default) { PlaceText.search(w, f, 200, countryCode) } }
     }
-    Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
-        Header((Flags.emoji(countryCode)?.let { "$it  " } ?: "") + country, onBack)
+    val f2 = Formatter(ar, vm.settings.collectAsStateWithLifecycle().value?.numerals ?: com.noor.app.data.Numerals.WESTERN, com.noor.app.data.TimeFormat.H12)
+    Pane(contentPadding, (Flags.emoji(countryCode)?.let { "$it  " } ?: "") + country, onBack) {
         SearchField(filter, stringResource(R.string.loc_find_in, country), onChange = { filter = it })
         if (regions == null) Loading()
         LazyColumn(Modifier.fillMaxSize()) {
@@ -380,11 +382,16 @@ private fun RegionsPane(contentPadding: PaddingValues, vm: LocationViewModel, co
                 items(largest, key = { "l" + it.row }) { p -> OpenablePlace(p, ar, world, opening, { opening = it }, showRegion = true, onCity = onCity) }
                 item { SectionLabel(regionsWord(countryCode, ar)) }
                 items(regions.orEmpty(), key = { "r" + it.index }) { r ->
-                    val name = (if (ar) r.nameAr ?: r.name else r.name).ifBlank { stringResource(R.string.loc_other_places) }
-                    val largestName = r.largest?.let { if (ar) it.nameAr ?: it.name else it.name }
-                    val f2 = Formatter(ar, vm.settings.collectAsStateWithLifecycle().value?.numerals ?: com.noor.app.data.Numerals.WESTERN, com.noor.app.data.TimeFormat.H12)
+                    val name = PlaceText.of(r, ar).ifBlank { stringResource(R.string.loc_other_places) }
+                    // (0.25, second review) The largest place is named only where it says something the region's own
+                    // name does not ("Eastern Province: Largest: Dammam"); "Ajman: Largest: Ajman" said it twice.
+                    val largestName = r.largest?.let { PlaceText.of(it, ar) }?.takeIf { l ->
+                        val a = PlaceText.key(l); val b = PlaceText.key(name)
+                        a.isNotEmpty() && !b.contains(a) && !a.contains(b)
+                    }
+                    val count = pluralStringResource(R.plurals.loc_places_count, r.places, f2.number(r.places))
                     PlaceRow(icon = Icons.Rounded.Public, title = name, chevron = true,
-                        subtitle = if (largestName != null) stringResource(R.string.loc_region_sub, largestName, f2.number(r.places)) else null) { onRegion(r) }
+                        subtitle = if (largestName != null) stringResource(R.string.loc_region_sub, largestName, f2.number(r.places)) else count) { onRegion(r) }
                 }
             }
             item { Spacer(Modifier.height(32.dp)) }
@@ -410,13 +417,12 @@ private fun CitiesPane(contentPadding: PaddingValues, vm: LocationViewModel, cou
     val filtered by produceState<List<WorldPlaces.Place>?>(null, world, filter, cities) {
         val f = filter.trim()
         value = if (f.length < 2) null else world?.let { w -> withContext(Dispatchers.Default) {
-            w.search(f, 300, countryCode).filter { region == null || it.admin1Code == region.code }
+            PlaceText.search(w, f, 300, countryCode).filter { region == null || it.admin1Code == region.code }
         } }
     }
-    val regionName = region?.let { (if (ar) it.nameAr ?: it.name else it.name).ifBlank { stringResource(R.string.loc_other_places) } }
+    val regionName = region?.let { PlaceText.of(it, ar).ifBlank { stringResource(R.string.loc_other_places) } }
     val title = regionName ?: ((Flags.emoji(countryCode)?.let { "$it  " } ?: "") + WorldStore.countryName(countryCode, ar))
-    Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
-        Header(title, onBack)
+    Pane(contentPadding, title, onBack) {
         SearchField(filter, stringResource(R.string.loc_find_in, regionName ?: WorldStore.countryName(countryCode, ar)), onChange = { filter = it })
         val all = filtered ?: cities
         if (all == null) Loading()
@@ -446,21 +452,19 @@ private fun AreasPane(contentPadding: PaddingValues, vm: LocationViewModel, city
                       onPick: (WorldPlaces.Place) -> Unit, onMap: () -> Unit) {
     val ar = isArabicUi()
     var filter by rememberSaveable { mutableStateOf("") }
-    val cityName = if (ar) city.nameAr ?: city.name else city.name
-    val shown = remember(areas, filter) {
-        val f = WorldPlaces.fold(filter.trim())
-        if (f.isEmpty()) areas else areas.filter { WorldPlaces.fold(it.name).contains(f) || it.nameAr?.let { a -> WorldPlaces.fold(a).contains(f) } == true }
-    }
-    Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
-        Header(stringResource(R.string.loc_areas_title, cityName), onBack)
+    val cityName = PlaceText.of(city, ar)
+    val shown = remember(areas, filter) { if (filter.isBlank()) areas else areas.filter { PlaceText.matches(it, filter) } }
+    Pane(contentPadding, stringResource(R.string.loc_areas_title, cityName), onBack) {
         SearchField(filter, stringResource(R.string.loc_areas_filter), onChange = { filter = it })
         LazyColumn(Modifier.fillMaxSize()) {
             if (filter.isBlank()) {
                 item { PlaceRow(icon = Icons.Rounded.Place, title = stringResource(R.string.loc_city_centre, cityName), subtitle = stringResource(R.string.loc_city_centre_desc)) { onPick(city) } }
                 item { PlaceRow(icon = Icons.Rounded.Map, title = stringResource(R.string.loc_pin_exact), subtitle = null) { onMap() } }
-                item { Hairline() }
             }
-            items(shown, key = { it.row }) { p -> PlaceItem(p, ar, showRegion = false) { onPick(p) } }
+            // (0.25, second review) One heading over the list, where "District" stood under almost every row (and
+            // not under the others, so the rows were of two heights).
+            if (shown.isNotEmpty()) item { SectionLabel(stringResource(R.string.loc_areas_header)) }
+            items(shown, key = { it.row }) { p -> PlaceItem(p, ar, showRegion = false, showKind = false) { onPick(p) } }
             item { Spacer(Modifier.height(32.dp)) }
         }
     }
@@ -476,15 +480,14 @@ private fun ConfirmPane(contentPadding: PaddingValues, vm: LocationViewModel, on
     val s = vm.settings.collectAsStateWithLifecycle().value
     val preview = vm.preview.collectAsStateWithLifecycle().value
     val f = Formatter(ar, s?.numerals ?: com.noor.app.data.Numerals.WESTERN, s?.timeFormat ?: com.noor.app.data.TimeFormat.H12)
-    Column(Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp)) {
-        Header(stringResource(R.string.loc_confirm_title), onBack)
+    Pane(contentPadding, stringResource(R.string.loc_confirm_title), onBack) {
         if (preview == null) {
             Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(Modifier.size(28.dp), color = c.gold, strokeWidth = 2.5.dp)
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.loc_naming), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
             }
-            return@Column
+            return@Pane
         }
         val p = preview.picked
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Noor.Gap)) {
@@ -495,11 +498,18 @@ private fun ConfirmPane(contentPadding: PaddingValues, vm: LocationViewModel, on
                 Pin(Modifier.align(Alignment.Center), lifted = false)
             }
             Column(Modifier.padding(horizontal = 4.dp)) {
+                val cc = p.countryCode
+                // (0.25, second review) A point named after a district leads with its city, the district under it.
+                val city = preview.city
+                val title = if (city != null) PlaceText.of(city, ar) else if (ar) p.nameAr ?: PlaceText.en(p.nameEn, cc) else PlaceText.en(p.nameEn, cc)
+                val under = if (city != null) listOfNotNull(if (ar) p.nameAr ?: PlaceText.en(p.nameEn, cc) else PlaceText.en(p.nameEn, cc),
+                    cc?.let { WorldStore.countryName(it, ar) }).joinToString(if (ar) "، " else ", ")
+                    else (if (ar) p.contextAr ?: p.contextEn else p.contextEn)?.let { PlaceText.en(it, cc) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Flags.emoji(p.countryCode)?.let { Text(it, fontSize = 22.sp, modifier = Modifier.padding(end = 10.dp)) }
-                    Text(if (ar) p.nameAr ?: p.nameEn else p.nameEn, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold), color = c.textPrimary)
+                    Flags.emoji(cc)?.let { Text(it, fontSize = 22.sp, modifier = Modifier.padding(end = 10.dp)) }
+                    Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold), color = c.textPrimary)
                 }
-                (if (ar) p.contextAr ?: p.contextEn else p.contextEn)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = c.textSecondary) }
+                under?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = c.textSecondary) }
             }
             GlassCard(Modifier.fillMaxWidth(), padding = 18.dp) {
                 Fact(stringResource(R.string.loc_coordinates), coords(p.point))
@@ -507,12 +517,14 @@ private fun ConfirmPane(contentPadding: PaddingValues, vm: LocationViewModel, on
                 val zone = ZoneId.of(p.zoneId)
                 val now = Instant.now()
                 // (0.25: the zone's name on the line, its offset with the small print under it. On one line they broke
-                // on a phone after the dot between them, which then hung at the end of the first.)
-                val zoneParts = zoneText(p.zoneId, ar, f, now).split("  ·  ")
-                Fact(stringResource(R.string.loc_time_zone), zoneParts.first())
+                // on a phone after the dot between them, which then hung at the end of the first. Second review: the
+                // name as people say it, without the database's "(Asia/Riyadh)", and the offset as "UTC+3".)
+                val (zoneName, offset) = zoneText(p.zoneId, ar, f, now)
+                val utc = stringResource(R.string.loc_utc_offset, offset).trim()
+                Fact(stringResource(R.string.loc_time_zone), zoneName ?: utc)
                 val dst = zone.rules.isDaylightSavings(now)
                 val changes = zone.rules.nextTransition(now) != null && zone.rules.transitionRules.isNotEmpty()
-                Text(listOfNotNull(zoneParts.getOrNull(1), stringResource(when { dst -> R.string.loc_dst_now; changes -> R.string.loc_dst_rule; else -> R.string.loc_dst_none }) +
+                Text(listOfNotNull(utc.takeIf { zoneName != null }, stringResource(when { dst -> R.string.loc_dst_now; changes -> R.string.loc_dst_rule; else -> R.string.loc_dst_none }) +
                     if (dst) " " + stringResource(R.string.loc_dst_rule) else "").joinToString("  ·  "),
                     style = com.noor.app.ui.settings.FootnoteStyle, color = c.textMuted, modifier = Modifier.padding(top = 2.dp))
             }
@@ -576,19 +588,22 @@ private fun MapPane(vm: LocationViewModel, start: GeoPoint?, startZoom: Double, 
             val w = world ?: return@collect
             val p = state.center
             val near = withContext(Dispatchers.Default) { w.nearest(p, if (state.zoom > 11) 8.0 else 40.0) }
-            label = near?.let { n -> (if (ar) n.nameAr ?: n.name else n.name) + ", " + WorldStore.countryName(n.countryCode, ar) }
+            label = near?.let { n -> PlaceText.of(n, ar) + (if (ar) "، " else ", ") + WorldStore.countryName(n.countryCode, ar) }
         }
     }
     Box(Modifier.fillMaxSize().background(Color(0xFF0B1A2A))) {
         TileMap(state, layer, cache, Modifier.fillMaxSize())
         Pin(Modifier.align(Alignment.Center), lifted = state.moving)
-        // Top: back and search.
+        // Top: back and search. (0.25, second review: the app's own gold chevron and its pill search field, on one
+        // pane of glass that floats over the picture, as the panel at the bottom does; they were an arrow in a circle
+        // and a rounded box, the map's own controls.)
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onBack)
-                Spacer(Modifier.width(8.dp))
-                Box(Modifier.weight(1f)) {
-                    SearchField(query, stringResource(R.string.loc_map_search), raised = true, onChange = { query = it; searching = it.isNotBlank(); vm.setQuery(it, ar) })
+            GlassCard(Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(30.dp)), corner = 30.dp, padding = 4.dp, highlighted = true) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.noor.app.ui.components.BackButton(onBack)
+                    Box(Modifier.weight(1f)) {
+                        SearchField(query, stringResource(R.string.loc_map_search), raised = true, onChange = { query = it; searching = it.isNotBlank(); vm.setQuery(it, ar) })
+                    }
                 }
             }
             if (searching && query.isNotBlank()) {
@@ -621,8 +636,14 @@ private fun MapPane(vm: LocationViewModel, start: GeoPoint?, startZoom: Double, 
         }
         // Bottom: what is under the pin, and the button.
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(12.dp)) {
-            if (cache.offline) Text(stringResource(R.string.loc_map_offline), style = MaterialTheme.typography.bodySmall, color = Color.White,
-                modifier = Modifier.padding(bottom = 8.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xCC000000)).padding(10.dp))
+            // (0.25, second review: a card of the panel's own glass, where it was a black banner of another app.)
+            if (cache.offline) GlassCard(Modifier.fillMaxWidth().padding(bottom = 8.dp).shadow(12.dp, RoundedCornerShape(Noor.CardRadius)), padding = 16.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.CloudOff, null, tint = c.textSecondary, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(stringResource(R.string.loc_map_offline), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textPrimary)
+                }
+            }
             GlassCard(Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(Noor.CardRadius)), padding = 16.dp) {
                 Text(label ?: stringResource(R.string.loc_map_hint), style = MaterialTheme.typography.titleSmall, color = c.textPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(coords(state.center), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
@@ -722,41 +743,53 @@ internal fun coords(p: GeoPoint): String {
     return n(p.latitude) + " " + (if (p.latitude >= 0) "ش" else "ج") + "، " + n(p.longitude) + " " + (if (p.longitude >= 0) "ق" else "غ")
 }
 
-/** The time zone in words: "Gulf Standard Time (Asia/Dubai) · UTC+04:00"; in Arabic its Arabic name and offset only. */
-internal fun zoneText(zoneId: String, ar: Boolean, f: Formatter, now: Instant = Instant.now()): String {
+/**
+ * The time zone in words, and its offset from UTC: ("Gulf Standard Time", "+4"), ("India Standard Time", "+5:30"),
+ * (null, "-3:30") where Android has no name for it in that language; "" for UTC itself. The offset is in the user's
+ * digits, kept left to right inside an Arabic sentence, and is shown as "UTC+4" (`loc_utc_offset`). (0.25, second
+ * review: no longer "Gulf Standard Time (Asia/Dubai) · UTC+04:00": the database's name and the zero-padded hours are a
+ * programmer's way to write it.)
+ */
+internal fun zoneText(zoneId: String, ar: Boolean, f: Formatter, now: Instant = Instant.now()): Pair<String?, String> {
     val zone = ZoneId.of(zoneId)
     val offset = zone.rules.getOffset(now)
     val tz = java.util.TimeZone.getTimeZone(zone)
     val name = tz.getDisplayName(zone.rules.isDaylightSavings(now), java.util.TimeZone.LONG, if (ar) Locale.forLanguageTag("ar") else Locale.ENGLISH)
         .takeIf { it.isNotBlank() && !it.startsWith("GMT") && !(ar && it.any { c -> c in 'A'..'z' }) }
-    val off = if (offset.totalSeconds == 0) "+00:00" else offset.id
-    return if (ar) listOfNotNull(name, "\u200E" + f.digits(off) + "\u200E").joinToString("  ·  ")
-    else (name?.let { "$it (${zoneId.replace('_', ' ')})" } ?: zoneId.replace('_', ' ')) + "  ·  UTC$off"
+    return name to utcOffset(offset.totalSeconds, f)
+}
+
+/** An offset from UTC as people write it: "+4", "-3:30", "+5:45"; "" for none. */
+internal fun utcOffset(totalSeconds: Int, f: Formatter): String {
+    if (totalSeconds == 0) return ""
+    val m = kotlin.math.abs(totalSeconds) / 60
+    val text = (if (totalSeconds < 0) "-" else "+") + f.number(m / 60) + (if (m % 60 != 0) ":" + f.digits("%02d".format(Locale.ROOT, m % 60)) else "")
+    return if (f.arabic) "‎" + text + "‎" else text
 }
 
 @Composable
-private fun Header(title: String, onBack: () -> Unit) {
-    com.noor.app.ui.components.NavBar(title, onBack)
+private fun Header(title: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    com.noor.app.ui.components.NavBar(title, onBack, modifier)
 }
 
 @Composable
 private fun SearchField(value: String, hint: String, raised: Boolean = false, onChange: (String) -> Unit) {
-    val c = NoorTheme.colors
-    // 0.14: the app's one search field; the map keeps its raised one, which floats over the picture.
-    if (!raised) { com.noor.app.ui.components.NoorSearchField(value, onChange, hint, Modifier.padding(top = 4.dp, bottom = 12.dp)); return }
-    TextField(
-        value = value, onValueChange = onChange, singleLine = true,
-        leadingIcon = { Icon(Icons.Rounded.Search, null, tint = c.textMuted) },
-        trailingIcon = if (value.isNotEmpty()) ({ IconButton(onClick = { onChange("") }) { Icon(Icons.Rounded.Close, stringResource(R.string.settings_search_clear), tint = c.textMuted) } }) else null,
-        placeholder = { Text(hint, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        shape = RoundedCornerShape(16.dp),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = c.glassRaised, unfocusedContainerColor = if (raised) c.glassRaised else c.glass, cursorColor = c.gold,
-            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
-        ),
-        modifier = Modifier.fillMaxWidth().padding(top = if (raised) 0.dp else 6.dp, bottom = if (raised) 0.dp else 10.dp)
-            .then(if (raised) Modifier.shadow(8.dp, RoundedCornerShape(16.dp)) else Modifier),
-    )
+    // 0.14: the app's one search field. (0.25, second review: the map's too, inside its floating pane of glass; it
+    // had a rounded box of its own.)
+    com.noor.app.ui.components.NoorSearchField(value, onChange, hint, if (raised) Modifier else Modifier.padding(top = 4.dp, bottom = 12.dp))
+}
+
+/**
+ * A location page other than the map: the slim bar across the whole screen (its chevron where every page has it),
+ * and under it a column of readable width, centred: on a foldable's inner screen or a tablet the rows do not run
+ * 800 dp wide (0.9.7; 0.25, second review: [com.noor.app.ui.components.Page.MaxWidth], as every other page).
+ */
+@Composable
+private fun Pane(contentPadding: PaddingValues, title: String, onBack: () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxSize().padding(contentPadding), horizontalAlignment = Alignment.CenterHorizontally) {
+        Header(title, onBack, Modifier.padding(horizontal = 16.dp))
+        Column(Modifier.widthIn(max = com.noor.app.ui.components.Page.MaxWidth).fillMaxWidth().weight(1f).padding(horizontal = 16.dp), content = content)
+    }
 }
 
 @Composable
@@ -769,14 +802,15 @@ private fun OptionRow(icon: ImageVector, title: String, subtitle: String?, selec
 }
 
 @Composable
-private fun PlaceItem(p: WorldPlaces.Place, ar: Boolean, showRegion: Boolean = true, inCountry: Boolean = false, busy: Boolean = false, onClick: () -> Unit) {
-    val region = if (ar) p.regionNameAr else p.regionName.takeIf { it.isNotBlank() && it != p.name }
+private fun PlaceItem(p: WorldPlaces.Place, ar: Boolean, showRegion: Boolean = true, inCountry: Boolean = false, busy: Boolean = false,
+                      showKind: Boolean = true, onClick: () -> Unit) {
+    val region = if (ar) p.regionNameAr else p.regionName.takeIf { it.isNotBlank() && it != p.name }?.let { PlaceText.en(it, p.countryCode) }
     val sub = listOfNotNull(
-        if (p.neighbourhood) stringResource(R.string.loc_neighbourhood) else null,
+        if (p.neighbourhood && showKind) stringResource(R.string.loc_neighbourhood) else null,
         region.takeIf { showRegion }, WorldStore.countryName(p.countryCode, ar).takeIf { showRegion && !inCountry },
     ).joinToString(if (ar) "، " else ", ")
     PlaceRow(flag = Flags.emoji(p.countryCode).takeIf { showRegion && !inCountry }, icon = if (inCountry || !showRegion) Icons.Rounded.Place else null,
-        title = if (ar) p.nameAr ?: p.name else p.name, subtitle = sub.ifBlank { null }, busy = busy, onClick = onClick)
+        title = PlaceText.of(p, ar), subtitle = sub.ifBlank { null }, busy = busy, onClick = onClick)
 }
 
 @Composable
@@ -814,7 +848,9 @@ private fun Loading() = Box(Modifier.fillMaxWidth().padding(24.dp), contentAlign
 @Composable
 private fun RoundButton(icon: ImageVector, description: String?, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    Box(Modifier.size(48.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(c.surfaceRaised).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+    // (0.25, second review: with the lit edge of the panels over the map.)
+    Box(Modifier.size(48.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(c.surfaceRaised)
+        .glassEdge(CircleShape, c.glassEdge, c.glassEdgeLow).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
         .semantics { if (description != null) contentDescription = description }, contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = c.textPrimary, modifier = Modifier.size(22.dp))
     }
