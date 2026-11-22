@@ -467,7 +467,7 @@
     <string name="adhan_random_detail">A different one of your %1$s favourites each time; none repeats until all have played.</string>
     <string name="adhan_random_needs">Mark at least two Adhans as favourites (♡) in the Adhan library.</string>
     <string name="adhan_screen_stop">Stop</string>
-    <string name="adhan_screen_close">Keep playing</string>
+    <string name="adhan_screen_close">Hide and keep playing</string>
     <string name="since_prayer">Time since the prayer began</string>
     <string name="since_sunrise">Time since sunrise</string>
     <!-- 0.9.7: choosing a location (search, country → city → area, coordinates, satellite map) -->
@@ -789,7 +789,7 @@
     <string name="cd_since">since %s began</string>
     <string name="cd_since_sunrise">since sunrise</string>
     <string name="adhan_prayers_footer_off">Turn on a prayer to hear its Adhan.</string>
-    <string name="adhan_hero_blocked">Will not sound. See below.</string>
+    <string name="adhan_hero_blocked">Will not sound</string>
     <string name="adhan_test_footer">Lock the phone after pressing it. The result goes into the history.</string>
     <string name="basis_official">Its own published times, for each day.</string>
     <string name="basis_validated">Its own method, checked against its published timetable.</string>
@@ -800,7 +800,7 @@
     <string name="adhan_hint_short">Its opening only</string>
     <string name="adhan_hint_sound">Birds, rain…</string>
     <string name="adhan_hint_custom">A file of yours</string>
-    <string name="adhan_hint_notification">Phone\'s usual sound</string>
+    <string name="adhan_hint_notification">Phone’s usual sound</string>
     <string name="adhan_hint_silent">Notice only, no sound</string>
     <string name="adhan_plays">Plays: %s</string>
     <string name="hijri_today_is">Today: %s</string>
@@ -815,8 +815,8 @@
     <string name="adhan_action_volume">Open sound settings</string>
     <string name="cd_today_now">Today, now</string>
     <string name="history_fix_dnd">Let alarms through Do Not Disturb</string>
-    <string name="adhan_alert_options">More settings</string>
     <string name="settings_watch_note">Install, sync, watch face</string>
+    <string name="adhan_alert_options">Sound and devices</string>
     <!-- 0.16: the Adhan section redone. -->
     <string name="adhan_voice">Adhan voice</string>
     <string name="voice_for">Voice for %s</string>
@@ -850,8 +850,8 @@
     <string name="alarm_edit">Edit alarm</string>
     <string name="alarm_before">%1$s before %2$s</string>
     <string name="alarm_after">%1$s after %2$s</string>
-    <string name="alarm_before_word">Before</string>
-    <string name="alarm_after_word">After</string>
+    <string name="alarm_before_word">before</string>
+    <string name="alarm_after_word">after</string>
     <string name="alarm_rings_today">Today at %1$s</string>
     <string name="alarm_rings_tomorrow">Tomorrow at %1$s</string>
     <string name="alarm_rings_on">%1$s at %2$s</string>
@@ -859,7 +859,7 @@
     <string name="alarm_repeat">Days</string>
     <string name="alarm_label_hint">Alarm name</string>
     <string name="alarm_sound">Sound</string>
-    <string name="alarm_sound_phone">Phone\'s alarm sound</string>
+    <string name="alarm_sound_phone">Phone’s alarm sound</string>
     <string name="alarm_sound_notification">Notification only</string>
     <string name="alarm_sound_add">Add a recording…</string>
     <string name="alarm_sound_footer">An alarm never plays the Adhan, so it is never taken for the call to prayer.</string>
@@ -889,7 +889,7 @@
     <string name="voice_all_title">Adhan voice for every prayer</string>
     <string name="adhan_volume_all">Volume for every prayer</string>
     <string name="adhan_sound_title">Sound</string>
-    <string name="alarm_sound_ringtone">Phone\'s ringtone</string>
+    <string name="alarm_sound_ringtone">Phone’s ringtone</string>
     <string name="alarm_sounds_phone">Phone</string>
     <string name="alarm_sounds_effects">Sounds</string>
     <string name="alarm_sounds_adhan">Adhan</string>
@@ -917,4 +917,17 @@
     <string name="accuracy_note_documented">Calculated with the parameters documented for each authority by widely used prayer-time references; not yet checked against their own timetables.</string>
     <string name="loc_chosen">Chosen</string>
     <string name="face_sample_note">Sample picture. Your watch shows the time, date and next prayer of the moment.</string>
+    <!-- 0.25 adhan -->
+    <string name="adhan_hero_next_at">Next: %1$s %2$s</string>
+    <string name="adhan_all_prayers">All prayers</string>
+    <string name="adhan_fix">Fix</string>
+    <plurals name="adhan_fix_count">
+        <item quantity="one">%s thing to fix</item>
+        <item quantity="other">%s things to fix</item>
+    </plurals>
+    <string name="alarms_fix_blocked">Alarms will not ring</string>
+    <string name="alarm_warn_fullscreen">The alarm screen cannot show over the lock screen.</string>
+    <string name="alarm_warn_volume">Your alarm volume is at zero, so alarms will be silent.</string>
+    <string name="alarm_unit_hours">h</string>
+    <string name="alarm_unit_minutes">min</string>
 </resources>
