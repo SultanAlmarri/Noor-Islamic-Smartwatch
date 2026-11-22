@@ -470,8 +470,8 @@ private fun ColumnScope.Ask(step: Int, size: PageSize, settle: () -> Float, phas
     // The words come first: the symbol stands at the same height on every page and takes the room they leave, up to
     // its own size; where they need all of it (a short screen with large text) it steps aside, so that the reason
     // is read whole before Android is asked.
-    Spacer(Modifier.weight(if (compact) 0.2f else 1.5f))
-    SymbolArt(symbol, Modifier.weight(8f, fill = false).size(if (compact) 150.dp else if (wide) 288.dp else 232.dp).graphicsLayer {
+    Spacer(Modifier.weight(if (compact) 0.2f else 1f))
+    SymbolArt(symbol, Modifier.weight(8f, fill = false).size(if (compact) 150.dp else if (wide) 240.dp else 232.dp).graphicsLayer {
         val p = part(settle(), 0, 3)
         alpha = p; scaleX = 0.84f + 0.16f * p; scaleY = scaleX
     }, phase)
@@ -486,7 +486,7 @@ private fun ColumnScope.Ask(step: Int, size: PageSize, settle: () -> Float, phas
     Text(stringResource(when (step) { PLACE -> R.string.perm_body; TRAVEL -> R.string.bg_perm_body; ADHAN -> R.string.onb_adhan_body; else -> R.string.welcome_exact_body }),
         style = MaterialTheme.typography.bodyLarge.copy(fontSize = if (wide) 19.sp else 17.sp, lineHeight = if (wide) 29.sp else 26.sp, lineBreak = LineBreak.Paragraph.copy(strategy = LineBreak.Strategy.Balanced)),
         color = WelcomeTextQuiet, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = if (wide) 480.dp else 400.dp).arrives(settle, 2, 3))
-    Spacer(Modifier.weight(1f))
+    Spacer(Modifier.weight(0.5f))
 }
 
 /** Where one is in the welcome: four pages, this one lit. (The exact alarms' page is the second half of the Adhan's.) */
