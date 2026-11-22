@@ -85,6 +85,17 @@ class LocationFlowTest {
             root.draw(Canvas(bmp))
             File(File("build/screenshots").apply { mkdirs() }, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
+        fun allTexts(): List<String> = rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("any") { true }, useUnmergedTree = true).fetchSemanticsNodes()
+            .flatMap { n -> n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }.orEmpty().map { it.text } }
+        /** The row whose texts include [title] exactly and one containing [sub]. */
+        fun clickRow(title: String, sub: String) {
+            val m = androidx.compose.ui.test.SemanticsMatcher("row $title") { n ->
+                val t = n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }.orEmpty().map { it.text }
+                title in t && t.any { sub in it }
+            }
+            rule.waitUntil(30_000) { rule.onAllNodes(m).fetchSemanticsNodes().isNotEmpty() }
+            rule.onAllNodes(m).onFirst().performClick(); rule.waitForIdle()
+        }
         fun saved() = runBlocking { app.container.settings.current() }
         // The save runs on the view model's scope (DataStore writes on its own thread): let the main looper run it.
         fun waitDone(n: Int) {
@@ -102,7 +113,14 @@ class LocationFlowTest {
         type("21.42250, 39.82620")
         waitText("Use these coordinates"); shot("61_location_coordinates_en")
         click("Use these coordinates")
-        waitText("Asia/Riyadh"); waitText("Fajr"); shot("62_location_confirm_makkah_en")
+        waitText("Arabian Standard Time"); waitText("Fajr"); shot("62_location_confirm_makkah_en")
+        // (0.25, second review) The zone as people say it, not the database's "(Asia/Riyadh)", and its offset "UTC+3";
+        // the point, named after the district it lies in, leads with its city, in plain letters.
+        assertTrue(allTexts().none { "Asia/" in it || "UTC+03:00" in it })
+        assertTrue(allTexts().any { "UTC+3" in it })
+        assertTrue(allTexts().toString(), allTexts().contains("Makkah"))
+        assertTrue(allTexts().toString(), allTexts().none { it.any { ch -> ch in "ḨḩāīūḑṬ‘" } })
+        assertTrue(allTexts().toString(), allTexts().any { it.startsWith("Harat al Bab wa ash Shamiyah") })
         click("Use this location")
         waitDone(1)
         saved().let { s ->
@@ -119,7 +137,7 @@ class LocationFlowTest {
         type("Dubai Marina")
         waitText("District"); shot("63_location_search_en")
         click("District, Dubai") // the result row (the first "Dubai Marina" is the search box itself)
-        waitText("Asia/Dubai"); waitText("Maghrib"); shot("64_location_confirm_marina_en")
+        waitText("Gulf Standard Time"); waitText("Maghrib"); shot("64_location_confirm_marina_en")
         click("Use this location")
         waitDone(2)
         saved().manualPlace!!.let { m ->
@@ -135,17 +153,23 @@ class LocationFlowTest {
         waitText("United Arab Emirates"); shot("65_location_countries_en")
         click("United Arab Emirates")
         // 0.9.8: the country first offers its largest cities and its emirates.
-        waitText("EMIRATES"); waitText("Largest: Ras Al Khaimah"); shot("66_location_cities_ae_en")
-        click("Largest: Ras Al Khaimah")
+        // (0.25, second review: "Ras Al Khaimah · 122 places", no longer "Largest: Ras Al Khaimah" under its own name.)
+        waitText("EMIRATES"); waitText(" places"); shot("66_location_cities_ae_en")
+        assertTrue(allTexts().none { it.startsWith("Largest: Ras Al Khaimah") || it.startsWith("Largest: Ajman") })
+        clickRow("Ras Al Khaimah", " places")
         waitText("Find a place in Ras Al Khaimah"); shot("66b_location_region_rak_en")
         rule.runOnIdle { rule.activity.onBackPressedDispatcher.onBackPressed() }
-        waitText("Largest: Ras Al Khaimah") // back on the emirates
+        waitText("EMIRATES") // back on the emirates
         click("Dubai")
         waitText("Areas of Dubai"); waitText("Dubai, centre"); shot("67_location_areas_dubai_en")
+        // (0.25, second review) One heading over the areas, no "District" under each; their names in plain letters.
+        waitText("DISTRICTS AND PLACES")
+        assertTrue(allTexts().none { it == "District" })
+        assertTrue(allTexts().toString(), allTexts().contains("Abu Hayl"))
         // The list is long (lists draw only what is on screen): find the area by name, as a user would.
         type("karama")
         waitText("Al Karama"); click("Al Karama")
-        waitText("Asia/Dubai"); shot("68_location_confirm_karama_en")
+        waitText("Gulf Standard Time"); shot("68_location_confirm_karama_en")
         click("Use this location")
         waitDone(3)
         assertEquals("Al Karama", saved().manualPlace!!.placeName)

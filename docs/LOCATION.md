@@ -28,6 +28,12 @@ coordinates, the time zone (its name, its offset now, whether daylight saving ap
 there, computed exactly as the app will compute them** (same authority choice, official timetable where one applies).
 "Use this location" saves; "Adjust on the map" opens the map at that point.
 
+How names are shown (0.25, second review; display only, nothing saved or searched changes): GeoNames writes the places
+of the Arab world, Iran and Afghanistan in a scholarly romanisation ("Abū Hayl", "Al ‘Usbij"); in English these are
+shown in plain letters ("Abu Hayl", "Al Usbij"), and every other name exactly as written (`PlaceText`). A filter
+matches both forms. A point named after a district (the map, coordinates) is confirmed under its city, the district
+under it. The time zone reads "Arabian Standard Time" and "UTC+3", without the database's id.
+
 ## What is saved, and how times follow
 
 `KnownLocation` (unchanged format): the exact point (full double precision), the IANA zone id, names in English and

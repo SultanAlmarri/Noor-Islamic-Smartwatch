@@ -922,11 +922,9 @@
     <string name="timetable_basis_some">أوقاتها المنشورة نفسها حيث نشرتها، وبقية الأيام بطريقتها.</string>
     <!-- 0.25 pages -->
     <string name="qibla_exact">اتجاه القبلة بدقة: %1$s من الشمال الحقيقي.</string>
-    <string name="accuracy_group_own">جهات وطرق أخرى</string>
+    <string name="accuracy_group_own">الجهات والطرق</string>
     <string name="accuracy_group_published">معايير منشورة</string>
-    <string name="accuracy_note_published">محسوبة وفق المعايير المنشورة لكل طريقة.</string>
     <string name="accuracy_group_documented">معايير موثّقة في المراجع</string>
-    <string name="accuracy_note_documented">محسوبة بالمعايير الموثّقة لكل جهة في المراجع الشائعة لمواقيت الصلاة؛ لم تُقارن بجداولها الرسمية بعد.</string>
     <string name="loc_chosen">مختار</string>
     <string name="face_sample_note">صورة توضيحية. تعرض ساعتك الوقت والتاريخ والصلاة القادمة في حينها.</string>
     <!-- 0.25 adhan -->
@@ -960,4 +958,32 @@
     <string name="welcome_exact_title">الأذان في دقيقته</string>
     <string name="welcome_exact_body">لا يسمح أندرويد لمنهاد برفع الأذان في دقيقته إلا إذا سمحتَ بـ«المنبّهات والتذكيرات». من دون ذلك قد يتأخر الأذان.</string>
     <string name="welcome_exact_allow">السماح بالمنبّهات الدقيقة</string>
+    <!-- 0.25 review 2: pages -->
+    <string name="loc_areas_header">الأحياء والأماكن</string>
+    <plurals name="loc_places_count">
+        <item quantity="zero">%1$s مكان</item>
+        <item quantity="one">مكان واحد</item>
+        <item quantity="two">مكانان</item>
+        <item quantity="few">%1$s أماكن</item>
+        <item quantity="many">%1$s مكانًا</item>
+        <item quantity="other">%1$s مكان</item>
+    </plurals>
+    <string name="loc_utc_offset">غرينتش %1$s</string>
+    <string name="accuracy_yours">المعتمدة لأوقات صلاتك</string>
+    <string name="accuracy_status_checked">قورنت بجداولها الرسمية</string>
+    <string name="accuracy_status_official">الجدول الرسمي</string>
+    <string name="accuracy_status_recognised">طريقة معتمدة</string>
+    <string name="accuracy_to_the_minute">مطابقة بالدقيقة</string>
+    <string name="accuracy_largest_difference">أكبر فارق</string>
+    <string name="accuracy_within_one_minute">ضمن دقيقة واحدة</string>
+    <string name="accuracy_minutes">%1$s د</string>
+    <string name="accuracy_source_iacad">588 وقتًا رسميًا من الدائرة، أغسطس 2020 – نوفمبر 2026</string>
+    <string name="accuracy_source_awqaf">2118 وقتًا من التقويم الرسمي لأبوظبي، 2023–2024</string>
+    <string name="accuracy_source_diyanet">الجدول الرسمي لرئاسة الشؤون الدينية لإسطنبول، 2026</string>
+    <string name="accuracy_source_jakim">جداول الدائرة الرسمية، 4 مناطق، 2026</string>
+    <string name="accuracy_source_kemenag">جداول الوزارة لعام 2026 في جاكرتا ومكاسر وميدان</string>
+    <string name="accuracy_source_dumk">الجداول الرسمية للإدارة الدينية لعام 2026، 13 مدينة</string>
+    <string name="accuracy_source_bosnia">تقويم المشيخة لسراييفو، 2026</string>
+    <string name="accuracy_show">عرض التفاصيل</string>
+    <string name="accuracy_hide">إخفاء التفاصيل</string>
 </resources>

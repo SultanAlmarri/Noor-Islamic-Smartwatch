@@ -228,3 +228,118 @@ wide, text at 1.5 (`PagesDesignTest`, `QiblaCalibrateDesignTest`), and the locat
 - The watch page on a phone where Minhad Studio cannot run (a watch that came with Wear OS 6): the top still shows
   the Studio design and its invitation, as the Studio card did before; the editor then explains that it cannot run
   there. Not rendered in that state.
+
+## Second review
+
+A second independent review judged the app against the owner's standard ("as if Apple made it"). These are its findings
+on the location pages, the accuracy page and the Qibla page, by its numbers. Software renders (Robolectric), not a
+phone: nothing here has been seen on a phone or with a real compass.
+
+Code: `ui/location/` (`LocationScreen.kt`, `LocationViewModel.kt`, new `PlaceText.kt`), `ui/settings/AccuracyScreen.kt`,
+`ui/qibla/QiblaScreen.kt`. Strings: edited in place, new ones at the end of both `strings.xml` under
+`<!-- 0.25 review 2: pages -->`; `accuracy_note_published` and `accuracy_note_documented` are gone (no longer used).
+
+**6. The accuracy page was a documentation dump.** Done. At the top, the method the user's times are calculated with
+(gold), "Used for your prayer times", and where this project has measured it against the authority's own times, two
+large figures and one line saying against what: for Dubai "89.6 % to the minute", "1 min largest difference", "588
+official IACAD times, Aug 2020 – Nov 2026" (`docs/PRAYER_ACCURACY.md`: 527 of 588 exact, all 61 others exactly 1
+minute). Seven methods have measured figures, each as its own statement gives them (`MEASURED`): IACAD, Awqaf (96.2 %,
+1 min, the UAE calendar for Abu Dhabi), Diyanet (64 %, 2 min, Istanbul), JAKIM (58–67 %, 94 % within 1 minute, 4
+zones), Kemenag (93–94 %, 1 min, three cities), DUMK (90–94 %, 1 min, 13 cities), the Takvim (56 %, 2 min, Sarajevo).
+Every other method shows no number: its name, its phrase and its statement. Singapore has none at the top on purpose:
+its table is used as published, and its other dates' figure is the statement's "about 75 %". Under the card, every
+method (27) is one row: its name and a phrase ("Checked against its own tables", "Official timetable", "Recognised
+method", "Published parameters", "Documented in references"); a tap opens the statement the page gave before, word for
+word (Dubai: its paragraph; the methods that shared a sentence: each profile's own sentence, of which the page showed a
+plural rewording). The phrase is derived from the statement's own words (`accuracyStatus`), never set by hand. One title
+style, 17 sp SemiBold; gold only for the method in use. "Data sources and licences" stays at the foot.
+Tests: `AccuracyGroupsTest` (4: every method once; a shared phrase only for the very same statement; every phrase is
+the one its statement earns, with a table of today's; every figure at the top stands in that method's statement, in
+both languages) and the new `AccuracyStatementsTest` (the page in English and Arabic, every row opened: each statement
+appears; IACAD's figures and source at the top, every number of the source in IACAD's paragraph).
+
+**7. Raw romanisation and "District" under every row.** Done. In English, names that GeoNames romanises from the Arabic
+script (the Arab League's countries, Iran, Afghanistan) are shown in plain letters: "Abu Hayl", "Ad Daghayah",
+"Al Usbij", "Ras al Khaymah" (`PlaceText.en`). Names elsewhere keep their letters, which are their language's own (São
+Paulo, Zürich, İstanbul; Russian and Chinese names whose ’ is a soft sign or a syllable mark): decided by the place's
+country, not by the marks. Display only: what is saved and the gazetteer are untouched; the filters of a country, a
+region and a city's areas match both forms, and the search box also finds a name typed as shown ("Al Usbij", whose
+list spelling is "Al ‘Usbij": `PlaceText.search` adds the places that contain the whole query after searching its
+longest word). The areas list has one heading, "Districts and places", and no "District" under each row (the search
+results keep it: there it tells a district from a town). A region says "7 places"; "Largest: …" only where the largest
+place is not the region's own name ("Eastern Province · Largest: Dammam"). A point chosen on the map or by coordinates
+that took its name from a district is confirmed under its city: "Makkah", "Harat al Bab wa ash Shamiyah, Saudi Arabia".
+A place picked from the list keeps its own name as the title (the user chose that district; its city is under it), and
+the name saved is the one saved before. Accepted limit, as asked: a place with no Arabic name shows its Latin name on
+the Arabic page (now in plain letters).
+
+**8. The licence footnote on the location page.** Done: removed; it is in Settings → About Minhad → Acknowledgements
+(the strings are kept, they are used there). The map's own attribution stays under the map.
+
+**15. The location pages on the Fold.** Already capped at 640 dp in 0.9.7: the review read 770 dp from a 1,680 px render
+at 2 px per dp; the rows measure 608 dp (640 less the margins). What was not right: the bar was inside the narrow
+column, so the chevron stood 240 dp in from the screen's edge. Every location page but the map now has the bar across
+the screen (the chevron where every page has it) and the column of `Page.MaxWidth` under it, centred (`Pane`).
+
+**16. The map's controls.** Done. Back is the app's gold chevron and the search is the app's pill field, together on
+one pane of glass floating over the picture; the offline message is a card of the bottom panel's glass with a
+cloud-off sign (it was a black banner). The round buttons keep their place, with the panels' lit edge. **The zoom
+buttons stay**: the map zooms in with a double tap but has no one-finger way to zoom out (and TalkBack users cannot
+pinch), so without them the map could not be used with one hand.
+
+**19. The time zone.** Done: "Arabian Standard Time", and "UTC+3 · No daylight saving time here." under it ("UTC+5:30",
+"UTC+5:45", "UTC-3:30" where the offset has minutes); in Arabic «توقيت …» and «غرينتش +3», in the user's digits. If
+Android has no name for a zone in that language, the line is the offset alone.
+
+**21. The Kaaba's sign in the light theme.** Done: white on the day's deep gold and deep green (`kaabaGlyph`; dark on
+the night's light gold and green, as before). `QiblaKaabaContrastTest` measures it: at least 3:1 on both discs in both
+themes. By day on the green the white sign has 5.9:1 where the black one had 3.1:1. On the day's gold disc the numbers
+go the other way (white 3.9:1, black 4.8:1): white was chosen there too, as the brief asked, so that the sign is one
+colour by day whether the phone is turning or facing the Qibla; both pass. The owner may prefer the dark sign on gold.
+
+**22. "Calibrate" three times when the compass is unsure.** Done. The line under the dial gives its place to the card,
+whose title is "Calibrate the compass", with the figure 8 beside it (the drawing is smaller, beside the words, so the
+card is about a row tall) and "Move your phone in a figure 8" under the title. The accuracy card ("Compass accuracy ·
+Poor") comes straight under it while the compass is unsure, and leaves out its own "needs calibrating: tap for how"
+then; when the compass is sure the page is as before (the card at the foot). `ScreenshotTest` now checks that
+"Calibrate the compass" is said once and that the accuracy card ends above an 82 dp tab bar and a 24 dp gesture bar on
+a 915 dp phone.
+
+With the largest common text size (1.5) the card's words take three or four lines beside the drawing; nothing is cut,
+but it is taller (render `qibla_calibrate_large_text_en`). Not seen on a phone in motion.
+
+**23 (part). The dot left at a line's end.** Done: "place · distance" on one line when it fits, else the distance on
+its own line without the dot (`PlaceAndDistance`).
+
+**29 (part). No compass.** Done: the readings card shows the Qibla direction alone.
+
+### Decisions the owner may want to change
+
+1. The accuracy page's figures for methods other than Dubai's (Awqaf, Diyanet, JAKIM, Kemenag, DUMK, the Takvim): each
+   is its statement's own figure, but only Dubai's was named in the brief.
+2. The phrases of the rows, and "Recognised method" for the Moonsighting Committee and Karachi with the Hanafi Asr.
+3. A point named after a district leads with its city on the confirmation, a district picked from the list does not.
+   The home of the location page and the Today screen still show the saved name (the district, its city under it).
+4. Plain letters for the Maghreb's French names too ("Fes" for "Fès"), since the rule goes by country.
+5. Arabic writes the offset «غرينتش +3» (Greenwich), the name people use, rather than a Latin "UTC".
+
+### Outside my files
+
+- `ScreenshotTest.kt`: two checks after the unsure-compass render (finding 22).
+- `docs/LOCATION.md`: one paragraph on how names and the time zone are shown.
+
+### Tests
+
+Run on the cloud machine through the shared Gradle lock, `--no-parallel`, with the Robolectric mirror, on the finished
+code: `ScreenshotTest`, `PagesDesignTest`, `QiblaCalibrateDesignTest`, `ui.location.*` (`LocationFlowTest`,
+`LocationSmallScreenTest`, `LocationWideScreenTest`, `TileMapTest`, new `PlaceTextTest`), `ui.qibla.*`
+(`QiblaAccuracyTest`, `QiblaDegreesTest`, new `QiblaKaabaContrastTest`), `AccuracyGroupsTest`, new
+`AccuracyStatementsTest`, `ThemeContrastTest`, `ButtonContrastTest`: **26 tests in 15 classes, 0 failures, 0
+errors, 0 skipped**. Earlier rounds while working failed, rightly, three times: a "UTC+3" with a left-to-right mark inside
+it in English, a check that took the apostrophe of "Today’s" for a transliteration mark, and a check that took two
+methods sharing one statement for a row already open; each fixed (the first in the code, the two others in the tests).
+Changed, each keeping its meaning: `LocationFlowTest` (it waits for "Arabian Standard Time" and "Gulf Standard Time"
+where it waited for "Asia/Riyadh" and "Asia/Dubai", and opens Ras Al Khaimah by its row, whose subtitle is now "122
+places"; new checks: no zone id and "UTC+3", the Kaaba's coordinates under "Makkah" in plain letters, one heading over
+the areas, no "District" under them, "Abu Hayl"); `AccuracyGroupsTest` (to the page's new shape, above). Not run: the
+whole suite (the lead runs it), `:core`, the release builds, anything on an emulator or a phone.

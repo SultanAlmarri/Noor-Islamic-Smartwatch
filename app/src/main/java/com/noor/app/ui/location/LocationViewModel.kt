@@ -35,8 +35,14 @@ data class SearchState(
     val searchingOnline: Boolean = false,
 )
 
-/** A place about to be chosen, with what its times will be (computed exactly as the app will compute them). */
-data class Preview(val picked: PickedPlace, val day: PrayerDay?, val official: Boolean, val methodEn: String, val methodAr: String)
+/**
+ * A place about to be chosen, with what its times will be (computed exactly as the app will compute them). [city]: for
+ * a point (the map, coordinates) that took its name from a district of the offline list, the city that district is in,
+ * so the confirmation leads with the city and gives the district under it (0.25, second review: the Kaaba's coordinates
+ * were titled "Ḩārat al Bāb wa ash Shāmīyah"). Display only: what is saved is [picked], as before.
+ */
+data class Preview(val picked: PickedPlace, val day: PrayerDay?, val official: Boolean, val methodEn: String, val methodAr: String,
+                   val city: WorldPlaces.Place? = null)
 
 class LocationViewModel(app: Application) : AndroidViewModel(app) {
     private val container = (app as NoorApplication).container
@@ -70,8 +76,8 @@ class LocationViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun pick(p: WorldPlaces.Place) = resolve { store.picked(p) }
-    fun pin(point: GeoPoint, title: String? = null) = resolve { store.pinned(point, title) }
+    fun pick(p: WorldPlaces.Place) = resolve(pinned = false) { store.picked(p) }
+    fun pin(point: GeoPoint, title: String? = null) = resolve(pinned = title == null) { store.pinned(point, title) }
 
     private var resolveJob: Job? = null
 
@@ -79,14 +85,14 @@ class LocationViewModel(app: Application) : AndroidViewModel(app) {
      * Only the place asked for last is resolved (0.14): an earlier one still being named (a slow geocoder) is given up,
      * so it can no longer arrive late and put itself under the confirmation of the place chosen after it.
      */
-    private fun resolve(block: suspend () -> PickedPlace) {
+    private fun resolve(pinned: Boolean, block: suspend () -> PickedPlace) {
         resolveJob?.cancel()
         resolveJob = viewModelScope.launch {
             resolving.value = true
             preview.value = null
             try {
                 val picked = block()
-                preview.value = previewOf(picked)
+                preview.value = previewOf(picked).let { if (pinned) it.copy(city = cityOfDistrict(picked)) else it }
             } finally {
                 if (resolveJob == coroutineContext[Job]) resolving.value = false
             }
@@ -100,6 +106,16 @@ class LocationViewModel(app: Application) : AndroidViewModel(app) {
         val auth = PrayerProvider.authority(s, place)
         val day = runCatching { PrayerProvider.resolve(LocalDate.now(place.zone), place, profile, s, container.timetables) }.getOrNull()
         Preview(p, day?.day, day?.official == true, auth?.nameEn ?: profile.nameEn, auth?.nameAr ?: profile.nameAr)
+    }
+
+    /**
+     * The city of a pinned point named after a district of the offline list (the name [WorldStore.pinned] gives when
+     * the phone's geocoder has none): the district must be the very place nearest the point, as it was when named.
+     */
+    private suspend fun cityOfDistrict(p: PickedPlace): WorldPlaces.Place? = withContext(Dispatchers.Default) {
+        val w = world.value ?: store.places()
+        val district = w.nearest(p.point, 25.0)?.takeIf { it.neighbourhood && it.name == p.nameEn } ?: return@withContext null
+        w.cityOf(p.point, district.countryCode)?.takeIf { it.row != district.row && it.name != district.name }
     }
 
     fun clearPreview() { resolveJob?.cancel(); preview.value = null }

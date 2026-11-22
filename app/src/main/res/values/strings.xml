@@ -906,11 +906,9 @@
     <string name="timetable_basis_some">Its own published times where it has given them; the other days by its method.</string>
     <!-- 0.25 pages -->
     <string name="qibla_exact">Exact Qibla direction: %1$s from true north.</string>
-    <string name="accuracy_group_own">Other authorities and methods</string>
+    <string name="accuracy_group_own">Authorities and methods</string>
     <string name="accuracy_group_published">Published parameters</string>
-    <string name="accuracy_note_published">Calculated with each method’s published parameters.</string>
     <string name="accuracy_group_documented">Documented in references</string>
-    <string name="accuracy_note_documented">Calculated with the parameters documented for each authority by widely used prayer-time references; not yet checked against their own timetables.</string>
     <string name="loc_chosen">Chosen</string>
     <string name="face_sample_note">Sample picture. Your watch shows the time, date and next prayer of the moment.</string>
     <!-- 0.25 adhan -->
@@ -940,4 +938,28 @@
     <string name="welcome_exact_title">The Adhan, on the minute</string>
     <string name="welcome_exact_body">Android lets Minhad sound the Adhan at the exact minute only if you allow “Alarms &amp; reminders”. Without it, the Adhan may come late.</string>
     <string name="welcome_exact_allow">Allow exact alarms</string>
+    <!-- 0.25 review 2: pages -->
+    <string name="loc_areas_header">Districts and places</string>
+    <plurals name="loc_places_count">
+        <item quantity="one">%1$s place</item>
+        <item quantity="other">%1$s places</item>
+    </plurals>
+    <string name="loc_utc_offset">UTC%1$s</string>
+    <string name="accuracy_yours">Used for your prayer times</string>
+    <string name="accuracy_status_checked">Checked against its own tables</string>
+    <string name="accuracy_status_official">Official timetable</string>
+    <string name="accuracy_status_recognised">Recognised method</string>
+    <string name="accuracy_to_the_minute">to the minute</string>
+    <string name="accuracy_largest_difference">largest difference</string>
+    <string name="accuracy_within_one_minute">within 1 minute</string>
+    <string name="accuracy_minutes">%1$s min</string>
+    <string name="accuracy_source_iacad">588 official IACAD times, Aug 2020 – Nov 2026</string>
+    <string name="accuracy_source_awqaf">2,118 times of the official UAE calendar for Abu Dhabi, 2023–2024</string>
+    <string name="accuracy_source_diyanet">Diyanet’s official Istanbul timetable, 2026</string>
+    <string name="accuracy_source_jakim">JAKIM’s e-Solat tables, 4 zones, 2026</string>
+    <string name="accuracy_source_kemenag">Kemenag’s 2026 tables for Jakarta, Makassar and Medan</string>
+    <string name="accuracy_source_dumk">DUMK’s own 2026 timetables, 13 cities</string>
+    <string name="accuracy_source_bosnia">The Takvim’s Sarajevo year, 2026</string>
+    <string name="accuracy_show">Show details</string>
+    <string name="accuracy_hide">Hide details</string>
 </resources>

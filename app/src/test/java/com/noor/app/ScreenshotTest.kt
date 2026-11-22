@@ -276,6 +276,11 @@ class ScreenshotTest {
         shot("16_qibla_aligned_day_en", "Facing the Qibla")
         // 0.22.1: the unsure compass shows the figure 8 drawn (by day, and in Arabic).
         reading = reading(301.4, 34.0, 1, 71.0, 4.0); shot("94_qibla_poor_day_en", "figure 8")
+        // (0.25, second review) "Calibrate the compass" is said once (the card's title), and how sure the compass is
+        // stands on the screen of this 915 dp phone above the app's tab bar (82 dp) and a gesture bar (24 dp).
+        assertTrue("\"Calibrate the compass\" is said once", shown("Calibrate the compass") == 1)
+        val accuracyCard = rule.onAllNodesWithText("Compass accuracy").onFirst().fetchSemanticsNode().boundsInRoot
+        assertTrue("the accuracy card ends at ${accuracyCard.bottom / rule.density.density} dp", accuracyCard.bottom <= (915 - 82 - 24) * rule.density.density)
         theme = ThemeMode.DARK; arabic = true; shot("95_qibla_poor_night_ar", "الرقم 8"); arabic = false
         theme = ThemeMode.DARK; reading = reading(301.4, 34.0, 1, 71.0, 4.0)
         screen = Screen.CALIBRATION; shot("17_calibration_night_en", "Calibrate")
