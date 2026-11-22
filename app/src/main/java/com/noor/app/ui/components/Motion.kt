@@ -2,7 +2,10 @@ package com.noor.app.ui.components
 
 import android.provider.Settings
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -20,6 +23,23 @@ object NoorMotion {
     const val Quick = 180
     const val Standard = 320
     const val Entrance = 900
+    /** A page pushed or popped (0.25): a touch longer, on [Glide]. */
+    const val Page = 420
+    /** Fast off the mark and a long, soft arrival, as a page settles on an iPhone. */
+    val Glide = CubicBezierEasing(0.2f, 0.9f, 0.1f, 1f)
+}
+
+/**
+ * What is touched gives under the finger (0.25): it draws in a little while pressed and springs back when let go, as
+ * a button of an iPhone. For cards and buttons that act; [source] is the same interaction source their click uses.
+ * Nothing moves when the phone's animations are off.
+ */
+fun androidx.compose.ui.Modifier.pressScale(source: androidx.compose.foundation.interaction.InteractionSource, to: Float = 0.97f): androidx.compose.ui.Modifier = composed {
+    if (!LocalAmbientMotion.current) return@composed this
+    val pressed by source.collectIsPressedAsState()
+    val k by androidx.compose.animation.core.animateFloatAsState(if (pressed) to else 1f,
+        androidx.compose.animation.core.spring(dampingRatio = 0.62f, stiffness = if (pressed) 900f else 420f), label = "press")
+    graphicsLayer { scaleX = k; scaleY = k }
 }
 
 /** False when ambient (endless) animations must not run. */

@@ -31,11 +31,14 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
@@ -88,11 +91,60 @@ fun SectionFooter(text: String, modifier: Modifier = Modifier) {
     Text(text, style = FootnoteStyle, color = NoorTheme.colors.textMuted, modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp))
 }
 
-/** The icon tile at the start of a row: a soft square in the accent with the glyph in it. */
+/**
+ * The colours of the signs in the lists (0.25). As in the Settings of an iPhone, each kind of thing has a colour of
+ * its own, so a row is found by its colour before its words are read: where one is in blue, the prayer's times in
+ * Minhad's gold, what makes itself heard in red and pink, what is seen in indigo and teal, the calendar in red, the
+ * watch in graphite, what is checked in green. The sign itself is white on its tile.
+ */
+object Tints {
+    val Gold = Color(0xFFCB9A3C)
+    val Blue = Color(0xFF1E88F5)
+    val Green = Color(0xFF2FB45A)
+    val Orange = Color(0xFFF58B1F)
+    val Red = Color(0xFFF0463C)
+    val Pink = Color(0xFFEE3E6A)
+    val Purple = Color(0xFFA557DA)
+    val Indigo = Color(0xFF5E5CE0)
+    val Teal = Color(0xFF28A9C4)
+    val Mint = Color(0xFF1FB8A6)
+    val Brown = Color(0xFFA2835C)
+    val Gray = Color(0xFF8A8F9A)
+    val Graphite = Color(0xFF4A4F5C)
+
+    private val byIcon: Map<String, Color> = mapOf(
+        // where
+        "LocationOn" to Blue, "MyLocation" to Blue, "GpsFixed" to Blue, "Update" to Green, "Map" to Green, "Public" to Blue, "Place" to Red,
+        // the times
+        "Schedule" to Gold, "Explore" to Teal, "Tune" to Gray, "Verified" to Green,
+        // what is heard and shown as a notice
+        "NotificationsActive" to Red, "Notifications" to Red, "Timer" to Orange, "History" to Gray, "VolumeUp" to Pink, "Vibration" to Pink,
+        "MusicNote" to Pink, "LibraryMusic" to Pink, "AudioFile" to Purple, "RecordVoiceOver" to Orange, "GraphicEq" to Purple, "DoNotDisturbOn" to Indigo,
+        "Snooze" to Orange, "PlayCircle" to Green, "Label" to Orange, "Add" to Green, "BatteryAlert" to Green, "BatterySaver" to Green,
+        // how it looks
+        "Brightness6" to Indigo, "Brightness" to Indigo, "Contrast" to Graphite, "Landscape" to Teal, "Park" to Green, "AutoAwesome" to Purple, "Palette" to Pink,
+        "Widgets" to Purple, "ViewCarousel" to Purple, "TextFields" to Blue, "CloudOff" to Gray,
+        // language and calendar
+        "Language" to Blue, "Numbers" to Gray, "AccessTime" to Orange, "CalendarMonth" to Red,
+        // the rest
+        "Watch" to Graphite, "Info" to Gray,
+    )
+
+    /** The colour for a sign, by what it shows; Minhad's gold for a sign with no colour of its own. */
+    fun of(icon: ImageVector): Color = byIcon[icon.name.substringAfterLast('.')] ?: Gold
+}
+
+/**
+ * The sign at the start of a row (0.25): a small tile filled with the sign's colour, lit from above, and the sign in
+ * white on it, as in an iPhone's Settings. [tint] is given only where the colour says something (a warning, a danger);
+ * otherwise the sign has the colour of its kind ([Tints.of]).
+ */
 @Composable
-fun IconTile(icon: ImageVector, tint: Color = NoorTheme.colors.gold) {
-    Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(tint.copy(alpha = if (NoorTheme.colors.isDark) 0.15f else 0.13f)), contentAlignment = Alignment.Center) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
+fun IconTile(icon: ImageVector, tint: Color = Color.Unspecified) {
+    val base = if (tint == Color.Unspecified) Tints.of(icon) else tint
+    val brush = remember(base) { Brush.verticalGradient(listOf(lerp(base, Color.White, 0.20f), base, lerp(base, Color.Black, 0.10f))) }
+    Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(brush), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = Color.White, modifier = Modifier.size(19.dp))
     }
 }
 
@@ -104,7 +156,7 @@ fun IconTile(icon: ImageVector, tint: Color = NoorTheme.colors.gold) {
 @Composable
 fun SettingsItem(
     icon: ImageVector, title: String, value: String?, onClick: (() -> Unit)?,
-    detail: String? = null, tint: Color = NoorTheme.colors.gold,
+    detail: String? = null, tint: Color = Color.Unspecified,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val c = NoorTheme.colors
@@ -162,7 +214,7 @@ fun SettingsItem(
  * and a touch anywhere on it answers with a tick.
  */
 @Composable
-fun SettingsSwitch(icon: ImageVector, title: String, value: String?, checked: Boolean, tint: Color = NoorTheme.colors.gold, onChange: (Boolean) -> Unit) {
+fun SettingsSwitch(icon: ImageVector, title: String, value: String?, checked: Boolean, tint: Color = Color.Unspecified, onChange: (Boolean) -> Unit) {
     val c = NoorTheme.colors
     val haptics = LocalHapticFeedback.current
     Row(
@@ -184,7 +236,7 @@ fun SettingsSwitch(icon: ImageVector, title: String, value: String?, checked: Bo
 
 /** Divider aligned with the row text (after the icon tile), as in a grouped list. */
 @Composable
-fun SettingsDivider() = HorizontalDivider(Modifier.padding(start = 62.dp), thickness = 0.5.dp, color = NoorTheme.colors.separator)
+fun SettingsDivider() = HorizontalDivider(Modifier.padding(start = 60.dp), thickness = 0.5.dp, color = NoorTheme.colors.separator)
 
 /** Noor's switch: gold when on, a quiet grey track when off, the same white thumb either way. */
 @Composable

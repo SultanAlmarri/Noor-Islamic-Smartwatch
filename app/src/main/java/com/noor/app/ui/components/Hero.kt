@@ -55,15 +55,16 @@ fun HeroCard(
     val c = NoorTheme.colors
     val shape = RoundedCornerShape(30.dp)
     val glow = c.gold.copy(alpha = if (c.isDark) 0.26f else 0.20f)
+    val source = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Column(
-        modifier.fillMaxWidth().clip(shape).background(c.glassRaised)
+        modifier.then(if (onClick != null) Modifier.pressScale(source, 0.98f) else Modifier).fillMaxWidth().clip(shape).background(c.glassRaised)
             .drawBehind {
                 // (0.21) Lit from the medallion's corner: the right one in Arabic (it was the left in both languages).
                 val corner = if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) 0.88f else 0.12f
                 drawRect(Brush.radialGradient(listOf(glow, Color.Transparent), center = Offset(size.width * corner, 0f), radius = max(size.width, size.height) * 0.85f))
             }
             .glassEdge(shape, c.glassEdge, c.glassEdgeLow)
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = withTick(onClick)) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(interactionSource = source, indication = androidx.compose.foundation.LocalIndication.current, role = Role.Button, onClickLabel = onClickLabel, onClick = withTick(onClick)) else Modifier)
             .padding(horizontal = 20.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

@@ -62,11 +62,14 @@ fun WarningRow(text: String, action: String?, onAction: (() -> Unit)?, icon: Ima
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        com.noor.app.ui.settings.IconTile(icon, if (danger) c.danger else if (warn) c.warning else c.textSecondary)
+        com.noor.app.ui.settings.IconTile(icon, com.noor.app.ui.settings.Tints.let { if (danger) it.Red else if (warn) it.Orange else it.Gray })
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(text, style = com.noor.app.ui.settings.FootnoteStyle.copy(fontSize = 14.sp, lineHeight = 20.sp), color = if (warn || danger) c.textPrimary else c.textSecondary)
-            if (action != null && onAction != null) Text(action, style = MaterialTheme.typography.labelLarge, color = c.goldText, modifier = Modifier.padding(top = 4.dp))
+            // (0.25) What fixes it reads as a button (a capsule in the accent), not as a line of coloured text; the whole
+            // row is still the touch target.
+            if (action != null && onAction != null) Text(action, style = MaterialTheme.typography.labelLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), color = c.goldText,
+                modifier = Modifier.padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(50)).background(c.gold.copy(alpha = if (c.isDark) 0.18f else 0.14f)).padding(horizontal = 14.dp, vertical = 6.dp))
         }
     }
 }

@@ -258,9 +258,10 @@ fun NoorButton(
         ButtonKind.Plain -> androidx.compose.ui.graphics.Color.Transparent
     }
     val fg = when { danger -> c.danger; kind == ButtonKind.Filled -> c.onGold; else -> c.goldText }
+    val source = remember { MutableInteractionSource() }
     Row(
-        modifier.heightIn(min = 50.dp).clip(shape).background(bg)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = ripple(color = fg), enabled = enabled, role = Role.Button, onClick = withTick(onClick))
+        modifier.pressScale(source).heightIn(min = 50.dp).clip(shape).background(bg)
+            .clickable(interactionSource = source, indication = ripple(color = fg), enabled = enabled, role = Role.Button, onClick = withTick(onClick))
             .graphicsLayer { alpha = if (enabled) 1f else 0.45f }.padding(horizontal = 20.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {

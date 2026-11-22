@@ -64,6 +64,7 @@ class SettingsRepository(
         val statusChipSystem = booleanPreferencesKey("status_chip_system_timer")
         val elapsed = booleanPreferencesKey("elapsed_after_prayer")
         val scrubHint = booleanPreferencesKey("hint_scrub_done")
+        val newsSeen = androidx.datastore.preferences.core.intPreferencesKey("news_seen")
         val scenery = stringPreferencesKey("scenery")
         val skyGraphics = stringPreferencesKey("sky_graphics")
         /** (0.19) The graphics level (SkyGraphics); "sky_graphics" is only read to carry an older choice over. */
@@ -108,6 +109,7 @@ class SettingsRepository(
             statusChipSystemTimer = p[K.statusChipSystem] ?: false,
             elapsedAfterPrayer = p[K.elapsed] ?: true,
             scrubHintDone = p[K.scrubHint] ?: false,
+            newsSeen = p[K.newsSeen] ?: 0,
             scenery = p.enum(K.scenery, Scenery.AUTO),
             skyGraphics = p[K.skyLevel]?.let { v -> SkyGraphics.entries.firstOrNull { it.name == v } } ?: SkyGraphics.fromOld(p[K.skyGraphics]),
             sunPath = p.enum(K.sunPath, SunPathMode.SIMPLE),
@@ -127,7 +129,9 @@ class SettingsRepository(
     /** The settings now, read from the store itself (so a change just written is always seen). */
     suspend fun current(): AppSettings = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { decoded.first() }
 
-    suspend fun setOnboardingDone() = context.dataStore.edit { it[K.onboarding] = true }
+    // (0.25: someone who has just been welcomed is not then told what is new.)
+    suspend fun setOnboardingDone() = context.dataStore.edit { it[K.onboarding] = true; it[K.newsSeen] = com.noor.app.ui.components.WhatsNew.EDITION }
+    suspend fun setNewsSeen(edition: Int) = context.dataStore.edit { it[K.newsSeen] = edition }
     suspend fun setLocationMode(mode: LocationMode) = context.dataStore.edit { it[K.locationMode] = mode.name }
     suspend fun setManualCity(id: String) = context.dataStore.edit {
         it[K.manualCity] = id; it.remove(K.manualPlace); it[K.locationMode] = LocationMode.MANUAL.name

@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -193,20 +194,32 @@ fun TodayScreen(contentPadding: PaddingValues, onOpenLocation: () -> Unit, onOpe
  * (0.21) With larger text the rows grow with it ([textScale], the phone's font size): the sky gives them the room, so
  * the day still fits above the tab bar (and the tester's banner) where it can; until then Isha went under them.
  */
-internal class HomeLayout(val heroHeight: Dp, val rowHeight: Dp, val shuruqHeight: Dp, val compact: Boolean) {
+internal class HomeLayout(val heroHeight: Dp, val rowHeight: Dp, val shuruqHeight: Dp, val compact: Boolean, val columns: Int = 1) {
     companion object {
         private val GAP = 10.dp
-        fun of(viewport: Dp, top: Dp, bottom: Dp, textScale: Float = 1f): HomeLayout {
-            if (viewport == Dp.Infinity || viewport <= 0.dp) return HomeLayout(top + 330.dp, 54.dp, 44.dp, false)
+        /** From this width the day's times stand in two columns (0.25). */
+        val TWO_COLUMNS_FROM = 600.dp
+        /**
+         * (0.25) [width]: on a wide screen (a folding phone opened out, a tablet, a phone on its side) the day's times
+         * stand in two columns of three (Fajr, Shuruq, Dhuhr | Asr, Maghrib, Isha), so the sky keeps its height: in one
+         * column the opened Galaxy Fold left the sky so little that the Sun's path lay flat and ran through the
+         * countdown's caption.
+         */
+        fun of(viewport: Dp, top: Dp, bottom: Dp, textScale: Float = 1f, width: Dp = 0.dp): HomeLayout {
+            val two = width >= TWO_COLUMNS_FROM
+            // (In two columns Shuruq's row is as tall as the others, so the rows of the two columns line up.)
+            fun make(hero: Dp, row: Dp, sh: Dp, compact: Boolean) = HomeLayout(hero, row, if (two) row else sh, compact, if (two) 2 else 1)
+            if (viewport == Dp.Infinity || viewport <= 0.dp) return make(top + 330.dp, 54.dp, 44.dp, false)
             // (Rows grow less than their text: only the lines of text grow, not the discs or the spacing.)
             val k = 1f + 0.4f * (textScale.coerceIn(1f, 2f) - 1f)
-            fun hero(date: Dp, row: Dp, sh: Dp) = viewport - ((date + row * 5 + sh) * k + GAP + bottom)
+            fun hero(date: Dp, row: Dp, sh: Dp) = viewport - ((date + if (two) row * 3 else row * 5 + sh) * k + GAP + bottom)
             val regular = hero(58.dp, 54.dp, 44.dp)
-            if (regular >= top + 252.dp) return HomeLayout(regular.coerceAtMost(top + 430.dp), 54.dp, 44.dp, false)
+            // (A wide screen has the room for a taller sky: there the path is as wide as the screen.)
+            if (regular >= top + 252.dp) return make(regular.coerceAtMost(top + if (two) 520.dp else 430.dp), 54.dp, 44.dp, false)
             val compact = hero(56.dp, 48.dp, 38.dp)
-            if (compact >= top + 214.dp) return HomeLayout(compact, 48.dp, 38.dp, true)
+            if (compact >= top + 214.dp) return make(compact, 48.dp, 38.dp, true)
             // Very short screens: slimmer rows, and the sky header puts the name and the countdown side by side.
-            return HomeLayout(hero(52.dp, 44.dp, 34.dp).coerceAtLeast(top + 150.dp), 44.dp, 34.dp, true)
+            return make(hero(52.dp, 44.dp, 34.dp).coerceAtLeast(top + 150.dp), 44.dp, 34.dp, true)
         }
     }
 }
@@ -280,7 +293,7 @@ fun TodayContent(
     }
 
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-    val home = HomeLayout.of(maxHeight, top, contentPadding.calculateBottomPadding(), LocalDensity.current.fontScale)
+    val home = HomeLayout.of(maxHeight, top, contentPadding.calculateBottomPadding(), LocalDensity.current.fontScale, maxWidth)
     // The real sky (0.10): the whole screen is the window. The scene is drawn behind everything by its own renderer;
     // the day's times lie on frosted glass over its lower part. Where it cannot run, the 0.9 sky fills the header.
     val skyContext = androidx.compose.ui.platform.LocalContext.current
@@ -328,7 +341,8 @@ fun TodayContent(
         }
 
         // The page is the land: its nearest ridge is the page colour, so the day's times sit on the ground under the sky.
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        // (0.25: on a very wide screen the times keep a readable width, in the middle.)
+        Column(Modifier.align(Alignment.CenterHorizontally).widthIn(max = 840.dp).fillMaxWidth().padding(horizontal = 16.dp)) {
             val pager = rememberPagerState(initialPage = DateWindow.pageOf(initialDate ?: today)) { DateWindow.pageCount }
             val shown = DateWindow.dateOf(pager.currentPage)
             androidx.compose.runtime.SideEffect { viewingToday = shown == today }
@@ -985,45 +999,56 @@ private fun Timeline(day: PrayerDay, date: LocalDate, isToday: Boolean, u: Today
     val ramadan = HijriDate.of(date, u.settings.hijriAdjust).isRamadan
     val suhoor = stringResource(R.string.today_suhoor)
     val iftar = stringResource(R.string.today_iftar)
-    Column(Modifier.fillMaxWidth()) {
-        val list = Prayer.entries
-        list.forEachIndexed { i, p ->
-            val at = day.instant(p)
-            // (0.18: Isha stays the current prayer until midnight, when the next is tomorrow's Fajr.)
-            val isCurrent = p == current
-            val isNext = p == next
-            val passed = isToday && !isCurrent && at != null && at.isBefore(u.now)
-            // Gold fills the line from the current moment's node to the next one's, in step with the time.
-            val fillBelow: () -> Float = if (isCurrent && list.getOrNull(i + 1) == next) { { (fill.value * 2f).coerceIn(0f, 1f) } } else NoFill
-            val fillAbove: () -> Float = if (isNext && list.getOrNull(i - 1) == current) { { (fill.value * 2f - 1f).coerceIn(0f, 1f) } } else NoFill
-            // 0.14: the bell says what will happen at this time (the Adhan or a sound, a quiet notification, nothing).
-            val alert = u.settings.alerts.alert(p)
-            val alerting = u.settings.alerts.enabled && alert.enabled
-            TimelineRow(
-                p, f.prayerName(p, date), day.minutes[p]?.let { f.time(it) },
-                // (Worked out where it is shown: "in 2 h 5 min" reads the clock, so only that line follows it.)
-                status = {
-                    listOfNotNull(
-                        when {
-                            isCurrent -> stringResource(R.string.now)
-                            isNext && st != null -> stringResource(R.string.today_in, durationText(Duration.between(clock(), st.next.at), f))
-                            else -> null
-                        },
-                        if (ramadan && p == Prayer.FAJR) suhoor else if (ramadan && p == Prayer.MAGHRIB) iftar else null,
-                    ).joinToString(" · ").ifEmpty { null }
-                },
-                isCurrent = isCurrent, isNext = isNext, passed = passed,
-                first = i == 0, last = i == list.size - 1,
-                lineAboveDone = passed || isCurrent, lineBelowDone = passed, fillAbove = fillAbove, fillBelow = fillBelow, f = f,
-                // Shuruq marks the end of Fajr's time; it is not a prayer, so its row is quieter and slimmer.
-                height = if (p == Prayer.SHURUQ) home.shuruqHeight else home.rowHeight, minor = p == Prayer.SHURUQ,
-                bell = when { !alerting -> Icons.Rounded.NotificationsOff; alert.mode.playsAudio -> Icons.Rounded.NotificationsActive; else -> Icons.Rounded.NotificationsNone },
-                bellOn = alerting,
-                bellText = stringResource(R.string.today_row_alert, stringResource(if (alerting) com.noor.app.ui.adhan.modeLabel(alert.mode) else R.string.adhan_off)),
-                onClick = { onOpenPrayer(p) }, onBell = { on -> onToggleAlert(p, on) },
-                modifier = Modifier.arrives(i + 1, Opening.PANEL_AT),
-            )
+    val list = Prayer.entries
+    // (0.25) [first], [last]: whether the row is the first or the last of its column (the line joins a column's rows).
+    @Composable
+    fun row(i: Int, first: Boolean, last: Boolean) {
+        val p = list[i]
+        val at = day.instant(p)
+        // (0.18: Isha stays the current prayer until midnight, when the next is tomorrow's Fajr.)
+        val isCurrent = p == current
+        val isNext = p == next
+        val passed = isToday && !isCurrent && at != null && at.isBefore(u.now)
+        // Gold fills the line from the current moment's node to the next one's, in step with the time.
+        val fillBelow: () -> Float = if (isCurrent && list.getOrNull(i + 1) == next) { { (fill.value * 2f).coerceIn(0f, 1f) } } else NoFill
+        val fillAbove: () -> Float = if (isNext && list.getOrNull(i - 1) == current) { { (fill.value * 2f - 1f).coerceIn(0f, 1f) } } else NoFill
+        // 0.14: the bell says what will happen at this time (the Adhan or a sound, a quiet notification, nothing).
+        val alert = u.settings.alerts.alert(p)
+        val alerting = u.settings.alerts.enabled && alert.enabled
+        TimelineRow(
+            p, f.prayerName(p, date), day.minutes[p]?.let { f.time(it) },
+            // (Worked out where it is shown: "in 2 h 5 min" reads the clock, so only that line follows it.)
+            status = {
+                listOfNotNull(
+                    when {
+                        isCurrent -> stringResource(R.string.now)
+                        isNext && st != null -> stringResource(R.string.today_in, durationText(Duration.between(clock(), st.next.at), f))
+                        else -> null
+                    },
+                    if (ramadan && p == Prayer.FAJR) suhoor else if (ramadan && p == Prayer.MAGHRIB) iftar else null,
+                ).joinToString(" · ").ifEmpty { null }
+            },
+            isCurrent = isCurrent, isNext = isNext, passed = passed,
+            first = first, last = last,
+            lineAboveDone = passed || isCurrent, lineBelowDone = passed, fillAbove = fillAbove, fillBelow = fillBelow, f = f,
+            // Shuruq marks the end of Fajr's time; it is not a prayer, so its row is quieter and slimmer.
+            height = if (p == Prayer.SHURUQ) home.shuruqHeight else home.rowHeight, minor = p == Prayer.SHURUQ,
+            bell = when { !alerting -> Icons.Rounded.NotificationsOff; alert.mode.playsAudio -> Icons.Rounded.NotificationsActive; else -> Icons.Rounded.NotificationsNone },
+            bellOn = alerting,
+            bellText = stringResource(R.string.today_row_alert, stringResource(if (alerting) com.noor.app.ui.adhan.modeLabel(alert.mode) else R.string.adhan_off)),
+            onClick = { onOpenPrayer(p) }, onBell = { on -> onToggleAlert(p, on) },
+            modifier = Modifier.arrives(i + 1, Opening.PANEL_AT),
+        )
+    }
+    if (home.columns == 2) {
+        // (0.25) A wide screen: the morning's three and the afternoon's three, side by side.
+        val half = (list.size + 1) / 2
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(Modifier.weight(1f)) { for (i in 0 until half) row(i, first = i == 0, last = i == half - 1) }
+            Column(Modifier.weight(1f)) { for (i in half until list.size) row(i, first = i == half, last = i == list.size - 1) }
         }
+    } else Column(Modifier.fillMaxWidth()) {
+        for (i in list.indices) row(i, first = i == 0, last = i == list.size - 1)
     }
 }
 

@@ -103,6 +103,7 @@ import com.noor.app.ui.components.Hairline
 import com.noor.app.ui.components.LocalAmbientMotion
 import com.noor.app.ui.components.NoorBackground
 import com.noor.app.ui.components.NoorMotion
+import com.noor.app.ui.components.pressScale
 import com.noor.app.ui.components.Page
 import com.noor.app.ui.components.animationsOn
 import com.noor.app.ui.components.systemAllowsAmbientMotion
@@ -296,19 +297,28 @@ internal object Routes {
     val withoutTabBar = setOf(ONBOARDING, CITIES, WATCH_STUDIO)
 }
 
-// Tabs cross-fade (they are siblings). A page pushed from a tab comes in from the side one reads towards, and leaves
-// that way: from the right in English, from the left in Arabic (0.14: it came from the right in both).
+// How pages come and go (0.25), as on an iPhone. Tabs are siblings: they cross-fade, the new one settling from a touch
+// smaller. A page pushed from another slides in from the side one reads towards (the right in English, the left in
+// Arabic) while the page under it draws back a little way and dims; going back is the same film run backwards, so the
+// system's back gesture (Android 14 and later, predictive back) can pull the page off by hand and show the one under it.
 private typealias Scope = AnimatedContentTransitionScope<NavBackStackEntry>
+private fun Scope.betweenTabs() = targetState.destination.route in Routes.tabs && initialState.destination.route in Routes.tabs
+private val push = tween<androidx.compose.ui.unit.IntOffset>(NoorMotion.Page, easing = NoorMotion.Glide)
 private val tabEnter: Scope.() -> EnterTransition = {
-    if (targetState.destination.route in Routes.tabs && initialState.destination.route in Routes.tabs)
-        fadeIn(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) + scaleIn(tween(NoorMotion.Standard, easing = NoorMotion.Ease), initialScale = 0.985f)
-    else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(NoorMotion.Standard, easing = NoorMotion.Ease)) { it / 5 } + fadeIn(tween(NoorMotion.Standard))
+    if (betweenTabs()) fadeIn(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) + scaleIn(tween(NoorMotion.Standard, easing = NoorMotion.Ease), initialScale = 0.985f)
+    else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, push) { (it * 0.42f).toInt() } + fadeIn(tween(NoorMotion.Quick + 60))
 }
-private val tabExit: Scope.() -> ExitTransition = { fadeOut(tween(NoorMotion.Quick)) }
-private val popEnter: Scope.() -> EnterTransition = { fadeIn(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) }
+private val tabExit: Scope.() -> ExitTransition = {
+    if (betweenTabs()) fadeOut(tween(NoorMotion.Quick))
+    else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, push) { (it * 0.14f).toInt() } + fadeOut(tween(NoorMotion.Quick))
+}
+private val popEnter: Scope.() -> EnterTransition = {
+    if (betweenTabs()) fadeIn(tween(NoorMotion.Standard, easing = NoorMotion.Ease))
+    else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, push) { (it * 0.14f).toInt() } + fadeIn(tween(NoorMotion.Standard, easing = NoorMotion.Ease))
+}
 private val popExit: Scope.() -> ExitTransition = {
     if (initialState.destination.route in Routes.tabs) fadeOut(tween(NoorMotion.Quick))
-    else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(NoorMotion.Standard, easing = NoorMotion.Ease)) { it / 5 } + fadeOut(tween(NoorMotion.Quick))
+    else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, push) { (it * 0.42f).toInt() } + fadeOut(tween(NoorMotion.Quick + 60))
 }
 
 @Composable
@@ -363,6 +373,14 @@ private fun NoorRoot(s: AppSettings, opening: OpeningState, debugRoute: String?,
             runCatching { openTab(r) }
         }
         onWidgetOpened()
+    }
+
+    // 0.25: what is new, once, to someone who had Minhad before this edition: over the home screen, when the opening
+    // has finished (never in the debug hooks' direct routes, and never after the welcome page: see setOnboardingDone).
+    if (com.noor.app.ui.components.WhatsNew.due(s.onboardingDone, s.newsSeen) && route == Routes.PRAYERS && !opening.active && debugRoute == null && widgetOpen == null) {
+        val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as NoorApplication
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        com.noor.app.ui.components.WhatsNewSheet { scope.launch { app.container.settings.setNewsSeen(com.noor.app.ui.components.WhatsNew.EDITION) } }
     }
 
     // 0.15: the tab bar floats over the page (a capsule of glass, as on iOS 26), and the pages run on under it: their
@@ -524,9 +542,10 @@ private fun RowScope.Tab(selected: Boolean, icon: Painter, label: String, onClic
     val tint by animateColorAsState(if (selected) c.gold else c.textSecondary, tween(NoorMotion.Quick), label = "tabTint")
     val text by animateColorAsState(if (selected) c.goldText else c.textSecondary, tween(NoorMotion.Quick), label = "tabText")
     val lift by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 0.55f, stiffness = 420f), label = "tabLift")
+    val source = remember { MutableInteractionSource() }
     Column(
-        Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(50))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Tab, onClick = com.noor.app.ui.components.withTick(onClick))
+        Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(50)).pressScale(source, 0.92f)
+            .clickable(interactionSource = source, indication = null, role = Role.Tab, onClick = com.noor.app.ui.components.withTick(onClick))
             .semantics { this.selected = selected },
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {

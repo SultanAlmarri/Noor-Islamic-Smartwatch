@@ -122,6 +122,8 @@ data class AppSettings(
     val elapsedAfterPrayer: Boolean = true,
     /** The home screen's sky has been drawn along once: its hint ("Drag the sky...") is not shown again (0.15). */
     val scrubHintDone: Boolean = false,
+    /** (0.25) The newest "What's new" page this phone has shown (its number, [com.noor.app.ui.components.WhatsNew.EDITION]); 0: none yet. */
+    val newsSeen: Int = 0,
     val scenery: Scenery = Scenery.AUTO,
     val skyGraphics: SkyGraphics = SkyGraphics.AUTO,
     /** (0.23) The Sun's path on the home screen: the same arch everywhere (default), or the real one. */

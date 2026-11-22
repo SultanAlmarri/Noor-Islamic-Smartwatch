@@ -14,6 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Label
+import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Brightness6
@@ -100,9 +107,12 @@ private data class SettingRow(
 private const val UNTITLED_2 = -2
 private const val UNTITLED_3 = -3
 private const val UNTITLED_4 = -4
+private const val UNTITLED_5 = -5
+private const val UNTITLED_6 = -6
 
 /** The pages of Settings (0.15): the first, and two it opens. */
-private enum class SettingsPage { ROOT, TIMES, LANGUAGE }
+/** 0.25: also the notification bar's page (its switch and the status-bar timer's options) and About. */
+private enum class SettingsPage { ROOT, TIMES, LANGUAGE, STATUS, ABOUT }
 
 /**
  * Settings (0.15). The first page holds what people come for, in the order they need it, and no more than a phone's
@@ -222,7 +232,14 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         // (0.15.2: the Adhan has its own tab; here only for search.)
         add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN) },
             detail = stringResource(if (s.alerts.enabled) R.string.settings_on else R.string.settings_off), listed = false))
-        add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Notifications, stringResource(R.string.status_setting), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status), null,
+        // 0.25: the notification bar has a page of its own (on a phone with Android 16 its switch and the status-bar
+        // timer's options were four rows of the first page); the row says whether it is on.
+        val statusPage = SettingsPage.STATUS
+        val statusShown = s.statusNotification && (Build.VERSION.SDK_INT < 33 || androidx.core.content.ContextCompat.checkSelfPermission(context,
+            Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+        add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Notifications, stringResource(R.string.status_setting), null, stringResource(R.string.kw_status), { page = statusPage },
+            detail = stringResource(if (statusShown) R.string.settings_on else R.string.settings_off)))
+        add(SettingRow(0, Icons.Rounded.Notifications, stringResource(R.string.status_setting), stringResource(R.string.status_setting_desc), stringResource(R.string.kw_status), null, page = statusPage,
             // (0.22: on by default, but Android shows it only with the notification permission: the switch says what is
             // really there, and turning it on asks for the permission.)
             toggle = (s.statusNotification && (Build.VERSION.SDK_INT < 33 || androidx.core.content.ContextCompat.checkSelfPermission(context,
@@ -249,7 +266,7 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                 }
                 Unit
             }
-            add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Timer, stringResource(R.string.status_chip_setting),
+            add(SettingRow(R.string.status_chip_group, Icons.Rounded.Timer, stringResource(R.string.status_chip_setting),
                 stringResource(when {
                     !newEnough -> R.string.status_chip_needs_16
                     s.statusBarChip && !allowed -> R.string.status_chip_blocked
@@ -262,15 +279,15 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                     else -> R.string.status_chip_desc
                 }), stringResource(R.string.kw_status),
                 when { newEnough && s.statusBarChip && !allowed -> openSettings; newEnough && s.statusBarChip && samsung -> { { dialog = Dialog.SAMSUNG_LIVE } }; else -> null },
-                toggle = if (newEnough) s.statusBarChip to { on -> if (on) com.noor.app.notify.LivePromotion.retry(context); vm.setStatusBarChip(on) } else null))
+                toggle = if (newEnough) s.statusBarChip to { on -> if (on) com.noor.app.notify.LivePromotion.retry(context); vm.setStatusBarChip(on) } else null, page = statusPage))
             // (0.24, the owner) The timer in the status bar without Minhad's icon beside it (off by default).
-            if (newEnough && s.statusBarChip) add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Timer, stringResource(R.string.status_chip_icon_setting),
+            if (newEnough && s.statusBarChip) add(SettingRow(R.string.status_chip_group, Icons.AutoMirrored.Rounded.Label, stringResource(R.string.status_chip_icon_setting),
                 stringResource(R.string.status_chip_icon_desc), stringResource(R.string.kw_status), null,
-                toggle = s.statusChipIcon to { on -> vm.setStatusChipIcon(on) }))
+                toggle = s.statusChipIcon to { on -> vm.setStatusChipIcon(on) }, page = statusPage))
             // (0.23.2) The timer counted by Android itself, on the phone's clock: exact, in the phone's digits, no sign.
-            if (newEnough && s.statusBarChip) add(SettingRow(R.string.settings_group_prayer, Icons.Rounded.Timer, stringResource(R.string.status_chip_system_setting),
+            if (newEnough && s.statusBarChip) add(SettingRow(R.string.status_chip_group, Icons.Rounded.AccessTime, stringResource(R.string.status_chip_system_setting),
                 stringResource(if (s.statusChipSystemTimer) R.string.status_chip_system_on else R.string.status_chip_system_off), stringResource(R.string.kw_status), null,
-                toggle = s.statusChipSystemTimer to { on -> vm.setStatusChipSystemTimer(on) }))
+                toggle = s.statusChipSystemTimer to { on -> vm.setStatusChipSystemTimer(on) }, page = statusPage))
         }
         add(SettingRow(R.string.settings_alerts, Icons.Rounded.History, stringResource(R.string.history_title), null, stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_HISTORY) }, listed = false))
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Brightness6, stringResource(R.string.theme), null, stringResource(R.string.kw_theme), { dialog = Dialog.THEME },
@@ -288,17 +305,22 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             add(SettingRow(R.string.countdown_group, Icons.Rounded.Timer, stringResource(R.string.elapsed_setting), stringResource(R.string.elapsed_setting_desc),
                 stringResource(R.string.kw_status), null, toggle = s.elapsedAfterPrayer to { on -> vm.setElapsedAfterPrayer(on) }, listed = false))
         }
+        // 0.24: the home screen's widgets, each customised from here too.
+        add(SettingRow(R.string.settings_appearance, Icons.Rounded.Widgets, stringResource(R.string.w_widgets_title), stringResource(R.string.w_widgets_row_note),
+            stringResource(R.string.w_kw_widgets), { onOpenRoute(Routes.WIDGETS) }))
         add(SettingRow(R.string.settings_appearance, Icons.Rounded.Language, stringResource(R.string.settings_language),
             listOf(languageLabel(s.language), stringResource(if (s.timeFormat == TimeFormat.H12) R.string.time_12 else R.string.time_24, f.number(if (s.timeFormat == TimeFormat.H12) 12 else 24))).joinToString(" · "),
             stringResource(R.string.kw_language) + " " + stringResource(R.string.kw_numerals) + " " + stringResource(R.string.kw_time) + " " + stringResource(R.string.kw_hijri),
             { page = SettingsPage.LANGUAGE }))
-        // 0.24: the home screen's widgets, each customised from here too.
-        add(SettingRow(R.string.settings_appearance, Icons.Rounded.Widgets, stringResource(R.string.w_widgets_title), stringResource(R.string.w_widgets_row_note),
-            stringResource(R.string.w_kw_widgets), { onOpenRoute(Routes.WIDGETS) }))
         // 0.15.2: the watch's page lives here (set up once), no longer a tab.
         add(SettingRow(UNTITLED_4, Icons.Rounded.Watch, stringResource(R.string.watch_title), stringResource(R.string.settings_watch_note), stringResource(R.string.kw_watch), { onOpenRoute(Routes.WATCH) }))
-        add(SettingRow(R.string.settings_about, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), null, stringResource(R.string.kw_accuracy), onOpenAccuracy))
-        add(SettingRow(R.string.settings_about, Icons.Rounded.Info, stringResource(R.string.about_version, BuildConfigInfo.versionName), null, "", null))
+        // 0.25: About is a page (Minhad's mark and name, the version, how the times are checked, the recordings' credits).
+        add(SettingRow(UNTITLED_5, Icons.Rounded.Info, stringResource(R.string.about_title), null, stringResource(R.string.kw_accuracy) + " " + stringResource(R.string.about_version_row),
+            { page = SettingsPage.ABOUT }, detail = f.digits(BuildConfigInfo.versionName)))
+        val about = SettingsPage.ABOUT
+        add(SettingRow(0, Icons.Rounded.Verified, stringResource(R.string.about_accuracy), stringResource(R.string.times_accuracy_note), stringResource(R.string.kw_accuracy), onOpenAccuracy, page = about))
+        add(SettingRow(0, Icons.Rounded.LibraryMusic, stringResource(R.string.adhan_library), stringResource(R.string.adhan_library_desc), stringResource(R.string.kw_alerts), { onOpenRoute(Routes.ADHAN_LIBRARY) }, page = about))
+        add(SettingRow(UNTITLED_6, Icons.Rounded.Info, stringResource(R.string.about_version_row), null, "", null, detail = f.digits(BuildConfigInfo.versionName), page = about))
         // Testing only (0.14): to be removed before release, with com.noor.app.testing (the owner's word).
         add(SettingRow(R.string.settings_testing, Icons.Rounded.Tune, stringResource(R.string.testing_row), stringResource(R.string.testing_row_note),
             stringResource(R.string.kw_testing), { onOpenRoute(Routes.TESTING) }))
@@ -370,7 +392,8 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
                     // Every word typed must appear in the row's title, value, group, page or keywords (in the current
                     // language). A row from another page says which page it is on (a breadcrumb), and works from here.
                     val words = q.lowercase().split(Regex("\\s+"))
-                    val pageName = mapOf(SettingsPage.TIMES to stringResource(R.string.settings_calculation), SettingsPage.LANGUAGE to stringResource(R.string.settings_language))
+                    val pageName = mapOf(SettingsPage.TIMES to stringResource(R.string.settings_calculation), SettingsPage.LANGUAGE to stringResource(R.string.settings_language),
+                        SettingsPage.STATUS to stringResource(R.string.status_setting), SettingsPage.ABOUT to stringResource(R.string.about_title))
                     val home = stringResource(R.string.scenery_title)
                     val found = rows.filter { r ->
                         val hay = listOf(r.title, r.value.orEmpty(), r.detail.orEmpty(), if (r.group <= 0) "" else stringResource(r.group), pageName[r.page].orEmpty(), r.keywords).joinToString(" ").lowercase()
@@ -408,6 +431,13 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
             }
             SettingsPage.LANGUAGE -> NoorPage(stringResource(R.string.settings_language), contentPadding, onBack = { page = SettingsPage.ROOT }) {
                 groups(SettingsPage.LANGUAGE)
+            }
+            SettingsPage.STATUS -> NoorPage(stringResource(R.string.status_setting), contentPadding, onBack = { page = SettingsPage.ROOT }) {
+                groups(SettingsPage.STATUS)
+            }
+            SettingsPage.ABOUT -> NoorPage(stringResource(R.string.about_title), contentPadding, onBack = { page = SettingsPage.ROOT }) {
+                AboutHeader()
+                groups(SettingsPage.ABOUT)
             }
         }
     }
@@ -493,6 +523,31 @@ fun SettingsScreen(contentPadding: PaddingValues, onOpenCities: () -> Unit, onOp
         )
     }
 }
+
+/**
+ * The head of the About page (0.25): Minhad's mark as the launcher shows it (the crescent and its star over the
+ * Earth's edge at first light), the name in both scripts as on the welcome page, and what Minhad is in a line.
+ */
+@Composable
+private fun AboutHeader() {
+    val c = NoorTheme.colors
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        androidx.compose.foundation.layout.Box(
+            Modifier.size(104.dp).androidx_shadow().clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)),
+        ) {
+            // (The launcher shows the middle two thirds of an adaptive icon's layers: so here.)
+            val layer = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }
+            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_background), null, layer)
+            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_foreground), null, layer)
+        }
+        Text(stringResource(R.string.app_name), color = c.textPrimary, modifier = Modifier.padding(top = 16.dp),
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 28.sp))
+        Text(stringResource(R.string.about_tagline), color = c.textSecondary, style = MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.padding(top = 2.dp, start = 24.dp, end = 24.dp))
+    }
+}
+
+private fun Modifier.androidx_shadow(): Modifier = this.then(Modifier.shadow(16.dp, androidx.compose.foundation.shape.RoundedCornerShape(24.dp), ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f), spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)))
 
 /** Personal adjustments (0.14: a sheet): minutes added to or taken from each time, and Reset. */
 @OptIn(ExperimentalMaterial3Api::class)
