@@ -35,7 +35,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
@@ -234,6 +233,7 @@ class AdhanDesignTest {
                 open(adhan); click("Sound and devices", "الصوت والأجهزة"); save("on_options_$tag")
                 open { com.noor.app.ui.adhan.PrayerAlertScreen(it, Prayer.SHURUQ, {}, {}) }; save("on_prayer_shuruq_off_$tag")
                 open { com.noor.app.ui.adhan.AlarmScreen(it, 0, {}) }; save("on_alarm_new_$tag")
+                click("Sound", "الصوت"); save("on_alarm_sound_$tag")
                 open { com.noor.app.ui.adhan.AlertHistoryScreen(it, {}) }; save("on_history_$tag")
                 open { com.noor.app.ui.adhan.VoiceScreen(it, Prayer.FAJR, {}) }; save("on_voice_fajr_$tag")
             }

@@ -360,7 +360,8 @@ internal fun FixCard(issues: List<Issue>, headline: String?, f: Formatter) {
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(c.gold).padding(horizontal = 18.dp, vertical = 8.dp))
         }
     }
-    if (open && one == null) NoorSheet({ open = false }, rememberModalBottomSheetState(skipPartiallyExpanded = true)) { FixList(issues, count) }
+    // (The sheet, once open, stays until it is closed or nothing is left: also with one thing left of several.)
+    if (open) NoorSheet({ open = false }, rememberModalBottomSheetState(skipPartiallyExpanded = true)) { FixList(issues, count) }
 }
 
 /** The things to fix, as the sheet lists them: each what is wrong in a sentence, and the one action that fixes it. */

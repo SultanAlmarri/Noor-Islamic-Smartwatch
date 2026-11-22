@@ -871,6 +871,31 @@ more complicated?" So every page was sorted into what is used often and what is 
 - **Settings** no longer repeats the Adhan tab; the watch's row stands without a group title; the notification
   bar's description is one line.
 
+### The Adhan and alarms area (0.25)
+
+An independent reviewer of 0.24's renders: "organised around the app's problems and options, not the person. A wall
+of four warnings repeats on both segments, the same choice appears in two different UIs, the hero's switch is
+ambiguous, and there is a 'More settings' drawer." What was done about each finding, with the measurements and the
+decisions the owner may want otherwise, is in [ADHAN_025_NOTES.md](ADHAN_025_NOTES.md). In short:
+
+- **The tab is "Adhan" and so is its page**; under one control, **Prayers | Alarms**.
+- **One switch, one name.** The hero is always "Prayer alerts", with one line under it: "Next: Fajr 5:20 AM", "Off",
+  or in the danger colour "Will not sound".
+- **One line and one button for what needs fixing** (`FixCard`), and only what affects the page it is on. One thing:
+  its sentence, and Fix does it. Several: "4 things to fix", and Fix opens them in a sheet, the most serious first.
+- **All prayers**: the Adhan's voice is one row that opens the voices (a touch there chooses and plays the opening);
+  the volume is one slider (`NoorSlider`: a thin track, a round white thumb). Then the six prayers, each sign in the
+  colour of its hour; then the test, the history, and **Sound and devices** (what is set once).
+- **What hangs on a switch that is off looks off** (`OffWhen`: 38%, no touch, not read out) and keeps its place.
+- **A kind of alert is a row of a list** with a check, not a tile of a grid.
+- **One segmented control** for the whole app (`Segmented`), the home screen's settings included; its fills and inks
+  are measured by `SegmentedContrastTest` (4.5:1 for both labels wherever it stands, at every height of the Sun).
+- **An alarm's editor** has Cancel and Save in its bar and no other way out; its wheels carry their units in the band
+  ("0 h  25 min  before  Fajr"). A clock time is written with its AM or PM at half size (`ClockText`), in the alarms'
+  list, the editor and the ringing screen.
+- **The ringing screen** shows the time at the top, what is sounding under it, and Stop, Snooze and "Hide and keep
+  playing" on the foot of the screen.
+
 ## The interface of 0.14: one system, and an opening
 
 The owner (15 November 2026): "totally revolutionize the user interface and keep the Apple aesthetic... make the

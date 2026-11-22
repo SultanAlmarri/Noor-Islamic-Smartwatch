@@ -10,17 +10,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.Mosque
@@ -33,15 +28,12 @@ import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -58,13 +50,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.noor.alerts.CustomSounds
 import com.noor.alerts.SoundEntry
 import com.noor.app.R
 import com.noor.app.ui.components.ButtonKind
@@ -73,8 +63,6 @@ import com.noor.app.ui.components.NoorPage
 import com.noor.app.ui.components.isArabicUi
 import com.noor.app.ui.settings.ChoiceDialog
 import com.noor.app.ui.settings.FootnoteStyle
-import com.noor.app.ui.settings.SectionFooter
-import com.noor.app.ui.settings.SectionHeader
 import com.noor.app.ui.settings.SettingsDivider
 import com.noor.app.ui.settings.SettingsItem
 import com.noor.app.ui.settings.SettingsSection
@@ -85,8 +73,6 @@ import com.noor.prayer.Prayer
 import com.noor.prayer.alerts.AlertDevice
 import com.noor.prayer.alerts.AlertMode
 import androidx.compose.material.icons.rounded.RecordVoiceOver
-import androidx.compose.material.icons.rounded.AlarmAdd
-import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Box
 

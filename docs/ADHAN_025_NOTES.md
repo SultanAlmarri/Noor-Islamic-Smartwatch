@@ -28,7 +28,7 @@ when touched was checked by reading the code and by the tests named below, not o
 | # | Finding | Done? | What was done |
 |---|---|---|---|
 | 2 (must) | A wall of four warnings on the Adhan tab, repeated on Alarms | Done | `FixCard` (AdhanScreen.kt): one row. One thing wrong: its sentence and a gold **Fix** that does it. Several: "4 things to fix" and **Fix** opens a sheet that lists them, the most serious first, each with its own action (the rows of 0.24, `WarningRow`); a thing fixed leaves the list when the app comes back, and the row leaves with the last. Each page shows only what affects it: Prayers what would stop or delay the prayers' alerts (and a watch's), Alarms what would stop or delay an alarm (there titled "Alarms will not ring"). The four paragraphs took about 220 dp; the row takes 60. |
-| 3 (must) | Dark segmented control: the chosen segment almost invisible; a second, gold-filled style on the Home screen page | Done, with other numbers | One control (`Segmented`, AdhanComponents.kt) everywhere: the Adhan tab, Sound and devices, an alarm's sound, the calendar picker (its call is unchanged), and both controls of Settings → Home screen (`SceneryScreen.kt`, which had its own). At night the track is white at 7% and the chosen segment white at 15%, lit along its top edge (0.5 dp) with a soft shadow drawn outside it; labels 15 sp, the chosen one SemiBold in the primary ink, the others in the secondary. **Not the reviewer's 8% and 20%**: measured, the chosen label on a 20% thumb fell to 3.98:1 on a sheet under a bright morning sky, below the 4.5:1 that is the rule here; 15% on 7% is the strongest that passes everywhere (4.6:1 at worst) and the thumb stands 1.4 times… see the test's figures below. By day the track and thumb are as they were; the labels of the segments not chosen are now in the primary ink too (the grey gave 2.5:1 at the foot of a page at night in the light theme). `SegmentedContrastTest` locks all of it. |
+| 3 (must) | Dark segmented control: the chosen segment almost invisible; a second, gold-filled style on the Home screen page | Done, with other numbers | One control (`Segmented`, AdhanComponents.kt) everywhere: the Adhan tab, Sound and devices, an alarm's sound, the calendar picker (its call is unchanged), and both controls of Settings → Home screen (`SceneryScreen.kt`, which had its own). At night the track is white at 7% and the chosen segment white at 15%, lit along its top edge (0.5 dp) with a soft shadow drawn outside it; labels 15 sp, the chosen one SemiBold in the primary ink, the others in the secondary. **Not the reviewer's 8% and 20%**: measured, the chosen label on a 20% thumb fell to 3.98:1 on a sheet under a bright morning sky, below the 4.5:1 that is the rule here; 15% on 7% passes everywhere (chosen label 4.59:1 at worst, the others 4.67:1) and the thumb's luminance stands 1.47 to 1 against the track at worst (it was 1 to 1). By day the track and thumb are as they were (the reviewer: "already right"); the labels of the segments not chosen are now in the primary ink too (the grey gave 2.54:1 at the foot of a page at night in the light theme). `SegmentedContrastTest` locks all of it. |
 | 4 (must) | The hero's switch has no name when on; "See below" is a pointer | Done | Always "Prayer alerts" (20 sp SemiBold; `HeroCard` got a `titleSize`), with "Next: Fajr 5:20 AM", "Off", "On your watch", or in the danger colour "Will not sound". What to do about it is the row directly under the card. |
 | 9 (must) | The alarm editor's wheel unevenly built; three exits; the bar's fade cutting a row | Done, weights differ | The row of names over the wheels is gone; the units stand in the band beside the numbers ("0 h", "25 min", then "before", "Fajr"; `Wheel` got a `unit`). Cancel (start) and Save (end, SemiBold) in the page's bar, in the accent; no chevron, no bottom bar (`NoorPage` got `barStart`/`barEnd`); Android's Back is Cancel. Gutters of 10 dp, widths 0.7 : 1 : 1.35 : 1.5, not the 1 : 1 : 1.3 : 1.3 with 12 dp asked for: on a 360 dp phone that leaves the prayer's wheel 71 dp, and "Maghrib" at the band's size needs 76. Each wheel is as wide as what it holds. |
 | 12 | Stock Material slider | Done | `NoorSlider`: a 4 dp track, gold up to the value, a 24 dp round white thumb with a soft shadow, no stop dot; it runs from the right in Arabic. A volume is one line: its sign, the slider, the figure (`VolumeRow`), on the tab and on a prayer's page. |
@@ -76,9 +76,20 @@ Edited in place: `adhan_hero_blocked` ("Will not sound"), `adhan_alert_options` 
 the band as part of a sentence), the three apostrophes. Added at the end of both files under `<!-- 0.25 adhan -->`:
 `adhan_hero_next_at`, `adhan_all_prayers`, `adhan_fix`, the plural `adhan_fix_count`, `alarms_fix_blocked`,
 `alarm_warn_fullscreen`, `alarm_warn_volume` (the two warnings worded for alarms: they said "the Adhan" on the alarms'
-page), `alarm_unit_hours`, `alarm_unit_minutes`. No string was removed; these are no longer used by any code and can go
+page), `alarm_unit_hours`, `alarm_unit_minutes`. No string was removed. These are no longer used by any code and can go
 when the lead likes: `adhan_hero_next`, `adhan_section_adhan`, `adhan_attention`, `voice_all_title`, `history_intro`,
-`history_row_empty`, `alarm_hours`/`alarm_minutes_head`/`alarm_prayer` are still used (as TalkBack's names of the wheels).
+`history_row_empty`. (`alarm_hours`, `alarm_minutes_head` and `alarm_prayer` are still used: they are TalkBack's names
+for the wheels.)
+
+## Something found on the way, outside this area
+
+`SegmentedContrastTest` measures the control on the bare page as well as on glass. In the **light theme at night** the
+foot of a page is dusky enough that the secondary grey directly on it gives 2.54:1. `ThemeContrastTest` guarantees text
+on the glass only; section titles and footers, which stand on the bare page in the muted grey, are not covered by it
+and are likely below 4.5:1 near the foot of a long page at night in the light theme (the bare page itself was not
+measured: 2.54:1 is on the control's grey track there). Not changed here (`ui/theme` and
+`SettingsComponents.kt` are shared); for the lead to judge. Also for the lead: DESIGN.md's 0.25 section still says
+"on the Adhan tab's 'Needs your attention', the action of each row is a capsule": those rows are now in the Fix sheet.
 
 ## Decisions the owner may want otherwise
 
@@ -98,7 +109,39 @@ when the lead likes: `adhan_hero_next`, `adhan_section_adhan`, `adhan_attention`
 
 ## Tests
 
-TESTS_PLACEHOLDER
+All through Gradle on the cloud machine (`:app:testDebugUnitTest`, Robolectric with SDK 34 for the renders). Unit
+tests and software renders only.
+
+- **The whole of `:app:testDebugUnitTest`: 65 test classes, 136 tests, 0 failures, 0 errors, 0 skipped** (16 min 58 s).
+  It ran on the final code but for one line changed after it (the Fix sheet stays open while one thing of several is
+  left). After that line, the five classes this work touches were run again and pass: `ScreenshotTest` (1),
+  `PagesDesignTest` (1), `AdhanDesignTest` (1), `SegmentedContrastTest` (1), `ThemeContrastTest` (5).
+- **New: `SegmentedContrastTest`** (plain JVM): the chosen label on the thumb and the other labels on the track, on
+  the bare page, on a card's glass and on a sheet, for every degree of the Sun's height from −90° to 90°, morning and
+  evening, at eleven heights of the page, in both themes: all at 4.5:1 or better; and at night the thumb's luminance
+  at least 1.3 to 1 against the track. Worst figures it printed: night, chosen label 4.59:1, other labels 4.67:1,
+  thumb against track 1.47; day, other labels 6.84:1, chosen label 17.57:1, thumb against track 1.23 (a white thumb
+  on a pale track, lifted by its shadow, as before).
+- **New: `AdhanDesignTest`** (`app/build/design/adhan`, 65 pictures at 360 dp): the tab with the alerts off, on with
+  four things in the way, with one, with one that only delays, and with nothing in the way; the alarms' page in the
+  same states; the things to fix as the sheet lists them; a prayer's page on, off, and with all alerts off; the
+  voices for every prayer and for Fajr; Sound and devices; a new alarm, an alarm being edited, an alarm's sounds; the
+  history; Settings → Home screen (the segmented control); the ringing screen for an alarm and for the Adhan. In
+  English, Arabic, light, and with large text (1.3). It asserts only that pictures were written: it is for looking.
+  The "nothing in the way" and "one thing" states are made by putting Android's answers straight into the page's state,
+  because Robolectric 4.14 cannot be told that the Adhan's screen may show over the lock screen.
+- **Changed assertions** (the meaning kept, the text or the order new):
+  - `ScreenshotTest`: 26 waits for "Prayer alerts" (was "Adhan voice for every prayer": with the alerts off that
+    group is now dimmed and hidden from the semantics the test reads); 27 waits for "Adhan voice", which is there only
+    with the alerts on; "More settings" → "Sound and devices" (27/83, 32/84 in Arabic, 34); going back from the alarms'
+    page in Arabic clicks "الصلوات" (was "الأذان"); the ringing screen gets a clock ("4:47") and its Arabic texts are
+    typed with Western digits, as the app writes them when its digits are as first set.
+  - `PagesDesignTest`: clicks "Sound and devices" / "الصوت والأجهزة" (was "More settings").
+  - Both still check that an English screen shows no Arabic letters and an Arabic one no Latin letters; both pass.
+    Note that what is dimmed by a switch that is off is not in the semantics tree, so that check does not read it there
+    (it reads the same texts where the switch is on).
+- **Not run**: `:core:prayer:test`, `:alerts:testDebugUnitTest`, `:wear:testDebugUnitTest` (nothing of theirs was
+  touched); the release builds (`:app:assembleRelease`); the emulator workflows on GitHub.
 
 ## Not tested
 
