@@ -7,7 +7,8 @@ The watch is unchanged (it still uses the 34,000-place gazetteer in `shared`; se
 
 Settings → **Location mode** opens one screen (`app/.../ui/location/LocationScreen.kt`):
 
-- **Prayer times are for**: what is chosen now, with its coordinates.
+- **Prayer times are for**: what is chosen now (0.25: its name and where it lies; the coordinates are shown where a
+  point is chosen or confirmed: the coordinates' dialog, the map and the confirmation).
 - **One search box** for everything: cities, towns, villages, districts, addresses (online), coordinates in any common
   format and map links (`geo:`, `?q=lat,lon`, `/@lat,lon,`). Offline results appear at once; online results a moment
   later under "More places (online)".

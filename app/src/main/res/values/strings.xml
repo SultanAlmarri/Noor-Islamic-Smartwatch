@@ -140,7 +140,6 @@
     <string name="qibla_turn_left">Turn left %1$s</string>
     <string name="qibla_bearing">Qibla direction</string>
     <string name="qibla_heading">Phone heading</string>
-    <string name="qibla_difference">Difference</string>
     <string name="acc_title">Compass accuracy</string>
     <string name="acc_good">Good</string>
     <string name="acc_fair">Fair</string>
@@ -149,14 +148,10 @@
     <string name="acc_interference">Metal or a magnet nearby is disturbing the compass.</string>
     <string name="acc_needs_calibration">The compass needs calibrating: tap for how.</string>
     <string name="acc_status_only">Based on the sensor status reported by the phone. Tap for calibration tips.</string>
-    <string name="qibla_method_note">Directions are true north. Qibla is the shortest path on the Earth\'s ellipsoid (WGS-84) to the Kaaba. Two decimals are shown; the real accuracy is the sensor\'s, shown above.</string>
-    <string name="qibla_declination_note">Magnetic declination here: %1$s, applied.</string>
     <string name="cal_title">Calibrate the compass</string>
-    <string name="cal_step1">Move away from metal, electronics, speakers and car interiors.</string>
-    <string name="cal_step2">Take the phone out of any case or holder with a magnet.</string>
-    <string name="cal_step3">Hold the phone and trace a figure eight in the air a few times, turning your wrist.</string>
-    <string name="cal_step4">Then rotate the phone slowly a full turn while keeping it flat.</string>
-    <string name="cal_step5">Lay it flat and wait a few seconds for the reading to settle.</string>
+    <string name="cal_step1">Move away from metal and magnets: a car, a speaker, a magnetic case.</string>
+    <string name="cal_step2">Trace a figure 8 in the air a few times, turning your wrist.</string>
+    <string name="cal_step3">Lay the phone flat and wait a few seconds.</string>
     <string name="cal_live">Current accuracy: %1$s</string>
     <string name="watch_no_wear_os_title">Set up your watch first</string>
     <string name="watch_none_title">Your watch is not connected yet</string>
@@ -169,7 +164,7 @@
     <string name="step_app_unreached">The watch did not answer. Make sure it is connected and awake, then try again.</string>
     <string name="step_app_waiting">The Play Store is open on your watch. Tap Install there; this page updates by itself when it is done.</string>
     <string name="step_app_timeout">Not installed yet. If the Play Store page closed, open it again.</string>
-    <string name="step_app_dev">A development build: install the watch app with the guide.</string>
+    <string name="step_app_dev">This copy of Minhad was not installed from the Play Store. The guide shows how to put it on your watch.</string>
     <string name="step_app_todo">Opens Minhad in the Play Store on your watch: one tap there installs it.</string>
     <string name="step_app_button">Install on watch</string>
     <string name="step_app_again">Open Play Store on watch again</string>
@@ -195,7 +190,7 @@
     <string name="source_manual_method">Calculated with the method you chose in Settings.</string>
     <string name="source_user_adjusted">Includes your adjustments (minutes): %1$s</string>
     <string name="search_city_world">Search any city or district</string>
-    <string name="geonames_credit">Place names: GeoNames (geonames.org), CC BY 4.0.</string>
+    <string name="geonames_credit">Place names: GeoNames (geonames.org), CC&#160;BY&#160;4.0.</string>
     <string name="location_precision">Location precision</string>
     <string name="location_precise">Precise: neighbourhood names, best Qibla bearing</string>
     <string name="location_approximate">Approximate: town names only. Change in Android settings.</string>
@@ -204,7 +199,7 @@
     <string name="kind_parameters">Authority\'s published parameters</string>
     <string name="kind_recognised">Widely used method</string>
     <string name="sources_title">Data sources and licences</string>
-    <string name="sources_body">Official timetables: IACAD Dubai (iacad.gov.ae; 2021–2023 pages preserved by the Internet Archive, November 2026 from the IACAD website); MUIS Singapore 2024–2026 (data.gov.sg, Singapore Open Data Licence). Place names: GeoNames (geonames.org), CC BY 4.0. Magnetic declination: World Magnetic Model, via Android. Each authority\'s parameters and their sources are listed in docs/AUTHORITIES.md in the Minhad repository.</string>
+    <string name="sources_body">Official timetables: IACAD Dubai (iacad.gov.ae; 2021–2023 pages preserved by the Internet Archive, November 2026 from the IACAD website); MUIS Singapore 2024–2026 (data.gov.sg, Singapore Open Data Licence). Place names: GeoNames (geonames.org), CC&#160;BY&#160;4.0. Magnetic declination: World Magnetic Model, via Android. Each authority’s parameters and their sources are listed in Minhad’s documentation.</string>
 
     <!-- Adhan & alerts -->
     <string name="tab_adhan">Adhan</string>
@@ -331,19 +326,18 @@
     <string name="today_set_location_title">Prayer times begin with where you are</string>
     <string name="today_set_location_body">Choose your location to see today’s times, the sky above you and the Qibla.</string>
     <string name="today_until">until %1$s</string>
-    <string name="watch_preview_desc">Preview of the Minhad watch app</string>
     <string name="watch_feature_app">Minhad app</string>
     <string name="watch_feature_app_desc">Next prayer, today’s times, Qibla compass, tasbih and Hijri calendar</string>
     <string name="watch_feature_tile">Two tiles</string>
     <string name="watch_feature_tile_desc">Prayer times with a live countdown, and Minhad shortcuts. Swipe from the watch face</string>
     <string name="watch_feature_complication">Four complications</string>
     <string name="watch_feature_complication_desc">Next prayer, Hijri date, Qibla and tasbih, on any watch face</string>
-    <string name="watch_feature_alerts">Prayer alerts</string>
+    <string name="watch_feature_alerts">Prayer alerts on the watch</string>
     <string name="watch_feature_alerts_desc">Choose Watch or Both in the Adhan tab</string>
-    <string name="watch_feature_standalone">Works on its own</string>
-    <string name="watch_feature_standalone_desc">Works on its own, with its own location</string>
+    <string name="watch_feature_standalone">Works without your phone</string>
+    <string name="watch_feature_standalone_desc">Keeps the prayer times with its own location</string>
     <string name="step_sync_own">Using the watch’s own settings. Turn off “Use this watch’s settings” on the watch to follow this phone.</string>
-    <string name="watch_feature_editor">Watch face editor</string>
+    <string name="watch_feature_editor">Minhad watch faces</string>
     <string name="watch_feature_editor_desc">Three designs in five colours, and the original face: choose with a preview, and your watch changes at once</string>
     <string name="offline_watch_footer">Same times as this phone, even without it.</string>
     <string name="onboarding_tagline">Prayer times from the sky above you, the Qibla and the Adhan, on your phone and your watch.</string>
@@ -882,4 +876,13 @@
     <string name="alarm_length_short">Short</string>
     <string name="alarm_adhan_before_warn">Heard before the prayer, the Adhan may be taken for its time.</string>
     <string name="adhan_warn_fullscreen">The Adhan screen cannot show over the lock screen.</string>
+    <!-- 0.25 pages -->
+    <string name="qibla_exact">Exact Qibla direction: %1$s from true north.</string>
+    <string name="accuracy_group_own">Other authorities and methods</string>
+    <string name="accuracy_group_published">Published parameters</string>
+    <string name="accuracy_note_published">Calculated with each method’s published parameters.</string>
+    <string name="accuracy_group_documented">Documented in references</string>
+    <string name="accuracy_note_documented">Calculated with the parameters documented for each authority by widely used prayer-time references; not yet checked against their own timetables.</string>
+    <string name="loc_chosen">Chosen</string>
+    <string name="face_sample_note">Sample picture. Your watch shows the time, date and next prayer of the moment.</string>
 </resources>

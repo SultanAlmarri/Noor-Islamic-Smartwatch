@@ -126,7 +126,7 @@ class PagesDesignTest {
             }
             runBlocking { repo.setSkyGraphics(SkyGraphics.AUTO) }
             open { com.noor.app.ui.settings.AccuracyScreen(it, {}) }; shot("accuracy")
-            open { com.noor.app.ui.watch.WatchScreen(it) }; shot("watch")
+            open { com.noor.app.ui.watch.WatchScreen(it, onBack = {}) }; shot("watch")
             open { com.noor.app.ui.watch.studio.StudioScreen(it, {}) }; shot("studio")
             open { com.noor.app.ui.adhan.AdhanScreen(it, {}, {}, {}) }; shot("adhan")
             click("More settings", "إعدادات أخرى"); shot("adhan_more")
@@ -161,7 +161,7 @@ class PagesDesignTest {
         open { com.noor.app.ui.adhan.AdhanScreen(it, {}, {}, {}) }; save("adhan_light_en")
         open { com.noor.app.ui.adhan.AlarmScreen(it, fajrAlarm, {}) }; save("alarm_edit_light_en")
         open { com.noor.app.ui.settings.SceneryScreen(it, {}) }; save("scenery_light_en")
-        open { com.noor.app.ui.watch.WatchScreen(it) }; save("watch_light_en")
+        open { com.noor.app.ui.watch.WatchScreen(it, onBack = {}) }; save("watch_light_en")
         theme = ThemeMode.DARK
         assertTrue("Text in the wrong language:\n" + languageProblems.joinToString("\n"), languageProblems.isEmpty())
     }
@@ -181,7 +181,7 @@ class PagesDesignTest {
     private val allowedInEnglish = listOf(Regex("منهاد"), Regex("[٠-٩]+"))
     private val allowedInArabic = listOf(
         Regex("(Galaxy|Pixel) Watch\\S*( Pro| Classic)?( \\([0-9A-F]{4}\\))?"), Regex("Wear OS"), Regex("Galaxy Wearable"), Regex("WGS-84"),
-        Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), Regex("CC0|CC BY(-SA)? \\d\\.\\d"),
+        Regex("\\b(MP3|M4A|AAC|WAV|OGG|Opus|FLAC)\\b"), Regex("CC0|CC[ \u00A0]BY(-SA)?[ \u00A0]\\d\\.\\d"),
         Regex("\\b[a-z0-9-]+(\\.[a-z0-9-]+)*\\.(ae|sg|org|com|gov)\\b"), Regex("GeoNames"), Regex("timezone-boundary-builder|OpenStreetMap|ODbL"),
         Regex("English"), Regex("Leave the office for the mosque"), // the language picker names English in English; a name the user gave an alarm
     ) + Regex("\"author\":\\s*\"([^\"]+)\"").findAll(File("src/main/assets/sounds/library.json").readText()).map { Regex(Regex.escape(it.groupValues[1])) }.toList()

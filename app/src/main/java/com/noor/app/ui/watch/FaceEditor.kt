@@ -50,17 +50,21 @@ fun FaceEditor(choice: WatchFaces.Choice, onChoose: (WatchFaces.Choice) -> Unit,
     val c = NoorTheme.colors
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         val name = faceLabel(choice)
+        // 0.25: a picture to choose by, smaller than the page's one watch (it was as large, a second watch that showed
+        // another time and date, and in English on the Arabic page), and said to be a sample.
         Crossfade(choice.id, label = "face") { id ->
             Image(
                 painterResource(facePreview(id)), contentDescription = stringResource(R.string.face_preview_desc, name),
-                modifier = Modifier.size(196.dp).clip(CircleShape).border(1.dp, c.outline, CircleShape),
+                modifier = Modifier.size(132.dp).clip(CircleShape).border(1.dp, c.outline, CircleShape),
             )
         }
         Spacer(Modifier.height(10.dp))
         Text(name, style = MaterialTheme.typography.titleSmall, color = c.textPrimary)
-        Text(stringResource(designBlurb(choice.design)), style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
+        Text(stringResource(designBlurb(choice.design)), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary,
             textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-        Spacer(Modifier.height(10.dp))
+        Text(stringResource(R.string.face_sample_note), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textMuted,
+            textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 8.dp))
+        Spacer(Modifier.height(12.dp))
         // Designs: each shown in the chosen colour.
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             for (d in Design.entries) {

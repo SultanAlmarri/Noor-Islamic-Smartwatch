@@ -44,6 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Map
@@ -218,34 +219,37 @@ private fun HomePane(
             SearchResults(vm, search, ar, onPoint = { p, title -> vm.pin(p, title); onPicked() }, onPlace = { vm.pick(it); onPicked() })
             return@Column
         }
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(Noor.Gap)) {
-            if (current != null) GlassCard(Modifier.fillMaxWidth(), padding = 18.dp) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (current != null) GlassCard(Modifier.fillMaxWidth(), padding = 16.dp, corner = 24.dp) {
                 Text(stringResource(R.string.loc_now_for), style = MaterialTheme.typography.labelMedium, color = c.textMuted)
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(Flags.emoji(current.countryCode) ?: "", fontSize = 20.sp, modifier = Modifier.padding(end = 10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(if (ar) current.nameAr ?: current.nameEn else current.nameEn, style = MaterialTheme.typography.titleMedium, color = c.textPrimary)
+                        // (0.25: no coordinates here: five decimals under a city's name say nothing to the eye. They are
+                        // shown where a point is chosen or confirmed: the coordinates' own dialog, the map, the confirmation.)
                         val sub = if (s.locationMode == LocationMode.AUTO) stringResource(R.string.loc_now_auto)
-                            else listOfNotNull(if (ar) current.contextAr ?: current.contextEn else current.contextEn, coords(current.point)).joinToString("  ·  ")
-                        Text(sub, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+                            else (if (ar) current.contextAr ?: current.contextEn else current.contextEn) ?: stringResource(R.string.loc_label_manual)
+                        Text(sub, style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
                     }
                 }
             }
-            GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
+            GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 24.dp) {
                 OptionRow(Icons.Rounded.MyLocation, stringResource(R.string.loc_current), stringResource(R.string.loc_current_desc),
                     selected = s?.locationMode == LocationMode.AUTO) {
                     if (vm.hasLocationPermission()) vm.useAutomatic(onAutomatic) else permission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
                 }
-                Hairline()
+                // (0.25: the dividers of every grouped list: from under the text to the card's edge.)
+                com.noor.app.ui.settings.SettingsDivider()
                 OptionRow(Icons.Rounded.Map, stringResource(R.string.loc_map), stringResource(R.string.loc_map_desc)) { onMap(current?.point) }
-                Hairline()
+                com.noor.app.ui.settings.SettingsDivider()
                 OptionRow(Icons.Rounded.Tune, stringResource(R.string.loc_coords), stringResource(R.string.loc_coords_desc), onClick = onCoords)
-                Hairline()
+                com.noor.app.ui.settings.SettingsDivider()
                 OptionRow(Icons.Rounded.Public, stringResource(R.string.loc_browse), null, onClick = onCountries)
             }
-            Text(stringResource(R.string.geonames_credit) + "  " + stringResource(R.string.loc_tz_credit), style = MaterialTheme.typography.bodySmall,
-                color = c.textMuted, modifier = Modifier.padding(horizontal = 8.dp))
+            Text(stringResource(R.string.geonames_credit) + " " + stringResource(R.string.loc_tz_credit), style = com.noor.app.ui.settings.FootnoteStyle,
+                color = c.textMuted, modifier = Modifier.padding(horizontal = 16.dp))
         }
     }
 }
@@ -502,12 +506,15 @@ private fun ConfirmPane(contentPadding: PaddingValues, vm: LocationViewModel, on
                 Spacer(Modifier.height(12.dp))
                 val zone = ZoneId.of(p.zoneId)
                 val now = Instant.now()
-                Fact(stringResource(R.string.loc_time_zone), zoneText(p.zoneId, ar, f, now))
+                // (0.25: the zone's name on the line, its offset with the small print under it. On one line they broke
+                // on a phone after the dot between them, which then hung at the end of the first.)
+                val zoneParts = zoneText(p.zoneId, ar, f, now).split("  ·  ")
+                Fact(stringResource(R.string.loc_time_zone), zoneParts.first())
                 val dst = zone.rules.isDaylightSavings(now)
                 val changes = zone.rules.nextTransition(now) != null && zone.rules.transitionRules.isNotEmpty()
-                Text(stringResource(when { dst -> R.string.loc_dst_now; changes -> R.string.loc_dst_rule; else -> R.string.loc_dst_none }) +
-                    if (dst) " " + stringResource(R.string.loc_dst_rule) else "",
-                    style = MaterialTheme.typography.bodySmall, color = c.textMuted, modifier = Modifier.padding(top = 2.dp))
+                Text(listOfNotNull(zoneParts.getOrNull(1), stringResource(when { dst -> R.string.loc_dst_now; changes -> R.string.loc_dst_rule; else -> R.string.loc_dst_none }) +
+                    if (dst) " " + stringResource(R.string.loc_dst_rule) else "").joinToString("  ·  "),
+                    style = com.noor.app.ui.settings.FootnoteStyle, color = c.textMuted, modifier = Modifier.padding(top = 2.dp))
             }
             preview.day?.let { day ->
                 GlassCard(Modifier.fillMaxWidth(), padding = 18.dp) {
@@ -526,9 +533,11 @@ private fun ConfirmPane(contentPadding: PaddingValues, vm: LocationViewModel, on
             }
             Spacer(Modifier.height(4.dp))
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SecondaryButton(stringResource(R.string.loc_adjust_pin), Modifier.weight(1f)) { onAdjust(p.point) }
-            PrimaryButton(stringResource(R.string.loc_use_this), Modifier.weight(1f)) { vm.save(p, onSaved) }
+        // 0.25: the app's own buttons, the one that finishes first and full width, the other quiet under it (they
+        // were two boxes side by side, of a shape no other page has).
+        Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp)) {
+            PrimaryButton(stringResource(R.string.loc_use_this), Modifier.fillMaxWidth()) { vm.save(p, onSaved) }
+            SecondaryButton(stringResource(R.string.loc_adjust_pin), Modifier.fillMaxWidth()) { onAdjust(p.point) }
         }
     }
 }
@@ -753,17 +762,10 @@ private fun SearchField(value: String, hint: String, raised: Boolean = false, on
 @Composable
 private fun OptionRow(icon: ImageVector, title: String, subtitle: String?, selected: Boolean = false, onClick: () -> Unit) {
     val c = NoorTheme.colors
-    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        // 0.14: the same tile and small print as every other list in the app.
-        com.noor.app.ui.settings.IconTile(icon)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
-            subtitle?.let { Text(it, style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary) }
-        }
-        if (selected) Box(Modifier.size(10.dp).clip(CircleShape).background(c.success))
-        else Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted)
-    }
+    // 0.25: the very row of every other grouped list (0.14 had copied its tile and small print); what is chosen now
+    // carries the gold check a chosen thing has everywhere in the app (it was a green dot).
+    com.noor.app.ui.settings.SettingsItem(icon, title, subtitle, onClick,
+        trailing = if (selected) ({ Icon(Icons.Rounded.Check, stringResource(R.string.loc_chosen), tint = c.gold, modifier = Modifier.size(22.dp)) }) else null)
 }
 
 @Composable
@@ -802,7 +804,7 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun Hairline() = Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(0.5.dp).background(NoorTheme.colors.separator))
+private fun Hairline() = Box(Modifier.fillMaxWidth().padding(start = 48.dp).height(0.5.dp).background(NoorTheme.colors.separator)) // (from under the rows' text, as in every list)
 
 @Composable
 private fun Loading() = Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -820,18 +822,10 @@ private fun RoundButton(icon: ImageVector, description: String?, onClick: () -> 
 
 @Composable
 private fun PrimaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val c = NoorTheme.colors
-    Box(modifier.heightIn(min = 50.dp).clip(RoundedCornerShape(16.dp)).background(c.gold).clickable(onClick = onClick).padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center) {
-        Text(text, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold), color = c.onGold, maxLines = 1)
-    }
+    com.noor.app.ui.components.NoorButton(text, onClick, modifier)
 }
 
 @Composable
 private fun SecondaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val c = NoorTheme.colors
-    Box(modifier.heightIn(min = 50.dp).clip(RoundedCornerShape(16.dp)).border(1.dp, c.outline, RoundedCornerShape(16.dp)).clickable(onClick = onClick)
-        .padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-        Text(text, style = MaterialTheme.typography.labelLarge, color = c.textPrimary, maxLines = 1)
-    }
+    com.noor.app.ui.components.NoorButton(text, onClick, modifier, kind = com.noor.app.ui.components.ButtonKind.Plain)
 }
