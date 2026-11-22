@@ -1005,7 +1005,11 @@ sky of the moment, in the phone's own sky colours darkened just enough for white
 stars at night and dunes along the bottom; everything else is black with dark platters (18 dp corners), a coloured
 disc for each sign, green switches, and one type scale. The interval ring keeps a gap at the top for the system clock.
 Facing the Qibla is an arrival: the whole field turns green with a check. The two tiles follow (the prayer in gold,
-its time very large; three coloured tools).
+its time very large; three coloured tools under the next prayer). After an independent review of its renders (20
+findings; WATCH_025_NOTES.md, "Second round"): Settings in a wearer's words, one highlight in the day's list (the next
+prayer in gold, "Now" beside the current one), nothing drawn over the ring or the compass's mark (the app writes the
+time itself, `WatchClock`, and not on the compass), the last line of every list able to rise clear of the round edge,
+touch targets of 44 dp and more, the first run steady through its three states.
 
 ## Arabic and right-to-left
 
