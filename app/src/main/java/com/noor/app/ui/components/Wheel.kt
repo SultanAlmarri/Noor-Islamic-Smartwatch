@@ -7,6 +7,11 @@ import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,6 +51,9 @@ import kotlin.math.abs
  * A scroll wheel (0.17.1), as the Clock app sets the time with: five rows in sight, the one in the middle chosen, a
  * soft band behind it, a tick as each row passes the middle. [loop]: it goes round (the minutes, 0 after 59). A touch
  * on a row brings it to the middle. [label] names the wheel for TalkBack ("Minutes").
+ *
+ * (0.25) [unit]: what the wheel's numbers count ("h", "min"), written once, small, in the band beside the chosen
+ * number, as Apple's pickers do; the numbers turn past it. The band then reads as a sentence: "0 h  25 min  before  Fajr".
  */
 @Composable
 fun Wheel(
@@ -60,6 +68,7 @@ fun Wheel(
     band: Boolean = true,
     /** The chosen row's type size; the others are a size smaller. */
     size: Float = 24f,
+    unit: String? = null,
 ) {
     val c = NoorTheme.colors
     val haptics = LocalHapticFeedback.current
@@ -85,7 +94,10 @@ fun Wheel(
             pick(i % n)
         }
     }
-    Box(modifier.height(rowHeight * 5).semantics { contentDescription = label; stateDescription = items[centre % n] }, contentAlignment = Alignment.Center) {
+    // (The words keep to their narrow wheel: they follow the phone's text size up to a tenth larger, no further.)
+    val grow = limitedGrowth(1.1f)
+    val unitSize = 13f
+    Box(modifier.height(rowHeight * 5).semantics { contentDescription = label; stateDescription = items[centre % n] + (unit?.let { " $it" } ?: "") }, contentAlignment = Alignment.Center) {
         if (band) Box(Modifier.fillMaxWidth().height(rowHeight).clip(RoundedCornerShape(12.dp)).background(c.textMuted.copy(alpha = if (c.isDark) 0.16f else 0.11f)))
         LazyColumn(Modifier.fillMaxWidth().height(rowHeight * 5), state = state, flingBehavior = fling,
             contentPadding = PaddingValues(vertical = rowHeight * 2), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -98,11 +110,23 @@ fun Wheel(
                         .graphicsLayer { alpha = when (away) { 0 -> 1f; 1 -> 0.55f; else -> 0.25f } },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(items[i % n], maxLines = 1,
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = if (on) size.sp else (size - 4f).sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal),
-                        color = if (on) c.textPrimary else c.textSecondary)
+                    val style = MaterialTheme.typography.titleLarge.copy(fontSize = (if (on) size else size - 4f).sp * grow, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
+                    if (unit == null) Text(items[i % n], maxLines = 1, softWrap = false, style = style, color = if (on) c.textPrimary else c.textSecondary)
+                    // (With a unit: the numbers end at the wheel's middle, and the unit begins there.)
+                    else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(items[i % n], maxLines = 1, softWrap = false, style = style.merge(com.noor.app.ui.theme.Tabular), color = if (on) c.textPrimary else c.textSecondary,
+                            textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                        Spacer(Modifier.weight(1f))
+                    }
                 }
             }
+        }
+        if (unit != null) Row(Modifier.fillMaxWidth().height(rowHeight), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.weight(1f))
+            // (Set down a little, onto the line the larger number stands on.)
+            val drop = with(LocalDensity.current) { ((size - unitSize) * 0.36f * grow).sp.toDp() }
+            Text(unit, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelLarge.copy(fontSize = unitSize.sp * grow, letterSpacing = 0.sp),
+                color = c.textSecondary, modifier = Modifier.weight(1f).padding(start = 3.dp, top = drop))
         }
     }
 }

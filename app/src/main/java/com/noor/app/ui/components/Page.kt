@@ -86,6 +86,9 @@ object Page {
  * the bar turns solid, with a hairline, only once something has scrolled under it.
  *
  * [floating] is drawn over the page (a snackbar, a button held at the bottom).
+ *
+ * (0.25) [barStart] and [barEnd]: a page that edits something (an alarm) has Cancel and Save in its bar, as on iOS,
+ * in place of the back chevron: exactly two ways out, each saying what it does.
  */
 @Composable
 fun NoorPage(
@@ -95,11 +98,13 @@ fun NoorPage(
     scroll: ScrollState = rememberScrollState(),
     spacing: Dp = Page.GroupGap,
     floating: (@Composable BoxScope.() -> Unit)? = null,
+    barStart: (@Composable () -> Unit)? = null,
+    barEnd: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = NoorTheme.colors
     val top = contentPadding.calculateTopPadding()
-    val large = onBack == null
+    val large = onBack == null && barStart == null && barEnd == null
     val density = LocalDensity.current
     // How far the bar has come in: with the large title's leaving on a tab, with the first scrolled pixels otherwise.
     val from = with(density) { (if (large) 30.dp else 0.dp).toPx() }
@@ -127,10 +132,12 @@ fun NoorPage(
             Text(
                 title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = c.textPrimary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 60.dp)
+                modifier = Modifier.padding(horizontal = if (barStart != null || barEnd != null) 92.dp else 60.dp)
                     .then(if (large) Modifier.graphicsLayer { alpha = bar() }.clearAndSetSemantics { } else Modifier.semantics { heading() }),
             )
-            if (onBack != null) BackButton(onBack, Modifier.align(Alignment.CenterStart).padding(start = 4.dp))
+            if (barStart != null) Box(Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) { barStart() }
+            else if (onBack != null) BackButton(onBack, Modifier.align(Alignment.CenterStart).padding(start = 4.dp))
+            if (barEnd != null) Box(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) { barEnd() }
         }
         floating?.invoke(this)
     }

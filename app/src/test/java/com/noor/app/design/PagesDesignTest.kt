@@ -129,7 +129,7 @@ class PagesDesignTest {
             open { com.noor.app.ui.watch.WatchScreen(it) }; shot("watch")
             open { com.noor.app.ui.watch.studio.StudioScreen(it, {}) }; shot("studio")
             open { com.noor.app.ui.adhan.AdhanScreen(it, {}, {}, {}) }; shot("adhan")
-            click("More settings", "إعدادات أخرى"); shot("adhan_more")
+            click("Sound and devices", "الصوت والأجهزة"); shot("adhan_more")
             open { com.noor.app.ui.adhan.AdhanScreen(it, {}, {}, {}) }
             click("Alarms", "المنبهات"); shot("adhan_alarms")
             open { com.noor.app.ui.adhan.PrayerAlertScreen(it, Prayer.FAJR, {}, {}) }; shot("prayer_fajr")

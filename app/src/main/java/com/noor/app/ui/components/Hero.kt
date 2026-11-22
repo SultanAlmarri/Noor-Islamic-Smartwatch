@@ -37,7 +37,8 @@ import kotlin.math.max
  * The first thing on a tab's page (0.15): a large pane of glass lit from one corner by Noor's gold, a medallion with
  * the page's sign in it, and in big type what the page is about now (the next Adhan, the place the times are for).
  * [overline] is a quiet line over the [title]; [trailing] holds a control (a switch); [below] runs under it all,
- * the width of the card. The whole card is [onClick] when given.
+ * the width of the card. The whole card is [onClick] when given. (0.25) [titleSize]: smaller where the title names
+ * a control beside a switch ("Prayer alerts") and must keep to one line on a 360 dp phone.
  */
 @Composable
 fun HeroCard(
@@ -51,6 +52,7 @@ fun HeroCard(
     onClickLabel: String? = null,
     trailing: (@Composable () -> Unit)? = null,
     below: (@Composable ColumnScope.() -> Unit)? = null,
+    titleSize: androidx.compose.ui.unit.TextUnit = 24.sp,
 ) {
     val c = NoorTheme.colors
     val shape = RoundedCornerShape(30.dp)
@@ -76,7 +78,7 @@ fun HeroCard(
                 if (overline != null) Text(overline.uppercase(), color = c.goldText, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, letterSpacing = 1.0.sp, fontWeight = FontWeight.SemiBold))
                 Text(title, color = c.textPrimary,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp))
+                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = titleSize, lineHeight = titleSize * 1.25f, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp))
                 if (subtitle != null) Text(subtitle, color = subtitleColor ?: c.textSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))
             }
             if (trailing != null) { Spacer(Modifier.width(12.dp)); trailing() }

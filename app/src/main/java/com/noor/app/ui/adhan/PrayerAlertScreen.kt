@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.Mosque
 import androidx.compose.material.icons.rounded.MusicNote
@@ -136,31 +137,38 @@ fun PrayerAlertScreen(
                 if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission()
             })
         }
+        // (0.15: the switch says what will happen: off while all alerts are off. Turned on then, it turns the alerts on
+        // for this prayer alone, as on the Adhan tab.)
+        val on = alerts.enabled && a.enabled
         SettingsSection("") {
-            // (0.15: the switch says what will happen: off while all alerts are off. Turned on then, it turns the
-            // alerts on for this prayer alone, as on the Adhan tab.)
-            SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_alert_for, f.prayerName(prayer)), null, alerts.enabled && a.enabled) { on ->
-                if (on && !alerts.enabled) {
+            SettingsSwitch(Icons.Rounded.NotificationsActive, stringResource(R.string.adhan_alert_for, f.prayerName(prayer)), null, on) { v ->
+                if (v && !alerts.enabled) {
                     vm.enableOnly(prayer)
                     if (ready.canRequestNotifications && alerts.device.includes(AlertDevice.PHONE)) notifPermission()
-                } else vm.setPrayer(prayer) { it.copy(enabled = on) }
+                } else vm.setPrayer(prayer) { it.copy(enabled = v) }
             }
         }
 
-        if (a.enabled) {
+        // 0.25: everything under the switch is there whether it is on or off, so the page keeps its shape; while it is
+        // off (this prayer's alert, or all alerts) it is shown at 38% and takes no touch. (Until 0.24 the kinds, the days
+        // and the volume kept their full colour and gold under a switch that read off.)
+        OffWhen(!on) { Column(verticalArrangement = Arrangement.spacedBy(com.noor.app.ui.components.Page.GroupGap)) {
             // 0.16: what kind of alert (no tones any more); then the voice, as one row; then the days.
-            // 0.17: four kinds for a prayer, two by two: the Adhan, its opening, a notification, silently. The user's own
-            // recording is one of the voices (the voice row), so it is no longer a kind of its own here; one chosen
-            // there shows as the Adhan.
-            Column {
-                SectionHeader(stringResource(R.string.adhan_type))
-                // (0.18: the sound effects are back, as Sound: birds and the like, real recordings.)
-                val modes = if (prayer == Prayer.SHURUQ) listOf(AlertMode.SOUND, AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
+            // 0.17: the user's own recording is one of the voices (the voice row), so it is no kind of its own here; one
+            // chosen there shows as the Adhan. 0.18: the sound effects are back, as Sound: birds and the like.
+            // 0.25: the kinds as a list, one under the other, the chosen one with a check (they were tiles of unequal
+            // widths, three over two).
+            val modes = if (prayer == Prayer.SHURUQ) listOf(AlertMode.SOUND, AlertMode.CUSTOM, AlertMode.NOTIFICATION, AlertMode.SILENT)
                 else listOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.SOUND, AlertMode.NOTIFICATION, AlertMode.SILENT)
-                ModeTiles(modes, if (prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM) AlertMode.ADHAN else a.mode) {
-                    // (0.22) A prayer with the user's own recording shows the Adhan tile chosen (it is their Adhan):
-                    // tapping that tile again keeps the recording; it used to put the Makkah voice in its place.
-                    if (!(it == AlertMode.ADHAN && prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM)) vm.setMode(prayer, it)
+            val shownMode = if (prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM) AlertMode.ADHAN else a.mode
+            SettingsSection(stringResource(R.string.adhan_type)) {
+                modes.forEachIndexed { i, m ->
+                    if (i > 0) SettingsDivider()
+                    ModeRow(m, m == shownMode) {
+                        // (0.22) A prayer with the user's own recording shows the Adhan chosen (it is their Adhan):
+                        // touching it again keeps the recording; it used to put the Makkah voice in its place.
+                        if (!(m == AlertMode.ADHAN && prayer != Prayer.SHURUQ && a.mode == AlertMode.CUSTOM)) vm.setMode(prayer, m)
+                    }
                 }
             }
 
@@ -180,31 +188,16 @@ fun PrayerAlertScreen(
 
             if (a.mode.playsAudio) {
                 SettingsSection(stringResource(R.string.adhan_options)) {
-                    var vol by remember(a.volumePercent) { mutableFloatStateOf(a.volumePercent.toFloat()) }
-                    val volumeLabel = stringResource(R.string.adhan_volume)
-                    Column(Modifier.padding(horizontal = 16.dp).padding(top = 10.dp, bottom = 2.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            com.noor.app.ui.settings.IconTile(Icons.AutoMirrored.Rounded.VolumeUp)
-                            Spacer(Modifier.width(14.dp))
-                            Text(volumeLabel, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary, modifier = Modifier.weight(1f))
-                            Text(f.number(vol.toInt()) + if (ar) "٪" else "%", style = MaterialTheme.typography.bodyLarge, color = c.textSecondary)
-                        }
-                        Slider(value = vol, onValueChange = { vol = it }, valueRange = 5f..100f,
-                            onValueChangeFinished = { vm.setPrayer(prayer) { it.copy(volumePercent = vol.toInt()) } },
-                            modifier = Modifier.semantics { contentDescription = volumeLabel },
-                            colors = SliderDefaults.colors(thumbColor = c.gold, activeTrackColor = c.gold, inactiveTrackColor = c.textMuted.copy(alpha = 0.25f)))
-                    }
+                    VolumeRow(a.volumePercent.toFloat(), a.volumePercent, stringResource(R.string.adhan_volume), f) { v -> vm.setPrayer(prayer) { it.copy(volumePercent = v) } }
                     SettingsDivider()
-                    SettingsSwitch(Icons.Rounded.Vibration, stringResource(R.string.adhan_vibrate), null, a.vibrate) { on -> vm.setPrayer(prayer) { it.copy(vibrate = on) } }
+                    SettingsSwitch(Icons.Rounded.Vibration, stringResource(R.string.adhan_vibrate), null, a.vibrate) { v -> vm.setPrayer(prayer) { it.copy(vibrate = v) } }
                     SettingsDivider()
                     SettingsItem(Icons.Rounded.Timer, stringResource(R.string.adhan_stop_after), null, onClick = { stopDialog = true }, detail = stopLabel(a.maxSeconds, f))
                 }
             }
 
-            Column {
-                NoorButton(stringResource(R.string.adhan_test), { vm.test(prayer) }, Modifier.fillMaxWidth(), kind = ButtonKind.Tonal)
-            }
-        }
+            NoorButton(stringResource(R.string.adhan_test), { vm.test(prayer) }, Modifier.fillMaxWidth(), kind = ButtonKind.Tonal)
+        } }
     }
 
     if (stopDialog) {
@@ -222,39 +215,37 @@ private fun modeIcon(m: AlertMode): ImageVector = when (m) {
     AlertMode.SILENT -> Icons.Rounded.NotificationsOff
 }
 
+/** The colour of a kind's sign: the Adhan's in Minhad's gold, a sound's in pink, a notice's in red, silence in grey. */
+private fun modeTint(m: AlertMode): androidx.compose.ui.graphics.Color = when (m) {
+    AlertMode.ADHAN, AlertMode.ADHAN_SHORT -> com.noor.app.ui.settings.Tints.Gold
+    AlertMode.SOUND -> com.noor.app.ui.settings.Tints.Pink
+    AlertMode.CUSTOM -> com.noor.app.ui.settings.Tints.Purple
+    AlertMode.NOTIFICATION -> com.noor.app.ui.settings.Tints.Red
+    AlertMode.SILENT -> com.noor.app.ui.settings.Tints.Gray
+}
+
 /**
- * The kinds of alert as tiles, three to a row, all visible at once (0.14; the chips before wrapped into a ragged
- * second line). The chosen one wears the accent; choosing answers with a tick.
+ * One kind of alert as a row of the list (0.25): its sign, its name, what it is in three words (0.15: so "Sound",
+ * "Notification" and "Silent" need not be tried), and a gold check on the chosen one. Choosing answers with a tick.
  */
 @Composable
-private fun ModeTiles(modes: List<AlertMode>, selected: AlertMode, onSelect: (AlertMode) -> Unit) {
+private fun ModeRow(m: AlertMode, on: Boolean, onSelect: () -> Unit) {
     val c = NoorTheme.colors
     val haptics = LocalHapticFeedback.current
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        modes.chunked(if (modes.size == 4) 2 else 3).forEach { row ->
-            Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { m ->
-                    val on = m == selected
-                    val shape = RoundedCornerShape(16.dp)
-                    Column(
-                        Modifier.weight(1f).heightIn(min = 76.dp).fillMaxHeight().clip(shape)
-                            .background(if (on) c.gold.copy(alpha = if (c.isDark) 0.16f else 0.13f) else c.glass)
-                            .border(if (on) 1.5.dp else 0.75.dp, if (on) c.gold else c.glassEdge.copy(alpha = c.glassEdge.alpha * 0.6f), shape)
-                            .clickable(role = Role.RadioButton) { if (!on) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSelect(m) }
-                            .semantics { this.selected = on }.padding(horizontal = 6.dp, vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(modeIcon(m), null, tint = if (on) c.gold else c.textSecondary, modifier = Modifier.size(24.dp))
-                        Spacer(Modifier.height(6.dp))
-                        Text(stringResource(modeLabel(m)), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, letterSpacing = 0.sp, lineHeight = 18.sp,
-                            fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium),
-                            color = if (on) c.goldText else c.textPrimary, textAlign = TextAlign.Center, maxLines = 2)
-                        // 0.15: what each kind is, in three words, so "Sound", "Notification" and "Silent" need not be tried.
-                        Text(stringResource(modeHint(m)), style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp, letterSpacing = 0.sp, lineHeight = 14.sp),
-                            color = c.textSecondary, textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 2.dp))
-                    }
-                }
-            }
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp)
+            .clickable(role = Role.RadioButton) { if (!on) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSelect() }
+            .semantics { this.selected = on }.padding(horizontal = 16.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        com.noor.app.ui.settings.IconTile(modeIcon(m), modeTint(m))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(modeLabel(m)), style = MaterialTheme.typography.bodyLarge, color = if (on) c.goldText else c.textPrimary)
+            Text(stringResource(modeHint(m)), style = FootnoteStyle, color = c.textSecondary)
+        }
+        Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            if (on) Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, tint = c.gold, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -289,7 +280,9 @@ internal fun minutesLabel(m: Int, f: Formatter): String = if (m <= 0) stringReso
 
 /**
  * The days of the week a prayer alerts on (0.16): seven round toggles, in the week's own order for the language,
- * lit when on. At least one stays on (no days at all is the prayer's switch, above).
+ * lit when on. At least one stays on (no days at all is the prayer's switch, above). 0.25: a day that is on is a ring
+ * of the accent round a tinted disc with its letters in the accent; seven solid gold discs were the loudest thing on
+ * the page, louder than its one button.
  */
 @Composable
 internal fun DaysRow(days: Int, f: Formatter, onChange: (Int) -> Unit) {
@@ -302,15 +295,16 @@ internal fun DaysRow(days: Int, f: Formatter, onChange: (Int) -> Unit) {
             val on = days and bit != 0
             Box(
                 Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(if (on) c.gold else c.glassRaised)
+                    .background(if (on) c.gold.copy(alpha = if (c.isDark) 0.20f else 0.16f) else c.glassRaised)
+                    .then(if (on) Modifier.border(1.25.dp, c.gold.copy(alpha = 0.85f), androidx.compose.foundation.shape.CircleShape) else Modifier)
                     .toggleable(on, role = Role.Checkbox, onValueChange = com.noor.app.ui.components.withTick<Boolean> { onChange(if (it) days or bit else days and bit.inv()) })
                     .semantics { contentDescription = d.getDisplayName(java.time.format.TextStyle.FULL, f.locale) },
                 contentAlignment = Alignment.Center,
             ) {
                 // (Arabic: the day's one-letter form, ح ن ث ر خ ج س; English: two letters.)
                 Text(if (f.arabic) d.getDisplayName(java.time.format.TextStyle.NARROW, f.locale) else f.weekdayShort(d).take(2),
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = if (f.arabic) 14.sp else 12.sp),
-                    color = if (on) c.onGold else c.textSecondary, maxLines = 1)
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = if (f.arabic) 14.sp else 12.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium),
+                    color = if (on) c.goldText else c.textSecondary, maxLines = 1)
             }
         }
     }

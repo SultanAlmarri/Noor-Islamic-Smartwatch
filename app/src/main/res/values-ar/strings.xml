@@ -458,7 +458,7 @@
     <string name="adhan_random_detail">أذان مختلف من مفضلتك (%1$s) في كل مرة؛ لا يتكرر أحدها حتى تُسمع كلها.</string>
     <string name="adhan_random_needs">اختر أذانين على الأقل في المفضلة (♡) من مكتبة الأذان.</string>
     <string name="adhan_screen_stop">إيقاف</string>
-    <string name="adhan_screen_close">متابعة التشغيل</string>
+    <string name="adhan_screen_close">إخفاء ومتابعة التشغيل</string>
     <string name="since_prayer">الوقت منذ دخول الصلاة</string>
     <string name="since_sunrise">الوقت منذ الشروق</string>
     <!-- 0.9.7: choosing a location (search, country → city → area, coordinates, satellite map) -->
@@ -782,7 +782,7 @@
     <string name="cd_since">منذ دخول %s</string>
     <string name="cd_since_sunrise">منذ الشروق</string>
     <string name="adhan_prayers_footer_off">فعّل صلاة لتسمع أذانها.</string>
-    <string name="adhan_hero_blocked">لن يُسمع. انظر أدناه.</string>
+    <string name="adhan_hero_blocked">لن يُسمع</string>
     <string name="adhan_test_footer">اقفل الهاتف بعد الضغط، وتُحفظ النتيجة في السجل.</string>
     <string name="basis_official">أوقاتها المنشورة نفسها، لكل يوم.</string>
     <string name="basis_validated">طريقتها نفسها، بعد مقارنتها بجدولها المنشور.</string>
@@ -808,7 +808,7 @@
     <string name="adhan_action_volume">فتح إعدادات الصوت</string>
     <string name="cd_today_now">اليوم، الآن</string>
     <string name="history_fix_dnd">السماح بالمنبّهات في وضع عدم الإزعاج</string>
-    <string name="adhan_alert_options">إعدادات أخرى</string>
+    <string name="adhan_alert_options">الصوت والأجهزة</string>
     <string name="settings_watch_note">منهاد على معصمك: التثبيت والمزامنة ووجه الساعة</string>
     <!-- 0.16: the Adhan section redone. -->
     <string name="adhan_voice">صوت الأذان</string>
@@ -894,4 +894,21 @@
     <string name="alarm_length_short">قصير</string>
     <string name="alarm_adhan_before_warn">إذا سُمع قبل الصلاة فقد يُظنّ الأذان دخولًا لوقتها.</string>
     <string name="adhan_warn_fullscreen">لا يمكن لشاشة الأذان أن تظهر فوق شاشة القفل.</string>
+    <!-- 0.25 adhan -->
+    <string name="adhan_hero_next_at">التالي: %1$s %2$s</string>
+    <string name="adhan_all_prayers">كل الصلوات</string>
+    <string name="adhan_fix">إصلاح</string>
+    <plurals name="adhan_fix_count">
+        <item quantity="zero">%s أمر يحتاج إلى إصلاح</item>
+        <item quantity="one">أمر واحد يحتاج إلى إصلاح</item>
+        <item quantity="two">أمران يحتاجان إلى إصلاح</item>
+        <item quantity="few">%s أمور تحتاج إلى إصلاح</item>
+        <item quantity="many">%s أمرًا يحتاج إلى إصلاح</item>
+        <item quantity="other">%s أمر يحتاج إلى إصلاح</item>
+    </plurals>
+    <string name="alarms_fix_blocked">لن ترنّ المنبهات</string>
+    <string name="alarm_warn_fullscreen">لا يمكن لشاشة المنبه أن تظهر فوق شاشة القفل.</string>
+    <string name="alarm_warn_volume">مستوى صوت المنبه صفر، فلن تُسمع المنبهات.</string>
+    <string name="alarm_unit_hours">س</string>
+    <string name="alarm_unit_minutes">د</string>
 </resources>

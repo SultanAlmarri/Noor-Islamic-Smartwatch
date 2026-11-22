@@ -97,8 +97,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * One alarm (0.17), new ([id] 0) or as set, laid out as the sentence it makes: "25 minutes / before / Fajr", and under
- * it at once when that rings next. Then the days, and how it rings. Nothing is kept until Save; Back leaves it as it was.
+ * One alarm (0.17), new ([id] 0) or as set: when it rings next in large type, and under it the wheels that read as the
+ * sentence it makes, "0 h  25 min  before  Fajr" (0.25: the units stand in the band beside the numbers, as in Apple's
+ * pickers; the row of names over the wheels is gone). Then its name, the days, and how it rings. Nothing is kept until
+ * Save. 0.25: the page has exactly two ways out, Cancel and Save, in its bar, as an editor has on iOS (it had three: a
+ * back chevron, and Cancel and Save in a bar at the foot whose fade cut through the rows under it); Android's Back is
+ * Cancel.
  */
 @Composable
 fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: AdhanViewModel = viewModel()) {
@@ -141,62 +145,39 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
     androidx.activity.compose.BackHandler(enabled = soundDialog) { vm.stopPreview(); soundDialog = false }
     if (soundDialog) { AlarmSoundPage(contentPadding, draft, custom, vm, ar, f, onBack = { vm.stopPreview(); soundDialog = false },
         onPick = { x -> set { x } }, onAdd = { picker.launch(CustomSounds.PICKER_TYPES) }); return }
-    NoorPage(stringResource(if (isNew) R.string.alarm_new else R.string.alarm_edit), contentPadding, onBack = onBack,
-        floating = {
-            // Cancel and Save, always in reach at the bottom, as in the Clock app.
-            // (The bar's glass reaches the bottom edge, so nothing scrolls by under or below it.)
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-                SnackbarHost(snackbar)
-                // (0.21) The foot of the page's own sky, solid under the buttons and fading out above them, as under
-                // the Studio's send bar: the top of the sky at 96% left the rows scrolling under it showing through the
-                // Cancel button, in a colour unlike the page's foot.
-                val sky = com.noor.app.ui.theme.LocalBackdrop.current.at(1f)
-                Row(Modifier.fillMaxWidth()
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to sky.copy(alpha = 0f), 0.2f to sky, 1f to sky))
-                    .padding(bottom = contentPadding.calculateBottomPadding())
-                    .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    NoorButton(stringResource(R.string.alarm_cancel), onBack, Modifier.weight(1f), kind = ButtonKind.Tonal)
-                    NoorButton(stringResource(R.string.alarm_save), save, Modifier.weight(1f), enabled = total > 0)
-                }
-            }
-        }) {
+    NoorPage(stringResource(if (isNew) R.string.alarm_new else R.string.alarm_edit), contentPadding,
+        barStart = { BarAction(stringResource(R.string.alarm_cancel), onBack) },
+        barEnd = { BarAction(stringResource(R.string.alarm_save), save, strong = true, enabled = total > 0) },
+        floating = { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
         GlassCard(Modifier.fillMaxWidth(), padding = 16.dp, corner = 30.dp, highlighted = true) {
             // When it rings, large, as a clock shows its alarm: the answer to every turn of the wheels below, at once.
             // (Worked out off the main thread, so the wheels turn smoothly; the answer before stays until the new one.)
             val next by androidx.compose.runtime.produceState(remember { vm.nextRingIfReady(draft) }, draftText, rings) { value = vm.nextRing(draft) }
-            Text(next?.let { f.timeAt(it.at, rings.zone) } ?: "–",
-                style = MaterialTheme.typography.displayMedium.copy(fontSize = 46.sp, fontWeight = FontWeight.Light),
-                color = c.textPrimary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            val big = MaterialTheme.typography.displayMedium.copy(fontSize = 46.sp, fontWeight = FontWeight.Light)
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                next?.let { ClockText(f.clockAt(it.at, rings.zone), big, c.textPrimary) } ?: Text("–", style = big, color = c.textPrimary)
+            }
             Text(if (total == 0) stringResource(R.string.alarm_at_least) else next?.let { ringDay(it, rings.zone, f) + " · " + alarmRelation(draft, f) } ?: stringResource(R.string.alarm_none_week),
                 style = MaterialTheme.typography.bodyLarge, color = if (total == 0) c.danger else c.goldText,
                 modifier = Modifier.fillMaxWidth().padding(top = 2.dp), textAlign = TextAlign.Center)
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
 
-            // The wheels read as the sentence: [0 h] [25 min] [before] [Fajr].
-            // (0.21) The names over the wheels keep to one line over their narrow wheels, up to 15% larger with the
-            // phone's text size: larger, "Hours" and "Minutes" broke inside the word ("Minut-es").
-            val grow = com.noor.app.ui.components.limitedGrowth()
-            val head = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp * grow)
-            // (0.18: wider room for "Before" and the prayer's name, and one band across all four, as on a clock.)
-            val w = listOf(0.7f, 0.9f, 1.3f, 1.5f)
-            Row(Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.alarm_hours), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(w[0]), maxLines = 1, softWrap = false)
-                Text(stringResource(R.string.alarm_minutes_head), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(w[1]), maxLines = 1, softWrap = false)
-                Spacer(Modifier.weight(w[2]))
-                Text(stringResource(R.string.alarm_prayer), style = head, color = c.textMuted, textAlign = TextAlign.Center, modifier = Modifier.weight(w[3]), maxLines = 1, softWrap = false)
-            }
+            // The wheels read as the sentence: [0 h] [25 min] [before] [Fajr], one band across all four, as on a clock.
+            // (Each as wide as what it holds: a digit and "h"; two digits and "min"; "before"; the longest prayer's name,
+            // "Maghrib", which must fit on a 360 dp phone.)
+            val w = listOf(0.7f, 1.0f, 1.35f, 1.5f)
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(c.gold.copy(alpha = if (c.isDark) 0.14f else 0.12f)))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Wheel((0..PrayerAlarm.MAX_MINUTES / 60).map { f.number(it) }, hours, { h -> hours = h; minutesOf(h, mins) }, stringResource(R.string.alarm_hours),
-                        Modifier.weight(w[0]), band = false)
+                        Modifier.weight(w[0]), band = false, size = 22f, unit = stringResource(R.string.alarm_unit_hours))
                     Wheel((0..59).map { f.number(it) }, mins, { m -> mins = m; minutesOf(hours, m) }, stringResource(R.string.alarm_minutes_head),
-                        Modifier.weight(w[1]), loop = true, band = false)
+                        Modifier.weight(w[1]), loop = true, band = false, size = 22f, unit = stringResource(R.string.alarm_unit_minutes))
                     Wheel(listOf(stringResource(R.string.alarm_before_word), stringResource(R.string.alarm_after_word)), if (draft.after) 1 else 0,
                         { i -> set { it.copy(after = i == 1) } }, stringResource(R.string.alarm_before_word) + " / " + stringResource(R.string.alarm_after_word),
-                        Modifier.weight(w[2]), band = false, size = 21f)
+                        Modifier.weight(w[2]), band = false, size = 20f)
                     Wheel(Prayer.entries.map { f.prayerName(it) }, draft.prayer.ordinal, { i -> set { it.copy(prayer = Prayer.entries[i]) } },
-                        stringResource(R.string.alarm_prayer), Modifier.weight(w[3]), band = false, size = 21f)
+                        stringResource(R.string.alarm_prayer), Modifier.weight(w[3]), band = false, size = 20f)
                 }
             }
         }
@@ -225,8 +206,6 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
                 kind = ButtonKind.Tonal, enabled = total > 0)
             if (!isNew) NoorButton(stringResource(R.string.alarm_delete), { vm.deleteAlarm(id); onBack() }, Modifier.fillMaxWidth(), kind = ButtonKind.Plain, danger = true)
         }
-        // (Room for the bar of Cancel and Save.)
-        Spacer(Modifier.height(76.dp))
     }
 
     if (snoozeDialog) ChoiceDialog(stringResource(R.string.alarm_snooze), PrayerAlarm.SNOOZE_CHOICES.map { it to minutesLabel(it, f) }, draft.snoozeMinutes,
@@ -367,9 +346,9 @@ private fun LabelRow(label: String, onChange: (String) -> Unit) {
 }
 
 /**
- * The alarms (0.17.1), as the Clock app lists its own: the next one first, in large type; then each alarm as a card
- * with its name, the time it rings next in large type, what it is and its days, and its switch; and Add alarm. With
- * none yet, what an alarm is for, and the button.
+ * The alarms (0.17.1), as the Clock app lists its own: the next one first; then the alarms in one list (0.25: one
+ * group with hairlines; each was a card of its own), each with its name, the time it rings next in large type, what it
+ * is and its days, and its switch; and Add alarm. With none yet, what an alarm is for, and the button.
  */
 @Composable
 internal fun AlarmsList(a: com.noor.prayer.alerts.AlertSettings, rings: Rings, f: Formatter, onOpen: (Int) -> Unit, onToggle: (Int, Boolean) -> Unit) {
@@ -386,39 +365,46 @@ internal fun AlarmsList(a: com.noor.prayer.alerts.AlertSettings, rings: Rings, f
         }
         return
     }
-    // The next alarm, as the Clock app says it at the top ("Alarm in 9 hours 12 minutes").
-    rings.next.values.filter { p -> a.alarms.any { it.id == p.alarm.id && it.enabled } }.minByOrNull { it.at }?.let { n ->
-        val left = java.time.Duration.between(java.time.Instant.now(), n.at).coerceAtLeast(java.time.Duration.ZERO)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-            val (h, m) = f.hoursMinutes(left)
-            Text(if (h > 0) stringResource(R.string.alarm_next_in_hm, f.number(h.toInt()), f.number(m.toInt())) else stringResource(R.string.alarm_next_in_m, f.number(m.toInt())), style = MaterialTheme.typography.titleMedium, color = c.textPrimary)
-            Text(ringWhen(n, rings.zone, f) + " · " + n.alarm.label.ifBlank { alarmRelation(n.alarm, f) }, style = FootnoteStyle, color = c.textSecondary)
+    Column {
+        // The next alarm, as the Clock app says it at the top ("Alarm in 9 hours 12 minutes"), over the list.
+        rings.next.values.filter { p -> a.alarms.any { it.id == p.alarm.id && it.enabled } }.minByOrNull { it.at }?.let { n ->
+            val left = java.time.Duration.between(java.time.Instant.now(), n.at).coerceAtLeast(java.time.Duration.ZERO)
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+                val (h, m) = f.hoursMinutes(left)
+                Text(if (h > 0) stringResource(R.string.alarm_next_in_hm, f.number(h.toInt()), f.number(m.toInt())) else stringResource(R.string.alarm_next_in_m, f.number(m.toInt())), style = MaterialTheme.typography.titleMedium, color = c.textPrimary)
+                Text(ringWhen(n, rings.zone, f) + " · " + n.alarm.label.ifBlank { alarmRelation(n.alarm, f) }, style = FootnoteStyle, color = c.textSecondary)
+            }
         }
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // (0.21) In the order of the day, as the Clock app lists its alarms: by prayer, then before it, then after it
-        // (until 0.21 in the order they were made: "15 min after Shuruq" above "25 min before Fajr").
-        a.alarms.sortedWith(compareBy({ it.prayer.ordinal }, { if (it.after) it.minutes else -it.minutes }, { it.id }))
-            .forEach { al -> AlarmCard(al, rings.next[al.id], rings.zone, f, onOpen = { onOpen(al.id) }, onToggle = { on -> onToggle(al.id, on) }) }
+        GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 24.dp) {
+            // (0.21) In the order of the day, as the Clock app lists its alarms: by prayer, then before it, then after it
+            // (until 0.21 in the order they were made: "15 min after Shuruq" above "25 min before Fajr").
+            a.alarms.sortedWith(compareBy({ it.prayer.ordinal }, { if (it.after) it.minutes else -it.minutes }, { it.id })).forEachIndexed { i, al ->
+                if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 18.dp), thickness = 0.5.dp, color = c.separator)
+                AlarmRow(al, rings.next[al.id], rings.zone, f, onOpen = { onOpen(al.id) }, onToggle = { on -> onToggle(al.id, on) })
+            }
+        }
     }
     NoorButton(stringResource(if (full) R.string.alarm_full else R.string.alarm_add), { onOpen(0) }, Modifier.fillMaxWidth(), icon = Icons.Rounded.Add, enabled = !full)
 }
 
-/** One alarm as a card: its name, the time it rings next (large), what it is and its days, and its switch. */
+/**
+ * One alarm in the list: its name, the time it rings next, what it is and its days, and its switch. The time is large
+ * and light with its AM or PM at half its size, as the home screen writes its times (0.25: at full size, and in Arabic
+ * the "ص" stood as large as the digits).
+ */
 @Composable
-private fun AlarmCard(a: PrayerAlarm, next: PlannedAlarm?, zone: ZoneId, f: Formatter, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun AlarmRow(a: PrayerAlarm, next: PlannedAlarm?, zone: ZoneId, f: Formatter, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
     val c = NoorTheme.colors
-    val shape = RoundedCornerShape(24.dp)
     Row(
-        Modifier.fillMaxWidth().clip(shape).background(c.glass).clickable(role = Role.Button, onClick = com.noor.app.ui.components.withTick(onOpen))
-            .padding(start = 18.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = com.noor.app.ui.components.withTick(onOpen))
+            .padding(start = 18.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f).alpha(if (a.enabled) 1f else 0.55f)) {
-            if (a.label.isNotBlank()) Text(a.label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp), color = c.goldText, maxLines = 1,
+        Column(Modifier.weight(1f).alpha(if (a.enabled) 1f else 0.5f)) {
+            if (a.label.isNotBlank()) Text(a.label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, letterSpacing = 0.sp), color = c.goldText, maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            Text(next?.let { f.timeAt(it.at, zone) } ?: "–", style = MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp, fontWeight = FontWeight.Light),
-                color = c.textPrimary, maxLines = 1)
+            val big = MaterialTheme.typography.displaySmall.merge(com.noor.app.ui.theme.Tabular).copy(fontSize = 40.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.5).sp)
+            next?.let { ClockText(f.clockAt(it.at, zone), big, c.textPrimary) } ?: Text("–", style = big, color = c.textPrimary, maxLines = 1)
             Text(alarmRelation(a, f) + " · " + daysLabel(a.days, f), style = FootnoteStyle, color = c.textSecondary)
         }
         Spacer(Modifier.width(12.dp))

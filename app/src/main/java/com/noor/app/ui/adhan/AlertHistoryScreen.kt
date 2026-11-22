@@ -23,6 +23,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.rounded.BatterySaver
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -52,6 +53,8 @@ import kotlin.math.roundToInt
 /**
  * What actually happened at each alert on this phone: played (and for how long), replaced, made quiet and why, late.
  * This is the evidence that the Adhan sounds on a real phone, and what the owner shares when it does not.
+ * 0.25: the page opens on the history itself (a test button led it; the test is on the Adhan tab, one step back, and
+ * its result comes here); under it, sharing the report, and the one piece of advice that is not a fault of the set-up.
  */
 @Composable
 fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: AdhanViewModel = viewModel()) {
@@ -68,19 +71,12 @@ fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
     androidx.compose.runtime.LaunchedEffect(message) { message?.let { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show(); vm.consumeMessage() } }
 
     com.noor.app.ui.components.NoorPage(stringResource(R.string.history_title), contentPadding, onBack = onBack) {
-        Footnote(stringResource(R.string.history_intro))
-
-        Column {
-            com.noor.app.ui.components.NoorButton(stringResource(R.string.history_test, f.number(10)), { vm.testNext() }, Modifier.fillMaxWidth())
-            com.noor.app.ui.settings.SectionFooter(stringResource(R.string.history_test_hint))
-        }
-
         if (history.isEmpty()) {
-            GlassCard(Modifier.fillMaxWidth(), padding = 18.dp, corner = 20.dp) {
+            GlassCard(Modifier.fillMaxWidth(), padding = 18.dp, corner = 24.dp) {
                 Text(stringResource(R.string.history_empty), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary)
             }
         } else {
-            GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 20.dp) {
+            GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 24.dp) {
                 Column {
                     history.forEachIndexed { i, r ->
                         if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 40.dp), thickness = 0.5.dp, color = c.separator)
@@ -96,6 +92,14 @@ fun AlertHistoryScreen(contentPadding: PaddingValues, onBack: () -> Unit, vm: Ad
                 .putExtra(Intent.EXTRA_TEXT, vm.report())
             runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }, Modifier.fillMaxWidth(), kind = com.noor.app.ui.components.ButtonKind.Tonal)
+        // (Until 0.24 at the foot of "More settings".)
+        val ready by vm.readiness.collectAsStateWithLifecycle()
+        if (s.alerts.enabled && s.alerts.device.includes(com.noor.prayer.alerts.AlertDevice.PHONE) && ready.batteryRestricted) {
+            com.noor.app.ui.settings.SettingsSection("") {
+                WarningRow(stringResource(R.string.adhan_warn_battery), stringResource(R.string.adhan_action_open),
+                    { context.open(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }, icon = androidx.compose.material.icons.Icons.Rounded.BatterySaver)
+            }
+        }
     }
 }
 

@@ -124,89 +124,11 @@ internal fun sharedVoice(a: AlertSettings, vm: AdhanViewModel, custom: List<Cust
 }
 
 /**
- * 0.18: the Adhan's voice for every prayer at once, first on the Adhan page (the owner: "Why do I have to go to every
- * individual prayer time and select the same Adhan?"): six tiles, the chosen one lit; a touch chooses it for every
- * prayer and plays its opening (a second touch stops it). A voice Noor has no recording of asks for the user's own.
- * Under them, the volume of every prayer's Adhan, as one slider.
- */
-@Composable
-internal fun VoiceCard(a: AlertSettings, vm: AdhanViewModel, custom: List<CustomSound>, f: Formatter, onAdd: (String) -> Unit) {
-    val c = NoorTheme.colors
-    val haptics = LocalHapticFeedback.current
-    val preview by vm.preview.collectAsStateWithLifecycle()
-    val shared = sharedVoice(a, vm, custom)
-    GlassCard(Modifier.fillMaxWidth(), padding = 14.dp, corner = 26.dp) {
-        Text(stringResource(R.string.voice_all_title), style = MaterialTheme.typography.titleSmall, color = c.textSecondary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp))
-        val tiles: List<Pair<ClockVoice?, String?>> = ClockVoice.entries.map { it to it.soundId(vm, custom) } + (null to SoundIds.RANDOM)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            tiles.chunked(3).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { (v, id) ->
-                        val on = id != null && id == shared
-                        val shape = RoundedCornerShape(16.dp)
-                        val title = v?.let { stringResource(it.label) } ?: stringResource(R.string.voice_random)
-                        Column(
-                            Modifier.weight(1f).heightIn(min = 64.dp).clip(shape)
-                                .background(if (on) c.gold.copy(alpha = if (c.isDark) 0.18f else 0.14f) else c.glass)
-                                .border(if (on) 1.5.dp else 0.75.dp, if (on) c.gold else c.glassEdge.copy(alpha = c.glassEdge.alpha * 0.6f), shape)
-                                .clickable(role = Role.RadioButton) {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    when {
-                                        v != null && id == null -> onAdd(stringResource0(v))
-                                        id == SoundIds.RANDOM -> vm.applyVoice(null, id)
-                                        id != null -> {
-                                            if (!on) vm.applyVoice(null, id)
-                                            if (SoundIds.isCustom(id)) vm.previewCustom(id, 80) else vm.previewLibrary(id, short = true, volumePercent = 80)
-                                        }
-                                    }
-                                }
-                                .semantics { selected = on }.padding(horizontal = 6.dp, vertical = 10.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                when {
-                                    v == null -> Icon(Icons.Rounded.Shuffle, null, tint = if (on) c.gold else c.textSecondary, modifier = Modifier.size(15.dp).padding(end = 2.dp))
-                                    id == null -> Icon(Icons.Rounded.Add, null, tint = c.textSecondary, modifier = Modifier.size(15.dp).padding(end = 2.dp))
-                                    preview?.id == id -> Icon(Icons.Rounded.GraphicEq, null, tint = c.gold, modifier = Modifier.size(15.dp).padding(end = 2.dp))
-                                }
-                                // (0.21) A third of the width each: the names follow the phone's text size up to 15% larger,
-                                // no further (with large text "Madinah", "Al-Quds" and "Random" were cut).
-                                val grow = com.noor.app.ui.components.limitedGrowth()
-                                Text(title, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp * grow, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium),
-                                    color = if (on) c.goldText else if (id == null) c.textSecondary else c.textPrimary, maxLines = 1, softWrap = false,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // One volume for every prayer's Adhan (the prayers' own volumes all move with it).
-        val volumes = Prayer.entries.filter { a.alert(it).enabled && a.alert(it).mode.playsAudio }.map { a.alert(it).volumePercent }
-        var vol by remember(volumes) { mutableFloatStateOf((volumes.takeIf { it.isNotEmpty() }?.average() ?: 80.0).toFloat()) }
-        val label = stringResource(R.string.adhan_volume_all)
-        Row(Modifier.fillMaxWidth().padding(top = 12.dp, start = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.AutoMirrored.Rounded.VolumeUp, null, tint = c.textSecondary, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Slider(value = vol, valueRange = 5f..100f, modifier = Modifier.weight(1f).semantics { contentDescription = label },
-                onValueChange = { v -> if ((v / 10).toInt() != (vol / 10).toInt()) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); vol = v },
-                onValueChangeFinished = { vm.setVolumeAll(vol.toInt()) },
-                colors = SliderDefaults.colors(thumbColor = c.gold, activeTrackColor = c.gold, inactiveTrackColor = c.textMuted.copy(alpha = 0.25f)))
-            Spacer(Modifier.width(10.dp))
-            // (0.21: on one line; with large text "80%" broke into "80" over "%".)
-            Text(f.number(vol.toInt()) + if (f.arabic) "٪" else "%", style = MaterialTheme.typography.bodyMedium, color = c.textSecondary,
-                modifier = Modifier.widthIn(min = 44.dp), textAlign = TextAlign.End, maxLines = 1, softWrap = false)
-        }
-    }
-}
-
-// (A voice's English name, for the file the user adds for it; the names in [ClockVoice.names] match it either way.)
-private fun stringResource0(v: ClockVoice): String = v.names[0]
-
-/**
  * One prayer's voice (0.16; 0.18: only the five voices and Random, the user's own recordings, and, for a prayer set to a
- * sound, the sound effects), each heard before it is chosen. [target] null: every prayer at once.
+ * sound, the sound effects). [target] null: every prayer at once (0.25: the one place for that choice; the Adhan tab's
+ * six tiles were the same choice a second time). A touch chooses a voice and plays its opening, as the tiles did (a
+ * second touch stops it); the round button plays the whole recording. A voice Noor has no recording of says so and has
+ * a plus where the others have their button: the row adds the user's own.
  */
 @Composable
 fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Unit, vm: AdhanViewModel = viewModel()) {
@@ -240,29 +162,43 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
         else -> stringResource(R.string.voice_for, f.prayerName(target))
     }
 
+    // The opening of [id] (the whole of it when it has no opening of its own, or is the user's file); a second touch stops it.
+    fun hear(id: String) {
+        if (preview?.id == id) vm.stopPreview()
+        else if (SoundIds.isCustom(id)) vm.previewCustom(id, volume)
+        else vm.previewLibrary(id, short = lib.byId(id)?.shortFile != null, volumePercent = volume)
+    }
+    // The whole recording, from the round button (which stops whatever of it is playing).
+    fun whole(id: String) {
+        if (preview?.id == id) vm.stopPreview()
+        else if (SoundIds.isCustom(id)) vm.previewCustom(id, volume)
+        else vm.previewLibrary(id, false, volume)
+    }
+
     NoorPage(title, contentPadding, onBack = onBack,
         floating = { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
         if (effects) SettingsSection("") {
             lib.sounds.forEachIndexed { i, e ->
                 if (i > 0) SettingsDivider()
-                SoundRow(e.title(ar), f.duration(e.seconds), current == e.id, preview == PreviewKey(e.id, false), previewLabel,
-                    onSelect = { vm.setPrayer(target!!) { it.copy(mode = AlertMode.SOUND, soundId = e.id) } }, onPreview = { vm.previewLibrary(e.id, false, volume) })
+                SoundRow(e.title(ar), f.duration(e.seconds), current == e.id, preview?.id == e.id, previewLabel,
+                    onSelect = { if (current != e.id) vm.setPrayer(target!!) { it.copy(mode = AlertMode.SOUND, soundId = e.id) }; hear(e.id) }, onPreview = { whole(e.id) })
             }
-        } else SettingsSection("") {
+        } else SettingsSection(if (target == null) stringResource(R.string.adhan_all_prayers) else "") {
             ClockVoice.entries.forEachIndexed { i, v ->
                 if (i > 0) SettingsDivider()
                 val id = v.soundId(vm, custom)
                 // (At Fajr, the voice's own Fajr recording when it has one.)
                 val play = if (target == Prayer.FAJR) id?.let { fajrOf(it, vm, custom) } else id
                 val name = stringResource(v.label)
-                SoundRow(name, if (id == null) stringResource(R.string.voice_add) else null,
-                    selected = id != null && (current == id || current == play), playing = play != null && preview?.id == play, previewLabel = previewLabel,
-                    onSelect = { if (id != null) vm.applyVoice(target, id) else { adding = v.names[0]; picker.launch(CustomSounds.PICKER_TYPES) } },
-                    onPreview = play?.let { p -> { if (SoundIds.isCustom(p)) vm.previewCustom(p, volume) else vm.previewLibrary(p, false, volume) } })
+                val chosen = id != null && (current == id || current == play)
+                if (id == null || play == null) SoundRow(name, stringResource(R.string.voice_add), false, false, previewLabel,
+                    onSelect = { adding = v.names[0]; picker.launch(CustomSounds.PICKER_TYPES) }, onPreview = null, add = true)
+                else SoundRow(name, null, selected = chosen, playing = preview?.id == play, previewLabel = previewLabel,
+                    onSelect = { if (!chosen) vm.applyVoice(target, id); hear(play) }, onPreview = { whole(play) })
             }
             SettingsDivider()
-            SoundRow(stringResource(R.string.voice_random), null, current == SoundIds.RANDOM, false, previewLabel,
-                onSelect = { vm.applyVoice(target, SoundIds.RANDOM) }, onPreview = null)
+            SoundRow(stringResource(R.string.voice_random), stringResource(R.string.voice_random_detail), current == SoundIds.RANDOM, false, previewLabel,
+                onSelect = { vm.stopPreview(); vm.applyVoice(target, SoundIds.RANDOM) }, onPreview = null)
         }
 
         // The user's own sounds (those not standing for a voice), and adding one.
@@ -272,7 +208,10 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
             mine.forEachIndexed { i, cs ->
                 if (i > 0) SettingsDivider()
                 SoundRow(cs.name, f.duration(cs.seconds), current == cs.id, preview == PreviewKey(cs.id, false), previewLabel,
-                    onSelect = { if (target == Prayer.SHURUQ) vm.setPrayer(target) { it.copy(mode = AlertMode.CUSTOM, soundId = cs.id) } else vm.applyVoice(target, cs.id) },
+                    onSelect = {
+                        if (current != cs.id) { if (target == Prayer.SHURUQ) vm.setPrayer(target) { it.copy(mode = AlertMode.CUSTOM, soundId = cs.id) } else vm.applyVoice(target, cs.id) }
+                        hear(cs.id)
+                    },
                     onPreview = { vm.previewCustom(cs.id, volume) })
             }
             if (mine.isNotEmpty()) SettingsDivider()
