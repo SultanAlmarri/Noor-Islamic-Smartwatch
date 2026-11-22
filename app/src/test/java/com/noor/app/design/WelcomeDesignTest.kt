@@ -74,9 +74,9 @@ import java.io.File
 import java.util.Locale
 
 /**
- * The welcome (0.25): every page of it drawn, in English and Arabic, on a phone (412 x 915 dp), a small phone
- * (360 x 640, also with text at 1.3), and an unfolded Fold (673 x 841), to build/design/welcome; and what must hold
- * of it, checked:
+ * The welcome (0.25): every page of it drawn, in English and Arabic, on a phone (412 x 915 dp, also with text at
+ * 1.5), a small phone (360 x 640, also with text at 1.3), an unfolded Fold (673 x 841, and turned: 841 x 673) and a
+ * phone on its side (915 x 412), to build/design/welcome; and what must hold of it, checked:
  *
  * - the words on the sky meet 4.5:1 against the sky's own drawn pixels, at every stage of the dawn (the whole part of
  *   the sky that can hold words, and under every text of every page drawn here);
@@ -94,7 +94,7 @@ import java.util.Locale
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], qualifiers = "w700dp-h950dp-xhdpi")
+@Config(sdk = [34], qualifiers = "w960dp-h950dp-xhdpi")
 class WelcomeDesignTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
@@ -104,8 +104,9 @@ class WelcomeDesignTest {
     private var frameH by mutableIntStateOf(915)
     private var ambient by mutableStateOf(false)
     private var fresh by mutableIntStateOf(0)
-    /** When set, the sky alone is drawn: (light, the Earth's edge in px). */
+    /** When set, the sky alone is drawn: (light, the Earth's edge in px), with [skyBand]. */
     private var skyOnly by mutableStateOf<Pair<Float, Float>?>(null)
+    private var skyBand by mutableStateOf(Dawn.Band)
     private var opening by mutableStateOf(OpeningState.None)
     private var finished = 0
     private var city = 0
@@ -139,7 +140,7 @@ class WelcomeDesignTest {
                             CompositionLocalProvider(LocalLayoutDirection provides if (arabic) LayoutDirection.Rtl else LayoutDirection.Ltr) {
                                 key(fresh) { OnboardingScreen(PaddingValues(top = 28.dp, bottom = 16.dp), onChooseCity = { city++ }, onFinished = { finished++ }) }
                                 // (Over the page, which stays as it is underneath: the sky covers all of it.)
-                                skyOnly?.let { sky -> DawnSky({ sky.first }, { sky.second }, Modifier.fillMaxSize(), stars = false) }
+                                skyOnly?.let { sky -> DawnSky({ sky.first }, { sky.second }, Modifier.fillMaxSize(), skyBand, stars = false) }
                             }
                         }
                     }
@@ -149,7 +150,8 @@ class WelcomeDesignTest {
 
         // ---- The pages, drawn and checked, in each size and language --------------------------------------------
         data class Frame(val tag: String, val w: Int, val h: Int, val scale: Float)
-        val frames = listOf(Frame("phone", 412, 915, 1f), Frame("small", 360, 640, 1f), Frame("small_130", 360, 640, 1.3f), Frame("fold", 673, 841, 1f), Frame("phone_150", 412, 915, 1.5f))
+        val frames = listOf(Frame("phone", 412, 915, 1f), Frame("small", 360, 640, 1f), Frame("small_130", 360, 640, 1.3f), Frame("fold", 673, 841, 1f), Frame("phone_150", 412, 915, 1.5f),
+            Frame("landscape", 915, 412, 1f), Frame("fold_turned", 841, 673, 1f))
         for (f in frames) for (ar in listOf(false, true)) {
             frameW = f.w; frameH = f.h; fontScale = f.scale; arabic = ar
             val tag = "${f.tag}_${if (ar) "ar" else "en"}"
@@ -173,23 +175,27 @@ class WelcomeDesignTest {
 
         // ---- Every stage of the dawn: the part of the sky that can hold words ------------------------------------
         val density = rule.activity.resources.displayMetrics.density
-        val band = Dawn.Band.value * density
-        val crest = 700f * density
-        var light = Dawn.BEFORE
-        while (light <= Dawn.LAST + 0.001f) {
-            skyOnly = light to crest; settle()
-            val sky = capture()
-            if (light == light.toInt().toFloat()) save(sky, "sky_light_${light.toInt()}")
-            val words = Rect(0f, 0f, sky.width.toFloat(), crest - band)
-            val white = worst(sky, words, WelcomeText); val quiet = worst(sky, words, WelcomeTextQuiet)
-            if (white < 4.5) problems += "light $light: white on the sky is $white:1"
-            if (quiet < 4.5) problems += "light $light: the quiet text on the sky is $quiet:1"
-            if (light <= 0.5f) worst(sky, words, Sky.GoldOnSky).let { if (it < 4.5) problems += "light $light: the gold name on the sky is $it:1" }
-            println("welcome sky, light ${"%.2f".format(light)}: white ${"%.2f".format(white)}:1, quiet ${"%.2f".format(quiet)}:1 at the least")
-            light += 0.25f
+        // (An upright phone, with the band of first light at its full height; a phone on its side, with the thin one.)
+        for ((w, h, edge) in listOf(Triple(412, 915, 700f), Triple(915, 412, 260f))) {
+            frameW = w; frameH = h; skyBand = Dawn.band(h.dp)
+            val band = skyBand.value * density
+            val crest = edge * density
+            var light = Dawn.BEFORE
+            while (light <= Dawn.LAST + 0.001f) {
+                skyOnly = light to crest; settle()
+                val sky = capture()
+                if (h > w && light == light.toInt().toFloat()) save(sky, "sky_light_${light.toInt()}")
+                val words = Rect(0f, 0f, sky.width.toFloat(), crest - band)
+                val white = worst(sky, words, WelcomeText); val quiet = worst(sky, words, WelcomeTextQuiet)
+                if (white < 4.5) problems += "$w x $h, light $light: white on the sky is $white:1"
+                if (quiet < 4.5) problems += "$w x $h, light $light: the quiet text on the sky is $quiet:1"
+                if (light <= 0.5f) worst(sky, words, Sky.GoldOnSky).let { if (it < 4.5) problems += "$w x $h, light $light: the gold name on the sky is $it:1" }
+                println("welcome sky $w x $h, light ${"%.2f".format(light)}: white ${"%.2f".format(white)}:1, quiet ${"%.2f".format(quiet)}:1 at the least")
+                light += 0.25f
+            }
+            if (h > w) { skyOnly = Dawn.SUNRISE to crest; settle(); save(capture(), "sky_light_4_sunrise") }
         }
-        skyOnly = Dawn.SUNRISE to crest; settle(); save(capture(), "sky_light_4_sunrise")
-        skyOnly = null
+        skyOnly = null; frameW = 412; frameH = 915; skyBand = Dawn.Band
         // The main button's own colours.
         ButtonGold.forEach { g -> Sky.contrast(ButtonInk, g).let { if (it < 4.5) problems += "the main button's words are $it:1 on its gold" } }
 
@@ -350,7 +356,8 @@ class WelcomeDesignTest {
         val shot = capture()
         save(shot, name)
         val barTop = rule.onNodeWithTag(WELCOME_BAR).fetchSemanticsNode().boundsInRoot.top
-        val crest = barTop + Dawn.Band.value * d
+        val band = Dawn.band(frameH.dp)
+        val crest = barTop + band.value * d
         val nodes = rule.onAllNodes(SemanticsMatcher("text") { it.config.getOrNull(SemanticsProperties.Text) != null }, useUnmergedTree = true).fetchSemanticsNodes()
         val texts = nodes.map { it.config[SemanticsProperties.Text].joinToString(" ") { t -> t.text } to it.boundsInRoot }
         // A page that asks for something says why in full, without scrolling, before Android is asked (on every size here).
@@ -359,11 +366,11 @@ class WelcomeDesignTest {
                 problems += "$name: \"${n.config[SemanticsProperties.Text].joinToString(" ") { t -> t.text }}\" is not whole on the screen"
         }
         // The sky alone, as this page has it (the same light, the same edge), without its stars.
-        skyOnly = Dawn.lightFor(step) to crest; settle()
+        skyBand = band; skyOnly = Dawn.lightFor(step) to crest; settle()
         val sky = capture()
         skyOnly = null; settle()
         // (That it is this page's sky: one point of the band of first light at the screen's side, where nothing else is drawn.)
-        val probeY = (crest - Dawn.Band.value * d * 0.5f).toInt()
+        val probeY = (crest - band.value * d * 0.5f).toInt()
         val a = Color(shot.getPixel(2, probeY)); val b = Color(sky.getPixel(2, probeY))
         if (maxOf(kotlin.math.abs(a.red - b.red), kotlin.math.abs(a.green - b.green), kotlin.math.abs(a.blue - b.blue)) > 0.012f) problems += "$name: the sky drawn alone is not the page's sky ($a, $b)"
 

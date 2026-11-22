@@ -80,8 +80,6 @@ internal fun SymbolArt(symbol: Symbol, modifier: Modifier = Modifier, phase: () 
     val mark = painterResource(R.drawable.ic_splash_mark)
     Canvas(modifier.clearAndSetSemantics { }) {
         val s = size.minDimension
-        // (Too little room to be a picture: the page's words have it.)
-        if (s < 64.dp.toPx()) return@Canvas
         val c = center
         val disc = s * 0.33f
         val hair = 1.25.dp.toPx()

@@ -105,11 +105,14 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -251,15 +254,19 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
     // short screen, large text): the sky is told where the buttons begin.
     val places = remember { Places() }
     val crest = remember { mutableFloatStateOf(0f) }
-    val band = with(LocalDensity.current) { Dawn.Band.toPx() }
     fun place() {
         val b = places.box; val r = places.bar
-        if (b != null && r != null && b.isAttached && r.isAttached) crest.floatValue = b.localPositionOf(r, Offset.Zero).y + band
+        if (b != null && r != null && b.isAttached && r.isAttached) crest.floatValue = b.localPositionOf(r, Offset.Zero).y + places.band
     }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val density = LocalDensity.current
 
-    Box(Modifier.fillMaxSize().onGloballyPositioned { places.box = it; place() }) {
-        DawnSky({ light.value }, { crest.floatValue }, Modifier.fillMaxSize(), twinkle = { turn?.value ?: -1f })
+    BoxWithConstraints(Modifier.fillMaxSize().onGloballyPositioned { places.box = it; place() }) {
+        // A phone on its side: little height, so the band of first light is thinner and the buttons stand side by side.
+        val short = maxHeight < Dawn.Short
+        val band = Dawn.band(maxHeight)
+        places.band = with(density) { band.toPx() }
+        DawnSky({ light.value }, { crest.floatValue }, Modifier.fillMaxSize(), band, twinkle = { turn?.value ?: -1f })
         Column(Modifier.fillMaxSize().padding(contentPadding)) {
             val pages = Modifier.weight(1f).fillMaxWidth().graphicsLayer { alpha = (1f - out.value * 2.5f).coerceIn(0f, 1f) }
             val page: @Composable (Int) -> Unit = { s ->
@@ -290,28 +297,38 @@ fun OnboardingScreen(contentPadding: PaddingValues, onChooseCity: () -> Unit, on
             Column(
                 Modifier.fillMaxWidth().onGloballyPositioned { places.bar = it; place() }.testTag(WELCOME_BAR)
                     .graphicsLayer { alpha = part(enter.value, 6, 7) * (1f - out.value * 2.5f).coerceIn(0f, 1f) }
-                    .padding(horizontal = 24.dp).wrapContentWidth().widthIn(max = 520.dp).padding(top = Dawn.Band + 20.dp, bottom = 4.dp),
+                    .padding(horizontal = 24.dp).wrapContentWidth().widthIn(max = if (short) 640.dp else 520.dp)
+                    .padding(top = band + (if (short) 10.dp else 20.dp), bottom = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Dots(step.coerceAtMost(ADHAN), ambient)
-                Spacer(Modifier.height(18.dp))
-                GoldButton(stringResource(when (step) {
-                    COVER, TRAVEL -> R.string.welcome_continue; PLACE -> R.string.perm_allow; ADHAN -> R.string.onb_adhan_on; else -> R.string.welcome_exact_allow
-                }), ambient) { primary() }
+                Spacer(Modifier.height(if (short) 10.dp else 18.dp))
+                val main: @Composable () -> Unit = {
+                    GoldButton(stringResource(when (step) {
+                        COVER, TRAVEL -> R.string.welcome_continue; PLACE -> R.string.perm_allow; ADHAN -> R.string.onb_adhan_on; else -> R.string.welcome_exact_allow
+                    }), ambient, if (short) 50.dp else 58.dp) { primary() }
+                }
                 // The other way: quiet, but a button (0.15: as plain text on the dawn it was easy to miss).
-                val other: @Composable () -> Unit = {
-                    TextButton(onClick = withTick { secondary() }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 52.dp), shape = ButtonShape) {
+                val other: @Composable (Modifier) -> Unit = { m ->
+                    TextButton(onClick = withTick { secondary() }, modifier = m.fillMaxWidth().heightIn(min = 52.dp), shape = ButtonShape) {
                         Words(stringResource(if (step == PLACE) R.string.perm_manual else R.string.welcome_not_now), ambient) {
                             Text(it, color = Sky.GoldOnSky, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                         }
                     }
                 }
-                if (ambient) AnimatedVisibility(
-                    step > COVER,
-                    enter = expandVertically(spring(dampingRatio = 0.86f, stiffness = 300f)) + fadeIn(tween(NoorMotion.Standard)),
-                    exit = shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) + fadeOut(tween(NoorMotion.Quick)),
-                ) { other() }
-                else if (step > COVER) other()
+                if (short) Row(Modifier.widthIn(max = if (step > COVER) 640.dp else 340.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // (Side by side: the main one where reading ends.)
+                    if (step > COVER) Box(Modifier.weight(1f)) { other(Modifier) }
+                    Box(Modifier.weight(1f)) { main() }
+                } else {
+                    main()
+                    if (ambient) AnimatedVisibility(
+                        step > COVER,
+                        enter = expandVertically(spring(dampingRatio = 0.86f, stiffness = 300f)) + fadeIn(tween(NoorMotion.Standard)),
+                        exit = shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)) + fadeOut(tween(NoorMotion.Quick)),
+                    ) { other(Modifier.padding(top = 4.dp)) }
+                    else if (step > COVER) other(Modifier.padding(top = 4.dp))
+                }
             }
         }
     }
@@ -334,7 +351,7 @@ internal val ButtonGold = listOf(Color(0xFFFFEBC0), Color(0xFFEDC57C))
 internal val ButtonInk = Color(0xFF1B1407)
 private val ButtonShape = RoundedCornerShape(28.dp)
 
-private class Places { var box: LayoutCoordinates? = null; var bar: LayoutCoordinates? = null }
+private class Places { var box: LayoutCoordinates? = null; var bar: LayoutCoordinates? = null; var band = 0f }
 
 /** How far the [order]-th of [of] pieces has come in, when the whole entrance is at [t] (0..1). */
 private fun part(t: Float, order: Int, of: Int): Float {
@@ -374,24 +391,35 @@ private fun Modifier.fadedEdges(scroll: ScrollState): Modifier = graphicsLayer {
 @Composable
 private fun PageFrame(content: @Composable ColumnScope.(size: PageSize) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // (A short screen has less of everything but words; an unfolded phone or a tablet has more.)
-        val size = when { maxHeight < 500.dp -> PageSize.COMPACT; maxWidth >= 600.dp -> PageSize.WIDE; else -> PageSize.PHONE }
+        // (A short screen has less of everything but words; an unfolded phone or a tablet has more; a phone on its
+        // side is short and wide.)
+        val size = PageSize(compact = maxHeight < 500.dp, broad = maxWidth >= 600.dp, height = maxHeight, width = maxWidth)
         val scroll = rememberScrollState()
         Column(
-            Modifier.fillMaxWidth().fadedEdges(scroll).verticalScroll(scroll).heightIn(min = maxHeight).padding(horizontal = 24.dp, vertical = 14.dp)
-                .wrapContentWidth().widthIn(max = 520.dp),
+            Modifier.fillMaxWidth().fadedEdges(scroll).verticalScroll(scroll).heightIn(min = maxHeight)
+                .padding(horizontal = PageSize.Side, vertical = size.edge).wrapContentWidth().widthIn(max = size.column),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) { content(size) }
     }
 }
 
-private enum class PageSize { COMPACT, PHONE, WIDE }
+/** The page's part of the screen ([width] by [height]), and what kind of screen that makes it. */
+private class PageSize(val compact: Boolean, broad: Boolean, val height: Dp, val width: Dp) {
+    /** Room to be larger: an unfolded phone, a tablet. */
+    val wide = broad && !compact
+    /** Short and wide: a phone on its side. */
+    val low = broad && compact
+    /** The space kept above and below the page's content, and the most its column of words may be wide. */
+    val edge = if (low) 6.dp else 14.dp
+    val column = if (low) 720.dp else 520.dp
+    companion object { val Side = 24.dp }
+}
 
 /** The cover: the mark, the name, what Minhad is in one line, and four things it gives. */
 @Composable
 private fun ColumnScope.Cover(size: PageSize, enter: () -> Float, carry: () -> Float) {
     val of = 7
-    val compact = size == PageSize.COMPACT; val wide = size == PageSize.WIDE
+    val compact = size.compact; val wide = size.wide
     Spacer(Modifier.weight(0.5f))
     // Wordmark: منهاد in Kufi is Minhad's logo (shown in both languages, like the icon); the Latin name beneath only in English.
     val name = MaterialTheme.typography.displayMedium.copy(fontFamily = Kufi, fontSize = if (compact) 36.sp else if (wide) 54.sp else 50.sp, fontWeight = FontWeight.Normal)
@@ -408,17 +436,27 @@ private fun ColumnScope.Cover(size: PageSize, enter: () -> Float, carry: () -> F
     }
     if (!isArabicUi()) Text("MINHAD", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 7.sp, fontSize = 12.sp), color = WelcomeTextQuiet,
         modifier = Modifier.padding(start = 7.dp).arrives(enter, 0, of))
-    Spacer(Modifier.height(if (compact) 10.dp else 22.dp))
+    Spacer(Modifier.height(if (size.low) 4.dp else if (compact) 10.dp else 22.dp))
     Text(stringResource(R.string.onboarding_tagline),
-        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = if (compact) 24.sp else if (wide) 30.sp else 28.sp,
-            lineHeight = if (compact) 30.sp else if (wide) 38.sp else 35.sp, lineBreak = LineBreak.Heading),
+        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = if (size.low) 22.sp else if (compact) 24.sp else if (wide) 30.sp else 28.sp,
+            lineHeight = if (size.low) 28.sp else if (compact) 30.sp else if (wide) 38.sp else 35.sp, lineBreak = LineBreak.Heading),
         color = WelcomeText, textAlign = TextAlign.Center, modifier = Modifier.arrives(enter, 1, of).semantics { heading() })
-    Spacer(Modifier.height(if (compact) 16.dp else if (wide) 30.dp else 34.dp))
-    Column(Modifier.widthIn(max = if (wide) 420.dp else 380.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 20.dp)) {
-        Gift(rememberVectorPainter(Icons.Rounded.Schedule), Color(0xFFFFB84D), Color(0xFFEE6A1F), R.string.welcome_times, R.string.welcome_times_line, wide, Modifier.arrives(enter, 2, of))
-        Gift(painterResource(R.drawable.ic_tab_today), Color(0xFF5DBBFF), Color(0xFF2A62E6), R.string.welcome_sky, R.string.welcome_sky_line, wide, Modifier.arrives(enter, 3, of))
-        Gift(rememberVectorPainter(Icons.Rounded.NotificationsActive), Color(0xFF4FDC97), Color(0xFF14975A), R.string.welcome_adhan, R.string.welcome_adhan_line, wide, Modifier.arrives(enter, 4, of))
-        Gift(rememberVectorPainter(Icons.Rounded.Explore), Color(0xFFB896FF), Color(0xFF7146E4), R.string.welcome_qibla, R.string.welcome_qibla_line, wide, Modifier.arrives(enter, 5, of))
+    Spacer(Modifier.height(if (size.low) 10.dp else if (compact) 16.dp else if (wide) 30.dp else 34.dp))
+    val gift: @Composable (Int, Modifier) -> Unit = { i, m ->
+        when (i) {
+            0 -> Gift(rememberVectorPainter(Icons.Rounded.Schedule), Color(0xFFFFB84D), Color(0xFFEE6A1F), R.string.welcome_times, R.string.welcome_times_line, wide, m.arrives(enter, 2, of))
+            1 -> Gift(painterResource(R.drawable.ic_tab_today), Color(0xFF5DBBFF), Color(0xFF2A62E6), R.string.welcome_sky, R.string.welcome_sky_line, wide, m.arrives(enter, 3, of))
+            2 -> Gift(rememberVectorPainter(Icons.Rounded.NotificationsActive), Color(0xFF4FDC97), Color(0xFF14975A), R.string.welcome_adhan, R.string.welcome_adhan_line, wide, m.arrives(enter, 4, of))
+            else -> Gift(rememberVectorPainter(Icons.Rounded.Explore), Color(0xFFB896FF), Color(0xFF7146E4), R.string.welcome_qibla, R.string.welcome_qibla_line, wide, m.arrives(enter, 5, of))
+        }
+    }
+    if (size.low) {
+        // (A phone on its side: two and two.)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (row in 0..1) Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) { gift(row * 2, Modifier.weight(1f)); gift(row * 2 + 1, Modifier.weight(1f)) }
+        }
+    } else Column(Modifier.widthIn(max = if (wide) 420.dp else 380.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 20.dp)) {
+        for (i in 0..3) gift(i, Modifier)
     }
     Spacer(Modifier.weight(1f))
 }
@@ -464,29 +502,49 @@ private fun LaunchMark(crescent: Dp, carry: () -> Float) {
 /** A page that asks for one thing: its symbol, what it is for in a few large words, and the honest reason. */
 @Composable
 private fun ColumnScope.Ask(step: Int, size: PageSize, settle: () -> Float, phase: () -> Float) {
-    val compact = size == PageSize.COMPACT; val wide = size == PageSize.WIDE
+    val compact = size.compact; val wide = size.wide
     val symbol = when (step) { PLACE -> Symbol.PLACE; TRAVEL -> Symbol.TRAVEL; ADHAN -> Symbol.ADHAN; else -> Symbol.MINUTE }
-    val title = stringResource(when (step) { PLACE -> R.string.perm_title; TRAVEL -> R.string.bg_perm_title; ADHAN -> R.string.onb_adhan_title; else -> R.string.welcome_exact_title })
-    // The words come first: the symbol stands at the same height on every page and takes the room they leave, up to
-    // its own size; where they need all of it (a short screen with large text) it steps aside, so that the reason
-    // is read whole before Android is asked.
-    Spacer(Modifier.weight(if (compact) 0.2f else 1f))
-    SymbolArt(symbol, Modifier.weight(8f, fill = false).size(if (compact) 150.dp else if (wide) 240.dp else 232.dp).graphicsLayer {
-        val p = part(settle(), 0, 3)
-        alpha = p; scaleX = 0.84f + 0.16f * p; scaleY = scaleX
-    }, phase)
-    Spacer(Modifier.height(if (compact) 8.dp else 20.dp))
+    val titleStyle = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = if (wide) 36.sp else if (compact) 26.sp else 30.sp,
+        lineHeight = if (wide) 45.sp else if (compact) 33.sp else 38.sp, lineBreak = LineBreak.Heading, textAlign = TextAlign.Center)
+    val bodyStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = if (wide) 19.sp else 17.sp, lineHeight = if (wide) 29.sp else 26.sp,
+        lineBreak = LineBreak.Paragraph.copy(strategy = LineBreak.Strategy.Balanced), textAlign = TextAlign.Center)
+    val bodyWidth = if (size.low) 600.dp else if (wide) 480.dp else 400.dp
+    val gap = if (compact) 8.dp else 20.dp
+    val titles = listOf(R.string.perm_title, R.string.bg_perm_title, R.string.onb_adhan_title, R.string.welcome_exact_title).map { stringResource(it) }
+    val bodies = listOf(R.string.perm_body, R.string.bg_perm_body, R.string.onb_adhan_body, R.string.welcome_exact_body).map { stringResource(it) }
+    // The words come first, and the picture is the same on every page: the symbol has the size, and stands at the
+    // height, that the page with the most words leaves it (so it neither grows nor moves from page to page). Where
+    // the words need all the room (a short screen with large text) there is no symbol, so that the reason is read
+    // whole before Android is asked.
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val (symbolSize, above) = remember(titles, bodies, size.height, size.width, density, titleStyle, bodyStyle) {
+        with(density) {
+            val column = min(size.width - PageSize.Side * 2, size.column).roundToPx().coerceAtLeast(1)
+            val words = titles.indices.maxOf { i ->
+                measurer.measure(titles[i], titleStyle, constraints = Constraints(maxWidth = column)).size.height +
+                    measurer.measure(bodies[i], bodyStyle, constraints = Constraints(maxWidth = minOf(column, bodyWidth.roundToPx()))).size.height
+            }
+            val room = (size.height - size.edge * 2 - 12.dp - gap).toPx() - words
+            val most = (if (compact) 150.dp else if (wide) 240.dp else 232.dp).toPx()
+            val shown = (room * 0.86f).coerceAtMost(most).takeIf { it >= 96.dp.toPx() } ?: 0f
+            val top = ((room - shown) * (if (shown > 0f) 0.45f else 0.35f)).coerceAtLeast(0f)
+            shown.toDp() to top.toDp()
+        }
+    }
+    Spacer(Modifier.height(above))
+    if (symbolSize > 0.dp) {
+        SymbolArt(symbol, Modifier.size(symbolSize).graphicsLayer {
+            val p = part(settle(), 0, 3)
+            alpha = p; scaleX = 0.84f + 0.16f * p; scaleY = scaleX
+        }, phase)
+        Spacer(Modifier.height(gap))
+    }
     // (A page of its own to TalkBack too: its title is said when it comes.)
-    Text(title,
-        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = if (wide) 36.sp else if (compact) 26.sp else 30.sp,
-            lineHeight = if (wide) 45.sp else if (compact) 33.sp else 38.sp,
-            lineBreak = LineBreak.Heading), color = WelcomeText,
-        textAlign = TextAlign.Center, modifier = Modifier.arrives(settle, 1, 3).semantics { heading(); paneTitle = title })
+    val title = titles[(step - PLACE).coerceIn(0, 3)]
+    Text(title, style = titleStyle, color = WelcomeText, modifier = Modifier.arrives(settle, 1, 3).semantics { heading(); paneTitle = title })
     Spacer(Modifier.height(12.dp))
-    Text(stringResource(when (step) { PLACE -> R.string.perm_body; TRAVEL -> R.string.bg_perm_body; ADHAN -> R.string.onb_adhan_body; else -> R.string.welcome_exact_body }),
-        style = MaterialTheme.typography.bodyLarge.copy(fontSize = if (wide) 19.sp else 17.sp, lineHeight = if (wide) 29.sp else 26.sp, lineBreak = LineBreak.Paragraph.copy(strategy = LineBreak.Strategy.Balanced)),
-        color = WelcomeTextQuiet, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = if (wide) 480.dp else 400.dp).arrives(settle, 2, 3))
-    Spacer(Modifier.weight(0.5f))
+    Text(bodies[(step - PLACE).coerceIn(0, 3)], style = bodyStyle, color = WelcomeTextQuiet, modifier = Modifier.widthIn(max = bodyWidth).arrives(settle, 2, 3))
 }
 
 /** Where one is in the welcome: four pages, this one lit. (The exact alarms' page is the second half of the Adhan's.) */
@@ -503,7 +561,7 @@ private fun Dots(step: Int, ambient: Boolean) {
 
 /** The main button: a capsule of gold that gives a little under the finger. */
 @Composable
-private fun GoldButton(text: String, ambient: Boolean, onClick: () -> Unit) {
+private fun GoldButton(text: String, ambient: Boolean, height: Dp, onClick: () -> Unit) {
     val touch = remember { MutableInteractionSource() }
     val pressed by touch.collectIsPressedAsState()
     val give by animateFloatAsState(if (pressed && ambient) 0.97f else 1f, spring(dampingRatio = 0.6f, stiffness = 700f), label = "press")
@@ -511,7 +569,7 @@ private fun GoldButton(text: String, ambient: Boolean, onClick: () -> Unit) {
         onClick = withTick(onClick), interactionSource = touch, shape = ButtonShape, elevation = null,
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = ButtonInk),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
-        modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = give; scaleY = give }.heightIn(min = 58.dp).background(Brush.verticalGradient(ButtonGold), ButtonShape),
+        modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = give; scaleY = give }.heightIn(min = height).background(Brush.verticalGradient(ButtonGold), ButtonShape),
     ) { Words(text, ambient) { Text(it, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 18.sp), textAlign = TextAlign.Center) } }
 }
 

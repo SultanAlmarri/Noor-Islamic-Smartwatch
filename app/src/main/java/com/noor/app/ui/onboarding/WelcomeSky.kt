@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.noor.app.ui.theme.Sky
 import kotlin.math.PI
@@ -27,6 +28,9 @@ import kotlin.math.sqrt
 internal object Dawn {
     /** The band of first light over the Earth's edge. Nothing is written in it. */
     val Band = 64.dp
+    /** A screen lower than this (a phone on its side) has a thinner band, and its buttons side by side. */
+    val Short = 480.dp
+    fun band(screenHeight: Dp): Dp = if (screenHeight < Short) 30.dp else Band
     /** The light of the last page, and of the Sun's first edge (the way out). */
     const val LAST = 3f
     const val SUNRISE = 4f
@@ -87,7 +91,7 @@ private val Air = Color(0xFF8FA8FF)
  * and the Earth move without recomposing anything. [twinkle] 0..1 turns endlessly when ambient motion is allowed; below 0 the stars are still.
  */
 @Composable
-internal fun DawnSky(light: () -> Float, crest: () -> Float, modifier: Modifier = Modifier, stars: Boolean = true, twinkle: () -> Float = { -1f }) {
+internal fun DawnSky(light: () -> Float, crest: () -> Float, modifier: Modifier = Modifier, bandHeight: Dp = Dawn.Band, stars: Boolean = true, twinkle: () -> Float = { -1f }) {
     val field = remember {
         // (Neighbouring seeds give java.util.Random nearly the same first numbers: one generator, run on.)
         val r = java.util.Random(0x5DEECE66DL)
@@ -97,7 +101,7 @@ internal fun DawnSky(light: () -> Float, crest: () -> Float, modifier: Modifier 
         val w = size.width; val h = size.height
         val l = light()
         val look = Dawn.look(l)
-        val band = Dawn.Band.toPx()
+        val band = bandHeight.toPx()
         val cy = crest().takeIf { it > band * 2f } ?: (h * 0.74f)
         val wordsEnd = cy - band
 
@@ -133,10 +137,11 @@ internal fun DawnSky(light: () -> Float, crest: () -> Float, modifier: Modifier 
         val reach = minOf(w, 520.dp.toPx())
         val g = look.glow
         val sunrise = (l - Dawn.LAST).coerceIn(0f, 1f)
-        // (Wide and low, as light lies along a horizon: a circle of light drawn twice as wide as it is high.)
-        val gr = reach * (0.30f + 0.14f * g + 0.22f * sunrise)
+        // (Wide and low, as light lies along a horizon: a circle of light drawn wider than it is high. Its height
+        // goes by the band's, so that it reaches no further into the words where the band is thin.)
+        val gr = band * (2.0f + 0.8f * g + 1.6f * sunrise)
         val gc = Offset(w / 2f, cy + band * 0.2f)
-        scale(2.1f, 1f, gc) {
+        scale(reach * (0.63f + 0.29f * g + 0.46f * sunrise) / gr, 1f, gc) {
             drawCircle(Brush.radialGradient(
                 0f to GlowCore.copy(alpha = 0.90f * g), 0.2f to GlowWarm.copy(alpha = 0.46f * g), 0.5f to GlowRose.copy(alpha = 0.14f * g), 1f to Color.Transparent,
                 center = gc, radius = gr,
