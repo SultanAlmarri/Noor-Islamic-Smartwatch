@@ -34,6 +34,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RotateLeft
+import androidx.compose.material.icons.rounded.RotateRight
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.heightIn
@@ -60,6 +62,7 @@ import com.noor.app.ui.settings.SectionFooter
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -142,14 +145,20 @@ fun QiblaContent(
         CompassIssue.NOT_FLAT !in reading!!.assessment.issues
     LaunchedEffect(aligned) { if (aligned) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
 
-    // 0.25: the page every tab stands on (the shared large title and margins, the slim bar once the title has gone).
-    NoorPage(stringResource(R.string.qibla_title), contentPadding, spacing = 16.dp) {
+    // 0.26: the whole page on one screen (the owner: "make the compass tab fit all in the screen, like I don't have to
+    // scroll up and down for the compass accuracy"), and nothing on it to read that a person does not need (the owner:
+    // "remove unnecessary stuff ... people don't need to read this": the note under the readings, the exact bearing to
+    // a tenth and the phone's estimate of its error in words, is gone; how sure the compass is stays, as its meter).
+    // The dial takes what the place line, the line that says what to do and the readings leave, so it grows, never
+    // squeezed (the owner: "don't make everything look bad and squished"); only a screen too short to give it a dial a hand can use
+    // (QiblaFit.MinDial) scrolls. How far the page reaches is the screen less the tab's title and the bars.
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+    val density = LocalDensity.current
+    val spacing = 12.dp
+    val titleHeight = 16.dp + with(density) { 44.sp.toDp() }
+    val room = maxHeight - contentPadding.calculateTopPadding() - contentPadding.calculateBottomPadding() - titleHeight - spacing * 2 - 8.dp
+    NoorPage(stringResource(R.string.qibla_title), contentPadding, spacing = spacing) {
         val place = p.place
-        // The place and how far the Kaaba is: one quiet line that belongs to the title, so it sits close under it.
-        if (place != null && q != null) Row(Modifier.padding(start = 4.dp).pullUp(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Flags.emoji(place.countryCode)?.let { e -> Text(e, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp)) }
-            PlaceAndDistance(if (ar) place.nameAr ?: place.nameEn else place.nameEn, stringResource(R.string.qibla_distance, f.kilometres(q.distanceKm)))
-        }
         if (place == null || q == null) {
             GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onOpenLocation)) {
                 Text(stringResource(R.string.qibla_needs_location), style = MaterialTheme.typography.bodyLarge, color = c.textSecondary)
@@ -157,24 +166,13 @@ fun QiblaContent(
             return@NoorPage
         }
         val notFlat = reading != null && CompassIssue.NOT_FLAT in reading.assessment.issues
-        // Dial (on a tablet or an opened fold it keeps the size a hand can turn with).
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Box(Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                CompassDial(heading = reading?.trueHeadingDeg, qibla = q.bearingDeg, aligned = aligned, f = f, modifier = Modifier.fillMaxSize(),
-                    uncertaintyDeg = reading?.headingAccuracyDeg)
-                if (notFlat) FlatWarning()
-            }
-        }
-
-        // Status line under the dial. Whole degrees (0.25): a phone's compass is good to a few degrees at best, and
-        // hundredths beside "accuracy ±10°" claimed what no phone can know.
+        // Whole degrees (0.25): a phone's compass is good to a few degrees at best.
         val status = when {
             noSensor -> stringResource(R.string.qibla_no_sensor)
             q.veryClose -> stringResource(R.string.qibla_very_close)
             q.nearAntipode -> stringResource(R.string.qibla_antipode)
             reading == null -> stringResource(R.string.qibla_starting)
-            // (0.25: "Hold your phone flat" is said once, in the dial, where the eye is; this line says how, more quietly.
-            // Until 0.24 both said the same words, and the dial also said how.)
+            // (0.25: "Hold your phone flat" is said once, in the dial, where the eye is; this line says how, more quietly.)
             notFlat -> null
             // 0.15: an unsure compass is not followed: the first thing said is what to do.
             reading.assessment.quality == CompassQuality.POOR -> stringResource(R.string.cal_title)
@@ -184,63 +182,51 @@ fun QiblaContent(
         }
         val unsure = !noSensor && reading != null && reading.assessment.quality == CompassQuality.POOR && !notFlat
         val statusColor by animateColorAsState(if (aligned) c.success else if (unsure) c.warning else c.textPrimary, label = "statusColor")
-        // (The line and what may unfold under it are one item of the page, so the folded drawing leaves no gap of its own.)
-        Column {
-            // (The line is never lower than a line of its usual type, so it keeps its height when it speaks more quietly.)
-            val lineStyle = MaterialTheme.typography.titleMedium
-            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-            val density = LocalDensity.current
-            val lineHeight = remember(lineStyle, density, measurer) { with(density) { measurer.measure(" ", lineStyle).size.height.toDp() } }
-            // (0.25, second review) When the compass is unsure the card below says it, with its title, and the line
-            // gives it its place: "Calibrate the compass" was said three times (the line, the card, the accuracy card),
-            // and the accuracy card was pushed off a 915 dp screen.
-            AnimatedVisibility(!unsure,
-                enter = fadeIn(tween(NoorMotion.Standard)) + expandVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
-                exit = fadeOut(tween(NoorMotion.Standard)) + shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
-            ) {
-                Row(Modifier.fillMaxWidth().heightIn(min = lineHeight), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(22.dp))
-                    if (status != null) Text(status, style = MaterialTheme.typography.titleMedium, color = statusColor, textAlign = TextAlign.Center)
+        val turning = !aligned && !unsure && !notFlat && turn != null && !noSensor && !q.veryClose && !q.nearAntipode
+
+        QiblaFit(room) {
+            // 1. The place and how far the Kaaba is: one quiet line that belongs to the title.
+            Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Flags.emoji(place.countryCode)?.let { e -> Text(e, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp)) }
+                PlaceAndDistance(if (ar) place.nameAr ?: place.nameEn else place.nameEn, stringResource(R.string.qibla_distance, f.kilometres(q.distanceKm)))
+            }
+            // 2. The dial, as large as the screen allows (QiblaFit gives it its size).
+            Box(Modifier.testTag("qiblaDial"), contentAlignment = Alignment.Center) {
+                CompassDial(heading = reading?.trueHeadingDeg, qibla = q.bearingDeg, aligned = aligned, f = f, modifier = Modifier.fillMaxSize(),
+                    uncertaintyDeg = reading?.headingAccuracyDeg)
+                if (notFlat) FlatWarning()
+            }
+            // 3. What to do: "Turn right 83°" with the way to turn drawn beside it, or "Facing the Qibla"; while the
+            // compass is unsure, the figure 8 that fixes it (0.22.1) in the line's place.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                if (unsure) CalibrateNudge(onOpen = { showCalibration = true }, compact = true)
+                else Row(Modifier.fillMaxWidth().heightIn(min = 34.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(24.dp))
+                    if (turning) Icon(
+                        if (turn!! > 0) Icons.Rounded.RotateRight else Icons.Rounded.RotateLeft, null, tint = c.goldText,
+                        modifier = Modifier.padding(end = 8.dp).size(24.dp),
+                    )
+                    if (status != null) Text(status, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold), color = statusColor, textAlign = TextAlign.Center)
                     else Text(stringResource(R.string.qibla_hold_flat_body), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary, textAlign = TextAlign.Center)
                 }
             }
-            // 0.15: when the compass itself is unsure, the direction is not to be trusted yet: said here, where the eye
-            // is, and not only in the accuracy card below. 0.22.1: shown, not only written (the owner: "it should display
-            // the figure 8"): a phone gliding along a figure 8, with what to do; it folds away once the compass is sure.
-            AnimatedVisibility(unsure,
-                enter = fadeIn(tween(NoorMotion.Standard)) + expandVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
-                exit = fadeOut(tween(NoorMotion.Standard)) + shrinkVertically(tween(NoorMotion.Standard, easing = NoorMotion.Ease)),
-            ) { CalibrateNudge(onOpen = { showCalibration = true }) }
-        }
-
-        // (0.25, second review) While the compass is unsure, how sure it is comes straight under what to do about it:
-        // at the foot of the page it was under the tab bar of a 915 dp phone. Its card then leaves the calibration to
-        // the card above (it said "needs calibrating" a third time).
-        if (unsure) AccuracyCard(reading!!, f, calibrationSaidAbove = true) { showCalibration = true }
-
-        // Readings, side by side: where the Qibla is and where the phone points, in whole degrees. (0.25: the third,
-        // "Difference", is gone: the line under the dial says it, and three rounded figures side by side do not always
-        // add up.) The Qibla's own bearing is calculated, far finer than a phone can point: given once, quietly, under
-        // the card.
-        Column {
+            // 4. The readings in one card: where the Qibla is, where the phone points, and how sure the compass is
+            // (until 0.25 the accuracy had a card of its own at the foot, under the fold of most phones). Tapping the
+            // accuracy opens the calibration guide.
             GlassCard(Modifier.fillMaxWidth(), padding = 0.dp) {
-                Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Readout(stringResource(R.string.qibla_bearing), f.wholeDegrees(q.bearingDeg), c.goldText, Modifier.weight(1f))
-                    // (0.25, second review: a phone without a compass has no heading: no half of the card waits for one.)
+                Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
+                    Readout(stringResource(R.string.qibla_cell_qibla), f.wholeDegrees(q.bearingDeg), c.goldText, Modifier.weight(1f))
+                    // (0.25, second review: a phone without a compass has no heading and no accuracy.)
                     if (!noSensor) {
                         VerticalHairline()
-                        Readout(stringResource(R.string.qibla_heading), reading?.let { f.wholeDegrees(it.trueHeadingDeg) } ?: "—", if (aligned) c.success else c.textPrimary, Modifier.weight(1f))
+                        Readout(stringResource(R.string.qibla_cell_phone), reading?.let { f.wholeDegrees(it.trueHeadingDeg) } ?: "—", if (aligned) c.success else c.textPrimary, Modifier.weight(1f))
+                        VerticalHairline()
+                        AccuracyReadout(reading, Modifier.weight(1f)) { showCalibration = true }
                     }
                 }
             }
-            SectionFooter(stringResource(R.string.qibla_exact, f.tenthDegrees(q.bearingDeg)))
         }
-
-        // Accuracy
-        if (reading != null && !noSensor && !unsure) AccuracyCard(reading, f) { showCalibration = true }
-
-        // (0.16: the note on the method (true north, the ellipsoid, the decimals, the declination) is gone: the owner,
-        // "is this really even necessary to tell the user?" The method is in the docs; the screen says what to do.)
+    }
     }
 
     if (showCalibration) {
@@ -275,13 +261,6 @@ private fun PlaceAndDistance(place: String, distance: String) {
     }
 }
 
-/** A line that belongs to what stands over it: placed [by] higher and that much shorter, so the gap over it closes. */
-private fun Modifier.pullUp(by: androidx.compose.ui.unit.Dp): Modifier = layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints)
-    val d = by.roundToPx().coerceAtMost(placeable.height)
-    layout(placeable.width, placeable.height - d) { placeable.place(0, -d) }
-}
-
 private const val LRM = "‎"
 
 /**
@@ -303,61 +282,83 @@ private fun Readout(label: String, value: String, color: Color, modifier: Modifi
     val c = NoorTheme.colors
     // (0.21) A name may take two lines (with large text "Qibla direction" lost its second word); the values stay on one
     // line with each other, at the foot.
-    Column(modifier.fillMaxHeight().padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
+    Column(modifier.fillMaxHeight().padding(horizontal = 6.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = c.textMuted, maxLines = 2, textAlign = TextAlign.Center)
         Spacer(Modifier.height(4.dp))
         Text(value, style = MaterialTheme.typography.titleLarge.merge(Tabular).copy(fontSize = 22.sp), color = color, fontWeight = FontWeight.Medium, maxLines = 1)
     }
 }
 
-@Composable
-private fun VerticalHairline() = Box(Modifier.width(0.5.dp).height(40.dp).background(NoorTheme.colors.separator))
-
 /**
- * How sure the compass is, from what the phone's sensors report. 0.9.6: the level shown is always the one the latest
- * sensor reading gives, at once (no hold, no fade): a phone brought near metal reads Poor the moment the field is off,
- * and Good again the moment it is not. 0.9.7: the reading's verdict comes from a CompassTracker, so a measure sitting
- * near a limit no longer makes the label flicker; the label has a fixed slot, so nothing beside it moves. When the
- * sensor says it is unreliable, the label says to calibrate. 0.25: the card is as tall as what it says (until 0.24 it
- * kept room for three lines, a band of empty glass whenever the compass was good); it is the last thing on the page,
- * so nothing under it moves, and its own edge glides to the new height instead of jumping.
+ * How sure the compass is, from what the phone's sensors report: (0.26) the third reading of the card, the
+ * three-segment meter and its word in the level's colour; a button that opens the calibration guide. (Until 0.25 a
+ * card of its own at the foot of the page.) 0.9.6: the level shown is always the one the latest sensor reading gives,
+ * at once (no hold, no fade); 0.9.7: the verdict comes from a CompassTracker, so a measure near a limit does not make
+ * it flicker, and the meter never moves when the word changes (here it stands centred over the word).
  */
 @Composable
-internal fun AccuracyCard(reading: CompassReading, f: Formatter, calibrationSaidAbove: Boolean = false, onCalibrate: () -> Unit) {
+internal fun AccuracyReadout(reading: CompassReading?, modifier: Modifier, onCalibrate: () -> Unit) {
     val c = NoorTheme.colors
-    val shown = reading.assessment
-    val label = accuracyLabel(shown)
-    GlassCard(Modifier.fillMaxWidth().clip(RoundedCornerShape(Noor.CardRadius)).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onCalibrate)
-        .animateContentSize(tween(NoorMotion.Standard, easing = NoorMotion.Ease)), padding = 16.dp) {
+    val label = stringResource(R.string.qibla_cell_accuracy)
+    val word = reading?.let { accuracyLabel(it.assessment) }
+    Column(
+        modifier.fillMaxHeight().clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = stringResource(R.string.cal_title), onClick = onCalibrate)
+            .semantics(mergeDescendants = true) {}.padding(horizontal = 6.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom,
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.acc_title), style = MaterialTheme.typography.titleSmall, color = c.textPrimary, modifier = Modifier.weight(1f))
-            AccuracyMeter(shown, small = false, modifier = Modifier.semantics { contentDescription = label })
-            Spacer(Modifier.width(10.dp))
-            // 0.9.7: the label sits in a slot as wide as the widest of the four, so the meter never moves sideways
-            // when the word changes.
-            val style = MaterialTheme.typography.titleSmall
-            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-            val labels = listOf(R.string.acc_good, R.string.acc_fair, R.string.acc_poor, R.string.acc_calibrate).map { stringResource(it) }
-            val density = androidx.compose.ui.platform.LocalDensity.current
-            // (Measured once for these words, this style and this measurer, not with every compass reading.)
-            val slot = remember(labels, style, density, measurer) {
-                with(density) { labels.maxOf { measurer.measure(it, style, maxLines = 1).size.width }.toDp() }
-            }
-            Text(label, style = style, color = accuracyColor(shown), maxLines = 1, modifier = Modifier.width(slot))
-            // (Mirrored in Arabic since 0.14: it pointed right in both languages.)
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.size(20.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, color = c.textMuted, maxLines = 2, textAlign = TextAlign.Center)
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.size(14.dp))
         }
         Spacer(Modifier.height(6.dp))
-        val detail = buildList {
-            (reading.shownAccuracyDeg ?: reading.headingAccuracyDeg?.let { com.noor.prayer.qibla.CompassDisplay.displayedEstimate(it) })?.let { add(stringResource(R.string.acc_estimate, f.number(it))) }
-            if (CompassIssue.MAGNETIC_INTERFERENCE in shown.issues) add(stringResource(R.string.acc_interference))
-            if (!calibrationSaidAbove && (CompassIssue.SENSOR_UNRELIABLE in shown.issues || CompassIssue.LOW_SENSOR_ACCURACY in shown.issues))
-                add(stringResource(R.string.acc_needs_calibration))
-            if (isEmpty()) add(stringResource(R.string.acc_status_only))
-        }.joinToString(" ")
-        Text(detail, style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
+        if (reading == null) Text("—", style = MaterialTheme.typography.titleLarge.merge(Tabular).copy(fontSize = 22.sp), color = c.textPrimary)
+        else {
+            AccuracyMeter(reading.assessment, small = true, modifier = Modifier.testTag("accuracyMeter"))
+            Spacer(Modifier.height(5.dp))
+            Text(word!!, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = accuracyColor(reading.assessment),
+                maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
     }
 }
+
+/**
+ * (0.26) The Qibla page's column, made to fit the screen: its second child (the dial) is given the height the others
+ * leave out of [room], square, no wider than the column nor than [QiblaFit.MaxDial], and centred in the room it has.
+ * Only when that would make it smaller than [QiblaFit.MinDial] is it held there, and the page then scrolls.
+ */
+@Composable
+private fun QiblaFit(room: androidx.compose.ui.unit.Dp, content: @Composable () -> Unit) {
+    androidx.compose.ui.layout.Layout(content, Modifier.fillMaxWidth()) { measurables, constraints ->
+        val w = constraints.maxWidth
+        val gaps = listOf(QiblaFit.AfterPlace, QiblaFit.AfterDial, QiblaFit.AfterStatus).map { it.roundToPx() }
+        val loose = androidx.compose.ui.unit.Constraints(maxWidth = w)
+        val others = measurables.mapIndexedNotNull { i, m -> if (i == 1) null else i to m.measure(loose) }.toMap()
+        val used = others.values.sumOf { it.height } + gaps.sum()
+        val slot = (room.roundToPx() - used).coerceAtLeast(QiblaFit.MinDial.roundToPx())
+        val side = minOf(slot, w - QiblaFit.DialInset.roundToPx() * 2, QiblaFit.MaxDial.roundToPx())
+        val dial = measurables[1].measure(androidx.compose.ui.unit.Constraints.fixed(side, side))
+        val height = used + slot
+        layout(w, height) {
+            var y = 0
+            others.getValue(0).placeRelative(0, y); y += others.getValue(0).height + gaps[0]
+            dial.placeRelative((w - side) / 2, y + (slot - side) / 2); y += slot + gaps[1]
+            others.getValue(2).placeRelative(0, y); y += others.getValue(2).height + gaps[2]
+            others.getValue(3).placeRelative(0, y)
+        }
+    }
+}
+
+internal object QiblaFit {
+    val MinDial = 260.dp
+    val MaxDial = 420.dp
+    val DialInset = 8.dp
+    val AfterPlace = 10.dp
+    val AfterDial = 10.dp
+    val AfterStatus = 14.dp
+}
+
+@Composable
+private fun VerticalHairline() = Box(Modifier.width(0.5.dp).height(40.dp).background(NoorTheme.colors.separator))
 
 @Composable
 private fun accuracyLabel(a: com.noor.prayer.qibla.CompassAssessment): String = stringResource(when {
@@ -583,7 +584,7 @@ private const val NUDGE_LOOP_MS = 2800
  * moment. [phase] fixes the moment (0..1 of a loop), for renders.
  */
 @Composable
-internal fun CalibrateNudge(onOpen: () -> Unit, modifier: Modifier = Modifier, phase: Float? = null) {
+internal fun CalibrateNudge(onOpen: () -> Unit, modifier: Modifier = Modifier, phase: Float? = null, compact: Boolean = false) {
     val c = NoorTheme.colors
     val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     // (0.25, second review) One card that says it once: its title is what to do ("Calibrate the compass", which the
@@ -596,21 +597,22 @@ internal fun CalibrateNudge(onOpen: () -> Unit, modifier: Modifier = Modifier, p
             .semantics(mergeDescendants = true) {},
         padding = 0.dp,
     ) {
-        Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            val drawing = Modifier.width(132.dp).height(84.dp)
+        Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 12.dp, top = if (compact) 2.dp else 6.dp, bottom = if (compact) 2.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            // (0.26) On the Qibla page it is smaller, so the dial over it keeps its size on a short screen.
+            val drawing = if (compact) Modifier.width(104.dp).height(64.dp) else Modifier.width(132.dp).height(84.dp)
             when {
-                phase != null -> FigureEightCanvas({ phase }, rtl, drawing, small = true)
+                phase != null -> FigureEightCanvas({ phase }, rtl, drawing, small = true, tiny = compact)
                 LocalAmbientMotion.current -> {
                     val t = rememberInfiniteTransition(label = "nudge")
                     val p = t.animateFloat(0f, 1f, infiniteRepeatable(tween(NUDGE_LOOP_MS, easing = LinearEasing), RepeatMode.Restart), label = "nudgePhase")
                     // (Read in the draw phase only: each frame draws again, nothing is composed again.)
-                    FigureEightCanvas({ p.value }, rtl, drawing, small = true)
+                    FigureEightCanvas({ p.value }, rtl, drawing, small = true, tiny = compact)
                 }
-                else -> FigureEightCanvas({ NUDGE_STILL_PHASE }, rtl, drawing, small = true)
+                else -> FigureEightCanvas({ NUDGE_STILL_PHASE }, rtl, drawing, small = true, tiny = compact)
             }
             Spacer(Modifier.width(6.dp))
-            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
-                Text(stringResource(R.string.cal_title), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = c.warning)
+            Column(Modifier.weight(1f).padding(vertical = if (compact) 8.dp else 10.dp)) {
+                Text(stringResource(R.string.cal_title), style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium).copy(fontWeight = FontWeight.SemiBold), color = c.warning)
                 Spacer(Modifier.height(2.dp))
                 Text(stringResource(R.string.qibla_figure8), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
             }
@@ -620,9 +622,9 @@ internal fun CalibrateNudge(onOpen: () -> Unit, modifier: Modifier = Modifier, p
 }
 
 @Composable
-private fun FigureEightCanvas(phase: () -> Float, rtl: Boolean, modifier: Modifier, small: Boolean = false) {
+private fun FigureEightCanvas(phase: () -> Float, rtl: Boolean, modifier: Modifier, small: Boolean = false, tiny: Boolean = false) {
     val c = NoorTheme.colors
-    Canvas(modifier) { nudgeFigure(phase(), rtl, c.gold, c.textMuted.copy(alpha = 0.30f), c.textPrimary, c.surface, if (small) 0.8f else 1f) }
+    Canvas(modifier) { nudgeFigure(phase(), rtl, c.gold, c.textMuted.copy(alpha = 0.30f), c.textPrimary, c.surface, if (tiny) 0.62f else if (small) 0.8f else 1f) }
 }
 
 /**

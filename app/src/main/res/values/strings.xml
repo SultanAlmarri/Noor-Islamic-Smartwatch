@@ -161,16 +161,9 @@
     <string name="qibla_aligned">Facing the Qibla</string>
     <string name="qibla_turn_right">Turn right %1$s</string>
     <string name="qibla_turn_left">Turn left %1$s</string>
-    <string name="qibla_bearing">Qibla direction</string>
-    <string name="qibla_heading">Phone heading</string>
-    <string name="acc_title">Compass accuracy</string>
     <string name="acc_good">Good</string>
     <string name="acc_fair">Fair</string>
     <string name="acc_poor">Poor</string>
-    <string name="acc_estimate">The phone estimates its heading is within ±%1$s°.</string>
-    <string name="acc_interference">Metal or a magnet nearby is disturbing the compass.</string>
-    <string name="acc_needs_calibration">The compass needs calibrating: tap for how.</string>
-    <string name="acc_status_only">Based on the sensor status reported by the phone. Tap for calibration tips.</string>
     <string name="cal_title">Calibrate the compass</string>
     <string name="cal_step1">Move away from metal and magnets: a car, a speaker, a magnetic case.</string>
     <string name="cal_step2">Trace a figure 8 in the air a few times, turning your wrist.</string>
@@ -905,7 +898,6 @@
     <string name="timetable_ramadan_note">Ramadan: Suhoor ends at Fajr, Iftar is at Maghrib.</string>
     <string name="timetable_basis_some">Its own published times where it has given them; the other days by its method.</string>
     <!-- 0.25 pages -->
-    <string name="qibla_exact">Exact Qibla direction: %1$s from true north.</string>
     <string name="accuracy_group_own">Authorities and methods</string>
     <string name="accuracy_group_published">Published parameters</string>
     <string name="accuracy_group_documented">Documented in references</string>
@@ -967,4 +959,8 @@
     <string name="accuracy_source_bosnia">The Takvim’s Sarajevo year, 2026</string>
     <string name="accuracy_show">Show details</string>
     <string name="accuracy_hide">Hide details</string>
+    <!-- 0.26 qibla: the three readings of the Qibla page's card -->
+    <string name="qibla_cell_qibla">Qibla</string>
+    <string name="qibla_cell_phone">Phone</string>
+    <string name="qibla_cell_accuracy">Accuracy</string>
 </resources>

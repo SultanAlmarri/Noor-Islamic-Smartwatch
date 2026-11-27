@@ -179,7 +179,9 @@ class ScreenshotTest {
                             } }
                             Screen.QIBLA -> {
                                 val place = PrayerProvider.place(s)
-                                QiblaContent(pad, QiblaPlace(s, place, place?.let { Qibla.from(it.point) }), reading, false, {})
+                                // (0.26) The page fits the screen, so it is given the app's own room at the foot: a
+                                // gesture bar (24 dp), the tab bar's space (82 dp) and its clearance (16 dp), as MainActivity does.
+                                QiblaContent(PaddingValues(top = 28.dp, bottom = 24.dp + 82.dp + 16.dp), QiblaPlace(s, place, place?.let { Qibla.from(it.point) }), reading, false, {})
                             }
                             // (The sheet opens in a window of its own, which this capture cannot see: its content is shown
                             // on a stand-in with the sheet's corners and grabber, 36 by 5 dp, as NoorSheet draws them.)
@@ -257,31 +259,43 @@ class ScreenshotTest {
         val qibla = Qibla.from(PrayerProvider.place(base)!!.point).bearingDeg
         reading = reading(174.82, 7.5, 3, 44.0, 3.0)
         fun shown(text: String) = rule.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().size
-        screen = Screen.QIBLA; shot("11_qibla_turn_night_en", "Turn right")
+        // (0.26) The whole Qibla page is on the screen without scrolling (the owner: "I don't have to scroll up and down
+        // for the compass accuracy"): the readings with the accuracy, and the note under them, end above the app's tab
+        // bar (82 dp) and a gesture bar (24 dp) of this 915 dp phone. (Until 0.25 only the accuracy card was checked,
+        // and only while the compass was unsure.)
+        fun fitsOneScreen(name: String) {
+            val limit = (915 - 82 - 24) * rule.density.density
+            val accuracy = rule.onAllNodesWithText(if (arabic) "الدقة" else "Accuracy").onFirst().fetchSemanticsNode().boundsInRoot
+            assertTrue("$name: the accuracy ends at ${accuracy.bottom / rule.density.density} dp", accuracy.bottom <= limit)
+            // (0.26) Nothing on the page to read that a person does not need (the owner): no note under the readings.
+            assertTrue("$name: a note under the readings is shown", shown(if (arabic) "الشمال الحقيقي" else "true north") == 0 && shown(if (arabic) "يقدّر الهاتف" else "estimates") == 0)
+        }
+        screen = Screen.QIBLA; shot("11_qibla_turn_night_en", "Turn right"); fitsOneScreen("11")
         // 0.25: whole degrees where the phone's compass speaks (the turn, the two readings); the Qibla's own bearing,
         // which is calculated, to a tenth, once.
         assertTrue("the turn, the Qibla and the heading are in whole degrees", shown("83°") == 1 && shown("258°") == 1 && shown("175°") == 1)
         assertTrue("hundredths of a degree are shown", shown("83.49") == 0 && shown("258.31") == 0 && shown("174.82") == 0)
-        assertTrue("the Qibla's calculated bearing is given once", shown("258.3°") == 1)
+        // (0.26) The calculated bearing to a tenth is no longer written under the readings (the owner: "people don't
+        // need to read this"); the page gives the Qibla in whole degrees, once.
+        assertTrue("the Qibla's bearing to a tenth is shown", shown("258.3°") == 0)
         reading = reading(qibla - 1.2, 6.0, 3, 44.0, 2.0)
-        shot("12_qibla_aligned_night_en", "Facing the Qibla")
+        shot("12_qibla_aligned_night_en", "Facing the Qibla"); fitsOneScreen("12")
         reading = reading(301.4, 34.0, 1, 71.0, 4.0)
-        shot("13_qibla_poor_night_en", "Poor")
+        shot("13_qibla_poor_night_en", "Poor"); fitsOneScreen("13")
         reading = reading(250.0, 8.0, 3, 44.0, 62.0)
-        shot("14_qibla_not_flat_night_en", "Hold your phone flat")
+        shot("14_qibla_not_flat_night_en", "Hold your phone flat"); fitsOneScreen("14")
         assertTrue("\"Hold your phone flat\" is said once, in the dial", shown("Hold your phone flat") == 1)
         arabic = true; reading = reading(174.82, 7.5, 3, 44.0, 3.0)
-        shot("15_qibla_turn_night_ar", "القبلة")
+        shot("15_qibla_turn_night_ar", "القبلة"); fitsOneScreen("15")
         arabic = false; theme = ThemeMode.LIGHT; reading = reading(qibla - 1.2, 6.0, 3, 44.0, 2.0)
-        shot("16_qibla_aligned_day_en", "Facing the Qibla")
+        shot("16_qibla_aligned_day_en", "Facing the Qibla"); fitsOneScreen("16")
         // 0.22.1: the unsure compass shows the figure 8 drawn (by day, and in Arabic).
         reading = reading(301.4, 34.0, 1, 71.0, 4.0); shot("94_qibla_poor_day_en", "figure 8")
         // (0.25, second review) "Calibrate the compass" is said once (the card's title), and how sure the compass is
         // stands on the screen of this 915 dp phone above the app's tab bar (82 dp) and a gesture bar (24 dp).
         assertTrue("\"Calibrate the compass\" is said once", shown("Calibrate the compass") == 1)
-        val accuracyCard = rule.onAllNodesWithText("Compass accuracy").onFirst().fetchSemanticsNode().boundsInRoot
-        assertTrue("the accuracy card ends at ${accuracyCard.bottom / rule.density.density} dp", accuracyCard.bottom <= (915 - 82 - 24) * rule.density.density)
-        theme = ThemeMode.DARK; arabic = true; shot("95_qibla_poor_night_ar", "الرقم 8"); arabic = false
+        fitsOneScreen("94_qibla_poor_day_en")
+        theme = ThemeMode.DARK; arabic = true; shot("95_qibla_poor_night_ar", "الرقم 8"); fitsOneScreen("95"); arabic = false
         theme = ThemeMode.DARK; reading = reading(301.4, 34.0, 1, 71.0, 4.0)
         screen = Screen.CALIBRATION; shot("17_calibration_night_en", "Calibrate")
         // Watch setup, every state from nothing to done (as the phone would see it).

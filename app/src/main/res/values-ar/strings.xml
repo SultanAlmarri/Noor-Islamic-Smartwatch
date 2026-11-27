@@ -164,16 +164,9 @@
     <string name="qibla_aligned">أنت متجه إلى القبلة</string>
     <string name="qibla_turn_right">استدر يميناً %1$s</string>
     <string name="qibla_turn_left">استدر يساراً %1$s</string>
-    <string name="qibla_bearing">اتجاه القبلة</string>
-    <string name="qibla_heading">اتجاه الهاتف</string>
-    <string name="acc_title">دقة البوصلة</string>
     <string name="acc_good">جيدة</string>
     <string name="acc_fair">متوسطة</string>
     <string name="acc_poor">ضعيفة</string>
-    <string name="acc_estimate">يقدّر الهاتف أن اتجاهه دقيق ضمن &#x2066;±%1$s°&#x2069;.</string>
-    <string name="acc_interference">معدن أو مغناطيس قريب يشوّش على البوصلة.</string>
-    <string name="acc_needs_calibration">البوصلة تحتاج إلى معايرة: اضغط لمعرفة الطريقة.</string>
-    <string name="acc_status_only">بحسب حالة المستشعر التي يبلّغ عنها الهاتف. اضغط لنصائح المعايرة.</string>
     <string name="cal_title">معايرة البوصلة</string>
     <string name="cal_step1">ابتعد عن المعادن والمغناطيس: سيارة أو مكبّر صوت أو غلاف مغناطيسي.</string>
     <string name="cal_step2">ارسم بالهاتف الرقم 8 في الهواء عدة مرات مع تدوير معصمك.</string>
@@ -921,7 +914,6 @@
     <string name="timetable_ramadan_note">رمضان: ينتهي السحور عند الفجر، والإفطار عند المغرب.</string>
     <string name="timetable_basis_some">أوقاتها المنشورة نفسها حيث نشرتها، وبقية الأيام بطريقتها.</string>
     <!-- 0.25 pages -->
-    <string name="qibla_exact">اتجاه القبلة بدقة: %1$s من الشمال الحقيقي.</string>
     <string name="accuracy_group_own">الجهات والطرق</string>
     <string name="accuracy_group_published">معايير منشورة</string>
     <string name="accuracy_group_documented">معايير موثّقة في المراجع</string>
@@ -991,4 +983,8 @@
     <string name="accuracy_source_bosnia">تقويم المشيخة لسراييفو، 2026</string>
     <string name="accuracy_show">عرض التفاصيل</string>
     <string name="accuracy_hide">إخفاء التفاصيل</string>
+    <!-- 0.26 qibla: the three readings of the Qibla page's card -->
+    <string name="qibla_cell_qibla">القبلة</string>
+    <string name="qibla_cell_phone">الهاتف</string>
+    <string name="qibla_cell_accuracy">الدقة</string>
 </resources>
