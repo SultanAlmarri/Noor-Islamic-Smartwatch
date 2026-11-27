@@ -794,7 +794,7 @@
     <string name="basis_manual">The method you chose.</string>
     <string name="adhan_hint_adhan">The full call</string>
     <string name="adhan_hint_short">Its opening only</string>
-    <string name="adhan_hint_sound">Birds, rain…</string>
+    <string name="adhan_hint_sound">Beeps, birds…</string>
     <string name="adhan_hint_custom">A file of yours</string>
     <string name="adhan_hint_notification">Phone’s usual sound</string>
     <string name="adhan_hint_silent">Notice only, no sound</string>

@@ -206,7 +206,7 @@ data class AlertSettings(
                 PrayerAlert(
                     enabled = f.getOrNull(0)?.let { it == "1" } ?: d.enabled,
                     mode = f.getOrNull(1)?.let { n -> AlertMode.entries.firstOrNull { it.name == n } } ?: d.mode,
-                    soundId = f.getOrNull(2)?.takeIf { it.isNotEmpty() },
+                    soundId = SoundIds.current(f.getOrNull(2)?.takeIf { it.isNotEmpty() }),
                     volumePercent = f.getOrNull(3)?.toIntOrNull() ?: d.volumePercent,
                     vibrate = f.getOrNull(4)?.let { it == "1" } ?: d.vibrate,
                     maxSeconds = f.getOrNull(5)?.toIntOrNull() ?: d.maxSeconds,
@@ -223,7 +223,7 @@ data class AlertSettings(
                 // Versions before 0.9 had only "dnd", off by default, which silenced the Adhan on vibrate: that default was
                 // the main reason Adhans did not sound, so it is not carried over. Only an explicit "quiet" choice is kept.
                 quietWhenSilent = m["quiet"] == "1",
-                favourites = m["fav"]?.split(',')?.filter { SoundIds.isValid(it) && !SoundIds.isCustom(it) }?.distinct().orEmpty(),
+                favourites = m["fav"]?.split(',')?.filter { SoundIds.isValid(it) && !SoundIds.isCustom(it) }?.map { SoundIds.current(it)!! }?.distinct().orEmpty(),
                 // ("pre" alone, as before 0.16: the lead for every prayer. Written beside per-prayer leads only for old
                 // watches: then the prayers' own leads are what counts.)
                 reminderMinutes = if (Prayer.entries.any { (m[it.name]?.split(',')?.size ?: 0) > 6 }) 0 else pre,
@@ -235,15 +235,15 @@ data class AlertSettings(
 
 /** Ids of the bundled sounds the defaults refer to, and the id format shared with custom sounds. */
 object SoundIds {
-    // 0.18: the library is the owner's voices (Makkah, Madinah, Dubai; Al-Quds and Egypt are the user's own until
-    // licensed recordings exist) and five sound effects.
+    // 0.18: the library is the owner's voices (Makkah, Madinah, Egypt, Dubai; Al-Quds is the user's own until a licensed
+    // recording exists) and five sound effects; 0.26: short alert sounds (birds; beeps to come) replaced them.
     const val DEFAULT_ADHAN = "adhan.makkah"
     /**
      * The default for Fajr: a Fajr Adhan, with "As-salatu khayrun min an-nawm" (Makkah has no licensed one; Dubai's is
      * the library's Fajr recording).
      */
     const val DEFAULT_FAJR_ADHAN = "adhan.dubai_fajr"
-    const val DEFAULT_SOUND = "fx.birds"
+    const val DEFAULT_SOUND = "fx.chickadee"
     const val CUSTOM_PREFIX = "custom."
     /** Not a recording: "a different favourite each time" (see [RandomAdhan]). */
     const val RANDOM = "random.favourites"
@@ -251,6 +251,23 @@ object SoundIds {
     private val pattern = Regex("^[a-z0-9_]+\\.[a-z0-9_-]{1,64}$")
     fun isValid(id: String): Boolean = pattern.matches(id)
     fun isCustom(id: String?): Boolean = id != null && id.startsWith(CUSTOM_PREFIX)
+
+    /**
+     * 0.26: the five sound effects of 0.18 (recordings of nature, 30 s each) were replaced by short alert sounds at
+     * the owner's word. A choice stored with an old id (a prayer's alert, an alarm, a favourite; on the phone or the
+     * watch) plays the sound that took its place. `tools/sounds/build_library.py` names the same pairs ("replaces").
+     */
+    val RENAMED: Map<String, String> = mapOf(
+        "fx.birds" to "fx.chickadee",
+        "fx.rooster" to "fx.pip_pip",
+        "fx.stream" to "fx.nuthatch",
+        "fx.waves" to "fx.solitaire",
+        // (0.26: until a beep recording is added, the rain plays the nuthatch, whose calls sound like beeps.)
+        "fx.rain" to "fx.nuthatch",
+    )
+
+    /** [id] as the library knows it today: an id of a replaced sound becomes its replacement's; any other is kept. */
+    fun current(id: String?): String? = id?.let { RENAMED[it] ?: it }
 }
 
 /**

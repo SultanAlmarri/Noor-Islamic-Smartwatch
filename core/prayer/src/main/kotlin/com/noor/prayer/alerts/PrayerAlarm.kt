@@ -45,7 +45,7 @@ data class PrayerAlarm(
     /** The user's name for it ("Wake up"), or blank. */
     val label: String = "",
     val sound: AlarmSound = AlarmSound.PHONE_ALARM,
-    /** With [AlarmSound.CUSTOM]: the user's recording ("custom.…"); with [AlarmSound.LIBRARY], Noor's sound ("fx.birds"). */
+    /** With [AlarmSound.CUSTOM]: the user's recording ("custom.…"); with [AlarmSound.LIBRARY], Noor's sound ("fx.chickadee"). */
     val customId: String? = null,
     val vibrate: Boolean = true,
     /** Minutes Snooze puts it off by; 0 = no Snooze. One of [SNOOZE_CHOICES]. */
@@ -93,7 +93,7 @@ data class PrayerAlarm(
                 minutes = f[4].toInt(),
                 days = f[5].toInt(),
                 sound = AlarmSound.entries.firstOrNull { it.name == f[6] } ?: AlarmSound.PHONE_ALARM,
-                customId = f[7].ifEmpty { null },
+                customId = SoundIds.current(f[7].ifEmpty { null }),
                 vibrate = f[8] == "1",
                 snoozeMinutes = f[9].toInt(),
                 label = f.getOrNull(10)?.let { URLDecoder.decode(it, "UTF-8") } ?: "",

@@ -806,7 +806,7 @@
     <string name="basis_manual">الطريقة التي اخترتها.</string>
     <string name="adhan_hint_adhan">الأذان كاملًا</string>
     <string name="adhan_hint_short">مطلعه فقط</string>
-    <string name="adhan_hint_sound">طيور، مطر…</string>
+    <string name="adhan_hint_sound">صفير، عصافير…</string>
     <string name="adhan_hint_custom">ملف من عندك</string>
     <string name="adhan_hint_notification">صوت هاتفك المعتاد</string>
     <string name="adhan_hint_silent">إشعار فقط، بلا صوت</string>
