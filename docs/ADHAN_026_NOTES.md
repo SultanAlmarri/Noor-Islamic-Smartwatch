@@ -150,7 +150,39 @@ Debug: `TestHookReceiver.kt` (one line). Docs: this file, DESIGN.md (a section),
 
 ## Tests
 
-TESTS_PLACEHOLDER
+All through Gradle on the cloud machine (one lock, `--no-parallel`), on the final code (commit before this file's last
+edit). Unit tests and software renders only.
+
+- `:core:prayer:test`: 33 classes, 159 tests, 0 failures, 0 errors, 4 skipped (the 4 skipped were skipped before).
+  New: **`SoftStartTest`** (5 tests): off by default for every prayer; each prayer's rise survives a round trip, also
+  inside the watch's config and beside alarms; the rise is the tenth field of a prayer's line, a prayer without one keeps
+  a six-field line, and a reader of the six first fields reads the same alert; settings as 0.25 wrote them (one
+  `grad=20`) give every prayer 20 s, write back with `pgrad=1` and read back the same; a stored 900 is held to 60, a
+  damaged value is 0; `fullVolumeFromStart` turns every rise off and changes nothing else.
+- `:alerts:testDebugUnitTest`: 8 classes, 21 tests, 0 failures. New: **`SoftStartDispatchTest`**: with the global
+  rise at 20 s, the dispatcher starts the Adhan with Asr's own 10 s and Maghrib's own 0 (it gave 20 to both before
+  0.26), and the request carries it through the service's intent.
+- `:wear:testDebugUnitTest`: 16 classes, 44 tests, 0 failures (the watch compiles and passes with the new `core`).
+- `:app:testDebugUnitTest`, the whole of it: **79 classes, 163 tests, 0 failures, 0 errors, 0 skipped** (19 min 41 s).
+  New: **`AdhanMigrationTest`** (the app runs the 0.26 change as it starts; from 0.25's state, a 20 s rise for every
+  prayer, the change turns every rise off, keeps volume, alarms and the switch, and does not run again over a rise
+  chosen afterwards); **`PrayersDesignTest`** (32 renders in `app/build/design/adhan026`: the tab off, on, and with
+  the prayers differing; Fajr's, Asr's (Start softly on), sunrise's and Isha's (a notification) pages; the picker for
+  every prayer, for Fajr, Dhuhr and sunrise; the devices page; in English, Arabic, light and text at 1.3, 360 dp wide;
+  it also checks that the prayers say what they play, that "Full volume from the start" is shown by default, that the
+  Fajr picker offers "Fajr version" and says "No Fajr version", and that differing prayers read "Mixed" and "On for
+  some prayers"). `ThemeContrastTest`, `SegmentedContrastTest`, `ButtonContrastTest`, `NumeralsInStringsTest` and
+  `ScreenshotTest`'s language check pass unchanged.
+- **Changed assertions** (the meaning kept, the words new): `ScreenshotTest` waits for "Start softly" (27, was "Adhan
+  voice") and "البدء بهدوء" (32, was "صوت الأذان"), opens "Devices and silent mode" / "الأجهزة والوضع الصامت" (was
+  "Sound and devices" / "الصوت والأجهزة") and waits there for "Play in silent mode" (83, was "Gradual volume"), and
+  waits for "Devices and silent mode" on 34; `AdhanDesignTest` and `PagesDesignTest` click the new name.
+- `:app:assembleRelease`: BUILD SUCCESSFUL. `:wear:assembleRelease` was not run (the watch's code did not change; its
+  unit tests ran).
+- Every render named above was looked at (English, Arabic, light, 1.3), as a person would, twice over: after the first
+  look the prayers' names were cut ("Shuru", "Maghri") and some rows' lines broke, the volume had no name, the sound's
+  sign was the mosque for sunrise, and "Devices and silent mode" broke beside "Phone"; all were changed and looked at
+  again.
 
 ## Not tested
 
