@@ -247,7 +247,6 @@
     <string name="adhan_sunrise_note">Sunrise ends Fajr time; it has no Adhan.</string>
     <string name="adhan_sound_section">Sound</string>
     <string name="adhan_dnd">Play in silent mode and Do Not Disturb</string>
-    <string name="adhan_dnd_on">Plays like an alarm clock.</string>
     <string name="adhan_dnd_off">A silent notice while the phone is silent.</string>
     <string name="adhan_volume_note">The Adhan plays on your alarm volume, so it is heard even when media is muted.</string>
     <!-- 0.9.9: reminder before each prayer -->
@@ -257,7 +256,6 @@
         <item quantity="one">%1$s minute before</item>
         <item quantity="other">%1$s minutes before</item>
     </plurals>
-    <string name="adhan_library_section">Library</string>
     <string name="adhan_library">Adhan library</string>
     <string name="adhan_library_desc">Sources and licences</string>
     <string name="adhan_my_sounds">My sounds</string>
@@ -274,7 +272,6 @@
     <string name="adhan_stop_full">Play to the end</string>
     <string name="adhan_stop_seconds">%1$s seconds</string>
     <string name="adhan_stop_minutes">%1$s min</string>
-    <string name="adhan_test">Test this alert</string>
     <string name="adhan_test_desc">Comes in %1$s seconds, exactly as at prayer time.</string>
     <string name="adhan_test_sent">Test alert in %1$s seconds</string>
     <string name="adhan_test_failed">The test alert could not be set.</string>
@@ -347,7 +344,6 @@
     <string name="history_row_empty">Nothing due yet</string>
     <string name="history_intro">What happened at each alert.</string>
     <string name="history_empty">Nothing yet. Each alert will appear here.</string>
-    <string name="history_test">Test the Adhan in %1$s&#160;seconds</string>
     <string name="history_test_hint">Lock the phone after pressing it.</string>
     <string name="history_share">Share report</string>
     <string name="history_test_tag">Test</string>
@@ -832,7 +828,6 @@
     <string name="alarm_snooze">Snooze</string>
     <string name="alarm_save">Save</string>
     <string name="alarm_delete">Delete alarm</string>
-    <string name="alarm_try">Try it in %1$s&#160;seconds</string>
     <string name="alarm_try_sent">The alarm rings in %1$s seconds.</string>
     <plurals name="alarm_minutes">
         <item quantity="one">%s min</item>
@@ -878,7 +873,7 @@
     <string name="loc_chosen">Chosen</string>
     <string name="face_sample_note">Sample picture. Your watch shows the time, date and next prayer of the moment.</string>
     <!-- 0.25 adhan -->
-    <string name="adhan_hero_next_at">Next: %1$s&#160;%2$s</string>
+    <string name="adhan_hero_next_at">Next:&#160;%1$s&#160;%2$s</string>
     <string name="adhan_fix">Fix</string>
     <plurals name="adhan_fix_count">
         <item quantity="one">%s thing to fix</item>
@@ -966,13 +961,10 @@
     <string name="a026_today_at">Today at %1$s</string>
     <string name="a026_sound_for_all">Sound for every prayer</string>
     <string name="a026_sound_for">Sound for %1$s</string>
-    <string name="a026_fajr_note_all">At Fajr a voice plays its Fajr version, with “As-salatu khayrun min an-nawm”. A voice without one leaves Fajr on the Fajr Adhan it has.</string>
-    <string name="a026_fajr_note_fajr">A voice without a Fajr version has no “As-salatu khayrun min an-nawm”.</string>
     <string name="a026_whole">Whole Adhan</string>
     <string name="a026_opening">Opening only</string>
     <string name="a026_whole_note">The whole call, to its end.</string>
     <string name="a026_opening_note">Only the first “Allahu Akbar, Allahu Akbar”.</string>
-    <string name="a026_no_fajr">No Fajr version</string>
     <string name="a026_fajr_version">Fajr version</string>
     <string name="a026_alert_sounds_note">A short sound at the prayer time, in place of the Adhan.</string>
     <string name="a026_notification_only">Notification only</string>
@@ -991,4 +983,10 @@
     <string name="news26_sounds_body">Real recordings of beeps and birds, and an Adhan opening that is just the first Allahu Akbar.</string>
     <string name="news26_signs_title">Signs of the sky</string>
     <string name="news26_signs_body">The crescent in the middle of the icon, and every sign in the app drawn like the prayers\' skies.</string>
+    <!-- 0.26 review -->
+    <string name="r026_test_in">Test in %1$s&#160;seconds</string>
+    <string name="r026_set_for_all">Set for every prayer</string>
+    <string name="r026_undo">Undo</string>
+    <string name="r026_fajr_note_all">Voices marked Fajr version use it at Fajr. With any other voice, Fajr keeps the Fajr Adhan it has.</string>
+    <string name="r026_fajr_note_fajr">Voices marked Fajr version use it at Fajr. The others play their usual Adhan.</string>
 </resources>

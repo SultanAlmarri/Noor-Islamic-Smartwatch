@@ -154,6 +154,13 @@ fun AdhanScreen(
     var page by rememberSaveable { mutableStateOf(0) }
     /** 0.17.1: 0 the prayers' Adhan, 1 the alarms. */
     var section by rememberSaveable { mutableStateOf(0) }
+    // (0.26 review) The alarms being chosen to delete, held here so that Delete stands in a bar at the page's foot.
+    val alarmChoice = remember { AlarmChoice() }
+    LaunchedEffect(section) { if (section != 1) alarmChoice.stop() }
+    val choosing = section == 1 && alarmChoice.selecting && a.alarms.isNotEmpty()
+    // (0.26 review) "Set for every prayer · Undo", when a change for every prayer overwrote prayers that differed.
+    val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
+    EveryPrayerUndo(vm, snackbar)
     androidx.activity.compose.BackHandler(enabled = page != 0) { page = 0 }
     val reselect = com.noor.app.LocalTabReselect.current
     var seenReselect by rememberSaveable { mutableStateOf(0) }
@@ -168,7 +175,15 @@ fun AdhanScreen(
         },
     ) { shown ->
     // (0.25: the page has the tab's name. It was "Adhan & alerts" under a tab "Adhan" with a first segment "Adhan".)
-    if (shown == 0) NoorPage(stringResource(R.string.tab_adhan), contentPadding) {
+    val footBottom = (contentPadding.calculateBottomPadding() - com.noor.app.TabBarClear).coerceAtLeast(0.dp)
+    // (While choosing, the list's end is lifted clear of the bar with Delete.)
+    val tabPadding = if (choosing) PaddingValues(top = contentPadding.calculateTopPadding(), bottom = contentPadding.calculateBottomPadding() + FootBarHeight + 12.dp) else contentPadding
+    if (shown == 0) NoorPage(stringResource(R.string.tab_adhan), tabPadding, floating = {
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+            NoorSnackbarHost(snackbar, Modifier.align(Alignment.CenterHorizontally).padding(bottom = if (choosing) 0.dp else contentPadding.calculateBottomPadding()))
+            if (choosing) AlarmsDeleteBar(alarmChoice, a, vm, footBottom)
+        }
+    }) {
         // What needs fixing, for each of the two pages its own: what would stop or delay the prayers' alerts, and what
         // would stop or delay an alarm (0.25: until 0.24 one list of everything stood, in full, on both).
         // (Without a place there are no times to alert at: that comes first, with the way to set one.)
@@ -183,7 +198,7 @@ fun AdhanScreen(
         Segmented(listOf(0 to stringResource(R.string.adhan_prayers), 1 to stringResource(R.string.alarms_title)), section, { section = it })
         if (section == 1) {
             if (alarmIssues.isNotEmpty()) FixCard(alarmIssues, if (alarmIssues.any { it.blocking }) stringResource(R.string.alarms_fix_blocked) else null, f)
-            AlarmsList(a, rings, f, onOpen = onOpenAlarm, onToggle = { id, on -> vm.setAlarmOn(id, on) })
+            AlarmsList(a, rings, f, onOpen = onOpenAlarm, onToggle = { id, on -> vm.setAlarmOn(id, on) }, vm = vm, choice = alarmChoice)
         } else {
         // The one switch, always under the same name (0.25: switched on, the card read "NEXT ADHAN / Fajr 5:20 AM"
         // beside a switch with no name). Under it what happens next; or Off; or, in the danger colour, that it will not
@@ -201,19 +216,32 @@ fun AdhanScreen(
                 n != null -> stringResource(R.string.adhan_hero_next_at, f.prayerName(n.planned.prayer, n.planned.date).together(), f.timeAt(n.planned.at, n.zone).together())
                 else -> stringResource(R.string.adhan_next_none)
             }
+            // (0.26 review: with large text "Next:" stood alone on a line over "Fajr 5:23 AM". It is now one piece;
+            // where that piece does not fit beside the switch, the line is the prayer and its time alone, which under
+            // "Prayer alerts" says the same.)
+            val shortNext = n?.let { f.prayerName(it.planned.prayer, it.planned.date).together() + NBSP + f.timeAt(it.planned.at, it.zone).together() }
+            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+            val subStyle = MaterialTheme.typography.bodyMedium
+            val density = androidx.compose.ui.platform.LocalDensity.current
             val toggle: (Boolean) -> Unit = { on ->
                 vm.setEnabled(on)
                 // The phone needs the permission only when it alerts itself (the watch asks on the watch).
                 if (on && ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission()
             }
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // (The room HeroCard leaves its subtitle: its padding, the seal and the gap after it, the gap before the
+            // switch, and the switch.)
+            val room = constraints.maxWidth - with(density) { (40 + 56 + 16 + 12 + 52).dp.roundToPx() }
+            val line = if (shortNext != null && measurer.measure(status, subStyle).size.width > room) shortNext else status
             HeroCard(
                 icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Rounded.NotificationsActive),
                 title = stringResource(R.string.adhan_master), titleSize = 20.sp,
-                subtitle = status, subtitleColor = if (blocked) NoorTheme.colors.danger else null,
+                subtitle = line, subtitleColor = if (blocked) NoorTheme.colors.danger else null,
                 modifier = Modifier.clip(RoundedCornerShape(30.dp)).toggleable(a.enabled, role = Role.Switch, onValueChange = withTick(toggle)),
                 // (0.18: the switch alone; the button under it that did the same was one thing too many.)
                 trailing = { NoorSwitch(a.enabled, null) },
             )
+            }
         }
 
         if (adhanIssues.isNotEmpty()) FixCard(adhanIssues, null, f)
@@ -227,7 +255,9 @@ fun AdhanScreen(
                 if (i > 0) RowDivider(66.dp)
                 val x = a.alert(p)
                 val on = a.enabled && x.enabled
-                val facts = if (!on) listOf(stringResource(R.string.adhan_off))
+                // (0.26 review: with every alert off, each prayer still says what it would do, dimmed, so its own setting
+                // does not vanish behind six "Off"s; a prayer switched off says Off.)
+                val facts = if (!x.enabled) listOf(stringResource(R.string.adhan_off))
                     else prayerFacts(p, x, vm.library, custom, ar) + listOfNotNull(daysLabel(x.days, f).takeIf { x.days != PrayerAlert.ALL_DAYS })
                 PrayerRow(p, f.prayerName(p), rings.today[p]?.let { f.clockAt(it, rings.zone) }, facts, on = on, live = a.enabled,
                     onOpen = { onOpenPrayer(p) }, onToggle = { v ->
@@ -255,7 +285,7 @@ fun AdhanScreen(
             // through the whole path, with the next prayer's own sound; what came of it is the row under it.
             // (Not while the alerts are on the watch alone: the test would sound on the phone.)
             if (a.enabled && a.device != AlertDevice.WATCH) {
-                SettingsItem(Icons.Rounded.PlayCircle, stringResource(R.string.history_test, f.number(10)), stringResource(R.string.history_test_hint), onClick = { vm.testNext() },
+                SettingsItem(Icons.Rounded.PlayCircle, stringResource(R.string.r026_test_in, f.number(10)), stringResource(R.string.history_test_hint), onClick = { vm.testNext() },
                     trailing = { })
                 SettingsDivider()
             }
@@ -296,16 +326,17 @@ fun AdhanScreen(
         }
 
         // (0.26: the gradual rise left this page: it is each prayer's "Start softly", on the Adhan tab.)
+        // (0.26 review: on, the footnote says what it does; "Plays like an alarm clock" under the switch said it again.
+        // Off, the line says what happens instead.)
         SettingsSection("", footer = stringResource(R.string.adhan_volume_note)) {
             SettingsSwitch(Icons.Rounded.DoNotDisturbOn, stringResource(R.string.adhan_dnd),
-                stringResource(if (!a.quietWhenSilent) R.string.adhan_dnd_on else R.string.adhan_dnd_off), !a.quietWhenSilent, onChange = vm::setPlayInSilentMode)
+                if (!a.quietWhenSilent) null else stringResource(R.string.adhan_dnd_off), !a.quietWhenSilent, onChange = vm::setPlayInSilentMode)
         }
 
-        SettingsSection(stringResource(R.string.adhan_library_section)) {
-            val lib = vm.library
-            SettingsItem(Icons.Rounded.LibraryMusic, stringResource(R.string.adhan_library),
-                stringResource(R.string.adhan_library_desc, f.number(lib.adhans.size), f.number(lib.sounds.size)), onClick = onOpenLibrary)
-            SettingsDivider()
+        // (0.26 review: the Adhan library left this page: it is in Settings, under About, with the recordings' credits,
+        // and every voice and sound of it is chosen in the sound picker. My sounds stays: its page, where a recording
+        // is renamed, replaced or deleted, has no other way in; the picker lists and adds them.)
+        SettingsSection("") {
             SettingsItem(Icons.Rounded.AudioFile, stringResource(R.string.adhan_my_sounds),
                 if (custom.isEmpty()) stringResource(R.string.adhan_my_sounds_desc_empty) else stringResource(R.string.adhan_my_sounds_desc, f.number(custom.size)),
                 onClick = onOpenMySounds)
@@ -474,8 +505,9 @@ private fun PrayerRow(p: Prayer, name: String, time: Pair<String, String?>?, fac
                 FactsLine(facts, FootnoteStyle, if (on) c.textSecondary else c.textMuted)
             }
             // (Second review of 0.25: something must say that the row opens a page. With large text the name needs its room.)
-            if (roomy) androidx.compose.material3.Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted.copy(alpha = 0.7f),
-                modifier = Modifier.padding(start = 4.dp).size(20.dp))
+            // (0.26 review: kept with large text too, a little narrower, so every row says it opens.)
+            androidx.compose.material3.Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted.copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = if (roomy) 4.dp else 2.dp).size(if (roomy) 20.dp else 18.dp))
         }
         Box(Modifier.padding(start = 6.dp, end = 14.dp)) { NoorSwitch(on, onToggle) }
     }

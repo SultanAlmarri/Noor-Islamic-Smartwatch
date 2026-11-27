@@ -250,7 +250,6 @@
     <string name="adhan_sunrise_note">الشروق نهاية وقت الفجر، وليس له أذان.</string>
     <string name="adhan_sound_section">الصوت</string>
     <string name="adhan_dnd">التشغيل في الوضع الصامت و«عدم الإزعاج»</string>
-    <string name="adhan_dnd_on">يعمل كالمنبّه.</string>
     <string name="adhan_dnd_off">إشعار صامت حين يكون الهاتف صامتًا.</string>
     <string name="adhan_volume_note">يعمل الأذان بمستوى صوت المنبّه، فيُسمع حتى لو كان صوت الوسائط مكتومًا.</string>
     <string name="adhan_reminder">تذكير قبل كل صلاة</string>
@@ -263,7 +262,6 @@
         <item quantity="many">قبل %1$s دقيقة</item>
         <item quantity="other">قبل %1$s دقيقة</item>
     </plurals>
-    <string name="adhan_library_section">المكتبة</string>
     <string name="adhan_library">مكتبة الأذان</string>
     <string name="adhan_library_desc">المصادر والتراخيص</string>
     <string name="adhan_my_sounds">أصواتي</string>
@@ -280,7 +278,6 @@
     <string name="adhan_stop_full">حتى النهاية</string>
     <string name="adhan_stop_seconds">%1$s ث</string>
     <string name="adhan_stop_minutes">%1$s د</string>
-    <string name="adhan_test">تجربة هذا التنبيه</string>
     <string name="adhan_test_desc">يأتي بعد %1$s ثوانٍ، تمامًا كما في وقت الصلاة.</string>
     <string name="adhan_test_sent">تنبيه تجريبي بعد %1$s ثوانٍ</string>
     <string name="adhan_test_failed">تعذّر ضبط التنبيه التجريبي.</string>
@@ -353,7 +350,6 @@
     <string name="history_row_empty">لم يحن أي تنبيه بعد</string>
     <string name="history_intro">ما حدث عند كل تنبيه.</string>
     <string name="history_empty">لا شيء بعد. سيظهر هنا كل تنبيه.</string>
-    <string name="history_test">جرّب الأذان بعد %1$s&#160;ثوانٍ</string>
     <string name="history_test_hint">اقفل الهاتف بعد الضغط.</string>
     <string name="history_share">مشاركة التقرير</string>
     <string name="history_test_tag">تجربة</string>
@@ -844,7 +840,6 @@
     <string name="alarm_snooze">الغفوة</string>
     <string name="alarm_save">حفظ</string>
     <string name="alarm_delete">حذف المنبه</string>
-    <string name="alarm_try">جرّبه بعد %1$s&#160;ثوانٍ</string>
     <string name="alarm_try_sent">يرن المنبه بعد %1$s ثوانٍ.</string>
     <plurals name="alarm_minutes">
         <item quantity="zero">%s دقيقة</item>
@@ -894,7 +889,7 @@
     <string name="loc_chosen">مختار</string>
     <string name="face_sample_note">صورة توضيحية. تعرض ساعتك الوقت والتاريخ والصلاة القادمة في حينها.</string>
     <!-- 0.25 adhan -->
-    <string name="adhan_hero_next_at">التالي: %1$s&#160;%2$s</string>
+    <string name="adhan_hero_next_at">التالي:&#160;%1$s&#160;%2$s</string>
     <string name="adhan_fix">إصلاح</string>
     <plurals name="adhan_fix_count">
         <item quantity="zero">%s أمر يحتاج إلى إصلاح</item>
@@ -998,13 +993,10 @@
     <string name="a026_today_at">اليوم الساعة %1$s</string>
     <string name="a026_sound_for_all">صوت كل الصلوات</string>
     <string name="a026_sound_for">صوت %1$s</string>
-    <string name="a026_fajr_note_all">عند الفجر يُرفع أذان الفجر بالصوت نفسه، وفيه «الصلاة خير من النوم». والصوت الذي ليس له أذان فجر يُبقي الفجر على أذان الفجر الذي له.</string>
-    <string name="a026_fajr_note_fajr">الصوت الذي ليس له أذان فجر ليس فيه «الصلاة خير من النوم».</string>
     <string name="a026_whole">الأذان كاملًا</string>
     <string name="a026_opening">المطلع فقط</string>
     <string name="a026_whole_note">الأذان كله حتى آخره.</string>
     <string name="a026_opening_note">«الله أكبر، الله أكبر» الأولى فقط.</string>
-    <string name="a026_no_fajr">ليس له أذان فجر</string>
     <string name="a026_fajr_version">أذان الفجر</string>
     <string name="a026_alert_sounds_note">صوت قصير عند دخول الوقت بدل الأذان.</string>
     <string name="a026_notification_only">إشعار فقط</string>
@@ -1023,4 +1015,10 @@
     <string name="news26_sounds_body">تسجيلات حقيقية لصفير وتغريد طيور، ومطلع أذان هو التكبيرتان الأوليان فقط.</string>
     <string name="news26_signs_title">علامات من السماء</string>
     <string name="news26_signs_body">الهلال في وسط الأيقونة، وكل علامات التطبيق مرسومة كسماء الصلوات.</string>
+    <!-- 0.26 review -->
+    <string name="r026_test_in">جرّب بعد %1$s&#160;ثوانٍ</string>
+    <string name="r026_set_for_all">طُبِّق على كل الصلوات</string>
+    <string name="r026_undo">تراجع</string>
+    <string name="r026_fajr_note_all">الأصوات التي عليها «أذان الفجر» يُرفع بها أذان الفجر. ومع غيرها يبقى الفجر على أذان الفجر الذي له.</string>
+    <string name="r026_fajr_note_fajr">الأصوات التي عليها «أذان الفجر» يُرفع بها أذان الفجر، وغيرها يُرفع بأذانه المعتاد.</string>
 </resources>

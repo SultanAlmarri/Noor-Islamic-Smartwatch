@@ -207,6 +207,13 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    /**
+     * 0.26 review: a change for every prayer that overwrote prayers that differed, offered back once ("Set for every
+     * prayer · Undo"); null when there is nothing to undo.
+     */
+    private val _undo = MutableStateFlow<EveryUndo?>(null)
+    internal val undo: StateFlow<EveryUndo?> = _undo.asStateFlow()
+
     private val player = AlertPlayer(app)
 
     init {
@@ -506,6 +513,7 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
      * prayer keeps its switch, volume and days. At Fajr a voice plays its Fajr recording when it has one ([playing]).
      */
     internal fun choose(target: Prayer?, choice: Plays) = update { s0 ->
+        if (target == null) offerUndo(EverySetting.SOUND, s0)
         var s = s0
         // ("Random": a different one of the voices each time, Fajr's own recordings at Fajr.)
         if (choice is Plays.Adhan && choice.voice == SoundIds.RANDOM)
@@ -518,17 +526,37 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 
     /** "Start softly" for [target], or for every prayer when null: a rise over [PrayerAlert.SOFT_START_SECONDS], or none. */
     fun setSoftStart(target: Prayer?, on: Boolean) = update { s ->
+        if (target == null) offerUndo(EverySetting.SOFT_START, s)
         s.withEach(target?.let(::listOf) ?: Prayer.entries) { _, a -> a.copy(gradualSeconds = if (on) PrayerAlert.SOFT_START_SECONDS else 0) }
     }
 
     /** Vibration for [target], or for every prayer when null. */
-    fun setVibrate(target: Prayer?, on: Boolean) = update { s -> s.withEach(target?.let(::listOf) ?: Prayer.entries) { _, a -> a.copy(vibrate = on) } }
+    fun setVibrate(target: Prayer?, on: Boolean) = update { s ->
+        if (target == null) offerUndo(EverySetting.VIBRATE, s)
+        s.withEach(target?.let(::listOf) ?: Prayer.entries) { _, a -> a.copy(vibrate = on) }
+    }
 
     /** The volume of [target] (every prayer when null), and a few seconds of what it plays at that volume. */
     fun setVolume(target: Prayer?, percent: Int) {
-        if (target == null) setVolumeAll(percent) else setPrayer(target) { it.copy(volumePercent = percent) }
+        if (target == null) update { s -> offerUndo(EverySetting.VOLUME, s); s.withEach { _, a -> a.copy(volumePercent = percent) } }
+        else setPrayer(target) { it.copy(volumePercent = percent) }
         sample(target, percent)
     }
+
+    /** [before]: the settings just before a change of [what] for every prayer; offered back when the prayers differed. */
+    private fun offerUndo(what: EverySetting, before: AlertSettings) {
+        _undo.value = if (before.differIn(what, library, _custom.value)) EveryUndo(what, before) else null
+    }
+
+    /** Gives every prayer back what the last change for every prayer overwrote (its Undo). */
+    internal fun undoEveryPrayer(u: EveryUndo) {
+        if (_undo.value === u) _undo.value = null
+        stopPreview()
+        update { it.undo(u) }
+    }
+
+    /** The offer [u] has been shown and has gone by (a newer one is left). */
+    internal fun consumeUndo(u: EveryUndo) { if (_undo.value === u) _undo.value = null }
 
     /**
      * A few seconds of what [target] plays (for every prayer: what they share, or else Dhuhr's) at [percent], so that a
