@@ -54,6 +54,10 @@ import kotlin.math.abs
  *
  * (0.25) [unit]: what the wheel's numbers count ("h", "min"), written once, small, in the band beside the chosen
  * number, as Apple's pickers do; the numbers turn past it. The band then reads as a sentence: "0 h  25 min  before  Fajr".
+ *
+ * (0.26) For the alarm editor in Samsung's manner: [visible] rows in sight (3 there), the others' size ([awaySize]) and
+ * the chosen row's [weight] set apart, and the numbers' share of a wheel with a unit ([numberShare]). The defaults keep
+ * the wheel as it was.
  */
 @Composable
 fun Wheel(
@@ -69,6 +73,16 @@ fun Wheel(
     /** The chosen row's type size; the others are a size smaller. */
     size: Float = 24f,
     unit: String? = null,
+    /** 0.26: how many rows are in sight (odd): 5 as on iOS, 3 as Samsung's Clock sets an alarm's time. */
+    visible: Int = 5,
+    /** 0.26: the type size of the rows away from the middle (a size smaller by default). */
+    awaySize: Float = size - 4f,
+    /** 0.26: the chosen row's weight (Samsung's Clock writes its large chosen numbers in a regular weight). */
+    weight: FontWeight = FontWeight.SemiBold,
+    /** 0.26: the unit's type size. */
+    unitSize: Float = 13f,
+    /** 0.26: with a [unit], the share of the wheel's width the numbers take (the rest is the unit's). */
+    numberShare: Float = 0.5f,
 ) {
     val c = NoorTheme.colors
     val haptics = LocalHapticFeedback.current
@@ -96,37 +110,40 @@ fun Wheel(
     }
     // (The words keep to their narrow wheel: they follow the phone's text size up to a tenth larger, no further.)
     val grow = limitedGrowth(1.1f)
-    val unitSize = 13f
-    Box(modifier.height(rowHeight * 5).semantics { contentDescription = label; stateDescription = items[centre % n] + (unit?.let { " $it" } ?: "") }, contentAlignment = Alignment.Center) {
+    val rows = visible.coerceAtLeast(1) or 1
+    val half = rows / 2
+    Box(modifier.height(rowHeight * rows).semantics { contentDescription = label; stateDescription = items[centre % n] + (unit?.let { " $it" } ?: "") }, contentAlignment = Alignment.Center) {
         if (band) Box(Modifier.fillMaxWidth().height(rowHeight).clip(RoundedCornerShape(12.dp)).background(c.textMuted.copy(alpha = if (c.isDark) 0.16f else 0.11f)))
-        LazyColumn(Modifier.fillMaxWidth().height(rowHeight * 5), state = state, flingBehavior = fling,
-            contentPadding = PaddingValues(vertical = rowHeight * 2), horizontalAlignment = Alignment.CenterHorizontally) {
+        LazyColumn(Modifier.fillMaxWidth().height(rowHeight * rows), state = state, flingBehavior = fling,
+            contentPadding = PaddingValues(vertical = rowHeight * half), horizontalAlignment = Alignment.CenterHorizontally) {
             items(count) { i ->
                 val on = i == centre
                 val away = abs(i - centre)
                 Box(
                     Modifier.fillMaxWidth().height(rowHeight)
                         .clickable(remember { MutableInteractionSource() }, null, role = Role.Button) { scope.launch { state.animateScrollToItem(i) } }
-                        .graphicsLayer { alpha = when (away) { 0 -> 1f; 1 -> 0.55f; else -> 0.25f } },
+                        .graphicsLayer { alpha = when { away == 0 -> 1f; rows <= 3 -> 0.42f; away == 1 -> 0.55f; else -> 0.25f } },
                     contentAlignment = Alignment.Center,
                 ) {
-                    val style = MaterialTheme.typography.titleLarge.copy(fontSize = (if (on) size else size - 4f).sp * grow, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
+                    val style = MaterialTheme.typography.titleLarge.copy(fontSize = (if (on) size else awaySize).sp * grow, fontWeight = if (on) weight else FontWeight.Normal)
+                        // (0.26: numbers larger than the title style's line hold to a line of their own size.)
+                        .let { if (size > 26f) it.copy(lineHeight = (size * 1.15f).sp * grow) else it }
                     if (unit == null) Text(items[i % n], maxLines = 1, softWrap = false, style = style, color = if (on) c.textPrimary else c.textSecondary)
                     // (With a unit: the numbers end at the wheel's middle, and the unit begins there.)
                     else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(items[i % n], maxLines = 1, softWrap = false, style = style.merge(com.noor.app.ui.theme.Tabular), color = if (on) c.textPrimary else c.textSecondary,
-                            textAlign = TextAlign.End, modifier = Modifier.weight(1f))
-                        Spacer(Modifier.weight(1f))
+                            textAlign = TextAlign.End, modifier = Modifier.weight(numberShare))
+                        Spacer(Modifier.weight(1f - numberShare))
                     }
                 }
             }
         }
         if (unit != null) Row(Modifier.fillMaxWidth().height(rowHeight), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.weight(numberShare))
             // (Set down a little, onto the line the larger number stands on.)
             val drop = with(LocalDensity.current) { ((size - unitSize) * 0.36f * grow).sp.toDp() }
             Text(unit, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelLarge.copy(fontSize = unitSize.sp * grow, letterSpacing = 0.sp),
-                color = c.textSecondary, modifier = Modifier.weight(1f).padding(start = 3.dp, top = drop))
+                color = c.textSecondary, modifier = Modifier.weight(1f - numberShare).padding(start = 3.dp, top = drop))
         }
     }
 }

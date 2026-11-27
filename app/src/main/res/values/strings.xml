@@ -963,4 +963,23 @@
     <string name="qibla_cell_qibla">Qibla</string>
     <string name="qibla_cell_phone">Phone</string>
     <string name="qibla_cell_accuracy">Accuracy</string>
+    <!-- 0.26 alarms -->
+    <string name="alarm_header_in">Alarm in %1$s</string>
+    <string name="alarm_header_in_hm">Alarm in %1$s %2$s</string>
+    <plurals name="alarm_hours_long">
+        <item quantity="one">%s&#160;hour</item>
+        <item quantity="other">%s&#160;hours</item>
+    </plurals>
+    <plurals name="alarm_minutes_long">
+        <item quantity="one">%s&#160;minute</item>
+        <item quantity="other">%s&#160;minutes</item>
+    </plurals>
+    <string name="alarms_all_off">All alarms are off</string>
+    <string name="alarms_selected">%1$s selected</string>
+    <string name="alarms_select_all">All</string>
+    <string name="alarms_delete_selected">Delete</string>
+    <string name="alarms_select">Select</string>
+    <string name="alarm_vibration">Vibration</string>
+    <string name="alarm_amount_hm">%1$s&#160;h %2$s&#160;min</string>
+    <string name="alarm_amount_h">%1$s&#160;h</string>
 </resources>

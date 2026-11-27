@@ -298,8 +298,11 @@ internal object Routes {
     // 0.15.2: four, in the order of use (the owner: the watch "should just be put in the settings"): the watch's page
     // opens from Settings, set up once and left.
     val tabs = listOf(PRAYERS, QIBLA, ADHAN, SETTINGS)
-    /** Pages that are a task of their own, shown without the tab bar (0.15: every other page keeps it). */
-    val withoutTabBar = setOf(ONBOARDING, CITIES, WATCH_STUDIO)
+    /**
+     * Pages that are a task of their own, shown without the tab bar (0.15: every other page keeps it). 0.26: the alarm
+     * editor too, as Samsung's Clock has it: its Cancel and Save are at its foot, where the tab bar would be.
+     */
+    val withoutTabBar = setOf(ONBOARDING, CITIES, WATCH_STUDIO, ADHAN_ALARM)
 }
 
 // How pages come and go (0.25), as on an iPhone. Tabs are siblings: they cross-fade, the new one settling from a touch
