@@ -1,10 +1,9 @@
 package com.noor.app.ui.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -99,23 +99,24 @@ fun SectionFooter(text: String, modifier: Modifier = Modifier) {
  * watch in graphite, what is checked in green. The sign itself is white on its tile.
  */
 object Tints {
-    // (0.26) One family of colours taken from the sky the app is drawn on, of the same strength, so a list reads as one
-    // calm thing and not a box of crayons (0.25's were the iPhone's own Settings colours, and the owner found them
-    // copied). The names stay what they were, so every row keeps its kind: Red is the dawn's coral, Purple the dusk's
-    // violet, Indigo the night's, Teal and Mint the sea's, Brown the sand's, Gray and Graphite stone.
-    val Gold = Color(0xFFD9A548)
-    val Blue = Color(0xFF4F9BEA)
-    val Green = Color(0xFF4FB47A)
-    val Orange = Color(0xFFE8954A)
-    val Red = Color(0xFFE5786C)
-    val Pink = Color(0xFFE06F92)
-    val Purple = Color(0xFFA07CE0)
-    val Indigo = Color(0xFF7F86E8)
-    val Teal = Color(0xFF33AFB4)
-    val Mint = Color(0xFF3FB79C)
-    val Brown = Color(0xFFB8946A)
-    val Gray = Color(0xFF9BA1AE)
-    val Graphite = Color(0xFF8A93A6)
+    // (0.26) Each colour is the middle of a small sky (IconTileLook: deeper towards the top, warmer towards the
+    // horizon), so every sign of the app is made like the home screen's prayer discs (the owner: "all the icons in the
+    // app ... should have the same theme", without each showing a time of day). One family, of one strength, so a list
+    // reads as one calm thing: the day's blue, the dusk's violet, the night's indigo, the dawn's coral, the sunset's
+    // orange, the sea's teal, the oasis's green, sand, stone. The names stay what they were, so every row keeps its kind.
+    val Gold = Color(0xFFB07F2C)
+    val Blue = Color(0xFF2F6FC8)
+    val Green = Color(0xFF2E8452)
+    val Orange = Color(0xFFC2642A)
+    val Red = Color(0xFFC04848)
+    val Pink = Color(0xFFB0406F)
+    val Purple = Color(0xFF7448B0)
+    val Indigo = Color(0xFF4646A8)
+    val Teal = Color(0xFF1F7F8E)
+    val Mint = Color(0xFF1E8270)
+    val Brown = Color(0xFF8C6A47)
+    val Gray = Color(0xFF606A7E)
+    val Graphite = Color(0xFF434A5C)
 
     private val byIcon: Map<String, Color> = mapOf(
         // where
@@ -140,31 +141,36 @@ object Tints {
 }
 
 /**
- * The sign at the start of a row (0.26): a small disc of the sign's colour, faint, like a tinted pane of the page's
- * glass, with a hairline of the same colour round it and the sign drawn in the colour itself (lighter by night,
- * deeper by day). A disc, as the home screen's prayers are discs of their sky; 0.25's filled squares with a white sign
- * were the iPhone's Settings, and the owner found them copied. [tint] is given only where the colour says something
- * (a warning, a danger); otherwise the sign has the colour of its kind ([Tints.of]).
+ * The sign at the start of a row (0.26): a small window onto a sky of the sign's colour, as the home screen's prayers
+ * are windows onto their skies ([com.noor.app.ui.today.SkyDisc]): deeper at the top, warmer towards its horizon, a
+ * whisper of light on the rim as on a glass bead, and the sign in white. (0.25's filled squares were the iPhone's
+ * Settings, and the owner found them copied; he asked that every sign of the app share the prayer discs' look.)
+ * [tint] is given only where the colour says something (a warning, a danger); otherwise the sign has the colour of its
+ * kind ([Tints.of]).
  */
 @Composable
 fun IconTile(icon: ImageVector, tint: Color = Color.Unspecified) {
     val base = if (tint == Color.Unspecified) Tints.of(icon) else tint
-    val dark = NoorTheme.colors.isDark
-    val look = remember(base, dark) { IconTileLook.of(base, dark) }
-    Box(
-        Modifier.size(32.dp).clip(CircleShape).background(look.fill).border(0.75.dp, look.ring, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
+    val look = remember(base) { IconTileLook.of(base) }
+    Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val r = size.minDimension / 2f
+            drawCircle(Brush.verticalGradient(0f to look.top, 0.62f to look.middle, 1f to look.bottom, startY = center.y - r, endY = center.y + r), r, center)
+            drawCircle(Color.White.copy(alpha = 0.16f), r, center, style = androidx.compose.ui.graphics.drawscope.Stroke(0.8.dp.toPx()))
+        }
         Icon(icon, null, tint = look.glyph, modifier = Modifier.size(18.dp))
     }
 }
 
-/** The colours of an [IconTile]: its fill and hairline (both see-through) and its sign. Checked by `IconTileContrastTest`. */
-data class IconTileLook(val fill: Color, val ring: Color, val glyph: Color) {
+/** An [IconTile]'s sky (top, middle, foot) and its sign. Checked by `IconTileContrastTest`. */
+data class IconTileLook(val top: Color, val middle: Color, val bottom: Color, val glyph: Color) {
+    /** The sky's colour at [t] (0 the top, 1 the foot), as the disc's gradient draws it. */
+    fun at(t: Float): Color = if (t <= 0.62f) lerp(top, middle, t / 0.62f) else lerp(middle, bottom, (t - 0.62f) / 0.38f)
+
     companion object {
-        fun of(base: Color, dark: Boolean): IconTileLook =
-            if (dark) IconTileLook(base.copy(alpha = 0.22f), base.copy(alpha = 0.34f), lerp(base, Color.White, 0.32f))
-            else IconTileLook(base.copy(alpha = 0.15f), base.copy(alpha = 0.26f), lerp(base, Color.Black, 0.38f))
+        private val Height = Color(0xFF0B1230)
+        private val Horizon = Color(0xFFFFD9A0)
+        fun of(base: Color): IconTileLook = IconTileLook(lerp(base, Height, 0.40f), base, lerp(base, Horizon, 0.30f), Color.White)
     }
 }
 
