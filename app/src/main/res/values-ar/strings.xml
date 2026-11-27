@@ -991,4 +991,31 @@
     <string name="accuracy_source_bosnia">تقويم المشيخة لسراييفو، 2026</string>
     <string name="accuracy_show">عرض التفاصيل</string>
     <string name="accuracy_hide">إخفاء التفاصيل</string>
+    <!-- 0.26 alarms -->
+    <string name="alarm_header_in">المنبه بعد %1$s</string>
+    <string name="alarm_header_in_hm">المنبه بعد %1$s و%2$s</string>
+    <plurals name="alarm_hours_long">
+        <item quantity="zero">%s&#160;ساعة</item>
+        <item quantity="one">ساعة</item>
+        <item quantity="two">ساعتين</item>
+        <item quantity="few">%s&#160;ساعات</item>
+        <item quantity="many">%s&#160;ساعة</item>
+        <item quantity="other">%s&#160;ساعة</item>
+    </plurals>
+    <plurals name="alarm_minutes_long">
+        <item quantity="zero">%s&#160;دقيقة</item>
+        <item quantity="one">دقيقة</item>
+        <item quantity="two">دقيقتين</item>
+        <item quantity="few">%s&#160;دقائق</item>
+        <item quantity="many">%s&#160;دقيقة</item>
+        <item quantity="other">%s&#160;دقيقة</item>
+    </plurals>
+    <string name="alarms_all_off">كل المنبهات متوقفة</string>
+    <string name="alarms_selected">تم تحديد %1$s</string>
+    <string name="alarms_select_all">الكل</string>
+    <string name="alarms_delete_selected">حذف</string>
+    <string name="alarms_select">تحديد</string>
+    <string name="alarm_vibration">الاهتزاز</string>
+    <string name="alarm_amount_hm">%1$s&#160;س و%2$s&#160;د</string>
+    <string name="alarm_amount_h">%1$s&#160;س</string>
 </resources>
