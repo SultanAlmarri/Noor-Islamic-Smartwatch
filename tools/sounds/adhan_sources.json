@@ -1,175 +1,199 @@
 {
- "_comment": "Every recording Minhad may bundle (Adhans and alert sounds; 0.17: the curated set the owner asked for on 16 November 2026; 0.26: five short alert sounds, beeps and birds, replaced the five recordings of nature). Each licence permits redistribution in a public repository and use in an app that may become commercial: public domain, CC0, CC BY or CC BY-SA, never NC or ND. fetch_commons.py fetches and checks each file. kind 'commons' (default): a Wikimedia Commons file; the live licence must equal 'licence' or the file is refused. kind 'url': a file from an archive with a stated licence (US National Park Service, Internet Archive / radio aporee), with page, artist, licence and the file's SHA-1 recorded by hand; the download must match the SHA-1. kind 'local': a recording supplied by the app's owner, kept in tools/sounds/owner/ ('path' relative to this folder), e.g. {\"id\": \"dubai\", \"kind\": \"local\", \"path\": \"owner/dubai.wav\", \"name\": \"Dubai Adhan (owner's recording)\", \"artist\": \"...\", \"licence\": \"...\", \"provenance\": \"who recorded it, where and when, who holds the rights and on what terms\"}. Do not add recordings whose provenance is doubtful (for example broadcast captures or commercial releases re-uploaded as 'public domain'). Entries with \"status\": \"candidate\" and \"sha1\": null (Al-Quds and Egypt, found on Freesound, which refuses the cloud session) are fetched for review only: build_library.py does not use them until they have been listened to, cut and their SHA-1 pinned.",
- "files": [
-  {
-   "id": "makkah_maghrib_2012",
-   "title": "File:Maghrib Adhan at the Masjid al Haram, Mecca - 25 Feb, 2012.webm",
-   "licence": "CC BY 3.0",
-   "provenance": "Recorded at al-Masjid al-Haram before Maghrib and published on YouTube under CC BY by the recordist (3omar Faruq); licence confirmed by YouTubeReviewBot on 14 February 2020."
-  },
-  {
-   "id": "madinah_prophets_mosque",
-   "title": "File:33937 ejaz215 call-to-prayer-from-the-prophet-s-mo.ogg",
-   "licence": "CC BY 3.0",
-   "provenance": "Recording of the call to prayer from the Prophet's Mosque, Madinah, published on Freesound by its recordist (ejaz215) under CC BY 3.0."
-  },
-  {
-   "id": "chickadee_romo",
-   "kind": "url",
-   "name": "Mountain Chickadee (call), Cub Lake Trail (Rocky Mountain National Park sound library)",
-   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-MOCHROMO6242015CubLakeTrail.mp3",
-   "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-mountainchickadee.htm",
-   "sha1": "ef429cd7cd7a31a6e0327b6bca729d0855fa98b4",
-   "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
-   "licence": "Public domain",
-   "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
-   "provenance": "A Mountain Chickadee calling (“chick-a-dee-dee”) on the Cub Lake Trail, Rocky Mountain National Park, 24 June 2015, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
-  },
-  {
-   "id": "nuthatch_red_romo",
-   "kind": "url",
-   "name": "Red-breasted Nuthatch (call), Sun Valley Trail (Rocky Mountain National Park sound library)",
-   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-RBNUROMO6232015SunValleyTrail.mp3",
-   "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-redbreastednuthatch.htm",
-   "sha1": "42b6b4cfb67fa554068e2276a8a60a089ced271d",
-   "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
-   "licence": "Public domain",
-   "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
-   "provenance": "A Red-breasted Nuthatch calling (its nasal “yank” notes) on the Sun Valley Trail, Rocky Mountain National Park, 23 June 2015, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
-  },
-  {
-   "id": "nuthatch_pygmy_romo",
-   "kind": "url",
-   "name": "Pygmy Nuthatch (call), Upper Beaver Meadows (Rocky Mountain National Park sound library)",
-   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-PYNUROMO5302017UpperBeaverMeadows.mp3",
-   "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-pygmynuthatch.htm",
-   "sha1": "c38762b6bf4b8266be369212191713f8b63b83c6",
-   "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
-   "licence": "Public domain",
-   "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
-   "provenance": "Pygmy Nuthatches calling (high “pip-pip” notes) in Upper Beaver Meadows, Rocky Mountain National Park, 30 May 2017, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
-  },
-  {
-   "id": "solitaire_yell",
-   "kind": "url",
-   "name": "Townsend's Solitaire (Yellowstone National Park sound library)",
-   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLTSOL20160506SM3.mp3",
-   "page": "https://www.nps.gov/yell/learn/photosmultimedia/sounds-townsendssolitaire.htm",
-   "sha1": "a5a59394955b688bf1d9fb8430b12c7a668cb899",
-   "artist": "National Park Service & MSU Acoustic Atlas / Jennifer Jerrett (Yellowstone National Park)",
-   "licence": "Public domain",
-   "licence_url": "https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm",
-   "provenance": "A Townsend's Solitaire chirping (single whistled “tew” notes), Yellowstone National Park, 6 May 2016, recorded for the park by Jennifer Jerrett (NPS & Montana State University Acoustic Atlas). The park's sound library states: “The files available here were recorded in the park and are in the public domain. They may be downloaded and used without limitation; however, please credit the National Park Service.”"
-  },
-  {
-   "id": "dubai",
-   "kind": "local",
-   "path": "owner/dubai.m4a",
-   "name": "Dubai Adhan, Abdulrahman Al-Hindi (owner's recording)",
-   "artist": "Abdulrahman Al-Hindi",
-   "licence": "Owner's rights",
-   "provenance": "Supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the rights to use them. The files' own tags name YouTube uploads (\"Adhan of Abdulrahman Al Hindi [from Dubai]\", Billy Habil & McBill, 2014; \"اجمل اذان في العالم - عبد الرحمن الهندي\", 2021); the rights statement is the owner's.",
-   "sha1": "1fc3af8fd1acfe62d6ce563543844c886bb54a33"
-  },
-  {
-   "id": "dubai_fajr",
-   "kind": "local",
-   "path": "owner/dubai_fajr.m4a",
-   "name": "Dubai Fajr Adhan, Abdulrahman Al-Hindi (owner's recording)",
-   "artist": "Abdulrahman Al-Hindi",
-   "licence": "Owner's rights",
-   "provenance": "Supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the rights to use them. The files' own tags name YouTube uploads (\"Adhan of Abdulrahman Al Hindi [from Dubai]\", Billy Habil & McBill, 2014; \"اجمل اذان في العالم - عبد الرحمن الهندي\", 2021); the rights statement is the owner's.",
-   "sha1": "4096d83d5f096cc962905998b9be498b1facec12"
-  },
-  {
-   "id": "alquds_holy_sepulchre",
-   "kind": "url",
-   "status": "candidate",
-   "name": "Israel_sanctum_sepulchrum_adhan.ogg (Freesound 191866)",
-   "url": "https://cdn.freesound.org/previews/191/191866_2580450-hq.mp3",
-   "page": "https://freesound.org/people/Zabuhailo/sounds/191866/",
-   "sha1": null,
-   "artist": "Zabuhailo",
-   "licence": "CC BY 4.0",
-   "licence_url": "https://creativecommons.org/licenses/by/4.0/",
-   "provenance": "The Adhan heard at the Church of the Holy Sepulchre in the Old City of Jerusalem, uploaded to Freesound by Zabuhailo (tags: Jerusalem, Holy-Sepulcher, azan, Denis-Nelubin); 108.6 s, Ogg 48 kHz original. The nearest minarets are those of the Mosque of Omar and al-Khanqah al-Salahiyya, beside the church. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
-  },
-  {
-   "id": "egypt_alexandria_cyweb",
-   "kind": "url",
-   "status": "candidate",
-   "name": "Muezzin 1 (Freesound 256188)",
-   "url": "https://cdn.freesound.org/previews/256/256188_3119016-hq.mp3",
-   "page": "https://freesound.org/people/CyWeb/sounds/256188/",
-   "sha1": null,
-   "artist": "CyWeb",
-   "licence": "CC BY 4.0",
-   "licence_url": "https://creativecommons.org/licenses/by/4.0/",
-   "provenance": "A muezzin's call in Alexandria, Egypt, with pedestrians and traffic (Freesound tags), recorded and uploaded by CyWeb; 185 s, WAV 48 kHz original. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
-  },
-  {
-   "id": "egypt_azhar_park",
-   "kind": "url",
-   "status": "candidate",
-   "name": "Adhan in Al-Azhar Park - Cairo (Freesound 683120)",
-   "url": "https://cdn.freesound.org/previews/683/683120_8105512-hq.mp3",
-   "page": "https://freesound.org/people/AhmadAiuby/sounds/683120/",
-   "sha1": null,
-   "artist": "AhmadAiuby",
-   "licence": "CC0",
-   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-   "provenance": "The Adhan heard in Al-Azhar Park, Cairo, recorded by Ahmad Aiuby for his Egypt Sound Map; 64 s, WAV 48 kHz original. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
-  },
-  {
-   "id": "egypt_maadi",
-   "kind": "url",
-   "status": "candidate",
-   "name": "Adhan in Maadi (Freesound 645045)",
-   "url": "https://cdn.freesound.org/previews/645/645045_8105512-hq.mp3",
-   "page": "https://freesound.org/people/AhmadAiuby/sounds/645045/",
-   "sha1": null,
-   "artist": "AhmadAiuby",
-   "licence": "CC BY 4.0",
-   "licence_url": "https://creativecommons.org/licenses/by/4.0/",
-   "provenance": "The Adhan in Maadi, Cairo, recorded by Ahmad Aiuby for his Egypt Sound Map; 74 s. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
-  },
-  {
-   "id": "egypt_qusseir",
-   "kind": "url",
-   "status": "candidate",
-   "name": "Adhan in Qusser by the sea (Freesound 555065)",
-   "url": "https://cdn.freesound.org/previews/555/555065_8105512-hq.mp3",
-   "page": "https://freesound.org/people/AhmadAiuby/sounds/555065/",
-   "sha1": null,
-   "artist": "AhmadAiuby",
-   "licence": "CC0",
-   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-   "provenance": "The Adhan by the sea at El Quseir, on Egypt's Red Sea coast, recorded by Ahmad Aiuby; 127 s. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
-  },
-  {
-   "id": "egypt_khan_khalili",
-   "kind": "url",
-   "name": "Call to prayer (Khan El Khalili rooftop) (Freesound 511003)",
-   "url": "https://cdn.freesound.org/previews/511/511003_571436-hq.mp3",
-   "page": "https://freesound.org/people/3bagbrew/sounds/511003/",
-   "sha1": "7e41370ff0f3f821a0d17a808c7f3b175073feb1",
-   "artist": "3bagbrew",
-   "licence": "CC0",
-   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-   "provenance": "The call to prayer heard from a rooftop at Khan el-Khalili, Islamic Cairo (beside the al-Hussein and al-Azhar mosques), uploaded by 3bagbrew; 336 s, WAV original. A rooftop in Islamic Cairo usually hears several mosques at once. Chosen on 16 November 2026 as the Egypt voice: the only candidate holding a whole, clear Adhan (from \"Allahu Akbar\" at 90 s to \"La ilaha illa Allah\" ending at 294 s, checked with a speech recogniser); licence confirmed in Openverse's index of Freesound (cc0 1.0). The file is Freesound's high-quality preview (MP3 128 kbit/s); its SHA-1 is pinned."
-  },
-  {
-   "id": "egypt_alexandria_nervousneal",
-   "kind": "url",
-   "status": "candidate",
-   "name": "Alexandria mosque call to prayer (Freesound 341762)",
-   "url": "https://cdn.freesound.org/previews/341/341762_6110723-hq.mp3",
-   "page": "https://freesound.org/people/nervousneal/sounds/341762/",
-   "sha1": null,
-   "artist": "nervousneal",
-   "licence": "CC0",
-   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-   "provenance": "A mosque's call to prayer in Alexandria, Egypt, recorded and uploaded by nervousneal; 54 s, WAV original (short for a whole Adhan). Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
-  }
- ]
+  "_comment": "Every recording Minhad may bundle (Adhans and alert sounds; 0.17: the curated set the owner asked for on 16 November 2026; 0.26: five short alert sounds, beeps and birds, replaced the five recordings of nature). Each licence permits redistribution in a public repository and use in an app that may become commercial: public domain, CC0, CC BY or CC BY-SA, never NC or ND. fetch_commons.py fetches and checks each file. kind 'commons' (default): a Wikimedia Commons file; the live licence must equal 'licence' or the file is refused. kind 'url': a file from an archive with a stated licence (US National Park Service, Internet Archive / radio aporee), with page, artist, licence and the file's SHA-1 recorded by hand; the download must match the SHA-1. kind 'local': a recording supplied by the app's owner, kept in tools/sounds/owner/ ('path' relative to this folder), e.g. {\"id\": \"dubai\", \"kind\": \"local\", \"path\": \"owner/dubai.wav\", \"name\": \"Dubai Adhan (owner's recording)\", \"artist\": \"...\", \"licence\": \"...\", \"provenance\": \"who recorded it, where and when, who holds the rights and on what terms\"}. Do not add recordings whose provenance is doubtful (for example broadcast captures or commercial releases re-uploaded as 'public domain'). Entries with \"status\": \"candidate\" and \"sha1\": null (Al-Quds and Egypt, found on Freesound, which refuses the cloud session) are fetched for review only: build_library.py does not use them until they have been listened to, cut and their SHA-1 pinned.",
+  "files": [
+    {
+      "id": "makkah_maghrib_2012",
+      "title": "File:Maghrib Adhan at the Masjid al Haram, Mecca - 25 Feb, 2012.webm",
+      "licence": "CC BY 3.0",
+      "provenance": "Recorded at al-Masjid al-Haram before Maghrib and published on YouTube under CC BY by the recordist (3omar Faruq); licence confirmed by YouTubeReviewBot on 14 February 2020."
+    },
+    {
+      "id": "madinah_prophets_mosque",
+      "title": "File:33937 ejaz215 call-to-prayer-from-the-prophet-s-mo.ogg",
+      "licence": "CC BY 3.0",
+      "provenance": "Recording of the call to prayer from the Prophet's Mosque, Madinah, published on Freesound by its recordist (ejaz215) under CC BY 3.0."
+    },
+    {
+      "id": "chickadee_romo",
+      "kind": "url",
+      "name": "Mountain Chickadee (call), Cub Lake Trail (Rocky Mountain National Park sound library)",
+      "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-MOCHROMO6242015CubLakeTrail.mp3",
+      "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-mountainchickadee.htm",
+      "sha1": "ef429cd7cd7a31a6e0327b6bca729d0855fa98b4",
+      "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
+      "licence": "Public domain",
+      "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
+      "provenance": "A Mountain Chickadee calling (“chick-a-dee-dee”) on the Cub Lake Trail, Rocky Mountain National Park, 24 June 2015, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
+    },
+    {
+      "id": "nuthatch_red_romo",
+      "kind": "url",
+      "name": "Red-breasted Nuthatch (call), Sun Valley Trail (Rocky Mountain National Park sound library)",
+      "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-RBNUROMO6232015SunValleyTrail.mp3",
+      "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-redbreastednuthatch.htm",
+      "sha1": "42b6b4cfb67fa554068e2276a8a60a089ced271d",
+      "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
+      "licence": "Public domain",
+      "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
+      "provenance": "A Red-breasted Nuthatch calling (its nasal “yank” notes) on the Sun Valley Trail, Rocky Mountain National Park, 23 June 2015, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
+    },
+    {
+      "id": "nuthatch_pygmy_romo",
+      "kind": "url",
+      "name": "Pygmy Nuthatch (call), Upper Beaver Meadows (Rocky Mountain National Park sound library)",
+      "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-PYNUROMO5302017UpperBeaverMeadows.mp3",
+      "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-pygmynuthatch.htm",
+      "sha1": "c38762b6bf4b8266be369212191713f8b63b83c6",
+      "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
+      "licence": "Public domain",
+      "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
+      "provenance": "Pygmy Nuthatches calling (high “pip-pip” notes) in Upper Beaver Meadows, Rocky Mountain National Park, 30 May 2017, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
+    },
+    {
+      "id": "solitaire_yell",
+      "kind": "url",
+      "name": "Townsend's Solitaire (Yellowstone National Park sound library)",
+      "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLTSOL20160506SM3.mp3",
+      "page": "https://www.nps.gov/yell/learn/photosmultimedia/sounds-townsendssolitaire.htm",
+      "sha1": "a5a59394955b688bf1d9fb8430b12c7a668cb899",
+      "artist": "National Park Service & MSU Acoustic Atlas / Jennifer Jerrett (Yellowstone National Park)",
+      "licence": "Public domain",
+      "licence_url": "https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm",
+      "provenance": "A Townsend's Solitaire chirping (single whistled “tew” notes), Yellowstone National Park, 6 May 2016, recorded for the park by Jennifer Jerrett (NPS & Montana State University Acoustic Atlas). The park's sound library states: “The files available here were recorded in the park and are in the public domain. They may be downloaded and used without limitation; however, please credit the National Park Service.”"
+    },
+    {
+      "id": "dubai",
+      "kind": "local",
+      "path": "owner/dubai.m4a",
+      "name": "Dubai Adhan, Abdulrahman Al-Hindi (owner's recording)",
+      "artist": "Abdulrahman Al-Hindi",
+      "licence": "Owner's rights",
+      "provenance": "Supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the rights to use them. The files' own tags name YouTube uploads (\"Adhan of Abdulrahman Al Hindi [from Dubai]\", Billy Habil & McBill, 2014; \"اجمل اذان في العالم - عبد الرحمن الهندي\", 2021); the rights statement is the owner's.",
+      "sha1": "1fc3af8fd1acfe62d6ce563543844c886bb54a33"
+    },
+    {
+      "id": "dubai_fajr",
+      "kind": "local",
+      "path": "owner/dubai_fajr.m4a",
+      "name": "Dubai Fajr Adhan, Abdulrahman Al-Hindi (owner's recording)",
+      "artist": "Abdulrahman Al-Hindi",
+      "licence": "Owner's rights",
+      "provenance": "Supplied by the app's owner on 16 November 2026, who states that he owns these recordings and holds all the rights to use them. The files' own tags name YouTube uploads (\"Adhan of Abdulrahman Al Hindi [from Dubai]\", Billy Habil & McBill, 2014; \"اجمل اذان في العالم - عبد الرحمن الهندي\", 2021); the rights statement is the owner's.",
+      "sha1": "4096d83d5f096cc962905998b9be498b1facec12"
+    },
+    {
+      "id": "alquds_holy_sepulchre",
+      "kind": "url",
+      "status": "candidate",
+      "name": "Israel_sanctum_sepulchrum_adhan.ogg (Freesound 191866)",
+      "url": "https://cdn.freesound.org/previews/191/191866_2580450-hq.mp3",
+      "page": "https://freesound.org/people/Zabuhailo/sounds/191866/",
+      "sha1": null,
+      "artist": "Zabuhailo",
+      "licence": "CC BY 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+      "provenance": "The Adhan heard at the Church of the Holy Sepulchre in the Old City of Jerusalem, uploaded to Freesound by Zabuhailo (tags: Jerusalem, Holy-Sepulcher, azan, Denis-Nelubin); 108.6 s, Ogg 48 kHz original. The nearest minarets are those of the Mosque of Omar and al-Khanqah al-Salahiyya, beside the church. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
+    },
+    {
+      "id": "egypt_alexandria_cyweb",
+      "kind": "url",
+      "status": "candidate",
+      "name": "Muezzin 1 (Freesound 256188)",
+      "url": "https://cdn.freesound.org/previews/256/256188_3119016-hq.mp3",
+      "page": "https://freesound.org/people/CyWeb/sounds/256188/",
+      "sha1": null,
+      "artist": "CyWeb",
+      "licence": "CC BY 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+      "provenance": "A muezzin's call in Alexandria, Egypt, with pedestrians and traffic (Freesound tags), recorded and uploaded by CyWeb; 185 s, WAV 48 kHz original. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
+    },
+    {
+      "id": "egypt_azhar_park",
+      "kind": "url",
+      "status": "candidate",
+      "name": "Adhan in Al-Azhar Park - Cairo (Freesound 683120)",
+      "url": "https://cdn.freesound.org/previews/683/683120_8105512-hq.mp3",
+      "page": "https://freesound.org/people/AhmadAiuby/sounds/683120/",
+      "sha1": null,
+      "artist": "AhmadAiuby",
+      "licence": "CC0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "provenance": "The Adhan heard in Al-Azhar Park, Cairo, recorded by Ahmad Aiuby for his Egypt Sound Map; 64 s, WAV 48 kHz original. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
+    },
+    {
+      "id": "egypt_maadi",
+      "kind": "url",
+      "status": "candidate",
+      "name": "Adhan in Maadi (Freesound 645045)",
+      "url": "https://cdn.freesound.org/previews/645/645045_8105512-hq.mp3",
+      "page": "https://freesound.org/people/AhmadAiuby/sounds/645045/",
+      "sha1": null,
+      "artist": "AhmadAiuby",
+      "licence": "CC BY 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+      "provenance": "The Adhan in Maadi, Cairo, recorded by Ahmad Aiuby for his Egypt Sound Map; 74 s. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
+    },
+    {
+      "id": "egypt_qusseir",
+      "kind": "url",
+      "status": "candidate",
+      "name": "Adhan in Qusser by the sea (Freesound 555065)",
+      "url": "https://cdn.freesound.org/previews/555/555065_8105512-hq.mp3",
+      "page": "https://freesound.org/people/AhmadAiuby/sounds/555065/",
+      "sha1": null,
+      "artist": "AhmadAiuby",
+      "licence": "CC0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "provenance": "The Adhan by the sea at El Quseir, on Egypt's Red Sea coast, recorded by Ahmad Aiuby; 127 s. Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
+    },
+    {
+      "id": "egypt_khan_khalili",
+      "kind": "url",
+      "name": "Call to prayer (Khan El Khalili rooftop) (Freesound 511003)",
+      "url": "https://cdn.freesound.org/previews/511/511003_571436-hq.mp3",
+      "page": "https://freesound.org/people/3bagbrew/sounds/511003/",
+      "sha1": "7e41370ff0f3f821a0d17a808c7f3b175073feb1",
+      "artist": "3bagbrew",
+      "licence": "CC0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "provenance": "The call to prayer heard from a rooftop at Khan el-Khalili, Islamic Cairo (beside the al-Hussein and al-Azhar mosques), uploaded by 3bagbrew; 336 s, WAV original. A rooftop in Islamic Cairo usually hears several mosques at once. Chosen on 16 November 2026 as the Egypt voice: the only candidate holding a whole, clear Adhan (from \"Allahu Akbar\" at 90 s to \"La ilaha illa Allah\" ending at 294 s, checked with a speech recogniser); licence confirmed in Openverse's index of Freesound (cc0 1.0). The file is Freesound's high-quality preview (MP3 128 kbit/s); its SHA-1 is pinned."
+    },
+    {
+      "id": "egypt_alexandria_nervousneal",
+      "kind": "url",
+      "status": "candidate",
+      "name": "Alexandria mosque call to prayer (Freesound 341762)",
+      "url": "https://cdn.freesound.org/previews/341/341762_6110723-hq.mp3",
+      "page": "https://freesound.org/people/nervousneal/sounds/341762/",
+      "sha1": null,
+      "artist": "nervousneal",
+      "licence": "CC0",
+      "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "provenance": "A mosque's call to prayer in Alexandria, Egypt, recorded and uploaded by nervousneal; 54 s, WAV original (short for a whole Adhan). Candidate, not yet in the app: found on 16 November 2026 through Openverse's index of Freesound (licence as indexed there); Freesound refuses the cloud session, so the file (Freesound's own high-quality preview, MP3 128 kbit/s; the original needs a Freesound login) is fetched by the Fetch workflow on GitHub and must be listened to, segmented and its licence confirmed on the Freesound page before its SHA-1 is pinned and it is used."
+    },
+    {
+      "id": "beep_microwave",
+      "title": "File:Microwave oven.ogg",
+      "licence": "Public domain",
+      "provenance": "PDSounds (stephan), public domain: a real microwave oven that finishes with three beeps. 0.26 candidate for a beep alert."
+    },
+    {
+      "id": "beep_car_unlock",
+      "title": "File:Unlocking a car.ogg",
+      "licence": "Public domain",
+      "provenance": "PDSounds (hc), public domain: a car's remote lock beeping twice, recorded through a window. 0.26 candidate for a beep alert (only the first two beeps)."
+    },
+    {
+      "id": "beep_alarmclock_bleeps",
+      "title": "File:Alarmclock-bleeps.ogg",
+      "licence": "CC BY-SA 4.0",
+      "provenance": "Geckoerer, 'a typical modern alarm clock'. 0.26 candidate; to be checked that it is a recording, not a generated tone."
+    },
+    {
+      "id": "beep_alarm_clock_01",
+      "title": "File:Alarm clock - 01.ogg",
+      "licence": "CC BY-SA 4.0",
+      "provenance": "Mathieu Kappler, a ringing alarm clock recorded in France. 0.26 candidate."
+    }
+  ]
 }
