@@ -44,7 +44,13 @@ class BackupSoundTest {
             val text = File(assets, "sounds/library.json").readText()
             val ids = Regex("\"id\":\\s*\"([^\"]+)\"").findAll(text).map { it.groupValues[1] }.toList()
             assertTrue("$label: adhan.makkah", "adhan.makkah" in ids)
-            assertTrue("$label: fx.birds", "fx.birds" in ids)
+            assertTrue("$label: the default sound", com.noor.prayer.alerts.SoundIds.DEFAULT_SOUND in ids)
+            // 0.26: every replaced effect's id resolves to a sound in this library, and none of the old ones is left.
+            for ((old, new) in com.noor.prayer.alerts.SoundIds.RENAMED) {
+                assertTrue("$label: $old → $new", new in ids)
+                assertFalse("$label: $old", old in ids)
+                assertEquals(new, com.noor.prayer.alerts.SoundIds.current(old))
+            }
             assertTrue("$label: only adhan.* and fx.*: $ids", ids.all { it.startsWith("adhan.") || it.startsWith("fx.") })
             val licences = Regex("\"licence\":\\s*\"([^\"]+)\"").findAll(text).map { it.groupValues[1] }.toList()
             assertEquals("$label: one licence per sound", ids.size, licences.size)
@@ -62,6 +68,11 @@ class BackupSoundTest {
             assertTrue("$label: the opening of every Adhan", ids.filter { it.startsWith("adhan.") }
                 .all { "${it.removePrefix("adhan.").let { id -> "adhan_${id}_short.ogg" }}" in bundled })
             assertFalse("$label: $bundled", bundled.any { it.startsWith("alt_") })
+            // 0.26: every alert sound is bundled on both devices, in one version (no "_short" file), and nothing else of
+            // the 0.18 effects is left behind.
+            assertTrue("$label: $bundled", ids.filter { it.startsWith("fx.") }.all { "fx_${it.removePrefix("fx.")}.ogg" in bundled })
+            assertFalse("$label: $bundled", bundled.any { it.startsWith("fx_") && it.endsWith("_short.ogg") })
+            assertFalse("$label: $bundled", com.noor.prayer.alerts.SoundIds.RENAMED.keys.any { "fx_${it.removePrefix("fx.")}.ogg" in bundled })
         }
     }
 }

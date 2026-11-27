@@ -22,7 +22,7 @@ class SoundLibraryTest {
 
     @get:Rule val tmp = TemporaryFolder()
 
-    // A made-up catalogue in the shape of the bundled one (0.17 ids). The Fajr entry and the opening-only entry exist
+    // A made-up catalogue in the shape of the bundled one (0.26 ids: the alert sounds have one version each). The Fajr entry and the opening-only entry exist
     // to exercise those paths; the bundled library itself is checked by the app's BackupSoundTest.
     private val json = """
         {"sounds":[
@@ -33,15 +33,13 @@ class SoundLibraryTest {
            "file":"sounds/adhan_dubai_fajr.ogg","seconds":200,"short":{"file":"sounds/adhan_dubai_fajr_short.ogg","seconds":25}},
           {"id":"adhan.alquds","kind":"adhan","title_en":"Al-Quds (opening)","title_ar":"القدس","categories":["renowned"],
            "short":{"file":"sounds/adhan_alquds_short.ogg","seconds":29},"note_en":"Opening only"},
-          {"id":"fx.birds","kind":"alt","title_en":"Birds","title_ar":"عصافير","categories":["nature"],"file":"sounds/fx_birds.ogg","seconds":31.6,
-           "short":{"file":"sounds/fx_birds_short.ogg","seconds":1.8}},
-          {"id":"fx.rain","kind":"alt","title_en":"Rain","title_ar":"مطر","categories":["nature"],"file":"sounds/fx_rain.ogg","seconds":30.0,
-           "short":{"file":"sounds/fx_rain_short.ogg","seconds":4.0}}
+          {"id":"fx.chickadee","kind":"alt","title_en":"Chickadee","title_ar":"القرقف","categories":["bird"],"file":"sounds/fx_chickadee.ogg","seconds":2.4},
+          {"id":"fx.nuthatch","kind":"alt","title_en":"Nuthatch","title_ar":"الخوّاص","categories":["bird"],"file":"sounds/fx_nuthatch.ogg","seconds":1.9}
         ]}
     """.trimIndent()
 
     private val phoneFiles = setOf("sounds/adhan_alquds_short.ogg", "sounds/adhan_makkah.ogg", "sounds/adhan_makkah_short.ogg", "sounds/adhan_dubai_fajr.ogg",
-        "sounds/adhan_dubai_fajr_short.ogg", "sounds/fx_birds.ogg", "sounds/fx_birds_short.ogg", "sounds/fx_rain.ogg", "sounds/fx_rain_short.ogg")
+        "sounds/adhan_dubai_fajr_short.ogg", "sounds/fx_chickadee.ogg", "sounds/fx_nuthatch.ogg")
     private val watchFiles = phoneFiles - setOf("sounds/adhan_makkah.ogg", "sounds/adhan_dubai_fajr.ogg")
 
     private fun lib(files: Set<String>, transfer: File? = null) = SoundLibrary(SoundLibrary.parse(json), { it in files }, transfer)
@@ -51,8 +49,12 @@ class SoundLibraryTest {
         assertEquals(3, l.adhans.size)
         assertFalse(l.byId("adhan.alquds")!!.hasFullRecording)
         assertEquals("Opening only", l.byId("adhan.alquds")!!.note(false))
-        assertEquals(listOf("fx.rain", "fx.birds"), l.sounds.map { it.id }) // sorted by duration
-        assertEquals(1.8, l.byId("fx.birds")!!.shortSeconds!!, 0.0) // effects carry a short version too
+        assertEquals(listOf("fx.nuthatch", "fx.chickadee"), l.sounds.map { it.id }) // sorted by duration
+        assertNull(l.byId("fx.chickadee")!!.shortFile) // 0.26: the alert sounds are short; one version each
+        // 0.26: an id of a replaced effect, still stored somewhere, finds the sound that replaced it.
+        assertEquals("fx.chickadee", l.byId("fx.birds")!!.id)
+        assertEquals("fx.nuthatch", l.byId("fx.rain")!!.id)
+        assertNull(l.byId("fx.unknown"))
         val m = l.byId("adhan.makkah")!!
         assertEquals("CC BY 3.0", m.credit!!.licence)
         assertEquals(20.0, m.shortSeconds!!, 0.0)
@@ -74,8 +76,11 @@ class SoundLibraryTest {
         assertEquals(SoundSource.Asset("sounds/adhan_makkah.ogg"), full.source); assertNull(full.substitution); assertFalse(full.short)
         val short = phone.resolve(Prayer.DHUHR, PrayerAlert(true, AlertMode.ADHAN_SHORT, SoundIds.DEFAULT_ADHAN), null)!!
         assertEquals(SoundSource.Asset("sounds/adhan_makkah_short.ogg"), short.source); assertTrue(short.short)
-        val sound = phone.resolve(Prayer.SHURUQ, PrayerAlert(true, AlertMode.SOUND, "fx.rain"), null)!!
-        assertEquals(SoundSource.Asset("sounds/fx_rain.ogg"), sound.source)
+        val sound = phone.resolve(Prayer.SHURUQ, PrayerAlert(true, AlertMode.SOUND, "fx.nuthatch"), null)!!
+        assertEquals(SoundSource.Asset("sounds/fx_nuthatch.ogg"), sound.source)
+        // (An old id stored before 0.26 plays its replacement, with no substitution to report.)
+        val old = phone.resolve(Prayer.SHURUQ, PrayerAlert(true, AlertMode.SOUND, "fx.rain"), null)!!
+        assertEquals(SoundSource.Asset("sounds/fx_nuthatch.ogg"), old.source); assertNull(old.substitution)
         assertNull(phone.resolve(Prayer.ASR, PrayerAlert(true, AlertMode.NOTIFICATION, null), null))
         // A recording that only has its opening plays the short version even when "full" is chosen, and says why.
         val opening = phone.resolve(Prayer.ASR, PrayerAlert(true, AlertMode.ADHAN, "adhan.alquds"), null)!!
@@ -85,11 +90,11 @@ class SoundLibraryTest {
         val watch = lib(watchFiles).resolve(Prayer.FAJR, PrayerAlert(true, AlertMode.ADHAN, "adhan.dubai_fajr"), null)!!
         assertEquals(SoundSource.Asset("sounds/adhan_dubai_fajr_short.ogg"), watch.source)
         assertEquals(Substitution.FULL_NOT_ON_DEVICE, watch.substitution)
-        // A missing custom sound falls back to the default sound (fx.birds), openly.
+        // A missing custom sound falls back to the default sound (fx.chickadee), openly.
         val gone = phone.resolve(Prayer.ASR, PrayerAlert(true, AlertMode.CUSTOM, "custom.gone"), CustomSounds(tmp.newFolder()) { 3.0 })!!
         assertEquals(Substitution.CUSTOM_MISSING, gone.substitution)
         assertEquals(SoundIds.DEFAULT_SOUND, gone.entry!!.id)
-        assertEquals("fx.birds", gone.entry!!.id)
+        assertEquals("fx.chickadee", gone.entry!!.id)
     }
 
     @Test fun fullRecordingSentToTheWatchIsUsed() {
@@ -143,7 +148,7 @@ class SoundLibraryTest {
 
     @Test fun randomFromFavouritesPlaysAFavouriteFittingThePrayer() {
         val phone = lib(phoneFiles)
-        val favs = listOf("adhan.makkah", "adhan.alquds", "adhan.dubai_fajr", "fx.birds")
+        val favs = listOf("adhan.makkah", "adhan.alquds", "adhan.dubai_fajr", "fx.chickadee")
         val random = PrayerAlert(true, AlertMode.ADHAN_SHORT, SoundIds.RANDOM)
         val days = (0L until 12L).map { java.time.LocalDate.of(2026, 11, 7).plusDays(it) }
         // Other prayers: only non-Fajr Adhans from the favourites (never the Fajr Adhan, never an alert sound).

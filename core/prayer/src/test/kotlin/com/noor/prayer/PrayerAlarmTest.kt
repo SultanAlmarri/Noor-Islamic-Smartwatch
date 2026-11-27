@@ -47,10 +47,10 @@ class PrayerAlarmTest {
         assertEquals(AlarmSound.PHONE_ALARM, n.sound)
         assertEquals(0, n.snoozeMinutes)
         // 0.18: one of Noor's sounds, full or short; a recording's id is not taken for one, nor the reverse.
-        val lib = PrayerAlarm(4, Prayer.ASR, 5, true, sound = AlarmSound.LIBRARY, customId = "fx.birds", short = true).normalized()
+        val lib = PrayerAlarm(4, Prayer.ASR, 5, true, sound = AlarmSound.LIBRARY, customId = "fx.chickadee", short = true).normalized()
         assertEquals(lib, PrayerAlarm.decode(lib.encode()))
         assertEquals(AlarmSound.PHONE_ALARM, lib.copy(customId = "custom.x1").normalized().sound)
-        assertEquals(AlarmSound.PHONE_ALARM, PrayerAlarm(5, Prayer.ASR, 5, true, sound = AlarmSound.CUSTOM, customId = "fx.birds").normalized().sound)
+        assertEquals(AlarmSound.PHONE_ALARM, PrayerAlarm(5, Prayer.ASR, 5, true, sound = AlarmSound.CUSTOM, customId = "fx.chickadee").normalized().sound)
         assertFalse(PrayerAlarm(6, Prayer.ASR, 5, true, sound = AlarmSound.RINGTONE, short = true).normalized().short)
         // Entries written by 0.17 (no length field) read as before.
         assertEquals(false, PrayerAlarm.decode("1,1,FAJR,B,25,127,PHONE_ALARM,,1,10,")!!.short)

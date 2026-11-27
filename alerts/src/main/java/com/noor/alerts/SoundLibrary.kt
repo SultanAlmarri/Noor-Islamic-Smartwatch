@@ -74,7 +74,8 @@ data class ResolvedSound(val source: SoundSource, val entry: SoundEntry?, val cu
 class SoundLibrary(val entries: List<SoundEntry>, private val exists: (String) -> Boolean, private val transferDir: File?) {
 
     private val byId = entries.associateBy { it.id }
-    fun byId(id: String?): SoundEntry? = id?.let { byId[it] }
+    /** (0.26: an id of a replaced sound, still stored somewhere, finds the sound that replaced it: [SoundIds.current].) */
+    fun byId(id: String?): SoundEntry? = id?.let { byId[it] ?: byId[SoundIds.current(it)] }
 
     val adhans: List<SoundEntry> get() = entries.filter { it.kind == SoundKind.ADHAN }
     val sounds: List<SoundEntry> get() = entries.filter { it.kind == SoundKind.ALT }.sortedBy { it.seconds }

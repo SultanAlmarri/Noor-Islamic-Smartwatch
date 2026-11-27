@@ -1,5 +1,5 @@
 {
- "_comment": "Every recording Noor may bundle (Adhans and sound effects; 0.17: the curated set the owner asked for on 16 November 2026). Each licence permits redistribution in a public repository and use in an app that may become commercial: public domain, CC0, CC BY or CC BY-SA, never NC or ND. fetch_commons.py fetches and checks each file. kind 'commons' (default): a Wikimedia Commons file; the live licence must equal 'licence' or the file is refused. kind 'url': a file from an archive with a stated licence (US National Park Service, Internet Archive / radio aporee), with page, artist, licence and the file's SHA-1 recorded by hand; the download must match the SHA-1. kind 'local': a recording supplied by the app's owner, kept in tools/sounds/owner/ ('path' relative to this folder), e.g. {\"id\": \"dubai\", \"kind\": \"local\", \"path\": \"owner/dubai.wav\", \"name\": \"Dubai Adhan (owner's recording)\", \"artist\": \"...\", \"licence\": \"...\", \"provenance\": \"who recorded it, where and when, who holds the rights and on what terms\"}. Do not add recordings whose provenance is doubtful (for example broadcast captures or commercial releases re-uploaded as 'public domain'). Entries with \"status\": \"candidate\" and \"sha1\": null (Al-Quds and Egypt, found on Freesound, which refuses the cloud session) are fetched for review only: build_library.py does not use them until they have been listened to, cut and their SHA-1 pinned.",
+ "_comment": "Every recording Minhad may bundle (Adhans and alert sounds; 0.17: the curated set the owner asked for on 16 November 2026; 0.26: five short alert sounds, beeps and birds, replaced the five recordings of nature). Each licence permits redistribution in a public repository and use in an app that may become commercial: public domain, CC0, CC BY or CC BY-SA, never NC or ND. fetch_commons.py fetches and checks each file. kind 'commons' (default): a Wikimedia Commons file; the live licence must equal 'licence' or the file is refused. kind 'url': a file from an archive with a stated licence (US National Park Service, Internet Archive / radio aporee), with page, artist, licence and the file's SHA-1 recorded by hand; the download must match the SHA-1. kind 'local': a recording supplied by the app's owner, kept in tools/sounds/owner/ ('path' relative to this folder), e.g. {\"id\": \"dubai\", \"kind\": \"local\", \"path\": \"owner/dubai.wav\", \"name\": \"Dubai Adhan (owner's recording)\", \"artist\": \"...\", \"licence\": \"...\", \"provenance\": \"who recorded it, where and when, who holds the rights and on what terms\"}. Do not add recordings whose provenance is doubtful (for example broadcast captures or commercial releases re-uploaded as 'public domain'). Entries with \"status\": \"candidate\" and \"sha1\": null (Al-Quds and Egypt, found on Freesound, which refuses the cloud session) are fetched for review only: build_library.py does not use them until they have been listened to, cut and their SHA-1 pinned.",
  "files": [
   {
    "id": "makkah_maghrib_2012",
@@ -14,64 +14,52 @@
    "provenance": "Recording of the call to prayer from the Prophet's Mosque, Madinah, published on Freesound by its recordist (ejaz215) under CC BY 3.0."
   },
   {
-   "id": "birds_yellowstone_dawn",
+   "id": "chickadee_romo",
    "kind": "url",
-   "name": "Dawn Chorus (Yellowstone National Park sound library)",
-   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLDawnChorus.mp3",
-   "page": "https://www.nps.gov/yell/learn/photosmultimedia/sounds-dawnchorus.htm",
-   "sha1": "3f56724be7ac25f3287e293c90023c75aab4aa95",
-   "artist": "National Park Service (Yellowstone National Park)",
-   "licence": "Public domain",
-   "licence_url": "https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm",
-   "provenance": "Early-morning birdsong recorded near Mammoth Hot Springs, Yellowstone National Park, by the US National Park Service. The park's sound library states: \"The files available here were recorded in the park and are in the public domain. They may be downloaded and used without limitation; however, please credit the National Park Service.\""
-  },
-  {
-   "id": "rooster_houx",
-   "kind": "url",
-   "name": "28130 Houx, France - Chicken and rooster (radio aporee)",
-   "url": "https://archive.org/download/aporee_34557_39722/houxcoqs261210h00.mp3",
-   "page": "https://archive.org/details/aporee_34557_39722",
-   "sha1": "d187a5221b15b05054f71e647a2b6bf6ca4fd64e",
-   "artist": "Vincent Duseigne",
-   "licence": "CC BY 3.0",
-   "licence_url": "https://creativecommons.org/licenses/by/3.0/",
-   "provenance": "Field recording of a farm in the village of Houx, France (26 December 2016), published by the recordist on radio aporee ::: maps (aporee.org/maps/?loc=34557), archived on the Internet Archive with the licence CC BY 3.0."
-  },
-  {
-   "id": "waves_yilan",
-   "kind": "url",
-   "name": "Toucheng, Yilan County - Rocks and waves (radio aporee)",
-   "url": "https://archive.org/download/aporee_24350_28262/SoundMap2014072935.mp3",
-   "page": "https://archive.org/details/aporee_24350_28262",
-   "sha1": "33cf53509b7ab8946fa39551d870e5fad371cdf6",
-   "artist": "Wu Tsan-Cheng (吳燦政)",
-   "licence": "CC BY 3.0",
-   "licence_url": "https://creativecommons.org/licenses/by/3.0/",
-   "provenance": "Waves on a rocky shore at Toucheng, Yilan County, Taiwan (29 July 2014; Zoom H6 and Rode NT4), published by the recordist on radio aporee ::: maps (aporee.org/maps/?loc=24350), archived on the Internet Archive with the licence CC BY 3.0."
-  },
-  {
-   "id": "rain_taitung",
-   "kind": "url",
-   "name": "Taitung County - Rain (radio aporee)",
-   "url": "https://archive.org/download/aporee_39377_45721/soundmap2018032842.mp3",
-   "page": "https://archive.org/details/aporee_39377_45721",
-   "sha1": "f115bab3a850235f8810e4ad8a64e1330154332b",
-   "artist": "Wu Tsan-Cheng (吳燦政)",
-   "licence": "CC BY 3.0",
-   "licence_url": "https://creativecommons.org/licenses/by/3.0/",
-   "provenance": "Steady rain at a village school in Taitung County, Taiwan (28 March 2018; Zoom H2n), published by the recordist on radio aporee ::: maps (aporee.org/maps/?loc=39377), archived on the Internet Archive with the licence CC BY 3.0."
-  },
-  {
-   "id": "stream_rocky_mountain",
-   "kind": "url",
-   "name": "Stream Soundscape from the Black Canyon Trail (Rocky Mountain National Park sound library)",
-   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
-   "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm",
-   "sha1": "b0d097a96adba1cc03bd08a79ed0df4e8a565197",
+   "name": "Mountain Chickadee (call), Cub Lake Trail (Rocky Mountain National Park sound library)",
+   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-MOCHROMO6242015CubLakeTrail.mp3",
+   "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-mountainchickadee.htm",
+   "sha1": "ef429cd7cd7a31a6e0327b6bca729d0855fa98b4",
    "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
    "licence": "Public domain",
    "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
-   "provenance": "A mountain stream on the Black Canyon Trail, Rocky Mountain National Park, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings \"are in the public domain and may be downloaded and used without limitation; however, please credit the National Park Service.\""
+   "provenance": "A Mountain Chickadee calling (“chick-a-dee-dee”) on the Cub Lake Trail, Rocky Mountain National Park, 24 June 2015, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
+  },
+  {
+   "id": "nuthatch_red_romo",
+   "kind": "url",
+   "name": "Red-breasted Nuthatch (call), Sun Valley Trail (Rocky Mountain National Park sound library)",
+   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-RBNUROMO6232015SunValleyTrail.mp3",
+   "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-redbreastednuthatch.htm",
+   "sha1": "42b6b4cfb67fa554068e2276a8a60a089ced271d",
+   "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
+   "licence": "Public domain",
+   "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
+   "provenance": "A Red-breasted Nuthatch calling (its nasal “yank” notes) on the Sun Valley Trail, Rocky Mountain National Park, 23 June 2015, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
+  },
+  {
+   "id": "nuthatch_pygmy_romo",
+   "kind": "url",
+   "name": "Pygmy Nuthatch (call), Upper Beaver Meadows (Rocky Mountain National Park sound library)",
+   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-PYNUROMO5302017UpperBeaverMeadows.mp3",
+   "page": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-pygmynuthatch.htm",
+   "sha1": "c38762b6bf4b8266be369212191713f8b63b83c6",
+   "artist": "Jacob Job / National Park Service (Rocky Mountain National Park)",
+   "licence": "Public domain",
+   "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
+   "provenance": "Pygmy Nuthatches calling (high “pip-pip” notes) in Upper Beaver Meadows, Rocky Mountain National Park, 30 May 2017, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited."
+  },
+  {
+   "id": "solitaire_yell",
+   "kind": "url",
+   "name": "Townsend's Solitaire (Yellowstone National Park sound library)",
+   "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLTSOL20160506SM3.mp3",
+   "page": "https://www.nps.gov/yell/learn/photosmultimedia/sounds-townsendssolitaire.htm",
+   "sha1": "a5a59394955b688bf1d9fb8430b12c7a668cb899",
+   "artist": "National Park Service & MSU Acoustic Atlas / Jennifer Jerrett (Yellowstone National Park)",
+   "licence": "Public domain",
+   "licence_url": "https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm",
+   "provenance": "A Townsend's Solitaire chirping (single whistled “tew” notes), Yellowstone National Park, 6 May 2016, recorded for the park by Jennifer Jerrett (NPS & Montana State University Acoustic Atlas). The park's sound library states: “The files available here were recorded in the park and are in the public domain. They may be downloaded and used without limitation; however, please credit the National Park Service.”"
   },
   {
    "id": "dubai",

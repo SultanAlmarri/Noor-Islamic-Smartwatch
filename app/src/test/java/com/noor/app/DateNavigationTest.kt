@@ -79,9 +79,10 @@ class BundledDataTest {
         val entries = com.noor.alerts.SoundLibrary.parse(text)
         fun exists(path: String) = runCatching { app.assets.open(path).close(); true }.getOrDefault(false)
         val allowed = setOf("CC0", "Public domain", "CC BY 3.0", "CC BY 4.0", "CC BY-SA 3.0", "CC BY-SA 4.0", "Owner's rights")
-        // (0.18: the owner's set, exactly what must be there, rather than a count.)
+        // (0.18: the owner's set, exactly what must be there, rather than a count; 0.26: the alert sounds that
+        // replaced the effects.)
         org.junit.Assert.assertTrue(entries.map { it.id }.toString(), entries.map { it.id }.containsAll(listOf("adhan.makkah", "adhan.madinah", "adhan.egypt", "adhan.dubai",
-            "adhan.dubai_fajr", "fx.birds", "fx.rooster", "fx.waves", "fx.rain", "fx.stream")))
+            "adhan.dubai_fajr") + com.noor.prayer.alerts.SoundIds.RENAMED.values))
         for (e in entries) {
             e.file?.let { org.junit.Assert.assertTrue("missing ${e.id} full", exists(it)) }
             e.shortFile?.let { org.junit.Assert.assertTrue("missing ${e.id} short", exists(it)) }
@@ -107,8 +108,16 @@ class BundledDataTest {
         }
         org.junit.Assert.assertTrue(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_FAJR_ADHAN)!!.fajr)
         org.junit.Assert.assertTrue(lib.adhansFor(com.noor.prayer.Prayer.ASR).none { it.fajr })
-        // 0.16: no generated tones (no music, nothing that sounds like it); 0.18: real recordings of nature only.
+        // 0.16: no generated tones (no music, nothing that sounds like it); 0.18: real recordings of nature only; 0.26:
+        // short real recordings (birds; beeps of real devices to come), each in one version.
         org.junit.Assert.assertTrue(lib.sounds.isNotEmpty() && lib.sounds.all { it.id.startsWith("fx.") })
+        org.junit.Assert.assertTrue(lib.sounds.size in 4..5)
+        org.junit.Assert.assertTrue(lib.sounds.all { it.seconds in 1.5..4.5 && it.shortFile == null })
         org.junit.Assert.assertNotNull(lib.byId(com.noor.prayer.alerts.SoundIds.DEFAULT_SOUND))
+        // Every id of a replaced effect, still stored in someone's settings, finds its replacement in the library.
+        for ((old, new) in com.noor.prayer.alerts.SoundIds.RENAMED) {
+            org.junit.Assert.assertNull(old, entries.firstOrNull { it.id == old })
+            org.junit.Assert.assertEquals(old, new, lib.byId(old)?.id)
+        }
     }
 }
