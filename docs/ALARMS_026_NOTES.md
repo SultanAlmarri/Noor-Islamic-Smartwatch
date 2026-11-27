@@ -138,3 +138,17 @@ Through Gradle on the cloud machine, Robolectric with SDK 34. Unit tests and sof
   foot over the navigation bar and the keyboard; TalkBack (reasoned from the semantics only: the cards are buttons with
   "Select" as their long-press action, the day letters read as "Mon–Fri", the "+" reads as "Add alarm").
 - The ringing screen was not changed and not looked at again.
+
+## The 0.26 review (27 November 2026), what changed
+
+- **The editor's foot** is an opaque bar (`FootBar`, `AdhanComponents.kt`), as the page's top bar is: the page's own
+  sky drawn where the bar stands (its gradient and the horizon's glow, so it is the page and not a wash over it), a
+  hairline above, and it takes the touches that land on it. Until then it was the foot's colour at 94% with a fade,
+  and Vibration and Snooze showed through. The page's end is lifted clear of it.
+- **Delete while choosing** stands in the same bar at the page's foot (as Samsung's), not under the last card, off the
+  screen with five alarms. What is chosen is held by the Adhan tab (`AlarmChoice`), whose foot shows it
+  (`AlarmsDeleteBar`); `AlarmsList` takes it as a last parameter with a default.
+- **The days**: the one selector of the app (`WeekDays`): a day that is on is now a solid gold disc with a dark letter.
+- **The name** wraps onto a second line inside the card's margins (it ran into the edge at 1.3, cut in a letter); a
+  line break typed or pasted becomes a space.
+- **"Test in 5 seconds"** (was "Try it in 5 seconds"), worded as the prayers' tests.

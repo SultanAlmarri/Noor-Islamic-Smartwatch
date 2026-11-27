@@ -141,6 +141,8 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
     val snackbar = remember { SnackbarHostState() }
     val previewLabel = stringResource(R.string.adhan_preview)
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); vm.consumeMessage() } }
+    // (0.26 review: a voice chosen for every prayer over prayers that differed says so, with Undo.)
+    if (target == null) EveryPrayerUndo(vm, snackbar)
     StopPreviewOnLeave(vm)
 
     val current: Plays? = if (target != null) playsOf(target, alerts.alert(target), lib, custom) else sharedPlays(alerts, lib, custom)
@@ -173,9 +175,9 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
     }
 
     NoorPage(title, contentPadding, onBack = onBack,
-        floating = { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
+        floating = { NoorSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
         if (adhan) SettingsSection(stringResource(R.string.adhan_mode_adhan),
-            footer = when (target) { null -> stringResource(R.string.a026_fajr_note_all); Prayer.FAJR -> stringResource(R.string.a026_fajr_note_fajr); else -> null }) {
+            footer = when (target) { null -> stringResource(R.string.r026_fajr_note_all); Prayer.FAJR -> stringResource(R.string.r026_fajr_note_fajr); else -> null }) {
             Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 10.dp)) {
                 Segmented(listOf(false to stringResource(R.string.a026_whole), true to stringResource(R.string.a026_opening)), opening, { o ->
                     opening = o
@@ -187,16 +189,17 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
             }
             // (Second review of 0.25: only the voices there is a recording of. One Minhad has no licensed recording of
             // (Al-Quds) waits under "My sounds" for the user's own, and is a voice like the others once there is one.)
-            ClockVoice.entries.mapNotNull { v -> v.soundId(vm, custom)?.let { v to it } }.forEach { (v, id) ->
+            // (0.26 review: on Fajr's page the voices with a Fajr version come first; the order is otherwise the owner's.)
+            ClockVoice.entries.mapNotNull { v -> v.soundId(vm, custom)?.let { v to it } }
+                .sortedBy { (_, id) -> if (target == Prayer.FAJR && hasFajrVersion(id, lib, custom)) 0 else 1 }.forEach { (v, id) ->
                 SettingsDivider()
                 val choice = Plays.Adhan(id, opening && !SoundIds.isCustom(id))
                 val fajrVersion = hasFajrVersion(id, lib, custom)
                 VoiceRow(stringResource(v.label), chosen = (current as? Plays.Adhan)?.voice == id, playing = preview?.id == heard(choice),
                     previewLabel = previewLabel, onSelect = { pick(choice) }, onPreview = { vm.preview(choice, target, fajr = target == Prayer.FAJR) }) {
-                    if (fajrMatters) {
-                        if (fajrVersion) FajrChip(preview?.id == fajrSound(id, lib, custom)) { vm.preview(choice, target, fajr = true) }
-                        else Text(stringResource(R.string.a026_no_fajr), style = FootnoteStyle, color = NoorTheme.colors.textMuted)
-                    }
+                    // (0.26 review: the gold chip alone says which voices have a Fajr version; "No Fajr version" under
+                    // each of the others said it again and again.)
+                    if (fajrMatters && fajrVersion) FajrChip(preview?.id == fajrSound(id, lib, custom)) { vm.preview(choice, target, fajr = true) }
                 }
             }
             SettingsDivider()
@@ -210,7 +213,8 @@ fun VoiceScreen(contentPadding: PaddingValues, target: Prayer?, onBack: () -> Un
             lib.sounds.forEachIndexed { i, e ->
                 if (i > 0) SettingsDivider()
                 val choice = Plays.Effect(e.id)
-                SoundRow(e.title(ar), f.duration(if (e.file != null) e.seconds else e.shortSeconds ?: e.seconds), current == choice, preview?.id == e.id, previewLabel,
+                // (0.26 review: no length under each, "30 s" told nothing a person chooses by; touching one plays it.)
+                SoundRow(e.title(ar), null, current == choice, preview?.id == e.id, previewLabel,
                     onSelect = { pick(choice) }, onPreview = { vm.preview(choice, target) })
             }
         }

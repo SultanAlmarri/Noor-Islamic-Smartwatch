@@ -889,7 +889,7 @@
     <string name="loc_chosen">Chosen</string>
     <string name="face_sample_note">Sample picture. Your watch shows the time, date and next prayer of the moment.</string>
     <!-- 0.25 adhan -->
-    <string name="adhan_hero_next_at">Next: %1$s&#160;%2$s</string>
+    <string name="adhan_hero_next_at">Next:&#160;%1$s&#160;%2$s</string>
     <string name="adhan_fix">Fix</string>
     <plurals name="adhan_fix_count">
         <item quantity="one">%s thing to fix</item>
@@ -991,4 +991,10 @@
     <string name="a026_silent">Silent notice</string>
     <string name="a026_silent_detail">On the screen, without a sound</string>
     <string name="a026_fajr_adhan">Fajr Adhan</string>
+    <!-- 0.26 review -->
+    <string name="r026_test_in">Test in %1$s&#160;seconds</string>
+    <string name="r026_set_for_all">Set for every prayer</string>
+    <string name="r026_undo">Undo</string>
+    <string name="r026_fajr_note_all">Voices marked Fajr version use it at Fajr. With any other voice, Fajr keeps the Fajr Adhan it has.</string>
+    <string name="r026_fajr_note_fajr">Voices marked Fajr version use it at Fajr. The others play their usual Adhan.</string>
 </resources>

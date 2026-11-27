@@ -43,16 +43,24 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.triStateToggleable
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -186,18 +194,25 @@ fun <T> Segmented(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> 
 fun NoorSlider(
     value: Float, onValueChange: (Float) -> Unit, valueRange: ClosedFloatingPointRange<Float>, label: String,
     modifier: Modifier = Modifier, onValueChangeFinished: (() -> Unit)? = null,
+    /**
+     * (0.26 review) The prayers it sets differ: no thumb and no gold, only the bare track, so it shows no position it
+     * does not have; a touch on the track sets them all there, and the thumb appears.
+     */
+    mixed: Boolean = false,
 ) {
     val c = NoorTheme.colors
     val rest = c.textMuted.copy(alpha = if (c.isDark) 0.30f else 0.24f)
+    val mixedWord = androidx.compose.ui.res.stringResource(com.noor.app.R.string.voice_mixed)
     Slider(
         value = value, onValueChange = onValueChange, valueRange = valueRange, onValueChangeFinished = onValueChangeFinished,
-        modifier = modifier.semantics { contentDescription = label },
+        modifier = modifier.semantics { contentDescription = label; if (mixed) stateDescription = mixedWord },
         thumb = {
-            Box(Modifier.size(24.dp).shadow(3.dp, CircleShape).background(Color.White, CircleShape)
+            if (mixed) Spacer(Modifier.size(24.dp))
+            else Box(Modifier.size(24.dp).shadow(3.dp, CircleShape).background(Color.White, CircleShape)
                 .border(0.5.dp, Color.Black.copy(alpha = 0.08f), CircleShape))
         },
         track = { state ->
-            val f = ((state.value - state.valueRange.start) / (state.valueRange.endInclusive - state.valueRange.start)).coerceIn(0f, 1f)
+            val f = if (mixed) 0f else ((state.value - state.valueRange.start) / (state.valueRange.endInclusive - state.valueRange.start)).coerceIn(0f, 1f)
             Canvas(Modifier.fillMaxWidth().height(4.dp)) {
                 val r = CornerRadius(size.height / 2)
                 drawRoundRect(rest, size = size, cornerRadius = r)
@@ -399,4 +414,159 @@ fun EmptyCard(icon: ImageVector, title: String, text: String, action: String, on
 @Composable
 fun Footnote(text: String, modifier: Modifier = Modifier) {
     Text(text, style = FootnoteStyle, color = NoorTheme.colors.textMuted, modifier = modifier.padding(horizontal = 16.dp))
+}
+
+// ---- 0.26 review: the foot bar, the mixed state, the snackbar, the days ----
+
+/**
+ * A bar at the foot of a page (0.26 review: the alarm editor's Cancel and Save, the alarms' Delete while choosing),
+ * as the page's top bar is made ([com.noor.app.ui.components.NoorPage]): opaque, in the page's own sky (the sky drawn
+ * as the page draws it where the bar stands, its horizon's glow included, so the bar is the page and not a wash over
+ * it), a hairline above it; nothing that scrolls under it is seen, and it takes the touches that land on it. [bottom]:
+ * the room under its row (the navigation bar, or the tab bar that floats over its lower part).
+ */
+@Composable
+internal fun FootBar(bottom: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+    val backdrop = com.noor.app.ui.theme.LocalBackdrop.current
+    // (Where the bar stands on the page, and the page's size, for the sky to be drawn as the page draws it.)
+    val place = remember { floatArrayOf(0f, 0f, 0f, 0f) }
+    val placed = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    Column(
+        modifier.fillMaxWidth()
+            .onPlaced { co ->
+                val at = co.positionInRoot(); val root = co.findRootCoordinates().size
+                if (place[0] != at.x || place[1] != at.y || place[2] != root.width.toFloat() || place[3] != root.height.toFloat()) {
+                    place[0] = at.x; place[1] = at.y; place[2] = root.width.toFloat(); place[3] = root.height.toFloat(); placed.intValue++
+                }
+            }
+            .drawBehind {
+                placed.intValue
+                val x = place[0]; val y = place[1]
+                val w = if (place[2] > 0f) place[2] else size.width
+                val h = if (place[3] > 0f) place[3] else size.height
+                drawRect(Brush.verticalGradient(0f to backdrop.top, 0.55f to backdrop.middle, 1f to backdrop.bottom, startY = -y, endY = h - y))
+                if (backdrop.glow.alpha > 0.01f) drawRect(Brush.radialGradient(listOf(backdrop.glow, Color.Transparent),
+                    center = Offset(w * 0.5f - x, h * 1.02f - y), radius = kotlin.math.max(w, h) * 0.62f))
+            }
+            .pointerInput(Unit) { },
+    ) {
+        com.noor.app.ui.components.Hairline()
+        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = bottom).heightIn(min = FootBarHeight), verticalAlignment = Alignment.CenterVertically, content = content)
+    }
+}
+
+/** How tall a [FootBar]'s row is, over the room under it. */
+internal val FootBarHeight = 56.dp
+
+/**
+ * A switch for several prayers that differ (0.26 review): the track of a switch that is off, its thumb in the middle
+ * with a dash, as a checkbox shows "some". Drawn as Minhad's switch is ([com.noor.app.ui.settings.NoorSwitch], 52 by
+ * 32 dp), so a row keeps its shape; a touch turns it on for every prayer.
+ */
+@Composable
+internal fun MixedSwitch() {
+    val c = NoorTheme.colors
+    val off = c.textMuted.copy(alpha = if (c.isDark) 0.38f else 0.30f)
+    Box(Modifier.size(width = 52.dp, height = 32.dp).clip(CircleShape).background(off), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(24.dp).shadow(1.dp, CircleShape).background(Color.White, CircleShape), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(width = 10.dp, height = 2.5.dp).clip(RoundedCornerShape(50)).background(MixedDash))
+        }
+    }
+}
+
+/** The dash on a mixed switch's white thumb (4.6:1 on white). */
+internal val MixedDash = Color(0xFF6A7180)
+
+/**
+ * A row that turns something on or off for several prayers at once (0.26 review), in three states: on, off, or on for
+ * some ([Shared.MIXED], the mixed switch). The whole row is the switch; from "some" a touch turns it on for all.
+ */
+@Composable
+internal fun TriSwitchRow(icon: ImageVector, title: String, value: String?, state: Shared, tint: Color, onChange: (Boolean) -> Unit) {
+    val c = NoorTheme.colors
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp)
+            .triStateToggleable(
+                when (state) { Shared.ON -> ToggleableState.On; Shared.OFF -> ToggleableState.Off; Shared.MIXED -> ToggleableState.Indeterminate },
+                role = Role.Switch,
+            ) { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove); onChange(state != Shared.ON) }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconTile(icon, tint)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
+            if (value != null) Text(value, style = FootnoteStyle, color = c.textSecondary)
+        }
+        Spacer(Modifier.width(12.dp))
+        if (state == Shared.MIXED) MixedSwitch() else com.noor.app.ui.settings.NoorSwitch(state == Shared.ON, null)
+    }
+}
+
+/**
+ * The line that rises at a page's foot (0.26 review): opaque, in the colour of what rises over the page (the sheets'
+ * surface), softly rounded, its action in the accent. Calmer than Material's dark bar.
+ */
+@Composable
+internal fun NoorSnackbarHost(state: androidx.compose.material3.SnackbarHostState, modifier: Modifier = Modifier) {
+    val c = NoorTheme.colors
+    androidx.compose.material3.SnackbarHost(state, modifier) { data ->
+        androidx.compose.material3.Snackbar(data, Modifier.padding(horizontal = 16.dp, vertical = 8.dp), shape = RoundedCornerShape(18.dp),
+            containerColor = c.surfaceRaised, contentColor = c.textPrimary, actionColor = c.goldText, dismissActionContentColor = c.textSecondary)
+    }
+}
+
+/**
+ * The colours of the days (0.26 review: one design wherever days are chosen, the alarm's, as Samsung's): a day that is
+ * on is a disc of solid gold with its letter dark, a day that is off a bare letter. In the light theme the gold disc has
+ * a deeper gold rim, so that it stands out from the white glass at 3:1 (`DayLettersContrastTest`).
+ */
+internal object WeekColors {
+    fun fill(c: NoorColors): Color = c.goldFill
+    fun onFill(c: NoorColors): Color = c.onGold
+    /** The rim of a day that is on (null: none needed). */
+    fun rim(c: NoorColors): Color? = if (c.isDark) null else c.goldDeep
+    fun letter(c: NoorColors): Color = c.textSecondary
+}
+
+/** The week in the language's own order (Sunday first in English, Saturday in Arabic). */
+internal fun week(f: Formatter): List<java.time.DayOfWeek> {
+    val first = java.time.temporal.WeekFields.of(f.locale).firstDayOfWeek
+    return (0 until 7).map { first.plus(it.toLong()) }
+}
+
+/** A day's one letter, as Samsung writes the week ("S M T W T F S"; in Arabic ح ن ث ر خ ج س). */
+internal fun letter(d: java.time.DayOfWeek, f: Formatter): String = d.getDisplayName(java.time.format.TextStyle.NARROW, f.locale)
+
+/**
+ * The days of the week something rings or alerts on (0.26 review: the one selector of the app, in the alarm editor
+ * and on a prayer's page): a line that says them ("Every day", "Mon–Fri") over the week's seven letters, in the
+ * language's week order, each a round toggle ([WeekColors]). At least one stays on: [onChange] is given 0 when the last
+ * would go, and the caller keeps it. Goes inside a card.
+ */
+@Composable
+internal fun WeekDays(days: Int, f: Formatter, onChange: (Int) -> Unit) {
+    val c = NoorTheme.colors
+    val grow = limitedGrowth(1.15f)
+    Text(daysLabel(days, f), style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp), color = c.textPrimary,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp))
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween) {
+        for (d in week(f)) {
+            val bit = 1 shl (d.value - 1)
+            val on = days and bit != 0
+            val rim = WeekColors.rim(c)
+            Box(
+                Modifier.size(40.dp).clip(CircleShape)
+                    .then(if (on) Modifier.background(WeekColors.fill(c)).then(if (rim != null) Modifier.border(1.dp, rim, CircleShape) else Modifier) else Modifier)
+                    .toggleable(on, role = Role.Checkbox, onValueChange = withTick<Boolean> { onChange(if (it) days or bit else days and bit.inv()) })
+                    .semantics { contentDescription = d.getDisplayName(java.time.format.TextStyle.FULL, f.locale) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(letter(d, f), style = MaterialTheme.typography.labelLarge.copy(fontSize = (if (f.arabic) 16f else 15f).sp * grow, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal),
+                    color = if (on) WeekColors.onFill(c) else WeekColors.letter(c), maxLines = 1)
+            }
+        }
+    }
 }

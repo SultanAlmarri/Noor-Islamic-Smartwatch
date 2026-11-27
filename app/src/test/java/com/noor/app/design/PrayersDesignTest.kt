@@ -152,7 +152,9 @@ class PrayersDesignTest {
         }
         open { com.noor.app.ui.adhan.VoiceScreen(it, Prayer.FAJR, {}) }
         assertTrue("a voice with a Fajr recording can be heard in it", shown("Fajr version"))
-        assertTrue("a voice without one says so", shown("No Fajr version"))
+        // (0.26 review: the gold chip alone marks the voices that have one; the others no longer say "No Fajr version".)
+        assertTrue("the voices without one are not labelled each", !shown("No Fajr version"))
+        assertTrue("the footnote says what the chip means", shown("Voices marked Fajr version use it at Fajr"))
 
         // 3. The prayers differ: Asr softer and starting softly, Maghrib the opening only, Isha a notification, sunrise
         // birds on weekdays.
@@ -172,6 +174,18 @@ class PrayersDesignTest {
         }
         open(tab)
         assertTrue("prayers that differ say so", shown("Mixed") && shown("On for some prayers"))
+        // (0.26 review) A change for every prayer over prayers that differed says so once, and Undo gives each its own
+        // back.
+        val before = runBlocking { repo.current().alerts }
+        click("Vibrate")
+        val set = runBlocking { repo.current().alerts }
+        assertTrue("Vibrate set for every prayer", Prayer.entries.all { set.alert(it).vibrate })
+        assertTrue("the change says so, with Undo", shown("Set for every prayer") && shown("Undo"))
+        save("tab_mixed_undo_en")
+        click("Undo")
+        val back = runBlocking { repo.current().alerts }
+        assertTrue("Undo gives every prayer its own back", Prayer.entries.all { back.alert(it).vibrate == before.alert(it).vibrate })
+        assertTrue("and the row reads as mixed again", shown("On for some prayers"))
         open { com.noor.app.ui.adhan.PrayerAlertScreen(it, Prayer.ISHA, {}, {}) }; save("prayer_isha_notification_en")
         assertTrue("no page was rendered", saved > 0)
     }

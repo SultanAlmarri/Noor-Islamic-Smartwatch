@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -156,13 +157,16 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
     // The foot of the page holds Cancel and Save (over the navigation bar, or over the tab bar where the page has one):
     // the page's own end is lifted clear of them, so its last row can always be scrolled out from under them.
     val footBottom = (contentPadding.calculateBottomPadding() - com.noor.app.TabBarClear).coerceAtLeast(0.dp)
-    val page = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = contentPadding.calculateBottomPadding() + EditorFootHeight)
+    val page = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = contentPadding.calculateBottomPadding() + FootBarHeight + 12.dp)
     // (The slim bar with the page's name and nothing to touch in it: the ways out are at the foot.)
     NoorPage(stringResource(if (isNew) R.string.alarm_new else R.string.alarm_edit), page, spacing = 14.dp, barStart = { },
         floating = {
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-                SnackbarHost(snackbar, Modifier.align(Alignment.CenterHorizontally))
-                EditorFoot(stringResource(R.string.alarm_cancel), onBack, stringResource(R.string.alarm_save), save, canSave = total > 0, bottom = footBottom)
+                NoorSnackbarHost(snackbar, Modifier.align(Alignment.CenterHorizontally))
+                FootBar(footBottom) {
+                    FootAction(stringResource(R.string.alarm_cancel), onBack, Modifier.weight(1f))
+                    FootAction(stringResource(R.string.alarm_save), save, Modifier.weight(1f), strong = true, enabled = total > 0)
+                }
             }
         }) {
         GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 30.dp, highlighted = true) {
@@ -186,9 +190,7 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
 
         // The days, as Samsung's: a line that says them, and the week's seven letters, each a round toggle.
         GlassCard(Modifier.fillMaxWidth(), padding = 0.dp, corner = 26.dp) {
-            Text(daysLabel(draft.days, f), style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp), color = c.textPrimary,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp))
-            WeekCircles(draft.days, f) { d -> if (d != 0) set { it.copy(days = d) } }
+            WeekDays(draft.days, f) { d -> if (d != 0) set { it.copy(days = d) } }
         }
 
         // Its name ("Wake up for Fajr"), shown over its time in the list.
@@ -212,7 +214,7 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
 
         // What is used now and then, quietly, under the rest.
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            NoorButton(stringResource(R.string.alarm_try, f.number(5)), { vm.tryAlarm(draft.copy(id = if (isNew) PrayerAlarm.MAX else id)) },
+            NoorButton(stringResource(R.string.r026_test_in, f.number(5)), { vm.tryAlarm(draft.copy(id = if (isNew) PrayerAlarm.MAX else id)) },
                 kind = ButtonKind.Plain, compact = true, enabled = total > 0)
             if (!isNew) NoorButton(stringResource(R.string.alarm_delete), { vm.deleteAlarm(id); onBack() }, kind = ButtonKind.Plain, compact = true, danger = true)
         }
@@ -223,32 +225,16 @@ fun AlarmScreen(contentPadding: PaddingValues, id: Int, onBack: () -> Unit, vm: 
         onSelect = { m -> lastSnooze = m; set { it.copy(snoozeMinutes = m) } }, onDismiss = { snoozeDialog = false })
 }
 
-/** How tall the foot with Cancel and Save is, over the navigation bar. */
-private val EditorFootHeight = 64.dp
-
 /**
- * Cancel and Save, the two words at the foot of the editor, side by side, as Samsung's Clock ends its editor: each half
- * the width, in the accent, Save the heavier. The page fades into the foot's sky above them, so nothing scrolls into
- * the words.
+ * Cancel and Save at the foot of the editor, as Samsung's Clock ends its editor: each half the width, in the accent, Save
+ * the heavier. (0.26 review: on an opaque bar in the page's own sky, [FootBar]; it was a 94% wash with a fade above, and
+ * the rows under it showed through.)
  */
-@Composable
-private fun EditorFoot(cancel: String, onCancel: () -> Unit, saveText: String, onSave: () -> Unit, canSave: Boolean, bottom: Dp) {
-    val sky = com.noor.app.ui.theme.LocalBackdrop.current.at(1f)
-    Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(16.dp).background(Brush.verticalGradient(listOf(sky.copy(alpha = 0f), sky.copy(alpha = 0.94f)))))
-        Row(Modifier.fillMaxWidth().background(sky.copy(alpha = 0.94f)).padding(start = 12.dp, end = 12.dp, bottom = bottom).height(52.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            FootAction(cancel, onCancel, Modifier.weight(1f))
-            FootAction(saveText, onSave, Modifier.weight(1f), strong = true, enabled = canSave)
-        }
-    }
-}
-
 @Composable
 private fun FootAction(text: String, onClick: () -> Unit, modifier: Modifier, strong: Boolean = false, enabled: Boolean = true) {
     val c = NoorTheme.colors
     Box(
-        modifier.fillMaxHeight().padding(vertical = 4.dp).clip(RoundedCornerShape(50))
+        modifier.heightIn(min = 48.dp).padding(vertical = 4.dp).clip(RoundedCornerShape(50))
             .clickable(enabled = enabled, role = Role.Button, onClick = withTick(onClick)),
         contentAlignment = Alignment.Center,
     ) {
@@ -289,49 +275,18 @@ private fun AlarmWheels(
     }
 }
 
-/** The week in the language's own order (Sunday first in English, Saturday in Arabic). */
-private fun week(f: Formatter): List<DayOfWeek> {
-    val first = java.time.temporal.WeekFields.of(f.locale).firstDayOfWeek
-    return (0 until 7).map { first.plus(it.toLong()) }
-}
-
-/** A day's one letter, as Samsung writes the week ("S M T W T F S"; in Arabic ح ن ث ر خ ج س). */
-private fun letter(d: DayOfWeek, f: Formatter): String = d.getDisplayName(java.time.format.TextStyle.NARROW, f.locale)
-
-/**
- * The seven days as Samsung's editor shows them: round letters, a day that rings lit (a ring of the accent round a
- * tinted disc, its letter in the accent), the others a plain letter. At least one stays on.
- */
-@Composable
-private fun WeekCircles(days: Int, f: Formatter, onChange: (Int) -> Unit) {
-    val c = NoorTheme.colors
-    val grow = limitedGrowth(1.15f)
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        for (d in week(f)) {
-            val bit = 1 shl (d.value - 1)
-            val on = days and bit != 0
-            Box(
-                Modifier.size(40.dp).clip(CircleShape)
-                    .then(if (on) Modifier.background(c.gold.copy(alpha = if (c.isDark) 0.20f else 0.16f)).border(1.25.dp, c.gold.copy(alpha = 0.85f), CircleShape) else Modifier)
-                    .toggleable(on, role = Role.Checkbox, onValueChange = withTick<Boolean> { onChange(if (it) days or bit else days and bit.inv()) })
-                    .semantics { contentDescription = d.getDisplayName(java.time.format.TextStyle.FULL, f.locale) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(letter(d, f), style = MaterialTheme.typography.labelLarge.copy(fontSize = (if (f.arabic) 16f else 15f).sp * grow, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal),
-                    color = if (on) c.goldText else c.textSecondary, maxLines = 1)
-            }
-        }
-    }
-}
-
 /** The alarm's name, typed in its card (optional), as Samsung's "Alarm name". */
 @Composable
 private fun NameField(label: String, onChange: (String) -> Unit) {
     val c = NoorTheme.colors
     val hint = stringResource(R.string.alarm_label_hint)
     val style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp)
-    Box(Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(horizontal = 20.dp, vertical = 16.dp), contentAlignment = Alignment.CenterStart) {
-        BasicTextField(label, onChange, singleLine = true, textStyle = style.copy(color = c.textPrimary),
+    // (0.26 review: with large text a long name ran into the card's edge, cut in a letter. It now wraps onto a second
+    // line inside the card's margins, as long names do in Samsung's editor; on the list's cards it ends in "…".)
+    Box(Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 16.dp), contentAlignment = Alignment.CenterStart) {
+        // (Up to 40 letters, wrapped over two lines at most rather than cut at the edge; a line break typed or pasted
+        // is a space, so the name stays one line of words.)
+        BasicTextField(label, { t -> onChange(t.replace('\n', ' ')) }, singleLine = false, maxLines = 2, textStyle = style.copy(color = c.textPrimary),
             cursorBrush = SolidColor(c.gold),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
             modifier = Modifier.fillMaxWidth().semantics { contentDescription = hint },
@@ -523,14 +478,15 @@ private fun AlarmSoundPage(contentPadding: PaddingValues, a: PrayerAlarm, custom
 internal fun AlarmsList(
     a: com.noor.prayer.alerts.AlertSettings, rings: Rings, f: Formatter, onOpen: (Int) -> Unit, onToggle: (Int, Boolean) -> Unit,
     vm: AdhanViewModel = viewModel(),
+    /** (0.26 review) What is being chosen, held by the page, whose foot shows Delete ([AlarmsDeleteBar]). */
+    choice: AlarmChoice = remember { AlarmChoice() },
 ) {
     val c = NoorTheme.colors
     val haptics = LocalHapticFeedback.current
     val full = a.nextAlarmId() == null
-    var selecting by remember { mutableStateOf(false) }
-    var chosen by remember { mutableStateOf(emptySet<Int>()) }
-    val picked = chosen.filter { id -> a.alarms.any { it.id == id } }.toSet()
-    fun stop() { selecting = false; chosen = emptySet() }
+    val selecting = choice.selecting
+    val picked = choice.picked(a)
+    fun stop() = choice.stop()
     androidx.activity.compose.BackHandler(enabled = selecting) { stop() }
     if (a.alarms.isEmpty()) {
         EmptyCard(Icons.Rounded.Alarm, stringResource(R.string.alarms_none), stringResource(R.string.alarms_empty_footer, f.number(25)),
@@ -571,7 +527,7 @@ internal fun AlarmsList(
         Row(Modifier.fillMaxWidth().padding(top = 10.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
             if (selecting) {
                 val all = picked.size == a.alarms.size
-                Row(Modifier.clip(RoundedCornerShape(50)).toggleable(all, role = Role.Checkbox, onValueChange = withTick<Boolean> { on -> chosen = if (on) a.alarms.map { it.id }.toSet() else emptySet() })
+                Row(Modifier.clip(RoundedCornerShape(50)).toggleable(all, role = Role.Checkbox, onValueChange = withTick<Boolean> { on -> choice.chosen = if (on) a.alarms.map { it.id }.toSet() else emptySet() })
                     .padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     PickMark(all)
                     Spacer(Modifier.width(10.dp))
@@ -595,17 +551,49 @@ internal fun AlarmsList(
         sorted.forEach { al ->
             val mine = al.id in picked
             AlarmCard(al, rings.next[al.id], rings.zone, f, selecting, mine,
-                onOpen = { if (selecting) chosen = if (mine) picked - al.id else picked + al.id else onOpen(al.id) },
+                onOpen = { if (selecting) choice.chosen = if (mine) picked - al.id else picked + al.id else onOpen(al.id) },
                 onLongPress = {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (!selecting) { selecting = true; chosen = setOf(al.id) } else chosen = if (mine) picked - al.id else picked + al.id
+                    if (!selecting) { choice.selecting = true; choice.chosen = setOf(al.id) } else choice.chosen = if (mine) picked - al.id else picked + al.id
                 },
                 onToggle = { on -> onToggle(al.id, on) })
         }
         if (full && !selecting) com.noor.app.ui.settings.SectionFooter(stringResource(R.string.alarm_full, f.number(PrayerAlarm.MAX)))
     }
-    if (selecting) NoorButton(stringResource(R.string.alarms_delete_selected), { picked.forEach { vm.deleteAlarm(it) }; stop() }, Modifier.fillMaxWidth(),
-        kind = ButtonKind.Tonal, danger = true, enabled = picked.isNotEmpty())
+}
+
+/** (0.26 review) The alarms being chosen to delete: held by the Adhan tab, whose foot shows Delete while choosing. */
+@androidx.compose.runtime.Stable
+internal class AlarmChoice {
+    var selecting by mutableStateOf(false)
+    var chosen by mutableStateOf(emptySet<Int>())
+    /** What is chosen of the alarms there are. */
+    fun picked(a: com.noor.prayer.alerts.AlertSettings): Set<Int> = chosen.filter { id -> a.alarms.any { it.id == id } }.toSet()
+    fun stop() { selecting = false; chosen = emptySet() }
+}
+
+/**
+ * Delete, while alarms are being chosen (0.26 review: it stood under the last card, off the screen with five alarms):
+ * pinned at the page's foot, as Samsung's Clock does, on the same opaque bar as the editor's Cancel and Save.
+ */
+@Composable
+internal fun AlarmsDeleteBar(choice: AlarmChoice, a: com.noor.prayer.alerts.AlertSettings, vm: AdhanViewModel, bottom: Dp) {
+    val c = NoorTheme.colors
+    val picked = choice.picked(a)
+    val enabled = picked.isNotEmpty()
+    FootBar(bottom) {
+        Row(
+            Modifier.weight(1f).heightIn(min = 48.dp).padding(vertical = 4.dp).clip(RoundedCornerShape(50))
+                .clickable(enabled = enabled, role = Role.Button, onClick = withTick { picked.forEach { vm.deleteAlarm(it) }; choice.stop() }),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val ink = c.danger.copy(alpha = if (enabled) 1f else 0.38f)
+            Icon(Icons.Rounded.DeleteOutline, null, tint = ink, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.alarms_delete_selected), style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp * limitedGrowth(1.2f), fontWeight = FontWeight.SemiBold),
+                color = ink, maxLines = 1, softWrap = false)
+        }
+    }
 }
 
 /** A round check: filled in the accent when chosen, an empty ring otherwise (Samsung's selection). */

@@ -194,3 +194,45 @@ edit). Unit tests and software renders only.
 - TalkBack was not run.
 - The renders show today's library (sea waves, rain…); the other helper's new alert sounds will be listed from the
   library as they are, but were not rendered here.
+
+## The 0.26 review (27 November 2026), what changed
+
+An independent "would Apple ship this?" review of the renders; a helper acted on it (software renders and unit tests
+only, nothing on a phone).
+
+- **Mixed is its own state.** Where the prayers differ, Volume's slider has no thumb and no gold (the bare track; a
+  touch sets them all there and the thumb appears), and Start softly / Vibrate show a third switch, its thumb in the
+  middle with a dash (`MixedSwitch`, `TriSwitchRow`; TalkBack hears "partly checked"); a touch turns it on for all.
+  The logic is pure and tested (`ui/adhan/EveryPrayer.kt`: `shown`, `sharedVolume`, `sharedSoftStart`,
+  `sharedVibrate`, `differIn`, `undo`; `EveryPrayerTest`, 5 tests).
+- **Undo.** A change for every prayer (sound, volume, Start softly, Vibrate) made while the row showed the prayers
+  differing says so once, "Set for every prayer", with **Undo** (`NoorSnackbarHost`: a calm opaque line, 10 s), which
+  gives each prayer back exactly what it had in that setting and touches nothing else (`AdhanViewModel.undo`,
+  `undoEveryPrayer`). On the tab and on the picker for every prayer.
+- **One day selector** (`WeekDays`, `WeekColors` in `AdhanComponents.kt`), the alarm's: "Every day" / "Mon–Fri" above
+  the week's single letters; a day that is on a solid gold disc with a dark letter (a deeper gold rim by day), a day
+  off a bare letter. On a prayer's page and in the alarm editor. `DayLettersContrastTest` (new) checks both themes at
+  every height of the Sun: letters 4.5:1, the disc against the glass 3:1 (worst: 9.0, 5.3, 4.3).
+- **The picker**: "No Fajr version" is gone (the gold chip marks the voices that have one); the footnote is
+  "Voices marked Fajr version use it at Fajr. With any other voice, Fajr keeps the Fajr Adhan it has." (Fajr's page:
+  "… The others play their usual Adhan."); on Fajr's page the voices with a Fajr version come first; the alert sounds
+  no longer show a length.
+- **Large text**: the card's line is "Next: Fajr 5:23 AM" in one piece (`adhan_hero_next_at` edited in place with
+  no-break spaces), or, where that does not fit beside the switch, "Fajr 5:23 AM" alone (measured); the prayers' rows
+  keep their chevron at every size.
+- **One test**: "Test in 10 seconds" (the row on the tab; a quiet gold text button on a prayer's page, which was a grey
+  pill "Test this alert") and "Test in 5 seconds" in the alarm editor: string `r026_test_in`.
+- **Alerts off**: each prayer's row keeps what it would play, dimmed; "Off" only for a prayer switched off.
+- **Devices and silent mode**: the Adhan library left it (it is in Settings → About, and every voice and sound is in
+  the picker). **My sounds stays**: its page (rename, replace, delete a recording) has no other way in; the picker can
+  list and add them but not manage them. To remove that row too, the lead would pass `onOpenMySounds` to `VoiceScreen`
+  (a one-line change in `MainActivity.kt`) and add a "Manage" row there. "Plays like an alarm clock" no longer stands
+  under the switch (the footnote says it); off, the line still says what happens instead.
+
+Strings added under `<!-- 0.26 review -->`: `r026_test_in`, `r026_set_for_all`, `r026_undo`, `r026_fajr_note_all`,
+`r026_fajr_note_fajr`. Edited in place: `adhan_hero_next_at` (no-break space after "Next:"). No longer used:
+`adhan_test`, `history_test`, `alarm_try`, `a026_no_fajr`, `a026_fajr_note_all`, `a026_fajr_note_fajr`,
+`adhan_dnd_on`, and `adhan_library_section` (the library's other strings are still used by Settings).
+`PrayersDesignTest`: the assertion that the picker says "No Fajr version" now asserts the opposite (the new truth), and
+it now also touches Vibrate on the mixed tab, checks that every prayer vibrates and the line with Undo is shown (render
+`tab_mixed_undo_en`), touches Undo and checks that each prayer has its own again.

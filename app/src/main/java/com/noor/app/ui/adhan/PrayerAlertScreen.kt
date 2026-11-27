@@ -84,6 +84,24 @@ internal fun StopPreviewOnLeave(vm: AdhanViewModel) {
 }
 
 /**
+ * (0.26 review) When a change for every prayer has overwritten prayers that differed, one calm line says so, "Set for
+ * every prayer", with Undo, which gives each prayer back what it had. Shown once for each such change, for ten seconds.
+ */
+@Composable
+internal fun EveryPrayerUndo(vm: AdhanViewModel, host: SnackbarHostState) {
+    val offer by vm.undo.collectAsStateWithLifecycle()
+    val text = stringResource(R.string.r026_set_for_all)
+    val action = stringResource(R.string.r026_undo)
+    LaunchedEffect(offer) {
+        val u = offer ?: return@LaunchedEffect
+        when (host.showSnackbar(text, action, duration = androidx.compose.material3.SnackbarDuration.Long)) {
+            androidx.compose.material3.SnackbarResult.ActionPerformed -> vm.undoEveryPrayer(u)
+            androidx.compose.material3.SnackbarResult.Dismissed -> vm.consumeUndo(u)
+        }
+    }
+}
+
+/**
  * Everything about one prayer's alert, on one calm page (0.26; the owner, 27 November 2026: "I should be able to
  * control well, if I want it to vibrate, if I want it to start gradually ... the specific volume for each prayer time
  * Adhan, what days it works, what days it doesn't"). Top to bottom: the prayer as the home screen draws it, with its
@@ -114,7 +132,7 @@ fun PrayerAlertScreen(
     val notifPermission = com.noor.app.ui.components.rememberNotificationRequest { vm.refresh() }
 
     NoorPage(f.prayerName(prayer), contentPadding, onBack = onBack,
-        floating = { SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
+        floating = { NoorSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(contentPadding)) }) {
         // All alerts are off: said here, with the switch for it here (0.14: the page sent one to the Adhan tab to find
         // it, which from the home screen's rows is a long way round).
         if (!alerts.enabled) SettingsSection("") {
@@ -140,11 +158,15 @@ fun PrayerAlertScreen(
             SettingsSection("", footer = if (prayer == Prayer.SHURUQ) stringResource(R.string.adhan_sunrise_note) else null) {
                 SoundSettings(prayer, alerts, vm, custom, f, ar, onOpenSound = onOpenVoice, stopAfter = stopLabel(a.maxSeconds, f) to { stopDialog = true })
             }
-            // (0.17: alarms before and after a prayer are on the Adhan tab, under Alarms.)
-            SettingsSection(stringResource(R.string.alarm_repeat), footer = daysLabel(a.days, f)) {
-                DaysRow(a.days, f) { d -> if (d != 0) vm.setDays(prayer, d) }
+            // (0.17: alarms before and after a prayer are on the Adhan tab, under Alarms.) (0.26 review: the days as the
+            // alarm editor chooses them, one selector in the whole app.)
+            SettingsSection("") {
+                WeekDays(a.days, f) { d -> if (d != 0) vm.setDays(prayer, d) }
             }
-            NoorButton(stringResource(R.string.adhan_test), { vm.test(prayer) }, Modifier.fillMaxWidth(), kind = ButtonKind.Tonal)
+            // (0.26 review: a page's own test is a quiet text button in the accent, worded as everywhere else.)
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                NoorButton(stringResource(R.string.r026_test_in, f.number(10)), { vm.test(prayer) }, kind = ButtonKind.Plain, compact = true)
+            }
         } }
     }
 
@@ -196,29 +218,29 @@ internal fun SoundSettings(
     val (icon, tint) = playsSign(plays)
     SettingsItem(icon, stringResource(R.string.adhan_sound_section), null, onClick = onOpenSound, tint = tint,
         detail = (if (target != null) prayerFacts(target, a.alert(target), lib, custom, ar) else plays?.let { playsFacts(it, lib, custom, ar) })?.joinToString(" · ") ?: stringResource(R.string.voice_mixed))
-    val audible = (target?.let(::listOf) ?: Prayer.entries).filter { a.alert(it).mode.playsAudio }
-    if (audible.isEmpty()) return
-    // (For every prayer: the prayers that will sound; when none is on, those that would.)
-    val counted = audible.filter { a.enabled && a.alert(it).enabled }.ifEmpty { audible }
+    // (For every prayer: the prayers that will sound; when none is on, those that would. 0.26 review: where they differ
+    // each control shows it as its own third state, a slider without a thumb, a switch with its thumb in the middle;
+    // what was shown "Mixed" and is then set for all can be undone, from the line that says so.)
+    val counted = a.shown(target)
+    if (counted.isEmpty()) return
     val some = stringResource(R.string.a026_some_prayers)
 
     SettingsDivider()
     val volumes = counted.map { a.alert(it).volumePercent }
-    VolumeLine(volumes.average().toFloat(), volumes.distinct().size > 1, volumes, stringResource(R.string.adhan_volume), f) { vm.setVolume(target, it) }
+    VolumeLine(volumes.average().toFloat(), a.sharedVolume(target) == null, volumes, stringResource(R.string.adhan_volume), f) { vm.setVolume(target, it) }
 
     SettingsDivider()
-    val rises = counted.map { a.alert(it).gradualSeconds }
-    val soft = rises.all { it > 0 }
-    SettingsSwitch(Icons.AutoMirrored.Rounded.TrendingUp, stringResource(R.string.a026_start_softly),
-        when {
-            soft -> stringResource(R.string.a026_soft_on, f.number(rises.max()))
-            rises.any { it > 0 } -> some
-            else -> stringResource(R.string.a026_soft_off)
+    val soft = a.sharedSoftStart(target)
+    TriSwitchRow(Icons.AutoMirrored.Rounded.TrendingUp, stringResource(R.string.a026_start_softly),
+        when (soft) {
+            Shared.ON -> stringResource(R.string.a026_soft_on, f.number(counted.maxOf { a.alert(it).gradualSeconds }))
+            Shared.MIXED -> some
+            Shared.OFF -> stringResource(R.string.a026_soft_off)
         }, soft, tint = Tints.Purple) { vm.setSoftStart(target, it) }
 
     SettingsDivider()
-    val vibrate = counted.map { a.alert(it).vibrate }
-    SettingsSwitch(Icons.Rounded.Vibration, stringResource(R.string.adhan_vibrate), if (vibrate.distinct().size > 1) some else null, vibrate.all { it },
+    val vibrate = a.sharedVibrate(target)
+    TriSwitchRow(Icons.Rounded.Vibration, stringResource(R.string.adhan_vibrate), if (vibrate == Shared.MIXED) some else null, vibrate,
         tint = Tints.Indigo) { vm.setVibrate(target, it) }
 
     if (stopAfter != null) {
@@ -261,7 +283,7 @@ internal fun VolumeLine(value: Float, mixed: Boolean, key: Any?, label: String, 
             NoorSlider(vol, { v ->
                 if ((v / 10).toInt() != (vol / 10).toInt()) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 vol = v; moved = true
-            }, 5f..100f, label, Modifier.fillMaxWidth(), onValueChangeFinished = { onSet(vol.toInt()) })
+            }, 5f..100f, label, Modifier.fillMaxWidth(), onValueChangeFinished = { onSet(vol.toInt()) }, mixed = mixed && !moved)
         }
     }
 }
@@ -283,35 +305,3 @@ internal fun adhanDetail(e: SoundEntry, short: Boolean, f: Formatter, ar: Boolea
 /** "15 min", or "Off". */
 @Composable
 internal fun minutesLabel(m: Int, f: Formatter): String = if (m <= 0) stringResource(R.string.adhan_off) else stringResource(R.string.minutes_short, f.number(m))
-
-/**
- * The days of the week a prayer alerts on (0.16): seven round toggles, in the week's own order for the language,
- * lit when on. At least one stays on (no days at all is the prayer's switch, above). 0.25: a day that is on is a ring
- * of the accent round a tinted disc with its letters in the accent; seven solid gold discs were the loudest thing on
- * the page, louder than its one button.
- */
-@Composable
-internal fun DaysRow(days: Int, f: Formatter, onChange: (Int) -> Unit) {
-    val c = NoorTheme.colors
-    val first = java.time.temporal.WeekFields.of(f.locale).firstDayOfWeek
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        for (k in 0 until 7) {
-            val d = first.plus(k.toLong())
-            val bit = 1 shl (d.value - 1)
-            val on = days and bit != 0
-            Box(
-                Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(if (on) c.gold.copy(alpha = if (c.isDark) 0.20f else 0.16f) else c.glassRaised)
-                    .then(if (on) Modifier.border(1.25.dp, c.gold.copy(alpha = 0.85f), androidx.compose.foundation.shape.CircleShape) else Modifier)
-                    .toggleable(on, role = Role.Checkbox, onValueChange = com.noor.app.ui.components.withTick<Boolean> { onChange(if (it) days or bit else days and bit.inv()) })
-                    .semantics { contentDescription = d.getDisplayName(java.time.format.TextStyle.FULL, f.locale) },
-                contentAlignment = Alignment.Center,
-            ) {
-                // (Arabic: the day's one-letter form, ح ن ث ر خ ج س; English: two letters.)
-                Text(if (f.arabic) d.getDisplayName(java.time.format.TextStyle.NARROW, f.locale) else f.weekdayShort(d).take(2),
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = if (f.arabic) 14.sp else 12.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium),
-                    color = if (on) c.goldText else c.textSecondary, maxLines = 1)
-            }
-        }
-    }
-}
