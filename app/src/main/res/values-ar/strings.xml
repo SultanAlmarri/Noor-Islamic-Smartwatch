@@ -260,9 +260,6 @@
     <string name="adhan_mode_silent">صامت</string>
     <string name="adhan_sunrise_note">الشروق نهاية وقت الفجر، وليس له أذان.</string>
     <string name="adhan_sound_section">الصوت</string>
-    <string name="adhan_gradual">رفع الصوت تدريجيًا</string>
-    <string name="adhan_gradual_off">متوقف: يبدأ بالصوت الكامل</string>
-    <string name="adhan_gradual_value">يرتفع خلال %1$s ث</string>
     <string name="adhan_dnd">التشغيل في الوضع الصامت و«عدم الإزعاج»</string>
     <string name="adhan_dnd_on">يعمل كالمنبّه.</string>
     <string name="adhan_dnd_off">إشعار صامت حين يكون الهاتف صامتًا.</string>
@@ -284,8 +281,6 @@
     <string name="adhan_my_sounds_desc_empty">استورد ملفاتك بصيغة MP3 أو M4A أو AAC أو WAV</string>
     <string name="adhan_my_sounds_desc">المستوردة: %1$s</string>
     <string name="adhan_alert_for">التنبيه عند %1$s</string>
-    <string name="adhan_type">النوع</string>
-    <string name="adhan_options">الخيارات</string>
     <string name="adhan_fajr_note">أذان الفجر يتضمن «الصلاة خير من النوم».</string>
     <string name="adhan_fajr_warn">ليس فيه «الصلاة خير من النوم». أذان الفجر أنسب للفجر.</string>
     <string name="adhan_badge_fajr">الفجر</string>
@@ -797,12 +792,7 @@
     <string name="basis_parameters">الطريقة الموثّق أنها تتبعها، ولم تُقارن بجدولها بعد.</string>
     <string name="basis_recognised">طريقة شائعة الاستخدام، ولا يُقصد بها جدول رسمي هنا.</string>
     <string name="basis_manual">الطريقة التي اخترتها.</string>
-    <string name="adhan_hint_adhan">الأذان كاملًا</string>
-    <string name="adhan_hint_short">مطلعه فقط</string>
-    <string name="adhan_hint_sound">طيور، مطر…</string>
-    <string name="adhan_hint_custom">ملف من عندك</string>
     <string name="adhan_hint_notification">صوت هاتفك المعتاد</string>
-    <string name="adhan_hint_silent">إشعار فقط، بلا صوت</string>
     <string name="adhan_plays">يُشغَّل: %s</string>
     <string name="hijri_today_is">اليوم: %s</string>
     <string name="watch_get_wearable">تنزيل Galaxy Wearable</string>
@@ -817,10 +807,8 @@
     <string name="cd_today_now">اليوم، الآن</string>
     <string name="history_fix_dnd">السماح بالمنبّهات في وضع عدم الإزعاج</string>
     <string name="settings_watch_note">التثبيت والمزامنة ووجه الساعة</string>
-    <string name="adhan_alert_options">الصوت والأجهزة</string>
     <!-- 0.16: the Adhan section redone. -->
     <string name="adhan_voice">صوت الأذان</string>
-    <string name="voice_for">صوت %s</string>
     <string name="voice_makkah">مكة</string>
     <string name="voice_madinah">المدينة</string>
     <string name="voice_alquds">القدس</string>
@@ -887,12 +875,9 @@
     <string name="alarm_day_tomorrow">غدًا</string>
     <string name="adhan_section_adhan">الأذان</string>
     <string name="alarms_none">لا منبهات بعد</string>
-    <string name="alarm_next_in_hm">المنبه التالي بعد %1$s س و%2$s د</string>
-    <string name="alarm_next_in_m">المنبه التالي بعد %1$s د</string>
     <!-- 0.18: the five voices, one volume for every prayer, the alarm's sounds. -->
     <string name="voice_dubai">دبي</string>
     <string name="voice_all_title">صوت الأذان لكل الصلوات</string>
-    <string name="adhan_volume_all">مستوى الصوت لكل الصلوات</string>
     <string name="adhan_sound_title">الصوت</string>
     <string name="alarm_sound_ringtone">نغمة رنين الهاتف</string>
     <string name="alarm_sounds_phone">الهاتف</string>
@@ -921,7 +906,6 @@
     <string name="face_sample_note">صورة توضيحية. تعرض ساعتك الوقت والتاريخ والصلاة القادمة في حينها.</string>
     <!-- 0.25 adhan -->
     <string name="adhan_hero_next_at">التالي: %1$s&#160;%2$s</string>
-    <string name="adhan_all_prayers">كل الصلوات</string>
     <string name="adhan_fix">إصلاح</string>
     <plurals name="adhan_fix_count">
         <item quantity="zero">%s أمر يحتاج إلى إصلاح</item>

@@ -257,9 +257,6 @@
     <string name="adhan_mode_silent">Silent</string>
     <string name="adhan_sunrise_note">Sunrise ends Fajr time; it has no Adhan.</string>
     <string name="adhan_sound_section">Sound</string>
-    <string name="adhan_gradual">Gradual volume</string>
-    <string name="adhan_gradual_off">Off: starts at full volume</string>
-    <string name="adhan_gradual_value">Rises over %1$s seconds</string>
     <string name="adhan_dnd">Play in silent mode and Do Not Disturb</string>
     <string name="adhan_dnd_on">Plays like an alarm clock.</string>
     <string name="adhan_dnd_off">A silent notice while the phone is silent.</string>
@@ -278,8 +275,6 @@
     <string name="adhan_my_sounds_desc_empty">Import your own MP3, M4A, AAC or WAV files</string>
     <string name="adhan_my_sounds_desc">Imported: %1$s</string>
     <string name="adhan_alert_for">Alert at %1$s</string>
-    <string name="adhan_type">Type</string>
-    <string name="adhan_options">Options</string>
     <string name="adhan_fajr_note">Fajr Adhans include “As-salatu khayrun min an-nawm” (prayer is better than sleep).</string>
     <string name="adhan_fajr_warn">This one has no “As-salatu khayrun min an-nawm”. A Fajr Adhan suits Fajr better.</string>
     <string name="adhan_badge_fajr">Fajr</string>
@@ -785,12 +780,7 @@
     <string name="basis_parameters">The method it is documented to use; not yet checked against its timetable.</string>
     <string name="basis_recognised">A widely used method: no official timetable is implied here.</string>
     <string name="basis_manual">The method you chose.</string>
-    <string name="adhan_hint_adhan">The full call</string>
-    <string name="adhan_hint_short">Its opening only</string>
-    <string name="adhan_hint_sound">Birds, rain…</string>
-    <string name="adhan_hint_custom">A file of yours</string>
     <string name="adhan_hint_notification">Phone’s usual sound</string>
-    <string name="adhan_hint_silent">Notice only, no sound</string>
     <string name="adhan_plays">Plays: %s</string>
     <string name="hijri_today_is">Today: %s</string>
     <string name="watch_get_wearable">Get Galaxy Wearable</string>
@@ -805,10 +795,8 @@
     <string name="cd_today_now">Today, now</string>
     <string name="history_fix_dnd">Let alarms through Do Not Disturb</string>
     <string name="settings_watch_note">Install, sync, watch face</string>
-    <string name="adhan_alert_options">Sound and devices</string>
     <!-- 0.16: the Adhan section redone. -->
     <string name="adhan_voice">Adhan voice</string>
-    <string name="voice_for">Voice for %s</string>
     <string name="voice_makkah">Makkah</string>
     <string name="voice_madinah">Madinah</string>
     <string name="voice_alquds">Al-Quds</string>
@@ -871,12 +859,9 @@
     <string name="alarm_day_tomorrow">Tomorrow</string>
     <string name="adhan_section_adhan">Adhan</string>
     <string name="alarms_none">No alarms yet</string>
-    <string name="alarm_next_in_hm">Next alarm in %1$s h %2$s min</string>
-    <string name="alarm_next_in_m">Next alarm in %1$s min</string>
     <!-- 0.18: the five voices, one volume for every prayer, the alarm's sounds. -->
     <string name="voice_dubai">Dubai</string>
     <string name="voice_all_title">Adhan voice for every prayer</string>
-    <string name="adhan_volume_all">Volume for every prayer</string>
     <string name="adhan_sound_title">Sound</string>
     <string name="alarm_sound_ringtone">Phone’s ringtone</string>
     <string name="alarm_sounds_phone">Phone</string>
@@ -905,7 +890,6 @@
     <string name="face_sample_note">Sample picture. Your watch shows the time, date and next prayer of the moment.</string>
     <!-- 0.25 adhan -->
     <string name="adhan_hero_next_at">Next: %1$s&#160;%2$s</string>
-    <string name="adhan_all_prayers">All prayers</string>
     <string name="adhan_fix">Fix</string>
     <plurals name="adhan_fix_count">
         <item quantity="one">%s thing to fix</item>
