@@ -314,10 +314,10 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         play(PreviewKey(id, false), SoundSource.LocalFile(f), volumePercent)
     }
 
-    private fun play(key: PreviewKey, source: SoundSource, volumePercent: Int) {
+    private fun play(key: PreviewKey, source: SoundSource, volumePercent: Int, maxSeconds: Int = 0) {
         if (_preview.value == key) { stopPreview(); return }
         _preview.value = key
-        player.play(source, volumePercent, gradualSeconds = 0, maxSeconds = 0) { _preview.value = null }
+        player.play(source, volumePercent, gradualSeconds = 0, maxSeconds = maxSeconds) { _preview.value = null }
     }
 
     fun stopPreview() { player.stop(); _preview.value = null }
@@ -325,7 +325,11 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
     /** 0.18: the phone's alarm sound ([SYS_ALARM]) or ringtone ([SYS_RINGTONE]), as an alarm would play it. */
     fun previewSystem(which: String) {
         val ctx = getApplication<Application>()
-        val type = if (which == SYS_RINGTONE) android.media.RingtoneManager.TYPE_RINGTONE else android.media.RingtoneManager.TYPE_ALARM
+        val type = when (which) {
+            SYS_RINGTONE -> android.media.RingtoneManager.TYPE_RINGTONE
+            SYS_NOTIFICATION -> android.media.RingtoneManager.TYPE_NOTIFICATION
+            else -> android.media.RingtoneManager.TYPE_ALARM
+        }
         val uri = runCatching { android.media.RingtoneManager.getActualDefaultRingtoneUri(ctx, type) }.getOrNull() ?: android.media.RingtoneManager.getDefaultUri(type) ?: return
         play(PreviewKey(which, false), SoundSource.System(uri.toString()), 90)
     }
@@ -495,6 +499,84 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- 0.26: what plays, the volume, the soft start and vibration, for one prayer or for every prayer at once ----
+
+    /**
+     * [choice] for [target], or for the five prayers at once when null (sunrise keeps its own: it has no Adhan). Each
+     * prayer keeps its switch, volume and days. At Fajr a voice plays its Fajr recording when it has one ([playing]).
+     */
+    internal fun choose(target: Prayer?, choice: Plays) = update { s0 ->
+        var s = s0
+        // ("Random": a different one of the voices each time, Fajr's own recordings at Fajr.)
+        if (choice is Plays.Adhan && choice.voice == SoundIds.RANDOM)
+            s = s.copy(favourites = library.adhans.map { it.id }.filter { id -> VOICE_LIBRARY_IDS.any { id == it || id == it + "_fajr" } })
+        val custom = _custom.value
+        s.withEach(target?.let(::listOf) ?: FIVE_PRAYERS) { p, a ->
+            if (p == Prayer.SHURUQ && choice is Plays.Adhan) a else a.playing(p, choice, library, custom, forAll = target == null)
+        }
+    }
+
+    /** "Start softly" for [target], or for every prayer when null: a rise over [PrayerAlert.SOFT_START_SECONDS], or none. */
+    fun setSoftStart(target: Prayer?, on: Boolean) = update { s ->
+        s.withEach(target?.let(::listOf) ?: Prayer.entries) { _, a -> a.copy(gradualSeconds = if (on) PrayerAlert.SOFT_START_SECONDS else 0) }
+    }
+
+    /** Vibration for [target], or for every prayer when null. */
+    fun setVibrate(target: Prayer?, on: Boolean) = update { s -> s.withEach(target?.let(::listOf) ?: Prayer.entries) { _, a -> a.copy(vibrate = on) } }
+
+    /** The volume of [target] (every prayer when null), and a few seconds of what it plays at that volume. */
+    fun setVolume(target: Prayer?, percent: Int) {
+        if (target == null) setVolumeAll(percent) else setPrayer(target) { it.copy(volumePercent = percent) }
+        sample(target, percent)
+    }
+
+    /**
+     * A few seconds of what [target] plays (for every prayer: what they share, or else Dhuhr's) at [percent], so that a
+     * volume is heard as it is set: the Adhan's opening, an alert sound, the user's recording. Always from its start.
+     */
+    fun sample(target: Prayer?, percent: Int) {
+        val s = settings.value?.alerts ?: return
+        val p = target ?: Prayer.DHUHR
+        val plays = (if (target == null) sharedPlays(s, library, _custom.value) else null) ?: playsOf(p, s.alert(p), library, _custom.value)
+        val source: Pair<String, SoundSource>? = when (plays) {
+            is Plays.Adhan -> {
+                val id = (if (p == Prayer.FAJR) fajrSound(plays.voice, library, _custom.value) else plays.voice)
+                    .let { if (it == SoundIds.RANDOM) library.byId(SoundIds.DEFAULT_ADHAN)?.id else it }
+                when {
+                    id == null -> null
+                    SoundIds.isCustom(id) -> container.customSounds.get(id)?.let { container.customSounds.file(it) }?.let { id to SoundSource.LocalFile(it) }
+                    else -> library.byId(id)?.let { e -> (e.shortFile ?: e.file)?.let { id to SoundSource.Asset(it) } }
+                }
+            }
+            is Plays.Effect -> library.byId(plays.id)?.let { e -> (e.file ?: e.shortFile)?.let { e.id to SoundSource.Asset(it) } }
+            is Plays.Own -> container.customSounds.get(plays.id)?.let { container.customSounds.file(it) }?.let { plays.id to SoundSource.LocalFile(it) }
+            Plays.Notification, Plays.Silent -> null
+        }
+        source ?: return
+        stopPreview()
+        play(PreviewKey(SAMPLE, false), source.second, percent, maxSeconds = 6)
+    }
+
+    /**
+     * What a row of the sound picker plays when touched: [plays] as it will sound at [p] ([fajr]: its Fajr recording),
+     * at the prayer's volume; a second touch stops it.
+     */
+    internal fun preview(plays: Plays, p: Prayer?, fajr: Boolean = false) {
+        val volume = p?.let { settings.value?.alerts?.alert(it)?.volumePercent } ?: settings.value?.alerts?.alert(Prayer.DHUHR)?.volumePercent ?: 80
+        when (plays) {
+            is Plays.Adhan -> {
+                val id = if (fajr) fajrSound(plays.voice, library, _custom.value) else plays.voice
+                if (id == SoundIds.RANDOM) return
+                if (SoundIds.isCustom(id)) previewCustom(id, volume)
+                else previewLibrary(id, short = plays.opening && library.byId(id)?.shortFile != null || library.byId(id)?.hasFullRecording == false, volumePercent = volume)
+            }
+            is Plays.Effect -> previewLibrary(plays.id, short = library.byId(plays.id)?.file == null, volumePercent = volume)
+            is Plays.Own -> previewCustom(plays.id, volume)
+            Plays.Notification -> previewSystem(SYS_NOTIFICATION)
+            Plays.Silent -> stopPreview()
+        }
+    }
+
     fun openNoorOnWatch(nodeId: String) = viewModelScope.launch { container.watchSetup.openNoorOnWatch(nodeId) }
 
     fun consumeMessage() { _message.value = null }
@@ -519,6 +601,10 @@ class AdhanViewModel(app: Application) : AndroidViewModel(app) {
 /** Preview keys of the phone's own sounds. */
 internal const val SYS_ALARM = "sys.alarm"
 internal const val SYS_RINGTONE = "sys.ringtone"
+/** 0.26: the phone's notification sound ("Notification only"). */
+internal const val SYS_NOTIFICATION = "sys.notification"
+/** 0.26: the few seconds heard while a volume is set. */
+internal const val SAMPLE = "sample"
 
 /** The kinds of alert a voice applies to: the Adhan, its opening, the user's own sound. */
 internal val VOICE_MODES = setOf(AlertMode.ADHAN, AlertMode.ADHAN_SHORT, AlertMode.CUSTOM)

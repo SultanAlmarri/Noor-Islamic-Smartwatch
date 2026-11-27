@@ -124,7 +124,7 @@ class TestHookReceiver : BroadcastReceiver() {
         repo.setManualCity("dxb")
         repo.setLocationMode(LocationMode.MANUAL)
         repo.updateAlerts { a ->
-            a.copy(enabled = true, device = AlertDevice.PHONE, gradualSeconds = 0).let { s ->
+            a.copy(enabled = true, device = AlertDevice.PHONE).fullVolumeFromStart().let { s ->
                 val which = if (scheduled) Prayer.entries.filter { it != Prayer.SHURUQ } else listOf(prayer)
                 which.fold(s) { acc, p -> acc.with(p, acc.alert(p).copy(enabled = true, mode = AlertMode.ADHAN, maxSeconds = max, volumePercent = 100)) }
             }

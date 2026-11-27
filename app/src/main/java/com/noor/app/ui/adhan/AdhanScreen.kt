@@ -107,9 +107,9 @@ internal class Issue(val text: String, val action: String?, val onAction: (() ->
  * The Adhan tab (0.25), organised round the person, not round the app's problems and options. Two pages under one
  * switch, Prayers and Alarms. Prayers, top to bottom: the one switch for all prayer alerts, always under the same name,
  * with what happens next under it (or Off, or that it will not sound); one line with one button for whatever needs
- * fixing, and only then; the voice and the volume of every prayer; the six prayers, each with today's time and its
- * switch; then the test, the record of what happened, and what is set once (which device, how the sound behaves, the
- * library).
+ * fixing, and only then; the six prayers, each with the home screen's sky for it, what it plays, today's time and its
+ * switch (0.26); what every prayer plays and how, set at once (0.26: the sound, the volume, Start softly, Vibrate);
+ * then the test, the record of what happened, and what is set once (which device, silent mode, the library).
  */
 @Composable
 fun AdhanScreen(
@@ -120,7 +120,7 @@ fun AdhanScreen(
     onOpenHistory: () -> Unit = {},
     vm: AdhanViewModel = viewModel(),
     onOpenLocation: () -> Unit = {},
-    /** 0.16: the voices, for every prayer. */
+    /** The sound picker for every prayer at once (0.16: the voices; 0.26: everything a prayer can play). */
     onOpenVoice: () -> Unit = {},
     /** 0.17: an alarm (0: a new one). */
     onOpenAlarm: (Int) -> Unit = {},
@@ -136,7 +136,7 @@ fun AdhanScreen(
     val ar = isArabicUi()
     val f = Formatter(ar, s.numerals, s.timeFormat)
     val context = LocalContext.current
-    var gradualDialog by rememberSaveable { mutableStateOf(false) }
+
 
     // (Not twice on entry: the view model has just done it; once each time the page comes back.)
     LifecycleResumeEffect(Unit) { vm.onShown(); onPauseOrDispose { } }
@@ -218,44 +218,37 @@ fun AdhanScreen(
 
         if (adhanIssues.isNotEmpty()) FixCard(adhanIssues, null, f)
 
-        // 0.18: one voice and one volume for every prayer (the owner: "Why can't I set a certain Adhan sound for all
-        // the prayers at once?"). 0.25: the voice is one row that opens the voices, where each is heard on touch (the
-        // six tiles here were the same choice a second time, in another shape). With the alerts off both look off.
-        OffWhen(!a.enabled) {
-            SettingsSection(stringResource(R.string.adhan_all_prayers)) {
-                val shared = sharedVoice(a, vm, custom)
-                val calls = Prayer.entries.any { it != Prayer.SHURUQ && a.alert(it).mode in VOICE_MODES }
-                SettingsItem(Icons.Rounded.RecordVoiceOver, stringResource(R.string.adhan_voice), null, onClick = onOpenVoice,
-                    detail = voiceName(shared, vm, custom, ar) ?: if (calls) stringResource(R.string.voice_mixed) else null)
-                SettingsDivider()
-                // One volume for every prayer's alert (the prayers' own volumes all move with it).
-                val volumes = Prayer.entries.filter { a.alert(it).enabled && a.alert(it).mode.playsAudio }.map { a.alert(it).volumePercent }
-                VolumeRow((volumes.takeIf { it.isNotEmpty() }?.average() ?: 80.0).toFloat(), volumes, stringResource(R.string.adhan_volume_all), f) { vm.setVolumeAll(it) }
-            }
-        }
-
-        // Each prayer with today's time and its switch, and a line under its name only where it differs from the
-        // others (its own voice, the opening only, a sound, some days). The row opens the prayer's own page.
-        // (0.15: listed also while the alerts are off, quiet and switched off, so what would happen can be seen; a
-        // prayer's switch turned on then turns the alerts on for that prayer alone.)
-        val shared = sharedVoice(a, vm, custom)
+        // 0.26: the six prayers first, each as the home screen draws it (the owner: "use the icons you used on the home
+        // screen ... it looks nice"): a small window onto its own sky, its name, today's time, what it will do in a word
+        // or two, and its switch. The row opens the prayer. (0.15: listed also while the alerts are off, quiet and
+        // switched off; a prayer's switch turned on then turns the alerts on for that prayer alone.)
         SettingsSection("") {
             Prayer.entries.forEachIndexed { i, p ->
-                if (i > 0) SettingsDivider()
+                if (i > 0) RowDivider(66.dp)
                 val x = a.alert(p)
-                val line = when {
-                    !a.enabled || !x.enabled -> emptyList()
-                    else -> differs(x, p, shared, vm, custom, ar, f)
-                }
-                PrayerAlertRow(p, f.prayerName(p), x, rings.today[p]?.let { f.clockAt(it, rings.zone) }, line, live = a.enabled,
-                    onOpen = { onOpenPrayer(p) }, onToggle = { on ->
-                        if (on && !a.enabled) {
+                val on = a.enabled && x.enabled
+                val facts = if (!on) listOf(stringResource(R.string.adhan_off))
+                    else prayerFacts(p, x, vm.library, custom, ar) + listOfNotNull(daysLabel(x.days, f).takeIf { x.days != PrayerAlert.ALL_DAYS })
+                PrayerRow(p, f.prayerName(p), rings.today[p]?.let { f.clockAt(it, rings.zone) }, facts, on = on, live = a.enabled,
+                    onOpen = { onOpenPrayer(p) }, onToggle = { v ->
+                        if (v && !a.enabled) {
                             vm.enableOnly(p)
                             if (ready.canRequestNotifications && a.device.includes(AlertDevice.PHONE)) notifPermission()
-                        } else vm.setPrayer(p) { it.copy(enabled = on) }
+                        } else vm.setPrayer(p) { it.copy(enabled = v) }
                     })
             }
         }
+
+        // 0.26: what every prayer plays and how, set at once (the owner: "control the audio of all the Adhans at the same
+        // time, or if you want, individual audio levels for each Adhan"); each prayer's page can then make it its own.
+        // Where the prayers differ the row says so ("Mixed", "On for some prayers"), and a change here sets them all.
+        // With the alerts off it looks off.
+        OffWhen(!a.enabled) {
+            SettingsSection(stringResource(R.string.a026_every_prayer), footer = stringResource(R.string.a026_every_prayer_footer)) {
+                SoundSettings(null, a, vm, custom, f, ar, onOpenSound = onOpenVoice)
+            }
+        }
+        StopPreviewOnLeave(vm)
 
         SettingsSection("") {
             // 0.15: "will it really sound tonight?" answered where the question arises: a real alert in ten seconds,
@@ -266,15 +259,17 @@ fun AdhanScreen(
                     trailing = { })
                 SettingsDivider()
             }
-            // What really happened at each alert. (0.25: the row alone; the last alert's whole sentence stood under it,
-            // three lines of it when something had gone wrong.)
+            // What really happened at each alert.
             SettingsItem(Icons.Rounded.History, stringResource(R.string.history_title), null, onClick = onOpenHistory)
             SettingsDivider()
-            SettingsItem(Icons.Rounded.Tune, stringResource(R.string.adhan_alert_options), null, onClick = { page = 1 },
-                detail = stringResource(when (a.device) { AlertDevice.PHONE -> R.string.adhan_device_phone; AlertDevice.WATCH -> R.string.adhan_device_watch; AlertDevice.BOTH -> R.string.adhan_device_both }))
+            // 0.26: named for what it holds now that the rise is each prayer's: which device, and silent mode.
+            // (Which device, as a line under the name: beside it the name broke over two lines.)
+            SettingsItem(Icons.Rounded.Tune, stringResource(R.string.a026_devices),
+                stringResource(when (a.device) { AlertDevice.PHONE -> R.string.adhan_device_phone; AlertDevice.WATCH -> R.string.adhan_device_watch; AlertDevice.BOTH -> R.string.adhan_device_both }),
+                onClick = { page = 1 })
         }
     }
-    } else NoorPage(stringResource(R.string.adhan_alert_options), contentPadding, onBack = { page = 0 }) {
+    } else NoorPage(stringResource(R.string.a026_devices), contentPadding, onBack = { page = 0 }) {
         Column {
             SectionHeader(stringResource(R.string.adhan_device_title))
             Segmented(
@@ -300,11 +295,8 @@ fun AdhanScreen(
             }
         }
 
-        SettingsSection(stringResource(R.string.adhan_sound_section), footer = stringResource(R.string.adhan_volume_note)) {
-            SettingsItem(Icons.Rounded.GraphicEq, stringResource(R.string.adhan_gradual),
-                if (a.gradualSeconds == 0) stringResource(R.string.adhan_gradual_off) else stringResource(R.string.adhan_gradual_value, f.number(a.gradualSeconds)),
-                onClick = { gradualDialog = true })
-            SettingsDivider()
+        // (0.26: the gradual rise left this page: it is each prayer's "Start softly", on the Adhan tab.)
+        SettingsSection("", footer = stringResource(R.string.adhan_volume_note)) {
             SettingsSwitch(Icons.Rounded.DoNotDisturbOn, stringResource(R.string.adhan_dnd),
                 stringResource(if (!a.quietWhenSilent) R.string.adhan_dnd_on else R.string.adhan_dnd_off), !a.quietWhenSilent, onChange = vm::setPlayInSilentMode)
         }
@@ -319,12 +311,6 @@ fun AdhanScreen(
                 onClick = onOpenMySounds)
         }
     }
-    }
-
-    if (gradualDialog) {
-        ChoiceDialog(stringResource(R.string.adhan_gradual),
-            listOf(0, 5, 10, 20, 30, 60).map { it to if (it == 0) stringResource(R.string.adhan_gradual_off) else stringResource(R.string.adhan_gradual_value, f.number(it)) },
-            a.gradualSeconds, onSelect = vm::setGradual, onDismiss = { gradualDialog = false })
     }
 }
 
@@ -448,81 +434,51 @@ internal fun VolumeRow(value: Float, key: Any?, label: String, f: Formatter, onS
     }
 }
 
-/** The colour of a prayer's sign: the sky of its hour (first light, sunrise, the noon Sun, the afternoon, sunset, night). */
-private fun prayerTint(p: Prayer): Color = when (p) {
-    Prayer.FAJR -> Tints.Indigo
-    Prayer.SHURUQ -> Tints.Orange
-    Prayer.DHUHR -> Tints.Gold
-    Prayer.ASR -> Tints.Blue
-    Prayer.MAGHRIB -> Tints.Pink
-    Prayer.ISHA -> Tints.Purple
-}
+/** A hairline between rows, from [start] (where the rows' words begin) to the end. */
+@Composable
+internal fun RowDivider(start: androidx.compose.ui.unit.Dp) =
+    androidx.compose.material3.HorizontalDivider(Modifier.padding(start = start), thickness = 0.5.dp, color = NoorTheme.colors.separator)
 
 /**
- * A prayer's sign on a small tile, as the signs of the lists are drawn (0.25): in the colour of its hour when it will
- * alert, grey when not. (Gold is left to the switches.)
+ * One prayer on the Adhan tab (0.26): the home screen's sign for it, a small window onto its own sky (the owner: "use
+ * the icons you used on the home screen"; 0.25 had drawn coloured tiles); its name, and under it what it will do in a word or two ("Adhan · Makkah", "Birds", "Notification", "Off"), and its days when not every
+ * day; today's time, as the home screen writes it; and its switch. Touching the row (all but the switch) opens the prayer; a chevron says so. Off, the sky is dim and
+ * the words grey, so the prayers that will sound stand out.
  */
 @Composable
-private fun PrayerTile(p: Prayer, on: Boolean) {
-    val base = if (on) prayerTint(p) else Tints.Gray
-    val brush = remember(base) { Brush.verticalGradient(listOf(lerp(base, Color.White, 0.20f), base, lerp(base, Color.Black, 0.10f))) }
-    Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(brush), contentAlignment = Alignment.Center) { PrayerIcon(p, 19.dp, Color.White) }
-}
-
-/**
- * One prayer: its name and today's time, a line under them only when it differs from the rest, and its switch. Second
- * review: a split row, as iOS draws a row that both opens and switches. What is left of a thin upright line (the sign,
- * the name, the time and a chevron) opens the prayer's alert (kind, voice, days, volume); the switch beyond the line
- * turns it on or off without leaving the page. (Until then the row ended in a switch alone, and nothing said that it
- * opened a page.)
- */
-@Composable
-private fun PrayerAlertRow(p: Prayer, name: String, alert: PrayerAlert, time: Pair<String, String?>?, line: List<String>, live: Boolean = true, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun PrayerRow(p: Prayer, name: String, time: Pair<String, String?>?, facts: List<String>, on: Boolean, live: Boolean, onOpen: () -> Unit, onToggle: (Boolean) -> Unit) {
     val c = NoorTheme.colors
-    // (With the alerts off nothing alerts: the switch says so, and the row is quieter.)
-    val on = live && alert.enabled
-    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+    val ink = if (on) c.textPrimary else c.textSecondary
+    // (With large text the time grows by a tenth at most, and the chevron gives its place to the name: "Maghrib 5:32 PM"
+    // still on one line on a 360 dp phone at 1.3.)
+    val grow = com.noor.app.ui.components.limitedGrowth(1.1f)
+    val roomy = androidx.compose.ui.platform.LocalDensity.current.fontScale <= 1.15f
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(
-            Modifier.weight(1f).heightIn(min = 56.dp).clickable(role = Role.Button, onClick = withTick(onOpen)).padding(start = 16.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
+            Modifier.weight(1f).heightIn(min = 64.dp).clickable(role = Role.Button, onClick = withTick(onOpen)).padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(Modifier.weight(1f).alpha(if (on) 1f else if (live) 0.62f else 0.45f), verticalAlignment = Alignment.CenterVertically) {
-                PrayerTile(p, on)
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(name, style = MaterialTheme.typography.bodyLarge, color = c.textPrimary)
-                    FactsLine(line, FootnoteStyle, c.textSecondary)
+            com.noor.app.ui.today.SkyDisc(p, 38.dp, passed = !on)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                // (The name and the time on one line, the time at its end; what it will do under them, with the whole
+                // width: with the time beside it, "Adhan · Makkah" broke over two lines on some rows and not others.)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, fontWeight = FontWeight.Medium), color = ink, maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Spacer(Modifier.weight(1f).widthIn(min = 8.dp))
+                    // (The time as the home screen writes it: light figures, the AM or PM small beside them.)
+                    if (time != null) ClockText(time, MaterialTheme.typography.titleLarge.merge(com.noor.app.ui.theme.Tabular).copy(fontSize = 19.sp * grow, fontWeight = FontWeight.Light, letterSpacing = (-0.2).sp),
+                        ink, markerStyle = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp * grow, letterSpacing = 0.sp))
                 }
-                if (time != null) ClockText(time, MaterialTheme.typography.bodyLarge.merge(com.noor.app.ui.theme.Tabular), c.textPrimary, Modifier.padding(start = 8.dp),
-                    markerStyle = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.sp))
+                FactsLine(facts, FootnoteStyle, if (on) c.textSecondary else c.textMuted)
             }
-            // (The chevron at full strength on a quiet row too: the page opens either way.)
-            androidx.compose.material3.Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted.copy(alpha = 0.7f),
-                modifier = Modifier.padding(start = 2.dp).size(20.dp))
+            // (Second review of 0.25: something must say that the row opens a page. With large text the name needs its room.)
+            if (roomy) androidx.compose.material3.Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted.copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = 4.dp).size(20.dp))
         }
-        Box(Modifier.width(1.dp).height(24.dp).background(c.separator))
-        Box(Modifier.padding(start = 12.dp, end = 16.dp)) { NoorSwitch(on, onToggle) }
+        Box(Modifier.padding(start = 6.dp, end = 14.dp)) { NoorSwitch(on, onToggle) }
     }
-}
-
-/** Whether [id] is [shared]'s voice (a voice's Fajr recording counts as the voice). */
-private fun sameVoice(id: String?, shared: String?, vm: AdhanViewModel, custom: List<com.noor.alerts.CustomSound>): Boolean =
-    id == shared || (shared != null && voiceOf(id, vm, custom)?.soundId(vm, custom) == shared)
-
-/**
- * What sets [x] apart from the other prayers, in a few words, or null when nothing does: its own voice (Fajr's own
- * recording included), the opening only, a notification or silence, some days only.
- */
-@Composable
-private fun differs(x: PrayerAlert, p: Prayer, shared: String?, vm: AdhanViewModel, custom: List<com.noor.alerts.CustomSound>, ar: Boolean, fm: Formatter): List<String> = buildList {
-    // (Each a fact of its own, joined by FactsLine; "♪ Dubai" in one piece.)
-    when (x.mode) {
-        AlertMode.ADHAN, AlertMode.CUSTOM -> if (!sameVoice(x.soundId, shared, vm, custom)) voiceName(x.soundId, vm, custom, ar)?.let { add("♪$NBSP$it") }
-        AlertMode.ADHAN_SHORT -> { add(stringResource(R.string.adhan_mode_short)); if (!sameVoice(x.soundId, shared, vm, custom)) voiceName(x.soundId, vm, custom, ar)?.let { add("♪$NBSP$it") } }
-        AlertMode.SOUND -> { add(stringResource(R.string.adhan_mode_sound)); vm.library.byId(x.soundId)?.title(ar)?.let { add(it) } }
-        else -> add(stringResource(modeLabel(x.mode)))
-    }
-    if (x.days != PrayerAlert.ALL_DAYS) add(daysLabel(x.days, fm))
 }
 
 internal fun modeLabel(m: AlertMode) = when (m) {

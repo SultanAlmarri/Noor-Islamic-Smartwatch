@@ -46,6 +46,13 @@ data class PrayerAlert(
     val beforeMinutes: Int = 0,
     /** 0.16: minutes after the prayer for a reminder ("Asr began 20 minutes ago": the iqamah), 0 = none. One of [AFTER_CHOICES]. */
     val afterMinutes: Int = 0,
+    /**
+     * 0.26: seconds over which the sound rises from quiet to [volumePercent] ("Start softly"), 0 = at full volume from
+     * the first second, the default (the owner, 27 November 2026: "by default it should be at the normal volume from
+     * the beginning ... make it an option"). Each prayer its own; until 0.25 one setting served every prayer
+     * ([AlertSettings.gradualSeconds]).
+     */
+    val gradualSeconds: Int = 0,
 ) {
     /** Whether it alerts on [day]. */
     fun on(day: java.time.DayOfWeek): Boolean = days and (1 shl (day.value - 1)) != 0
@@ -54,7 +61,8 @@ data class PrayerAlert(
         val m = if (p == Prayer.SHURUQ && (mode == AlertMode.ADHAN || mode == AlertMode.ADHAN_SHORT)) AlertMode.SOUND else mode
         return copy(mode = m, volumePercent = volumePercent.coerceIn(5, 100), maxSeconds = maxSeconds.coerceIn(0, 600),
             soundId = soundId?.takeIf { SoundIds.isValid(it) }, days = days.coerceIn(0, ALL_DAYS),
-            beforeMinutes = beforeMinutes.takeIf { it in BEFORE_CHOICES } ?: 0, afterMinutes = afterMinutes.takeIf { it in AFTER_CHOICES } ?: 0)
+            beforeMinutes = beforeMinutes.takeIf { it in BEFORE_CHOICES } ?: 0, afterMinutes = afterMinutes.takeIf { it in AFTER_CHOICES } ?: 0,
+            gradualSeconds = gradualSeconds.coerceIn(0, MAX_GRADUAL))
     }
 
     companion object {
@@ -64,6 +72,10 @@ data class PrayerAlert(
         val BEFORE_CHOICES = listOf(0, 5, 10, 15, 20, 30)
         /** The times offered after a prayer (the iqamah), in minutes (0 = off). */
         val AFTER_CHOICES = listOf(0, 5, 10, 15, 20, 25, 30)
+        /** 0.26: the rise "Start softly" turns on ("Rises to full volume over 10 seconds"). */
+        const val SOFT_START_SECONDS = 10
+        /** The longest rise a stored setting may ask for. */
+        const val MAX_GRADUAL = 60
     }
 }
 
@@ -79,6 +91,9 @@ data class AlertSettings(
     /**
      * Seconds to rise from quiet to the chosen volume. 0 = start at full volume: the default since 0.24.1 (the owner:
      * "I don't want the Adhan sound to get progressively louder, I want it at its normal volume from the beginning").
+     * 0.26: the prayers' alerts follow each prayer's own [PrayerAlert.gradualSeconds]; this one setting is kept for the
+     * alarms, and for watches up to 0.25, which read only it. Settings written before 0.26 (without "pgrad") give it to
+     * every prayer when read ([decode]).
      */
     val gradualSeconds: Int = 0,
     /**
@@ -158,11 +173,24 @@ data class AlertSettings(
 
     fun with(p: Prayer, a: PrayerAlert) = copy(perPrayer = perPrayer + (p to a.normalized(p)))
 
+    /** [change] made to every prayer's alert ([only]: to those prayers alone). */
+    fun withEach(only: Collection<Prayer> = Prayer.entries, change: (Prayer, PrayerAlert) -> PrayerAlert): AlertSettings =
+        only.fold(this) { s, p -> s.with(p, change(p, s.alert(p))) }
+
+    /**
+     * 0.26: every alert at its full volume from the first second, the prayers' and the alarms' (the owner, 27 November
+     * 2026: "why is it that the Adhan is still starting up gradually? I want it to be on its normal volume from the
+     * beginning"). Run once on each phone when 0.26 first starts; afterwards "Start softly" is each prayer's choice.
+     */
+    fun fullVolumeFromStart(): AlertSettings = copy(gradualSeconds = 0).withEach { _, a -> a.copy(gradualSeconds = 0) }
+
     /** Compact single-line form, used in DataStore and inside the watch config. */
     fun encode(): String = buildList {
         add("v=$VERSION"); add("on=${if (enabled) 1 else 0}"); add("dev=${device.name}")
         // "dnd" is the 0.5–0.8 field ("play in Do Not Disturb"), still written so watches on those versions behave the same.
-        add("grad=$gradualSeconds"); add("dnd=${if (quietWhenSilent) 0 else 1}"); add("quiet=${if (quietWhenSilent) 1 else 0}")
+        // (0.26: "pgrad=1" says that each prayer's rise is in its own line, none written meaning none; without it, as
+        // written before 0.26, "grad" is every prayer's.)
+        add("grad=$gradualSeconds"); add("pgrad=1"); add("dnd=${if (quietWhenSilent) 0 else 1}"); add("quiet=${if (quietWhenSilent) 1 else 0}")
         if (favourites.isNotEmpty()) add("fav=" + favourites.joinToString(","))
         // Written only when set, so settings without a reminder encode exactly as before (watches up to 0.9.8 ignore it).
         // 0.16: reminders are per prayer; when only those are set, "pre" carries the lead they share, for watches up to
@@ -172,8 +200,10 @@ data class AlertSettings(
         if (shared > 0) add("pre=$shared")
         Prayer.entries.forEach { p ->
             val a = alert(p)
-            // (Days and the reminders before and after are new fields at the end: older readers stop before them.)
-            val extra = if (a.days != PrayerAlert.ALL_DAYS || a.beforeMinutes > 0 || a.afterMinutes > 0) ",${a.days},${a.beforeMinutes},${a.afterMinutes}" else ""
+            // (Days and the reminders before and after are new fields at the end: older readers stop before them. 0.26:
+            // then the prayer's own rise, written only when it has one.)
+            val extra = (if (a.days != PrayerAlert.ALL_DAYS || a.beforeMinutes > 0 || a.afterMinutes > 0 || a.gradualSeconds > 0)
+                ",${a.days},${a.beforeMinutes},${a.afterMinutes}" else "") + (if (a.gradualSeconds > 0) ",${a.gradualSeconds}" else "")
             add("${p.name}=${if (a.enabled) 1 else 0},${a.mode.name},${a.soundId ?: ""},${a.volumePercent},${if (a.vibrate) 1 else 0},${a.maxSeconds}$extra")
         }
         // 0.17: a new field, written only when there are alarms (older readers ignore it).
@@ -200,9 +230,12 @@ data class AlertSettings(
             val m = text.split(';').mapNotNull { f -> f.indexOf('=').takeIf { it > 0 }?.let { f.substring(0, it) to f.substring(it + 1) } }.toMap()
             // (Before 0.16 one reminder lead served every prayer: it becomes each prayer's own.)
             val pre = m["pre"]?.toIntOrNull()?.takeIf { it in REMINDER_CHOICES } ?: 0
+            val grad = (m["grad"]?.toIntOrNull() ?: 0).coerceIn(0, 60)
+            // (Before 0.26 one rise served every prayer: it becomes each prayer's own.)
+            val perPrayerGrad = m["pgrad"] == "1"
             val per = Prayer.entries.associateWith { p ->
                 val d = DEFAULTS.getValue(p)
-                val f = m[p.name]?.split(',') ?: return@associateWith d
+                val f = m[p.name]?.split(',') ?: return@associateWith (if (perPrayerGrad) d else d.copy(gradualSeconds = grad)).normalized(p)
                 PrayerAlert(
                     enabled = f.getOrNull(0)?.let { it == "1" } ?: d.enabled,
                     mode = f.getOrNull(1)?.let { n -> AlertMode.entries.firstOrNull { it.name == n } } ?: d.mode,
@@ -213,13 +246,14 @@ data class AlertSettings(
                     days = f.getOrNull(6)?.toIntOrNull() ?: PrayerAlert.ALL_DAYS,
                     beforeMinutes = f.getOrNull(7)?.toIntOrNull() ?: 0,
                     afterMinutes = f.getOrNull(8)?.toIntOrNull() ?: 0,
+                    gradualSeconds = if (perPrayerGrad) f.getOrNull(9)?.toIntOrNull() ?: 0 else grad,
                 ).normalized(p)
             }
             return AlertSettings(
                 enabled = m["on"] == "1",
                 device = m["dev"]?.let { n -> AlertDevice.entries.firstOrNull { it.name == n } } ?: AlertDevice.PHONE,
                 perPrayer = per,
-                gradualSeconds = (m["grad"]?.toIntOrNull() ?: 0).coerceIn(0, 60),
+                gradualSeconds = grad,
                 // Versions before 0.9 had only "dnd", off by default, which silenced the Adhan on vibrate: that default was
                 // the main reason Adhans did not sound, so it is not carried over. Only an explicit "quiet" choice is kept.
                 quietWhenSilent = m["quiet"] == "1",

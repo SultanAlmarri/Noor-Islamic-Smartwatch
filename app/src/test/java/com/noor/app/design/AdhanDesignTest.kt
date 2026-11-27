@@ -230,7 +230,7 @@ class AdhanDesignTest {
             open { com.noor.app.ui.adhan.AlarmScreen(it, fajrAlarm, {}) }; save("on_alarm_edit_$tag")
             open { com.noor.app.ui.adhan.VoiceScreen(it, null, {}) }; save("on_voice_all_$tag")
             if (tag == "en" || tag == "ar") {
-                open(adhan); click("Sound and devices", "الصوت والأجهزة"); save("on_options_$tag")
+                open(adhan); click("Devices and silent mode", "الأجهزة والوضع الصامت"); save("on_options_$tag")
                 open { com.noor.app.ui.adhan.PrayerAlertScreen(it, Prayer.SHURUQ, {}, {}) }; save("on_prayer_shuruq_off_$tag")
                 open { com.noor.app.ui.adhan.AlarmScreen(it, 0, {}) }; save("on_alarm_new_$tag")
                 click("Sound", "الصوت"); save("on_alarm_sound_$tag")
