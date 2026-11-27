@@ -1,6 +1,8 @@
 package com.noor.app.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
@@ -98,19 +99,23 @@ fun SectionFooter(text: String, modifier: Modifier = Modifier) {
  * watch in graphite, what is checked in green. The sign itself is white on its tile.
  */
 object Tints {
-    val Gold = Color(0xFFCB9A3C)
-    val Blue = Color(0xFF1E88F5)
-    val Green = Color(0xFF2FB45A)
-    val Orange = Color(0xFFF58B1F)
-    val Red = Color(0xFFF0463C)
-    val Pink = Color(0xFFEE3E6A)
-    val Purple = Color(0xFFA557DA)
-    val Indigo = Color(0xFF5E5CE0)
-    val Teal = Color(0xFF28A9C4)
-    val Mint = Color(0xFF1FB8A6)
-    val Brown = Color(0xFFA2835C)
-    val Gray = Color(0xFF8A8F9A)
-    val Graphite = Color(0xFF4A4F5C)
+    // (0.26) One family of colours taken from the sky the app is drawn on, of the same strength, so a list reads as one
+    // calm thing and not a box of crayons (0.25's were the iPhone's own Settings colours, and the owner found them
+    // copied). The names stay what they were, so every row keeps its kind: Red is the dawn's coral, Purple the dusk's
+    // violet, Indigo the night's, Teal and Mint the sea's, Brown the sand's, Gray and Graphite stone.
+    val Gold = Color(0xFFD9A548)
+    val Blue = Color(0xFF4F9BEA)
+    val Green = Color(0xFF4FB47A)
+    val Orange = Color(0xFFE8954A)
+    val Red = Color(0xFFE5786C)
+    val Pink = Color(0xFFE06F92)
+    val Purple = Color(0xFFA07CE0)
+    val Indigo = Color(0xFF7F86E8)
+    val Teal = Color(0xFF33AFB4)
+    val Mint = Color(0xFF3FB79C)
+    val Brown = Color(0xFFB8946A)
+    val Gray = Color(0xFF9BA1AE)
+    val Graphite = Color(0xFF8A93A6)
 
     private val byIcon: Map<String, Color> = mapOf(
         // where
@@ -135,16 +140,31 @@ object Tints {
 }
 
 /**
- * The sign at the start of a row (0.25): a small tile filled with the sign's colour, lit from above, and the sign in
- * white on it, as in an iPhone's Settings. [tint] is given only where the colour says something (a warning, a danger);
- * otherwise the sign has the colour of its kind ([Tints.of]).
+ * The sign at the start of a row (0.26): a small disc of the sign's colour, faint, like a tinted pane of the page's
+ * glass, with a hairline of the same colour round it and the sign drawn in the colour itself (lighter by night,
+ * deeper by day). A disc, as the home screen's prayers are discs of their sky; 0.25's filled squares with a white sign
+ * were the iPhone's Settings, and the owner found them copied. [tint] is given only where the colour says something
+ * (a warning, a danger); otherwise the sign has the colour of its kind ([Tints.of]).
  */
 @Composable
 fun IconTile(icon: ImageVector, tint: Color = Color.Unspecified) {
     val base = if (tint == Color.Unspecified) Tints.of(icon) else tint
-    val brush = remember(base) { Brush.verticalGradient(listOf(lerp(base, Color.White, 0.20f), base, lerp(base, Color.Black, 0.10f))) }
-    Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(brush), contentAlignment = Alignment.Center) {
-        Icon(icon, null, tint = Color.White, modifier = Modifier.size(19.dp))
+    val dark = NoorTheme.colors.isDark
+    val look = remember(base, dark) { IconTileLook.of(base, dark) }
+    Box(
+        Modifier.size(32.dp).clip(CircleShape).background(look.fill).border(0.75.dp, look.ring, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, null, tint = look.glyph, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** The colours of an [IconTile]: its fill and hairline (both see-through) and its sign. Checked by `IconTileContrastTest`. */
+data class IconTileLook(val fill: Color, val ring: Color, val glyph: Color) {
+    companion object {
+        fun of(base: Color, dark: Boolean): IconTileLook =
+            if (dark) IconTileLook(base.copy(alpha = 0.22f), base.copy(alpha = 0.34f), lerp(base, Color.White, 0.32f))
+            else IconTileLook(base.copy(alpha = 0.15f), base.copy(alpha = 0.26f), lerp(base, Color.Black, 0.38f))
     }
 }
 
