@@ -23,12 +23,13 @@ V = 108.0  # the adaptive icon's viewport; a launcher shows the middle 72 at mos
 # ---- the geometry -------------------------------------------------------------------------------------------------
 # 0.26: the crescent is in the middle of the icon, across and down (the owner: "I actually want the crescent
 # centered, like in the middle, vertically and horizontally"): the box of the drawn crescent (what is left of the
-# outer circle after the bite) is centred on the field's centre, and the star sits inside its curve. The Earth's edge
-# moved down to make room (82 -> 86). place() below works the circle's centre out from that.
-R = 21.0                           # the crescent's outer circle: its radius (its centre: place())
-INNER_R, INNER_OFF, INNER_ANG = 17.4, 7.6, -40.0   # the circle that bites it: radius, distance and bearing of its centre
-STAR_T, STAR_RO, STAR_RI = 2.0, 6.0, 3.3          # the star: past the bite's centre along its bearing; outer, inner radius
-LIMB_Y, EARTH_R = 86.0, 150.0      # the Earth's edge: its highest point, and the radius of the arc
+# outer circle after the bite) is centred on the field's centre, and the star sits inside its curve. The crescent is
+# a little smaller than 0.25's (19 for 22) so the Earth's edge still shows well below it (the owner: the horizon was
+# too small at 86). place() below works the circle's centre out from that.
+R = 19.0                           # the crescent's outer circle: its radius (its centre: place())
+INNER_R, INNER_OFF, INNER_ANG = 15.74, 6.88, -40.0   # the circle that bites it: radius, distance and bearing of its centre
+STAR_T, STAR_RO, STAR_RI = 1.81, 5.43, 2.99          # the star: past the bite's centre along its bearing; outer, inner radius
+LIMB_Y, EARTH_R = 78.0, 150.0      # the Earth's edge: its highest point, and the radius of the arc
 
 
 def place():
@@ -50,9 +51,9 @@ def place():
 CX, CY, STAR = place()
 
 SKY = [(0.00, "#050920"), (0.42, "#101C52"), (0.68, "#2A3384"), (0.82, "#6A5598"), (0.91, "#DB8E70"), (0.97, "#F8C078")]
-SKY_END_Y = 83.0                   # the sky's gradient runs from the top to here
+SKY_END_Y = 81.0                   # the sky's gradient runs from the top to here
 GLOW = [(0.0, "#FFE6B8", 0.85), (0.42, "#FAAA6C", 0.34), (1.0, "#F29B6A", 0.0)]
-GLOW_C, GLOW_R = (54.0, 86.0), 40.0
+GLOW_C, GLOW_R = (54.0, 84.0), 40.0
 MOON = [(0.0, "#FFFBEF"), (1.0, "#EDCB8A")]
 STAR_FILL = "#FFF8E2"
 EARTH = [(0.0, "#1B1838"), (1.0, "#07081A")]

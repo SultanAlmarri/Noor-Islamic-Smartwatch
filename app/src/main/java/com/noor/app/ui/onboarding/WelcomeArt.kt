@@ -40,15 +40,15 @@ import kotlin.math.sin
 
 /**
  * Where the crescent and its star sit in the mark's drawing (`ic_splash_mark`, written by tools/brand/logo.py: the
- * crescent's circle is centred on 54.24, 54 with radius 21 in a field of 108: since 0.26 the crescent is in the
+ * crescent's circle is centred on 54.21, 54 with radius 19 in a field of 108: since 0.26 the crescent is in the
  * middle of the icon and the star inside its curve). The welcome shows the mark without the
  * launcher's margins, so it needs to know.
  */
 internal object Mark {
     const val FIELD = 108f
-    const val CX = 54.24f
+    const val CX = 54.21f
     const val CY = 54f
-    const val R = 21f
+    const val R = 19f
     /** The side of the square that holds the crescent and its star with a little air, as a part of the field. */
     const val BOX = 2f * (R + 3f) / FIELD
 }
