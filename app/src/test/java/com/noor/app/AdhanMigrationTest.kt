@@ -28,7 +28,11 @@ class AdhanMigrationTest {
         val old = AlertSettings.decode("v=1;on=1;dev=PHONE;grad=20;dnd=1;quiet=0;FAJR=1,ADHAN,adhan.dubai_fajr,70,1,0")
             .withAlarm(PrayerAlarm(0, Prayer.FAJR, 25, after = false))
         runBlocking {
-            // (The app's own first run may already have done it: start from 0.25's state.)
+            // (The app runs the change itself as it starts, in the background: let that run end first, then start again
+            // from 0.25's state.)
+            val until = System.currentTimeMillis() + 20_000
+            while (!prefs.getBoolean("adhan_full_from_start_026", false) && System.currentTimeMillis() < until) Thread.sleep(50)
+            assertTrue("the app ran the change as it started", prefs.getBoolean("adhan_full_from_start_026", false))
             prefs.edit().clear().commit()
             repo.updateAlerts { old }
             assertTrue(Prayer.entries.all { repo.current().alerts.alert(it).gradualSeconds == 20 })

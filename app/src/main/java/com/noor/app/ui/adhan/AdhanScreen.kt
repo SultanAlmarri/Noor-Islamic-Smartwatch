@@ -107,9 +107,9 @@ internal class Issue(val text: String, val action: String?, val onAction: (() ->
  * The Adhan tab (0.25), organised round the person, not round the app's problems and options. Two pages under one
  * switch, Prayers and Alarms. Prayers, top to bottom: the one switch for all prayer alerts, always under the same name,
  * with what happens next under it (or Off, or that it will not sound); one line with one button for whatever needs
- * fixing, and only then; the voice and the volume of every prayer; the six prayers, each with today's time and its
- * switch; then the test, the record of what happened, and what is set once (which device, how the sound behaves, the
- * library).
+ * fixing, and only then; the six prayers, each with the home screen's sky for it, what it plays, today's time and its
+ * switch (0.26); what every prayer plays and how, set at once (0.26: the sound, the volume, Start softly, Vibrate);
+ * then the test, the record of what happened, and what is set once (which device, silent mode, the library).
  */
 @Composable
 fun AdhanScreen(
@@ -120,7 +120,7 @@ fun AdhanScreen(
     onOpenHistory: () -> Unit = {},
     vm: AdhanViewModel = viewModel(),
     onOpenLocation: () -> Unit = {},
-    /** 0.16: the voices, for every prayer. */
+    /** The sound picker for every prayer at once (0.16: the voices; 0.26: everything a prayer can play). */
     onOpenVoice: () -> Unit = {},
     /** 0.17: an alarm (0: a new one). */
     onOpenAlarm: (Int) -> Unit = {},
@@ -228,7 +228,7 @@ fun AdhanScreen(
                 val x = a.alert(p)
                 val on = a.enabled && x.enabled
                 val facts = if (!on) listOf(stringResource(R.string.adhan_off))
-                    else playsFacts(playsOf(p, x, vm.library, custom), vm.library, custom, ar) + listOfNotNull(daysLabel(x.days, f).takeIf { x.days != PrayerAlert.ALL_DAYS })
+                    else prayerFacts(p, x, vm.library, custom, ar) + listOfNotNull(daysLabel(x.days, f).takeIf { x.days != PrayerAlert.ALL_DAYS })
                 PrayerRow(p, f.prayerName(p), rings.today[p]?.let { f.clockAt(it, rings.zone) }, facts, on = on, live = a.enabled,
                     onOpen = { onOpenPrayer(p) }, onToggle = { v ->
                         if (v && !a.enabled) {

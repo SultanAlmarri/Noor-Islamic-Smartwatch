@@ -913,6 +913,32 @@ decisions the owner may want otherwise, is in [ADHAN_025_NOTES.md](ADHAN_025_NOT
 - **The ringing screen** shows the time at the top, what is sounding under it, and Stop, Snooze and "Hide and keep
   playing" on the foot of the screen.
 
+### The prayers' part of the Adhan tab (0.26)
+
+The owner (27 November 2026), on 0.25: "the master volume doesn't really make sense ... the section that says all
+prayers, it's kind of weird. Adhan voice, I don't really like it ... why can't I hear the Fajr version as well? And why
+is it that the Adhan is still starting up gradually? ... use the icons you used on the home screen ... I don't like the
+way you organized it, like Adhan and then short Adhan and then sound, notification, silent ... I want you to totally
+redesign the Adhan section." The whole account, screen by screen, is in [ADHAN_026_NOTES.md](ADHAN_026_NOTES.md). In
+short:
+
+- **The six prayers as the home screen draws them**: each row is the prayer's sky disc (`SkyDisc`), its name and
+  today's time, what it plays in a word or two ("Adhan · Makkah", "Adhan opening · Makkah", "Birds", "Notification",
+  "Off") and its days when not every day, and its switch. The row opens the prayer.
+- **Every prayer at once**, one group under the prayers, the same rows as a prayer's own page: **Sound** (what plays),
+  **Volume** (named, with its figure over a slider; a few seconds of the sound are heard when the finger lets go),
+  **Start softly** and **Vibrate**. Where the prayers differ the row says "Mixed" or "On for some prayers", and a
+  change sets them all.
+- **Start softly is each prayer's own and off by default**: the Adhan at full volume from the first second; on, it
+  rises over 10 seconds. 0.26's first start turns every rise off once, whatever an earlier version had left.
+- **A prayer's page**: the prayer's sky, "Alert at Fajr" with today's time and the switch; Sound, Volume, Start softly,
+  Vibrate, Stop after; Days; Test this alert.
+- **One sound picker** (for a prayer, or "Sound for every prayer") in four parts: **Adhan** (Whole Adhan | Opening
+  only, then the voices, each with its play button and, for Fajr and for every prayer, its **Fajr version** to hear, or
+  "No Fajr version"; Random), **Alert sounds** (from the library), **Notification only** (the phone's sound, or a silent
+  notice), **My sounds**. A touch chooses and plays; the stored modes are unchanged underneath.
+- "Sound and devices" is **Devices and silent mode** (the rise left it).
+
 ## The interface of 0.14: one system, and an opening
 
 The owner (15 November 2026): "totally revolutionize the user interface and keep the Apple aesthetic... make the

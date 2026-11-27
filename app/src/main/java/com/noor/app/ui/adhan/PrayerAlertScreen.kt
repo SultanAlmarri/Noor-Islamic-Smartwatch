@@ -195,7 +195,7 @@ internal fun SoundSettings(
     val plays = if (target != null) playsOf(target, a.alert(target), lib, custom) else sharedPlays(a, lib, custom)
     val (icon, tint) = playsSign(plays)
     SettingsItem(icon, stringResource(R.string.adhan_sound_section), null, onClick = onOpenSound, tint = tint,
-        detail = plays?.let { playsFacts(it, lib, custom, ar).joinToString(" · ") } ?: stringResource(R.string.voice_mixed))
+        detail = (if (target != null) prayerFacts(target, a.alert(target), lib, custom, ar) else plays?.let { playsFacts(it, lib, custom, ar) })?.joinToString(" · ") ?: stringResource(R.string.voice_mixed))
     val audible = (target?.let(::listOf) ?: Prayer.entries).filter { a.alert(it).mode.playsAudio }
     if (audible.isEmpty()) return
     // (For every prayer: the prayers that will sound; when none is on, those that would.)

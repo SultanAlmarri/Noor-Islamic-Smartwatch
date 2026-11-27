@@ -133,3 +133,15 @@ internal fun playsFacts(plays: Plays, lib: SoundLibrary, custom: List<CustomSoun
     Plays.Notification -> listOf(stringResource(R.string.adhan_mode_notification))
     Plays.Silent -> listOf(stringResource(R.string.a026_silent))
 }
+
+/**
+ * What [a] plays at [p], as facts for a line. At Fajr a Fajr recording is named so ("Fajr Adhan · Dubai"): beside the
+ * other prayers' "Adhan · Makkah" it says why Fajr's voice differs (Makkah has no Fajr recording).
+ */
+@Composable
+internal fun prayerFacts(p: Prayer, a: PrayerAlert, lib: SoundLibrary, custom: List<CustomSound>, ar: Boolean): List<String> {
+    val plays = playsOf(p, a, lib, custom)
+    val facts = playsFacts(plays, lib, custom, ar)
+    val fajrRecording = lib.byId(a.soundId)?.fajr == true || ClockVoice.entries.any { it.ownFajr(custom)?.id == a.soundId }
+    return if (p == Prayer.FAJR && plays is Plays.Adhan && !plays.opening && fajrRecording) listOf(stringResource(R.string.a026_fajr_adhan)) + facts.drop(1) else facts
+}

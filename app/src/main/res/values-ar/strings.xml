@@ -1015,4 +1015,5 @@
     <string name="a026_notification_sound">صوت الإشعارات</string>
     <string name="a026_silent">إشعار صامت</string>
     <string name="a026_silent_detail">على الشاشة، بلا صوت</string>
+    <string name="a026_fajr_adhan">أذان الفجر</string>
 </resources>

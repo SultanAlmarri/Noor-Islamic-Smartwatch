@@ -375,11 +375,12 @@ class ScreenshotTest {
         screen = Screen.ADHAN
         runBlocking { app.container.settings.updateAlerts { it.copy(enabled = true, device = com.noor.prayer.alerts.AlertDevice.BOTH) } }
         // (0.25: one voice for every prayer is a row that opens the voices; the page of what is set once is named for
-        // what it holds.)
-        shot("27_adhan_on_night_en", "Adhan voice")
+        // what it holds. 0.26: what every prayer plays and how, "Start softly" among it, shown with the alerts on; the
+        // page of what is set once is "Devices and silent mode".)
+        shot("27_adhan_on_night_en", "Start softly")
         // 0.15.2: what is set once (phone or watch, the sound's behaviour, the library) is on a page of its own.
-        rule.onAllNodes(androidx.compose.ui.test.hasText("Sound and devices")).onFirst().performScrollTo().performClick()
-        shot("83_adhan_options_night_en", "Gradual volume")
+        rule.onAllNodes(androidx.compose.ui.test.hasText("Devices and silent mode")).onFirst().performScrollTo().performClick()
+        shot("83_adhan_options_night_en", "Play in silent mode")
         screen = Screen.WATCH; rule.waitForIdle()
         screen = Screen.ADHAN_FAJR; shot("28_adhan_fajr_night_en", "Dubai")
         screen = Screen.ADHAN_SHURUQ; runBlocking {
@@ -412,11 +413,11 @@ class ScreenshotTest {
         screen = Screen.ADHAN_LIBRARY; shot("30_adhan_library_night_en", "Madinah")
         screen = Screen.ADHAN_SOUNDS; shot("31_adhan_my_sounds_night_en", "Import a sound")
         arabic = true; screen = Screen.ADHAN_LIBRARY; shot("54_adhan_library_night_ar", "المدينة"); arabic = false
-        screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "صوت الأذان")
-        rule.onAllNodes(androidx.compose.ui.test.hasText("الصوت والأجهزة")).onFirst().performScrollTo().performClick()
+        screen = Screen.ADHAN; arabic = true; shot("32_adhan_on_night_ar", "البدء بهدوء")
+        rule.onAllNodes(androidx.compose.ui.test.hasText("الأجهزة والوضع الصامت")).onFirst().performScrollTo().performClick()
         shot("84_adhan_options_night_ar", "التنبيه على")
         screen = Screen.ADHAN_FAJR; shot("33_adhan_fajr_night_ar", "دبي")
-        arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Sound and devices")
+        arabic = false; theme = ThemeMode.LIGHT; screen = Screen.ADHAN; shot("34_adhan_on_day_en", "Devices and silent mode")
         screen = Screen.ADHAN_FAJR; shot("35_adhan_fajr_day_en", "Dubai")
         theme = ThemeMode.DARK
         // Alert history (0.9): what really happened at each alert, with examples of each kind of outcome.

@@ -991,4 +991,5 @@
     <string name="a026_notification_sound">Notification sound</string>
     <string name="a026_silent">Silent notice</string>
     <string name="a026_silent_detail">On the screen, without a sound</string>
+    <string name="a026_fajr_adhan">Fajr Adhan</string>
 </resources>
