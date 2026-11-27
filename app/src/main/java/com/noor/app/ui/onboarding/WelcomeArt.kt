@@ -168,11 +168,20 @@ private fun DrawScope.pin(head: Offset, r: Float, tipY: Float, brush: Brush) {
     drawPath(path, brush)
 }
 
-/** A small tile of colour with a white sign on it, as the rows of an iPhone's Settings have: what Minhad gives. */
+/**
+ * What Minhad gives, as a sign on a small sky of its colour (0.26): the same disc as every sign of the app
+ * ([com.noor.app.ui.settings.IconTile]) and the home screen's prayers, larger. (0.25 had rounded squares of saturated
+ * colour, as the rows of an iPhone's Settings; the review of 0.26 found them the one place left in the old style.)
+ */
 @Composable
-internal fun SignTile(sign: Painter, top: Color, low: Color, side: Dp = 46.dp, modifier: Modifier = Modifier) {
-    Box(
-        modifier.size(side).clip(RoundedCornerShape(side * 0.285f)).background(Brush.verticalGradient(listOf(top, low))).clearAndSetSemantics { },
-        contentAlignment = Alignment.Center,
-    ) { Icon(sign, null, tint = Color.White, modifier = Modifier.size(side * 0.59f)) }
+internal fun SignTile(sign: Painter, tint: Color, side: Dp = 46.dp, modifier: Modifier = Modifier) {
+    val look = androidx.compose.runtime.remember(tint) { com.noor.app.ui.settings.IconTileLook.of(tint) }
+    Box(modifier.size(side).clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(side)) {
+            val r = size.minDimension / 2f
+            drawCircle(Brush.verticalGradient(0f to look.top, 0.62f to look.middle, 1f to look.bottom, startY = center.y - r, endY = center.y + r), r, center)
+            drawCircle(Color.White.copy(alpha = 0.18f), r, center, style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+        }
+        Icon(sign, null, tint = look.glyph, modifier = Modifier.size(side * 0.52f))
+    }
 }

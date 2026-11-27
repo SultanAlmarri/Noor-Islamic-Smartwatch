@@ -57,6 +57,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Mosque
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -446,10 +447,10 @@ private fun ColumnScope.Cover(size: PageSize, enter: () -> Float, carry: () -> F
     Spacer(Modifier.height(if (size.low) 10.dp else if (compact) 16.dp else if (wide) 30.dp else 34.dp))
     val gift: @Composable (Int, Modifier) -> Unit = { i, m ->
         when (i) {
-            0 -> Gift(rememberVectorPainter(Icons.Rounded.Schedule), Color(0xFFFFB84D), Color(0xFFEE6A1F), R.string.welcome_times, R.string.welcome_times_line, wide, m.arrives(enter, 2, of))
-            1 -> Gift(painterResource(R.drawable.ic_tab_today), Color(0xFF5DBBFF), Color(0xFF2A62E6), R.string.welcome_sky, R.string.welcome_sky_line, wide, m.arrives(enter, 3, of))
-            2 -> Gift(rememberVectorPainter(Icons.Rounded.NotificationsActive), Color(0xFF4FDC97), Color(0xFF14975A), R.string.welcome_adhan, R.string.welcome_adhan_line, wide, m.arrives(enter, 4, of))
-            else -> Gift(rememberVectorPainter(Icons.Rounded.Explore), Color(0xFFB896FF), Color(0xFF7146E4), R.string.welcome_qibla, R.string.welcome_qibla_line, wide, m.arrives(enter, 5, of))
+            0 -> Gift(rememberVectorPainter(Icons.Rounded.Schedule), com.noor.app.ui.settings.Tints.Gold, R.string.welcome_times, R.string.welcome_times_line, wide, m.arrives(enter, 2, of))
+            1 -> Gift(painterResource(R.drawable.ic_tab_today), com.noor.app.ui.settings.Tints.Blue, R.string.welcome_sky, R.string.welcome_sky_line, wide, m.arrives(enter, 3, of))
+            2 -> Gift(rememberVectorPainter(Icons.Rounded.Mosque), com.noor.app.ui.settings.Tints.Purple, R.string.welcome_adhan, R.string.welcome_adhan_line, wide, m.arrives(enter, 4, of))
+            else -> Gift(painterResource(R.drawable.ic_kaaba), com.noor.app.ui.settings.Tints.Indigo, R.string.welcome_qibla, R.string.welcome_qibla_line, wide, m.arrives(enter, 5, of))
         }
     }
     if (size.low) {
@@ -465,9 +466,9 @@ private fun ColumnScope.Cover(size: PageSize, enter: () -> Float, carry: () -> F
 
 /** One thing Minhad gives: a sign, a few bold words, one quiet line. */
 @Composable
-private fun Gift(sign: Painter, top: Color, low: Color, title: Int, line: Int, wide: Boolean, modifier: Modifier = Modifier) {
+private fun Gift(sign: Painter, tint: Color, title: Int, line: Int, wide: Boolean, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth().semantics(mergeDescendants = true) { }, verticalAlignment = Alignment.CenterVertically) {
-        SignTile(sign, top, low, if (wide) 50.dp else 46.dp)
+        SignTile(sign, tint, if (wide) 50.dp else 46.dp)
         Spacer(Modifier.width(if (wide) 18.dp else 16.dp))
         Column {
             Text(stringResource(title), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = if (wide) 18.sp else 17.sp), color = WelcomeText)

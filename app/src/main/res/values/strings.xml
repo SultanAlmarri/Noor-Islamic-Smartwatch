@@ -102,16 +102,6 @@
         <item quantity="other">%s days</item>
     </plurals>
     <string name="news_title">What\'s New in Minhad</string>
-    <string name="news_look_title">A new icon</string>
-    <string name="news_look_body">The crescent over the Earth at first light, and an opening to match.</string>
-    <string name="news_month_title">The whole month</string>
-    <string name="news_month_body">Every prayer time of the month in one table. Tap the date to find it.</string>
-    <string name="news_settings_title">A calmer Adhan tab</string>
-    <string name="news_settings_body">One switch, one voice for every prayer, and one Fix button when something is in the way.</string>
-    <string name="news_motion_title">Easier to find, smoother to use</string>
-    <string name="news_motion_body">Settings in colour, pages that follow your finger back, quick actions on the icon.</string>
-    <string name="news_watch_title">Redesigned on your wrist</string>
-    <string name="news_watch_body">The watch app has a new look, with the sky of the moment behind the countdown.</string>
     <string name="news_continue">Continue</string>
     <string name="search_city">Search cities</string>
     <string name="done">Done</string>
@@ -157,7 +147,6 @@
     <string name="qibla_antipode">You are opposite Makkah: every direction is nearly as short.</string>
     <string name="qibla_starting">Starting the compass…</string>
     <string name="qibla_hold_flat">Hold your phone flat</string>
-    <string name="qibla_hold_flat_body">Lay it face up, level, for an accurate reading.</string>
     <string name="qibla_aligned">Facing the Qibla</string>
     <string name="qibla_turn_right">Turn right %1$s</string>
     <string name="qibla_turn_left">Turn left %1$s</string>
@@ -342,7 +331,7 @@
     <string name="watch_feature_complication">Four complications</string>
     <string name="watch_feature_complication_desc">Next prayer, Hijri date, Qibla and tasbih, on any watch face</string>
     <string name="watch_feature_alerts">Prayer alerts on the watch</string>
-    <string name="watch_feature_alerts_desc">Choose Watch or Both in the Adhan tab</string>
+    <string name="watch_feature_alerts_desc">Adhan › Devices and silent mode: choose Watch or Both</string>
     <string name="watch_feature_standalone">Works without your phone</string>
     <string name="watch_feature_standalone_desc">Keeps the prayer times with its own location</string>
     <string name="step_sync_own">Using the watch’s own settings. Turn off “Use this watch’s settings” on the watch to follow this phone.</string>
@@ -991,4 +980,15 @@
     <string name="a026_silent">Silent notice</string>
     <string name="a026_silent_detail">On the screen, without a sound</string>
     <string name="a026_fajr_adhan">Fajr Adhan</string>
+    <!-- 0.26 what's new -->
+    <string name="news26_adhan_title">A new Adhan tab</string>
+    <string name="news26_adhan_body">Each prayer\'s sound, volume and days in one place. It starts at full volume unless you choose Start softly.</string>
+    <string name="news26_alarms_title">Alarms like your clock</string>
+    <string name="news26_alarms_body">An alarm before or after any prayer, set the way your phone\'s clock sets one.</string>
+    <string name="news26_qibla_title">Qibla on one screen</string>
+    <string name="news26_qibla_body">The compass, the direction and how sure it is, without scrolling.</string>
+    <string name="news26_sounds_title">New alert sounds</string>
+    <string name="news26_sounds_body">Real recordings of beeps and birds, and an Adhan opening that is just the first Allahu Akbar.</string>
+    <string name="news26_signs_title">Signs of the sky</string>
+    <string name="news26_signs_body">The crescent in the middle of the icon, and every sign in the app drawn like the prayers\' skies.</string>
 </resources>

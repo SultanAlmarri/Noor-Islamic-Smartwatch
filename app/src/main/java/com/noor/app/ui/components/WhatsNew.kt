@@ -43,6 +43,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.rounded.Mosque
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
 import com.noor.app.R
 import com.noor.app.ui.settings.Tints
 import com.noor.app.ui.theme.NoorTheme
@@ -56,12 +61,12 @@ import kotlinx.coroutines.launch
  */
 object WhatsNew {
     /** The number of the page below. Raise it when the page is written anew for a later version. */
-    const val EDITION = 25
+    const val EDITION = 26
 
     fun due(onboardingDone: Boolean, seen: Int): Boolean = onboardingDone && seen < EDITION
 }
 
-private data class NewsItem(val icon: ImageVector, val tint: Color, val title: Int, val body: Int)
+private data class NewsItem(val icon: @Composable () -> androidx.compose.ui.graphics.painter.Painter, val tint: Color, val title: Int, val body: Int)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,13 +80,14 @@ fun WhatsNewSheet(onDismiss: () -> Unit) {
 @Composable
 fun WhatsNewContent(onContinue: () -> Unit) {
     val c = NoorTheme.colors
+    // (0.26) The page written anew for 0.26, its signs the app's own discs of sky (IconTile's look), not tiles.
     val items = remember {
         listOf(
-            NewsItem(Icons.Rounded.AutoAwesome, Tints.Indigo, R.string.news_look_title, R.string.news_look_body),
-            NewsItem(Icons.Rounded.CalendarMonth, Tints.Red, R.string.news_month_title, R.string.news_month_body),
-            NewsItem(Icons.Rounded.NotificationsActive, Tints.Gold, R.string.news_settings_title, R.string.news_settings_body),
-            NewsItem(Icons.Rounded.Tune, Tints.Blue, R.string.news_motion_title, R.string.news_motion_body),
-            NewsItem(Icons.Rounded.Watch, Tints.Graphite, R.string.news_watch_title, R.string.news_watch_body),
+            NewsItem({ rememberVectorPainter(Icons.Rounded.Mosque) }, Tints.Purple, R.string.news26_adhan_title, R.string.news26_adhan_body),
+            NewsItem({ rememberVectorPainter(Icons.Rounded.Alarm) }, Tints.Orange, R.string.news26_alarms_title, R.string.news26_alarms_body),
+            NewsItem({ painterResource(R.drawable.ic_kaaba) }, Tints.Indigo, R.string.news26_qibla_title, R.string.news26_qibla_body),
+            NewsItem({ rememberVectorPainter(Icons.Rounded.MusicNote) }, Tints.Pink, R.string.news26_sounds_title, R.string.news26_sounds_body),
+            NewsItem({ rememberVectorPainter(Icons.Rounded.AutoAwesome) }, Tints.Gold, R.string.news26_signs_title, R.string.news26_signs_body),
         )
     }
     run {
@@ -95,10 +101,7 @@ fun WhatsNewContent(onContinue: () -> Unit) {
             Column(Modifier.widthIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 items.forEach { item ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        val brush = remember(item.tint) { Brush.verticalGradient(listOf(lerp(item.tint, Color.White, 0.20f), item.tint, lerp(item.tint, Color.Black, 0.10f))) }
-                        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(brush), contentAlignment = Alignment.Center) {
-                            Icon(item.icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
-                        }
+                        com.noor.app.ui.onboarding.SignTile(item.icon(), item.tint, 44.dp)
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(item.title), color = c.textPrimary, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))

@@ -101,19 +101,21 @@ fun SectionFooter(text: String, modifier: Modifier = Modifier) {
 object Tints {
     // (0.26) Each colour is the middle of a small sky (IconTileLook: deeper towards the top, warmer towards the
     // horizon), so every sign of the app is made like the home screen's prayer discs (the owner: "all the icons in the
-    // app ... should have the same theme", without each showing a time of day). One family, of one strength, so a list
-    // reads as one calm thing: the day's blue, the dusk's violet, the night's indigo, the dawn's coral, the sunset's
-    // orange, the sea's teal, the oasis's green, sand, stone. The names stay what they were, so every row keeps its kind.
+    // app ... should have the same theme", without each showing a time of day). Only the sky's own colours, of one
+    // strength: the day's blue, the night's indigo, the dusk's violet, the dawn's coral, the sunset's amber, the sea's
+    // teal, Minhad's gold, sand and stone. (The review of 0.26: a pink, a red, a green and a mint beside them still read
+    // as the iPhone's Settings. The names stay, so every row keeps its kind: Pink is now the dusk's rose-violet, Red the
+    // dawn's coral, Green and Mint the sea's teal.)
     val Gold = Color(0xFFB07F2C)
     val Blue = Color(0xFF2F6FC8)
-    val Green = Color(0xFF2E8452)
-    val Orange = Color(0xFFC2642A)
-    val Red = Color(0xFFC04848)
-    val Pink = Color(0xFFB0406F)
-    val Purple = Color(0xFF7448B0)
     val Indigo = Color(0xFF4646A8)
+    val Purple = Color(0xFF7448B0)
+    val Pink = Color(0xFF8A4E9E)
+    val Red = Color(0xFFB65A4E)
+    val Orange = Color(0xFFB86B2E)
     val Teal = Color(0xFF1F7F8E)
-    val Mint = Color(0xFF1E8270)
+    val Green = Color(0xFF267A80)
+    val Mint = Color(0xFF267A80)
     val Brown = Color(0xFF8C6A47)
     val Gray = Color(0xFF606A7E)
     val Graphite = Color(0xFF434A5C)

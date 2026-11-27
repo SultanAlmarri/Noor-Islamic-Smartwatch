@@ -12,8 +12,8 @@ android {
         applicationId = "com.noor.smartwatch"
         minSdk = 26
         targetSdk = 35
-        versionCode = 50
-        versionName = "0.25.0"
+        versionCode = 51
+        versionName = "0.26.0"
         // (0.25) The tester's options (Settings → Testing; com.noor.app.testing) are in every build the owner tests, and
         // out of a build made for a store: `-Pminhad.store=true` leaves their way in out (BuildConfig.TESTER false).
         buildConfigField("boolean", "TESTER", (providers.gradleProperty("minhad.store").orNull != "true").toString())

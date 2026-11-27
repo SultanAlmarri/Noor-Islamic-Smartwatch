@@ -88,7 +88,7 @@
     <string name="credits_places">الأماكن والخرائط</string>
     <string name="credits_maps_body">صور الخرائط: ⁦Esri⁩ ومزوّدو بياناتها، وأسماؤهم على الخريطة.\nالبحث عن الأماكن في الهواتف التي لا تملك خدمات ⁦Google⁩: ⁦Photon⁩ ⁦(photon.komoot.io)⁩، © مساهمو ⁦OpenStreetMap⁩.</string>
     <string name="credits_times">الجداول والشمس</string>
-    <string name="credits_times_body">الجداول الرسمية: دائرة الشؤون الإسلامية والعمل الخيري بدبي ⁦(iacad.gov.ae)⁩، والمجلس الإسلامي السنغافوري ⁦(data.gov.sg)⁩ برخصة ⁦Singapore Open Data Licence⁩.\nموضع الشمس: خوارزمية ⁦Solar Position Algorithm⁩ لـ ⁦I. Reda⁩ و ⁦A. Andreas⁩ ⁦(NREL)⁩.</string>
+    <string name="credits_times_body">الجداول الرسمية: دائرة الشؤون الإسلامية والعمل الخيري بدبي ⁦(iacad.gov.ae)⁩، والمجلس الإسلامي السنغافوري ⁦(data.gov.sg)⁩ برخصة ⁦Singapore Open Data Licence⁩.\nموضع الشمس: خوارزمية ⁦Solar Position Algorithm⁩ لـ ⁦I. Reda⁩ و ⁦A. Andreas⁩ ⁦(NREL)⁩.</string>
     <string name="credits_sky">السماء والأرض</string>
     <string name="credits_sky_body">مسوح الصخور والأرض والنبات: ⁦Poly Haven⁩ و ⁦ambientCG⁩ ⁦(CC0)⁩.\nالارتفاعات: ⁦USGS 3DEP⁩.\nخرائط النجوم والقمر: ⁦NASA/Goddard Space Flight Center Scientific Visualization Studio⁩.\n⁦Contains data from Kartverket (the Norwegian Mapping Authority), Nasjonal høydemodell, CC BY 4.0.⁩\n⁦Contains modified Copernicus DEM data: © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA; all rights reserved.⁩\nالسحب مرسومة من أحجام سحب من ⁦CGHEVEN⁩.</string>
     <string name="credits_sounds">التسجيلات</string>
@@ -105,16 +105,6 @@
         <item quantity="other">%s يوم</item>
     </plurals>
     <string name="news_title">الجديد في منهاد</string>
-    <string name="news_look_title">أيقونة جديدة</string>
-    <string name="news_look_body">الهلال فوق الأرض عند أول ضوء، وافتتاحية تشبهها.</string>
-    <string name="news_month_title">الشهر كله</string>
-    <string name="news_month_body">كل مواقيت الصلاة للشهر في جدول واحد. اضغط على التاريخ لتجده.</string>
-    <string name="news_settings_title">صفحة أذان أهدأ</string>
-    <string name="news_settings_body">مفتاح واحد، وصوت واحد لكل الصلوات، وزر إصلاح واحد إن وُجد ما يمنع.</string>
-    <string name="news_motion_title">أسهل في الوصول وأسلس في الاستخدام</string>
-    <string name="news_motion_body">إعدادات ملوّنة، وصفحات تتبع إصبعك عند الرجوع، واختصارات على الأيقونة.</string>
-    <string name="news_watch_title">تصميم جديد على معصمك</string>
-    <string name="news_watch_body">تطبيق الساعة بمظهر جديد، وسماء اللحظة خلف العدّ التنازلي.</string>
     <string name="news_continue">متابعة</string>
     <string name="search_city">ابحث عن مدينة</string>
     <string name="done">تم</string>
@@ -160,7 +150,6 @@
     <string name="qibla_antipode">أنت في الجهة المقابلة لمكة: كل الاتجاهات متقاربة الطول.</string>
     <string name="qibla_starting">جارٍ تشغيل البوصلة…</string>
     <string name="qibla_hold_flat">ضع الهاتف بشكل مستوٍ</string>
-    <string name="qibla_hold_flat_body">ضعه على ظهره مستوياً للحصول على قراءة دقيقة.</string>
     <string name="qibla_aligned">أنت متجه إلى القبلة</string>
     <string name="qibla_turn_right">استدر يميناً %1$s</string>
     <string name="qibla_turn_left">استدر يساراً %1$s</string>
@@ -348,7 +337,7 @@
     <string name="watch_feature_complication">أربع إضافات</string>
     <string name="watch_feature_complication_desc">الصلاة القادمة والتاريخ الهجري والقبلة والتسبيح، على أي واجهة ساعة</string>
     <string name="watch_feature_alerts">تنبيهات الصلاة على الساعة</string>
-    <string name="watch_feature_alerts_desc">اختر «الساعة» أو «كلاهما» من تبويب الأذان</string>
+    <string name="watch_feature_alerts_desc">الأذان ‹ الأجهزة والوضع الصامت: اختر «الساعة» أو «كلاهما»</string>
     <string name="watch_feature_standalone">تعمل من دون هاتفك</string>
     <string name="watch_feature_standalone_desc">تحسب أوقات الصلاة بموقعها الخاص</string>
     <string name="step_sync_own">الساعة تستخدم إعداداتها. أوقف «استخدام إعدادات هذه الساعة» على الساعة لتتبع هذا الهاتف.</string>
@@ -1023,4 +1012,15 @@
     <string name="a026_silent">إشعار صامت</string>
     <string name="a026_silent_detail">على الشاشة، بلا صوت</string>
     <string name="a026_fajr_adhan">أذان الفجر</string>
+    <!-- 0.26 what's new -->
+    <string name="news26_adhan_title">تبويب أذان جديد</string>
+    <string name="news26_adhan_body">صوت كل صلاة ومستواه وأيامها في مكان واحد. يبدأ بكامل الصوت إلا إذا اخترت «البدء بهدوء».</string>
+    <string name="news26_alarms_title">منبهات كساعة هاتفك</string>
+    <string name="news26_alarms_body">منبه قبل أي صلاة أو بعدها، تضبطه كما تضبط منبه الساعة في هاتفك.</string>
+    <string name="news26_qibla_title">القبلة في شاشة واحدة</string>
+    <string name="news26_qibla_body">البوصلة والاتجاه ومدى دقته، دون تمرير.</string>
+    <string name="news26_sounds_title">أصوات تنبيه جديدة</string>
+    <string name="news26_sounds_body">تسجيلات حقيقية لصفير وتغريد طيور، ومطلع أذان هو التكبيرتان الأوليان فقط.</string>
+    <string name="news26_signs_title">علامات من السماء</string>
+    <string name="news26_signs_body">الهلال في وسط الأيقونة، وكل علامات التطبيق مرسومة كسماء الصلوات.</string>
 </resources>

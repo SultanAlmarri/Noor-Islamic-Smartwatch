@@ -172,8 +172,9 @@ fun QiblaContent(
             q.veryClose -> stringResource(R.string.qibla_very_close)
             q.nearAntipode -> stringResource(R.string.qibla_antipode)
             reading == null -> stringResource(R.string.qibla_starting)
-            // (0.25: "Hold your phone flat" is said once, in the dial, where the eye is; this line says how, more quietly.)
-            notFlat -> null
+            // (0.26: "Hold your phone flat" is said once, here under the dial; until then it was also written across the
+            // dial's needle, with a line of how under it: the review found it said twice.)
+            notFlat -> stringResource(R.string.qibla_hold_flat)
             // 0.15: an unsure compass is not followed: the first thing said is what to do.
             reading.assessment.quality == CompassQuality.POOR -> stringResource(R.string.cal_title)
             aligned -> stringResource(R.string.qibla_aligned)
@@ -194,7 +195,6 @@ fun QiblaContent(
             Box(Modifier.testTag("qiblaDial"), contentAlignment = Alignment.Center) {
                 CompassDial(heading = reading?.trueHeadingDeg, qibla = q.bearingDeg, aligned = aligned, f = f, modifier = Modifier.fillMaxSize(),
                     uncertaintyDeg = reading?.headingAccuracyDeg)
-                if (notFlat) FlatWarning()
             }
             // 3. What to do: "Turn right 83°" with the way to turn drawn beside it, or "Facing the Qibla"; while the
             // compass is unsure, the figure 8 that fixes it (0.22.1) in the line's place.
@@ -207,7 +207,6 @@ fun QiblaContent(
                         modifier = Modifier.padding(end = 8.dp).size(24.dp),
                     )
                     if (status != null) Text(status, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold), color = statusColor, textAlign = TextAlign.Center)
-                    else Text(stringResource(R.string.qibla_hold_flat_body), style = MaterialTheme.typography.bodyMedium, color = c.textSecondary, textAlign = TextAlign.Center)
                 }
             }
             // 4. The readings in one card: where the Qibla is, where the phone points, and how sure the compass is
@@ -385,17 +384,6 @@ internal fun AccuracyMeter(a: com.noor.prayer.qibla.CompassAssessment, small: Bo
             Box(Modifier.width(if (small) 14.dp else 22.dp).height(if (small) 6.dp else 8.dp).clip(RoundedCornerShape(4.dp))
                 .background(if (i < lit) color else c.textMuted.copy(alpha = 0.25f)))
         }
-    }
-}
-
-@Composable
-private fun FlatWarning() {
-    val c = NoorTheme.colors
-    Column(
-        Modifier.clip(RoundedCornerShape(50)).background(c.surface.copy(alpha = 0.94f)).padding(horizontal = 22.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(stringResource(R.string.qibla_hold_flat), style = MaterialTheme.typography.titleMedium, color = c.textPrimary, textAlign = TextAlign.Center)
     }
 }
 
@@ -614,7 +602,9 @@ internal fun CalibrateNudge(onOpen: () -> Unit, modifier: Modifier = Modifier, p
             Column(Modifier.weight(1f).padding(vertical = if (compact) 8.dp else 10.dp)) {
                 Text(stringResource(R.string.cal_title), style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium).copy(fontWeight = FontWeight.SemiBold), color = c.warning)
                 Spacer(Modifier.height(2.dp))
-                Text(stringResource(R.string.qibla_figure8), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
+                // (0.26, review) With large text the Qibla page's card says only what to do, so the compass keeps its size.
+                if (!compact || androidx.compose.ui.platform.LocalDensity.current.fontScale < 1.15f)
+                    Text(stringResource(R.string.qibla_figure8), style = com.noor.app.ui.settings.FootnoteStyle, color = c.textSecondary)
             }
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.padding(start = 4.dp).size(20.dp))
         }

@@ -76,7 +76,8 @@ class QiblaCalibrateDesignTest {
             h.arabic = true; h.shot("qibla_calibrate_${tag}_ar", "الرقم 8"); check("qibla_calibrate_${tag}_ar", true)
         }
         h.theme = ThemeMode.DARK; h.arabic = false; h.fontScale = 1.5f
-        h.shot("qibla_calibrate_large_text_en", "figure 8"); h.fontScale = 1f
+        // (0.26) With large text the page's card says only what to do, so the compass keeps its size.
+        h.shot("qibla_calibrate_large_text_en", "Calibrate the compass"); h.fontScale = 1f
         // Sure again: the drawing folds away.
         compass = reading(174.82, 7.5, 3, 44.0, 3.0)
         h.shot("qibla_calibrate_then_good_en", "Turn right")

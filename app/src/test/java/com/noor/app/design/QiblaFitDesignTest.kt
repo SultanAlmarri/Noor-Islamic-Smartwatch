@@ -78,6 +78,6 @@ class QiblaFitDesignTest {
         compass = reading(174.82, 7.5, 3, 44.0, 3.0)
         h.shot("qibla_fit_large_text_en", "Turn right")
         compass = reading(301.4, 34.0, 1, 71.0, 4.0)
-        h.shot("qibla_fit_large_text_poor_en", "figure 8")
+        h.shot("qibla_fit_large_text_poor_en", "Calibrate the compass")
     }
 }

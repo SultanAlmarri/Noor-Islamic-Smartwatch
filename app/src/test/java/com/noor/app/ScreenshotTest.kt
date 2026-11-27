@@ -284,7 +284,7 @@ class ScreenshotTest {
         shot("13_qibla_poor_night_en", "Poor"); fitsOneScreen("13")
         reading = reading(250.0, 8.0, 3, 44.0, 62.0)
         shot("14_qibla_not_flat_night_en", "Hold your phone flat"); fitsOneScreen("14")
-        assertTrue("\"Hold your phone flat\" is said once, in the dial", shown("Hold your phone flat") == 1)
+        assertTrue("\"Hold your phone flat\" is said once, under the dial (0.26)", shown("Hold your phone flat") == 1)
         arabic = true; reading = reading(174.82, 7.5, 3, 44.0, 3.0)
         shot("15_qibla_turn_night_ar", "القبلة"); fitsOneScreen("15")
         arabic = false; theme = ThemeMode.LIGHT; reading = reading(qibla - 1.2, 6.0, 3, 44.0, 2.0)
@@ -474,7 +474,7 @@ class ScreenshotTest {
         // and the two notices their licences ask to have shown word for word (Kartverket, Copernicus). (First: they hold
         // shorter names the rules below would take out of them.)
         Regex("IBM Plex Sans Arabic|IBM Corp\\.|Reem Kufi|The Reem Kufi Project Authors|SIL Open Font License 1\\.1|Esri|Photon|photon\\.komoot\\.io|Google"),
-        Regex("Singapore Open Data Licence|Solar Position Algorithm|I\\. Reda|A\\. Andreas|NREL|Poly Haven|ambientCG|USGS 3DEP|CGHEVEN"),
+        Regex("Singapore Open Data Licence|Solar Position Algorithm|I\\.[ \u00A0]Reda|A\\.[ \u00A0]Andreas|NREL|Poly Haven|ambientCG|USGS 3DEP|CGHEVEN"),
         Regex("NASA/Goddard Space Flight Center Scientific Visualization Studio|Material Symbols|Android Jetpack|Kotlin|Apache License 2\\.0"),
         Regex("Contains data from Kartverket \\(the Norwegian Mapping Authority\\), Nasjonal høydemodell, CC BY 4\\.0\\."),
         Regex("Contains modified Copernicus DEM data: © DLR e\\.V\\. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA; all rights reserved\\."),
