@@ -294,10 +294,9 @@ object SoundIds {
     val RENAMED: Map<String, String> = mapOf(
         "fx.birds" to "fx.chickadee",
         "fx.rooster" to "fx.pip_pip",
-        "fx.stream" to "fx.nuthatch",
+        "fx.stream" to "fx.alarm_clock",
         "fx.waves" to "fx.solitaire",
-        // (0.26: until a beep recording is added, the rain plays the nuthatch, whose calls sound like beeps.)
-        "fx.rain" to "fx.nuthatch",
+        "fx.rain" to "fx.beeps",
     )
 
     /** [id] as the library knows it today: an id of a replaced sound becomes its replacement's; any other is kept. */

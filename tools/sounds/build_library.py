@@ -114,14 +114,33 @@ MISSING = [
      "uploader does not hold the rights."),
 ]
 
-# 0.26: short alert sounds, real recordings. The owner asked for five, beeps and birds; four birds are here. The beeps
-# chosen on Wikimedia Commons could not be downloaded in the session that made 0.26 (Commons' file host answered
-# "429 Too Many Requests" for more than two hours); see "Still to do" in docs/SOUNDS.md.
+# 0.26: short alert sounds, real recordings. The owner asked for five, beeps and birds: two beeps of real devices and
+# three birds. (A first set of four birds waited for the beeps, which Commons' file host refused to this machine; the
+# beeps were fetched by GitHub's fetch-sounds workflow. The Red-breasted Nuthatch made way for them.)
 #   "cut"      (start_s, end_s) in the original
 #   "fade"     (fade-in, fade-out) in seconds
 #   "highpass" Hz, below the sound itself
 #   "replaces" the ids of the 0.18 effects whose users get this sound (SoundIds.RENAMED in core/prayer must agree)
 EFFECTS = [
+    dict(id="beeps", src="beep_microwave", category="beep", replaces=["fx.rain"],
+         title_en="Three beeps", title_ar="ثلاث صفّارات",
+         place_en="A microwave oven, its timer done", place_ar="فرن ميكروويف انتهى مؤقّته",
+         cut=(28.15, 31.15), fade=(0.03, 0.2), highpass=1200,
+         note_en="A real microwave oven's three beeps, “beep, beep, beep”.",
+         note_ar="ثلاث صفّارات حقيقية من فرن ميكروويف.",
+         how=("The three beeps that end the 43 s recording of a microwave at work (28.21-28.83, 29.21-29.84 and "
+              "30.22-30.84 s, near 2.4 kHz with its harmonics), the room 56 dB below them. Starts 0.06 s before the "
+              "first beep and ends 0.3 s after the third, in the room's quiet; the oven's hum below 1.2 kHz is "
+              "filtered out. Fetched by GitHub's fetch-sounds workflow (Commons refused this machine).")),
+    dict(id="alarm_clock", src="beep_alarm_clock_01", category="beep", replaces=["fx.stream"],
+         title_en="Alarm clock", title_ar="منبّه",
+         place_en="A bedside alarm clock, France", place_ar="منبّه بجانب السرير، فرنسا",
+         cut=(2.34, 3.98), fade=(0.03, 0.12), highpass=1200,
+         note_en="A real alarm clock beeping in fours, twice: “beep-beep-beep-beep”.",
+         note_ar="منبّه حقيقي يصفّر أربعًا، مرتين.",
+         how=("The first two groups of four beeps (2.39-2.86 and 3.39-3.86 s, near 2 kHz with harmonics up to 14 kHz), "
+              "the room 56 dB below them. Starts 0.05 s before the first beep and ends 0.12 s after the eighth, before "
+              "the third group. Fetched by GitHub's fetch-sounds workflow (Commons refused this machine).")),
     dict(id="chickadee", src="chickadee_romo", category="bird", replaces=["fx.birds"],
          title_en="Chickadee", title_ar="القُرقُف",
          place_en="Two calls, Rocky Mountain National Park", place_ar="نداءان، متنزه جبال روكي الوطني",
@@ -138,14 +157,6 @@ EFFECTS = [
          note_en="Small birds chirping “pip-pip, pip-pip”.", note_ar="طيور صغيرة تزقزق مرتين ثم مرتين.",
          how=("Two quick pairs of high chirps and two single ones (4-5.5 kHz), the background about 45 dB below them. "
               "Cut in the silences before the first chirp and before the next one (3.1 s).")),
-    dict(id="nuthatch", src="nuthatch_red_romo", category="bird", replaces=["fx.stream", "fx.rain"],
-         title_en="Nuthatch", title_ar="الخوّاص",
-         place_en="Three calls, Rocky Mountain National Park", place_ar="ثلاثة نداءات، متنزه جبال روكي الوطني",
-         cut=(16.7, 18.6), fade=(0.04, 0.2), highpass=2000,
-         note_en="A Red-breasted Nuthatch calls three times, “yank, yank, yank”: a bird that beeps.",
-         note_ar="طائر الخوّاص أحمر الصدر ينادي ثلاث مرات، كأنه صفير.",
-         how=("Three calls of 0.3 s each, 30 dB above the forest behind them; a hum near 700 Hz and a stream's band "
-              "near 2 kHz are below the high-pass. Starts 0.05 s before the first call, ends 0.25 s after the third.")),
     dict(id="solitaire", src="solitaire_yell", category="bird", replaces=["fx.waves"],
          title_en="Whistle", title_ar="صفير طائر",
          place_en="Townsend's solitaire, Yellowstone National Park", place_ar="طائر السوليتير، متنزه يلوستون الوطني",
@@ -387,20 +398,14 @@ def write_doc(path, doc, fxdoc):
                 "cleanly and is levelled to about −17 LUFS (true peak at most −1.5 dBTP), close to the Adhans' −16 LUFS. "
                 "There is one version of each (they are 2–4 s long: no separate short version); an alarm plays it "
                 "over and over.\n\n"
-                "Still to do (0.26): the owner asked for five, beeps (“beep beep”) and birds; four birds are here. The "
-                "beeps chosen on Wikimedia Commons could not be downloaded while 0.26 was made (Commons' file host "
-                "answered “429 Too Many Requests” to the cloud session for more than two hours; a request was never "
-                "sent around the limit). Candidates, licences verified on Commons' API, to be listened to (as "
-                "spectrograms) before use: *Microwave oven.ogg* (stephan, PDSounds, public domain: a real microwave that "
-                "“finishes with 3 beeps”), *Unlocking a car.ogg* (hc, PDSounds, public domain: a car's remote lock "
-                "beeping twice, recorded through a window; the upload repeats the two beeps, so only the first two can "
-                "be used), *Alarmclock-bleeps.ogg* (Geckoerer, CC BY-SA 4.0, “a typical modern alarm clock”: whether it "
-                "is a recording must be checked; a perfectly clean tone with no room sound would be a generated one) and "
-                "*Alarm clock - 01.ogg* (Mathieu Kappler, CC BY-SA 4.0, a ringing alarm clock recorded in France). "
-                "Rejected from their descriptions: *Alarm or siren.ogg* and *Beep alarm clock.ogg* (generated), *Joseph "
-                "Sardin - Passer domesticus tschilp call* (a toy sparrow), *Alarm Clock (Directory.Audio)* (unknown "
-                "origin), *Heart Monitor Beep* (probably generated), *Smoke alarm.ogg* (harsh). Until a beep is added, "
-                "`fx.rain` plays the nuthatch, whose calls sound like beeps.\n\n")
+                "How the beeps were chosen (0.26): Commons' file host refused this cloud session (“429 Too Many "
+                "Requests”) for hours, so GitHub's fetch-sounds workflow downloaded four candidates whose licences "
+                "Commons' API confirmed; each was looked at as a spectrogram and an envelope. Kept: *Microwave oven.ogg* "
+                "(public domain) and *Alarm clock - 01.ogg* (CC BY-SA 4.0), both real devices in a room. Not used: "
+                "*Unlocking a car.ogg* (faint chirps through a window, not beeps) and *Alarmclock-bleeps.ogg* (one long "
+                "loop). Rejected from their descriptions: *Alarm or siren.ogg* and *Beep alarm clock.ogg* (generated), "
+                "*Joseph Sardin - Passer domesticus tschilp call* (a toy sparrow), *Alarm Clock (Directory.Audio)* "
+                "(unknown origin), *Heart Monitor Beep* (probably generated), *Smoke alarm.ogg* (harsh).\n\n")
         for e, m, ch, x in fxdoc:
             section(f, e, m, ch)
             if x.get("how"):

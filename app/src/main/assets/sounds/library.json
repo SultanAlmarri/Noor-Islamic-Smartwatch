@@ -155,6 +155,51 @@
    }
   },
   {
+   "id": "fx.beeps",
+   "kind": "alt",
+   "title_en": "Three beeps",
+   "title_ar": "ثلاث صفّارات",
+   "place_en": "A microwave oven, its timer done",
+   "place_ar": "فرن ميكروويف انتهى مؤقّته",
+   "categories": [
+    "beep"
+   ],
+   "file": "sounds/fx_beeps.ogg",
+   "seconds": 3.0,
+   "credit": {
+    "author": "stephan",
+    "licence": "Public domain",
+    "licence_url": "",
+    "source": "https://commons.wikimedia.org/wiki/File:Microwave_oven.ogg",
+    "changes": "28.15–31.15 s of the original; changed: trimmed, levelled (0.03 s fade-in, 0.2 s fade-out, 1200 Hz high-pass, loudness to -17 LUFS), mono Ogg Vorbis."
+   },
+   "note_en": "A real microwave oven's three beeps, “beep, beep, beep”.",
+   "note_ar": "ثلاث صفّارات حقيقية من فرن ميكروويف."
+  },
+  {
+   "id": "fx.alarm_clock",
+   "kind": "alt",
+   "title_en": "Alarm clock",
+   "title_ar": "منبّه",
+   "place_en": "A bedside alarm clock, France",
+   "place_ar": "منبّه بجانب السرير، فرنسا",
+   "categories": [
+    "beep"
+   ],
+   "file": "sounds/fx_alarm_clock.ogg",
+   "seconds": 1.64,
+   "credit": {
+    "author": "Mathieu Kappler",
+    "licence": "CC BY-SA 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Alarm_clock_-_01.ogg",
+    "changes": "2.34–3.98 s of the original; changed: trimmed, levelled (0.03 s fade-in, 0.12 s fade-out, 1200 Hz high-pass, loudness to -17 LUFS), mono Ogg Vorbis.",
+    "derivative_licence": "CC BY-SA 4.0"
+   },
+   "note_en": "A real alarm clock beeping in fours, twice: “beep-beep-beep-beep”.",
+   "note_ar": "منبّه حقيقي يصفّر أربعًا، مرتين."
+  },
+  {
    "id": "fx.chickadee",
    "kind": "alt",
    "title_en": "Chickadee",
@@ -197,28 +242,6 @@
    },
    "note_en": "Small birds chirping “pip-pip, pip-pip”.",
    "note_ar": "طيور صغيرة تزقزق مرتين ثم مرتين."
-  },
-  {
-   "id": "fx.nuthatch",
-   "kind": "alt",
-   "title_en": "Nuthatch",
-   "title_ar": "الخوّاص",
-   "place_en": "Three calls, Rocky Mountain National Park",
-   "place_ar": "ثلاثة نداءات، متنزه جبال روكي الوطني",
-   "categories": [
-    "bird"
-   ],
-   "file": "sounds/fx_nuthatch.ogg",
-   "seconds": 1.9,
-   "credit": {
-    "author": "Jacob Job / National Park Service (Rocky Mountain National Park)",
-    "licence": "Public domain",
-    "licence_url": "https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm",
-    "source": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-redbreastednuthatch.htm",
-    "changes": "16.7–18.6 s of the original; changed: trimmed, levelled (0.04 s fade-in, 0.2 s fade-out, 2000 Hz high-pass, loudness to -17 LUFS), mono Ogg Vorbis."
-   },
-   "note_en": "A Red-breasted Nuthatch calls three times, “yank, yank, yank”: a bird that beeps.",
-   "note_ar": "طائر الخوّاص أحمر الصدر ينادي ثلاث مرات، كأنه صفير."
   },
   {
    "id": "fx.solitaire",

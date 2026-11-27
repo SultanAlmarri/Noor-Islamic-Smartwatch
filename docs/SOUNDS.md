@@ -82,7 +82,34 @@ These voices are offered as “add your own recording”.
 
 Short real recordings to announce the prayer time: beeps of real devices and birds. No music, melody or musical instrument, nothing synthesised. Each starts at once, ends cleanly and is levelled to about −17 LUFS (true peak at most −1.5 dBTP), close to the Adhans' −16 LUFS. There is one version of each (they are 2–4 s long: no separate short version); an alarm plays it over and over.
 
-Still to do (0.26): the owner asked for five, beeps (“beep beep”) and birds; four birds are here. The beeps chosen on Wikimedia Commons could not be downloaded while 0.26 was made (Commons' file host answered “429 Too Many Requests” to the cloud session for more than two hours; a request was never sent around the limit). Candidates, licences verified on Commons' API, to be listened to (as spectrograms) before use: *Microwave oven.ogg* (stephan, PDSounds, public domain: a real microwave that “finishes with 3 beeps”), *Unlocking a car.ogg* (hc, PDSounds, public domain: a car's remote lock beeping twice, recorded through a window; the upload repeats the two beeps, so only the first two can be used), *Alarmclock-bleeps.ogg* (Geckoerer, CC BY-SA 4.0, “a typical modern alarm clock”: whether it is a recording must be checked; a perfectly clean tone with no room sound would be a generated one) and *Alarm clock - 01.ogg* (Mathieu Kappler, CC BY-SA 4.0, a ringing alarm clock recorded in France). Rejected from their descriptions: *Alarm or siren.ogg* and *Beep alarm clock.ogg* (generated), *Joseph Sardin - Passer domesticus tschilp call* (a toy sparrow), *Alarm Clock (Directory.Audio)* (unknown origin), *Heart Monitor Beep* (probably generated), *Smoke alarm.ogg* (harsh). Until a beep is added, `fx.rain` plays the nuthatch, whose calls sound like beeps.
+How the beeps were chosen (0.26): Commons' file host refused this cloud session (“429 Too Many Requests”) for hours, so GitHub's fetch-sounds workflow downloaded four candidates whose licences Commons' API confirmed; each was looked at as a spectrogram and an envelope. Kept: *Microwave oven.ogg* (public domain) and *Alarm clock - 01.ogg* (CC BY-SA 4.0), both real devices in a room. Not used: *Unlocking a car.ogg* (faint chirps through a window, not beeps) and *Alarmclock-bleeps.ogg* (one long loop). Rejected from their descriptions: *Alarm or siren.ogg* and *Beep alarm clock.ogg* (generated), *Joseph Sardin - Passer domesticus tschilp call* (a toy sparrow), *Alarm Clock (Directory.Audio)* (unknown origin), *Heart Monitor Beep* (probably generated), *Smoke alarm.ogg* (harsh).
+
+### Three beeps — A microwave oven, its timer done
+
+- Recording: [File:Microwave oven.ogg](https://commons.wikimedia.org/wiki/File:Microwave_oven.ogg)
+- Author: stephan
+- Licence: Public domain
+- Provenance: PDSounds (stephan), public domain: a real microwave oven that finishes with three beeps. 0.26 candidate for a beep alert.
+- Changes made by Minhad: 28.15–31.15 s of the original; changed: trimmed, levelled (0.03 s fade-in, 0.2 s fade-out, 1200 Hz high-pass, loudness to -17 LUFS), mono Ogg Vorbis.
+- Note: A real microwave oven's three beeps, “beep, beep, beep”.
+- Length in Minhad: 3.0 s
+- SHA-1 of the original file: `ebd60e929199bcc29c07f320816f15a8fa4b218c`
+
+  How it was chosen: The three beeps that end the 43 s recording of a microwave at work (28.21-28.83, 29.21-29.84 and 30.22-30.84 s, near 2.4 kHz with its harmonics), the room 56 dB below them. Starts 0.06 s before the first beep and ends 0.3 s after the third, in the room's quiet; the oven's hum below 1.2 kHz is filtered out. Fetched by GitHub's fetch-sounds workflow (Commons refused this machine).
+
+### Alarm clock — A bedside alarm clock, France
+
+- Recording: [File:Alarm clock - 01.ogg](https://commons.wikimedia.org/wiki/File:Alarm_clock_-_01.ogg)
+- Author: Mathieu Kappler
+- Licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0)
+- Provenance: Mathieu Kappler, a ringing alarm clock recorded in France. 0.26 candidate.
+- Changes made by Minhad: 2.34–3.98 s of the original; changed: trimmed, levelled (0.03 s fade-in, 0.12 s fade-out, 1200 Hz high-pass, loudness to -17 LUFS), mono Ogg Vorbis.
+- The edited audio in Minhad is shared under the same licence (CC BY-SA 4.0).
+- Note: A real alarm clock beeping in fours, twice: “beep-beep-beep-beep”.
+- Length in Minhad: 1.64 s
+- SHA-1 of the original file: `2dcade30737a28f62d862604f1a01f7cadc71577`
+
+  How it was chosen: The first two groups of four beeps (2.39-2.86 and 3.39-3.86 s, near 2 kHz with harmonics up to 14 kHz), the room 56 dB below them. Starts 0.05 s before the first beep and ends 0.12 s after the eighth, before the third group. Fetched by GitHub's fetch-sounds workflow (Commons refused this machine).
 
 ### Chickadee — Two calls, Rocky Mountain National Park
 
@@ -110,19 +137,6 @@ Still to do (0.26): the owner asked for five, beeps (“beep beep”) and birds;
 
   How it was chosen: Two quick pairs of high chirps and two single ones (4-5.5 kHz), the background about 45 dB below them. Cut in the silences before the first chirp and before the next one (3.1 s).
 
-### Nuthatch — Three calls, Rocky Mountain National Park
-
-- Recording: [Red-breasted Nuthatch (call), Sun Valley Trail (Rocky Mountain National Park sound library)](https://www.nps.gov/romo/learn/photosmultimedia/sounds-redbreastednuthatch.htm)
-- Author: Jacob Job / National Park Service (Rocky Mountain National Park)
-- Licence: Public domain (https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm)
-- Provenance: A Red-breasted Nuthatch calling (its nasal “yank” notes) on the Sun Valley Trail, Rocky Mountain National Park, 23 June 2015, recorded by Jacob Job (Colorado State University and the NPS Natural Sounds and Night Skies Division). The park's sound library states that its recordings are in the public domain and may be downloaded and used without limitation, and asks that the National Park Service be credited.
-- Changes made by Minhad: 16.7–18.6 s of the original; changed: trimmed, levelled (0.04 s fade-in, 0.2 s fade-out, 2000 Hz high-pass, loudness to -17 LUFS), mono Ogg Vorbis.
-- Note: A Red-breasted Nuthatch calls three times, “yank, yank, yank”: a bird that beeps.
-- Length in Minhad: 1.9 s
-- SHA-1 of the original file: `42b6b4cfb67fa554068e2276a8a60a089ced271d`
-
-  How it was chosen: Three calls of 0.3 s each, 30 dB above the forest behind them; a hum near 700 Hz and a stream's band near 2 kHz are below the high-pass. Starts 0.05 s before the first call, ends 0.25 s after the third.
-
 ### Whistle — Townsend's solitaire, Yellowstone National Park
 
 - Recording: [Townsend's Solitaire (Yellowstone National Park sound library)](https://www.nps.gov/yell/learn/photosmultimedia/sounds-townsendssolitaire.htm)
@@ -143,8 +157,8 @@ The five recordings of nature bundled from 0.18 to 0.25 (each 30 s, with a short
 - `fx.birds` Birds: Dawn chorus, Yellowstone National Park (National Park Service, public domain) → `fx.chickadee`
 - `fx.rooster` Rooster: A farm in Houx, France (Vincent Duseigne, radio aporee, CC BY 3.0) → `fx.pip_pip`
 - `fx.waves` Sea waves: A rocky shore in Yilan, Taiwan (Wu Tsan-Cheng, radio aporee, CC BY 3.0) → `fx.solitaire`
-- `fx.rain` Rain: Steady rain in Taitung, Taiwan (Wu Tsan-Cheng, radio aporee, CC BY 3.0) → `fx.nuthatch`
-- `fx.stream` Stream: A mountain stream, Rocky Mountain National Park (Jacob Job / NPS, public domain) → `fx.nuthatch`
+- `fx.rain` Rain: Steady rain in Taitung, Taiwan (Wu Tsan-Cheng, radio aporee, CC BY 3.0) → `fx.beeps`
+- `fx.stream` Stream: A mountain stream, Rocky Mountain National Park (Jacob Job / NPS, public domain) → `fx.alarm_clock`
 
 ## Considered and not used
 

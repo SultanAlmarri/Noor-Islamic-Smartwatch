@@ -19,8 +19,8 @@ class SoundIdsTest {
 
     @Test fun everyOldEffectHasItsOwnReplacement() {
         assertEquals(old.toSet(), SoundIds.RENAMED.keys)
-        // (Four new sounds for now: until a beep recording is added, two old ids share the nuthatch.)
-        assertTrue(SoundIds.RENAMED.values.toSet().size >= 4)
+        // Five old sounds, five new ones: each old id has a sound of its own.
+        assertEquals(5, SoundIds.RENAMED.values.toSet().size)
         for ((from, to) in SoundIds.RENAMED) {
             assertTrue(SoundIds.isValid(to) && to.startsWith("fx."), to)
             assertFalse(to in SoundIds.RENAMED.keys, "$from → $to is itself renamed")
@@ -41,7 +41,7 @@ class SoundIdsTest {
         assertEquals(AlertMode.SOUND, s.alert(Prayer.SHURUQ).mode)
         assertEquals(listOf("adhan.makkah", "fx.chickadee"), s.favourites)
         assertEquals(AlarmSound.LIBRARY, s.alarms.single().sound)
-        assertEquals("fx.nuthatch", s.alarms.single().customId)
+        assertEquals("fx.beeps", s.alarms.single().customId)
         // Written again, only the new ids are stored.
         assertTrue(old.none { it in s.encode() }, s.encode())
         assertEquals(s, AlertSettings.decode(s.encode()))
