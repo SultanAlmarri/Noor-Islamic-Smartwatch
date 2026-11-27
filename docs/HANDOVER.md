@@ -2288,7 +2288,7 @@ fifteen SHOULD); a fourth helper fixed the Adhan and alarm findings while the le
   select, Delete in a solid bar) and editor (the ring time large, the wheels, the day letters, name, Sound / Vibration
   / Snooze rows, Cancel and Save at the foot on a solid bar, no tab bar). One day selector everywhere (`WeekDays`,
   `DayLettersContrastTest`).
-- **Sounds**: SOUNDS_PLACEHOLDER
+- **Sounds**: five real recordings (`docs/SOUNDS.md`): three beeps of a microwave oven (PDSounds, public domain) and a bedside alarm clock beeping in fours (Mathieu Kappler, CC BY-SA 4.0), a chickadee, pygmy nuthatches' "pip-pip" and a solitaire's whistle (US National Park Service, public domain); one version each, 1.6–4 s, about −17 LUFS. Old ids read as their replacements (`SoundIds.RENAMED`: birds → chickadee, rooster → pip-pip, waves → whistle, rain → three beeps, stream → alarm clock; `SoundIdsTest`). Commons' file host refused this cloud session with "429 Too Many Requests" for hours (never worked around): the beep candidates were added to `tools/sounds/adhan_sources.json` and fetched by GitHub's `fetch-sounds.yml` (run on the work branch; Commons' API re-checked each licence), then judged from spectrograms and envelopes. Every Adhan opening is now exactly the first "Allahu Akbar, Allahu Akbar" (cut points from the voice band's energy, spectrograms and faster-whisper "medium" in Arabic; Egypt's held all four takbirs before; the others end in the pause with a short fade); `build_library.py` holds every cut and writes SOUNDS.md (`--keep-whole` leaves the whole Adhans byte for byte). Nothing was heard: the owner should listen.
 - What's New written for 0.26 (EDITION 26).
 
 **Tests and what was not tested**: TESTS_PLACEHOLDER

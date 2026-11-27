@@ -20,9 +20,10 @@ Minhad, while package ids (`com.noor.smartwatch`), code packages (`com.noor.*`),
   `alerts` (Adhan and alerts), `shared` (compass, offline gazetteer, official timetables).
 - **The original watch face v1.3.2** (`com.noorface.prayer`), frozen in `legacy/`. It still runs on the owner's watch.
 
-Current version: phone **0.25.0** (versionCode 50), watch **0.25.0** (versionCode 36); 0.9.7, 0.9.9–0.9.11,
+Current version: phone **0.26.0** (versionCode 51), watch **0.26.0** (versionCode 37); 0.9.7, 0.9.9–0.9.11,
 0.9.13, 0.9.14 and 0.10.0 to 0.15.2 changed only the phone (0.16.0 to 0.24.1 rebuilt the watch with the shared alert
-engine and, in 0.18, its new sounds; the alarms ring on the phone only; 0.25.0 redesigned the watch app). Everything is on `main`. The merged work
+engine and, in 0.18, its new sounds; the alarms ring on the phone only; 0.25.0 redesigned the watch app; 0.26.0 rebuilt
+it with the new alert sounds and Adhan openings). Everything is on `main`. The merged work
 branches were deleted on 15 November 2026 at the owner's word (0.13's `sky/life` is merged and may go too). Three
 branches hold work that never reached `main` and were left alone: `probe/emu37` and `adhan/097-repro` (abandoned
 Android 17 emulator experiments: that image does not run reliably on GitHub's machines) and `noor/0912` (a first

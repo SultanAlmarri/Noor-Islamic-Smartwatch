@@ -647,6 +647,29 @@ letters of the other script, apart from names that are not language (devices, li
 Every text colour meets WCAG AA (4.5:1) on every surface in both themes, white on the sky meets 7:1 at every solar
 elevation, and gold on the sky 4.5:1 (`ThemeContrastTest`, `SkyPaletteTest`).
 
+## The interface of 0.26: signs of the sky, Qibla on one screen, the Adhan tab and alarms redone
+
+The owner after using 0.25 (27 November 2026, HANDOVER.md section 43): the modern Apple aesthetic as inspiration, not a
+copy; some colours and icons disliked. What changed, and the rules it leaves:
+
+- **Every sign is a small disc of sky** (`IconTile`, `IconTileLook`, `SignTile`), made as the home screen's prayer
+  discs (`SkyDisc`): a sky of the sign's colour, deeper at the top and warmer towards its horizon, a hairline of light on
+  the rim, the sign in white. Not a time of day: one colour per kind of sign, and only the sky's colours (day blue,
+  night indigo, dusk violet, dawn coral, sunset amber, sea teal, gold, sand, stone; never the iPhone's pink, red, green,
+  mint). Squares of saturated colour with a white sign (0.25) are not used anywhere. `IconTileContrastTest`.
+- **The mark**: the drawn crescent's box on the icon's centre both ways, the star inside its curve, the Earth's edge
+  visible down to 48 px (`tools/brand/logo.py`, `place()`).
+- **Qibla fits the screen** (`QiblaFit`): place line, the dial (all the height the rest leaves, never under 260 dp),
+  what to do in one line ("Turn right 83°" with the way to turn drawn; "Hold your phone flat" here, once), one card of
+  readings (Qibla, phone, accuracy as a meter: a button to calibration). Nothing to read that a person does not need
+  (the owner: "people don't need to read this"); never squeeze the compass to fit text.
+- **The Adhan tab**: see "The prayers' part of the Adhan tab (0.26)" below and docs/ADHAN_026_NOTES.md. One day
+  selector everywhere (`WeekDays`: single letters in the week's order, a chosen day a solid gold disc, the caption
+  above), one way to test ("Test in N seconds"), solid foot bars (`FootBar`) wherever buttons sit at the foot.
+- **Alarms as Samsung's Clock** (docs/ALARMS_026_NOTES.md): the 0.25 notes below on the alarms' list and their editor
+  (one group, Cancel and Save in the top bar) are superseded: one card per alarm, a next-alarm header, long press to
+  select with Delete at the foot; the editor's ring time large over its wheels, Cancel and Save at the foot, no tab bar.
+
 ## The interface of 0.25: as if Apple had made it
 
 The owner (22 November 2026): "totally improve the app in every way possible ... really focus on Apple's design
