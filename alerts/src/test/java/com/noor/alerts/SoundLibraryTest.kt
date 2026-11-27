@@ -34,12 +34,12 @@ class SoundLibraryTest {
           {"id":"adhan.alquds","kind":"adhan","title_en":"Al-Quds (opening)","title_ar":"القدس","categories":["renowned"],
            "short":{"file":"sounds/adhan_alquds_short.ogg","seconds":29},"note_en":"Opening only"},
           {"id":"fx.chickadee","kind":"alt","title_en":"Chickadee","title_ar":"القرقف","categories":["bird"],"file":"sounds/fx_chickadee.ogg","seconds":2.4},
-          {"id":"fx.nuthatch","kind":"alt","title_en":"Nuthatch","title_ar":"الخوّاص","categories":["bird"],"file":"sounds/fx_nuthatch.ogg","seconds":1.9}
+          {"id":"fx.beeps","kind":"alt","title_en":"Three beeps","title_ar":"ثلاث صفّارات","categories":["beep"],"file":"sounds/fx_beeps.ogg","seconds":1.9}
         ]}
     """.trimIndent()
 
     private val phoneFiles = setOf("sounds/adhan_alquds_short.ogg", "sounds/adhan_makkah.ogg", "sounds/adhan_makkah_short.ogg", "sounds/adhan_dubai_fajr.ogg",
-        "sounds/adhan_dubai_fajr_short.ogg", "sounds/fx_chickadee.ogg", "sounds/fx_nuthatch.ogg")
+        "sounds/adhan_dubai_fajr_short.ogg", "sounds/fx_chickadee.ogg", "sounds/fx_beeps.ogg")
     private val watchFiles = phoneFiles - setOf("sounds/adhan_makkah.ogg", "sounds/adhan_dubai_fajr.ogg")
 
     private fun lib(files: Set<String>, transfer: File? = null) = SoundLibrary(SoundLibrary.parse(json), { it in files }, transfer)
@@ -49,11 +49,11 @@ class SoundLibraryTest {
         assertEquals(3, l.adhans.size)
         assertFalse(l.byId("adhan.alquds")!!.hasFullRecording)
         assertEquals("Opening only", l.byId("adhan.alquds")!!.note(false))
-        assertEquals(listOf("fx.nuthatch", "fx.chickadee"), l.sounds.map { it.id }) // sorted by duration
+        assertEquals(listOf("fx.beeps", "fx.chickadee"), l.sounds.map { it.id }) // sorted by duration
         assertNull(l.byId("fx.chickadee")!!.shortFile) // 0.26: the alert sounds are short; one version each
         // 0.26: an id of a replaced effect, still stored somewhere, finds the sound that replaced it.
         assertEquals("fx.chickadee", l.byId("fx.birds")!!.id)
-        assertEquals("fx.nuthatch", l.byId("fx.rain")!!.id)
+        assertEquals("fx.beeps", l.byId("fx.rain")!!.id)
         assertNull(l.byId("fx.unknown"))
         val m = l.byId("adhan.makkah")!!
         assertEquals("CC BY 3.0", m.credit!!.licence)
@@ -76,11 +76,11 @@ class SoundLibraryTest {
         assertEquals(SoundSource.Asset("sounds/adhan_makkah.ogg"), full.source); assertNull(full.substitution); assertFalse(full.short)
         val short = phone.resolve(Prayer.DHUHR, PrayerAlert(true, AlertMode.ADHAN_SHORT, SoundIds.DEFAULT_ADHAN), null)!!
         assertEquals(SoundSource.Asset("sounds/adhan_makkah_short.ogg"), short.source); assertTrue(short.short)
-        val sound = phone.resolve(Prayer.SHURUQ, PrayerAlert(true, AlertMode.SOUND, "fx.nuthatch"), null)!!
-        assertEquals(SoundSource.Asset("sounds/fx_nuthatch.ogg"), sound.source)
+        val sound = phone.resolve(Prayer.SHURUQ, PrayerAlert(true, AlertMode.SOUND, "fx.beeps"), null)!!
+        assertEquals(SoundSource.Asset("sounds/fx_beeps.ogg"), sound.source)
         // (An old id stored before 0.26 plays its replacement, with no substitution to report.)
         val old = phone.resolve(Prayer.SHURUQ, PrayerAlert(true, AlertMode.SOUND, "fx.rain"), null)!!
-        assertEquals(SoundSource.Asset("sounds/fx_nuthatch.ogg"), old.source); assertNull(old.substitution)
+        assertEquals(SoundSource.Asset("sounds/fx_beeps.ogg"), old.source); assertNull(old.substitution)
         assertNull(phone.resolve(Prayer.ASR, PrayerAlert(true, AlertMode.NOTIFICATION, null), null))
         // A recording that only has its opening plays the short version even when "full" is chosen, and says why.
         val opening = phone.resolve(Prayer.ASR, PrayerAlert(true, AlertMode.ADHAN, "adhan.alquds"), null)!!
