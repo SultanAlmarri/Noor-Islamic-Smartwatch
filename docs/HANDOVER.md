@@ -2292,3 +2292,7 @@ fifteen SHOULD); a fourth helper fixed the Adhan and alarm findings while the le
 - What's New written for 0.26 (EDITION 26).
 
 **Tests and what was not tested**: locally on the final code: prayer engine 161 tests (4 skipped by design), alerts 21, phone 173, watch 44, no failures; both release APKs built (phone 0.26.0, versionCode 51, 59.5 MB; watch 0.26.0, versionCode 37, 10.2 MB). New tests: `IconTileContrastTest`, `QiblaFitDesignTest`, `SoundIdsTest`, `SoftStartTest`, `SoftStartDispatchTest`, `AdhanMigrationTest`, `EveryPrayerTest`, `DayLettersContrastTest`, `AlarmsDesignTest`, `AlarmsPhoneDesignTest`, `PrayersDesignTest`. Assertions changed only to the new truth (each says so: the Qibla note and the exact bearing no longer shown, "Hold your phone flat" under the dial, the alert sounds' ids). **Not tested**: anything on a phone or a watch (the layouts, the wheels and long press under a thumb, the sounds' loudness and the volume preview, the one-time change on an updated phone); the sounds were judged from spectrograms and measurements, never heard; the emulator workflows were not run for 0.26 before release.
+
+**Released** (27 November 2026): `main` at `e2ea692`. GitHub's `android.yml` run 116 on that commit passed (every test,
+both APKs) and republished `dev-latest`: the phone link was downloaded and reads Minhad 0.26.0, versionCode 51; the
+watch link 0.26.0, versionCode 37. **Nothing of 0.26 has been run on a phone or a watch.**
