@@ -2239,3 +2239,56 @@ runs too), hid the Qibla tab from the script. `home_sky.sh` now closes such a di
 the other two the push started were cancelled after a few minutes by something outside the session (not a failure;
 not re-run). Locally, on the final code: prayer engine 154 tests (4 skipped by design), alerts 20, phone 161, watch 44,
 no failures; both release APKs built. **Nothing of 0.25 has been run on a phone or a watch.**
+
+## 43. The Adhan tab redesigned, alarms like the phone's clock, Qibla on one screen, signs of the sky, real alert sounds (0.26.0, 27 November 2026, phone and watch)
+
+**The owner** (27 November 2026, after using 0.25): "make the next update focusing on the UI as well. I want the modern
+Apple aesthetic ... I didn't say copy Apple 100%. I just said take inspiration ... Some of the colors and icons I don't
+really like." In order: the Qibla tab must "fit all in the screen, like I don't have to scroll up and down for the
+compass accuracy"; the Adhan section "totally redesign[ed] ... intuitive": the master volume "doesn't really make sense"
+(all Adhans at once, or each its own), "All prayers" and "Adhan voice" were weird, "why can't I hear the Fajr version",
+"why is it that the Adhan is still starting up gradually? ... by default it should be at the normal volume from the
+beginning", "use the icons you used on the home screen", days easy to choose, per prayer vibrate / start gradually /
+volume / days, and a better way than "Adhan, short Adhan, sound, notification, silent"; the sounds replaced by five
+real (never AI-generated) short alert sounds, "beep beep ... birds chirp chirp", and the short Adhan "just says the
+first Allahu Akbar, Allahu Akbar"; the alarms "should look very similar to the Samsung clock app ... Even when you set
+an alarm"; the settings' icons not "copy and pasted Apple"; the app icon's crescent centred. During the work: "I
+actually want the crescent centered, like in the middle, vertically and horizontally"; "the horizon, it's not like
+showing. It's too small"; on Qibla, "remove unnecessary stuff ... people don't need to read this. I don't want you to
+squish everything down and make the compass look horrible"; and "all the icons in the app, like in the settings and
+stuff, should have the same relative theme [as the prayer icons]. But it wouldn't make sense for the other icons to
+show different times of day."
+
+**How it was done.** Three helpers in git worktrees at once (the Adhan section; the sounds; the alarms), the lead on
+the mark, the signs and Qibla; then an independent review of every render ("not ready to ship yet": four MUST, about
+fifteen SHOULD); a fourth helper fixed the Adhan and alarm findings while the lead fixed the rest.
+
+- **The mark** (`tools/brand/logo.py`, `place()`): the drawn crescent's box on the field's centre both ways, the star
+  inside its curve, the crescent 19 (was 22) so the Earth's edge shows; the edge at 75.5 (the review: still readable
+  at 48 px). The welcome's `Mark` reads the same numbers.
+- **Signs of the sky** (`IconTile`, `IconTileLook`, `Tints`): every sign of the app is a small disc of sky of its
+  colour, deeper at the top and warmer towards its horizon, a hairline of light on the rim and the sign in white, as
+  the home screen's `SkyDisc`; only the sky's colours (day blue, night indigo, dusk violet, dawn coral, sunset amber,
+  sea teal, gold, sand, stone). The welcome's signs and What's New use the same disc (`SignTile`). A first version
+  (faint tinted discs) was replaced the same day at the owner's word. `IconTileContrastTest`.
+- **Qibla** (`QiblaScreen.kt`, `QiblaFit`): the page fits the screen (the dial takes what the rest leaves, never under
+  260 dp; only a screen too short scrolls); "Turn right 83°" with the way to turn drawn; one card with the Qibla, the
+  heading and the accuracy (its meter: a button to the calibration guide); the note under the readings (the exact
+  bearing, the phone's estimate in words), the accuracy card and "Hold your phone flat" across the needle are gone.
+  `QiblaFitDesignTest` (360×740: fits, dial at least 280 dp), `ScreenshotTest` (every Qibla shot fits a 915 dp phone).
+- **The Adhan tab** (`docs/ADHAN_026_NOTES.md`): the prayers with their sky discs, time and what each plays; "Every
+  prayer" (sound, volume, Start softly, vibrate; "Mixed" shown as a bare slider and a third switch state; a change
+  that overwrites prayers that differed says so, with Undo); a prayer's page (sound, volume, Start softly, vibrate,
+  stop after, days, test); one sound picker (Adhan: whole or opening only, each voice with its Fajr version to hear;
+  alert sounds; notification only; my sounds). **Start softly is per prayer and off by default**; why the Adhan still
+  rose: 0.24.1's one-time change reset the global rise only when it was exactly 10. A new one-time change
+  (`adhan_full_from_start_026`) turns every rise off once. Format: `PrayerAlert.gradualSeconds` as a 10th field and
+  `pgrad=1`, older readers ignore both; a watch still on 0.25 plays such a prayer at full volume from the start.
+- **Alarms** (`docs/ALARMS_026_NOTES.md`): Samsung Clock's list (next-alarm header, one card per alarm, long press to
+  select, Delete in a solid bar) and editor (the ring time large, the wheels, the day letters, name, Sound / Vibration
+  / Snooze rows, Cancel and Save at the foot on a solid bar, no tab bar). One day selector everywhere (`WeekDays`,
+  `DayLettersContrastTest`).
+- **Sounds**: SOUNDS_PLACEHOLDER
+- What's New written for 0.26 (EDITION 26).
+
+**Tests and what was not tested**: TESTS_PLACEHOLDER
