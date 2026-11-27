@@ -2,13 +2,13 @@
 <!-- Minhad's mark. Written by tools/brand/logo.py: change it there. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:pathData="M74.02 50.57 A22 22 0 1 1 51.74 24.01 A18.2 18.2 0 1 0 74.02 50.57 Z">
+    <path android:pathData="M74.77 58.41 A21 21 0 1 1 53.46 33.01 A17.4 17.4 0 1 0 74.77 58.41 Z">
         <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="37.1" android:startY="26.2" android:endX="65.7" android:endY="65.8">
+            <gradient android:type="linear" android:startX="39.54" android:startY="35.1" android:endX="66.84" android:endY="72.9">
                 <item android:offset="0" android:color="#FFFFFBEF"/>
                 <item android:offset="1" android:color="#FFEDCB8A"/>
             </gradient>
         </aapt:attr>
     </path>
-    <path android:fillColor="#FFFFF8E2" android:pathData="M68.40 31.40 L69.62 34.24 L72.50 33.10 L71.36 35.98 L74.20 37.20 L71.36 38.42 L72.50 41.30 L69.62 40.16 L68.40 43.00 L67.18 40.16 L64.30 41.30 L65.44 38.42 L62.60 37.20 L65.44 35.98 L64.30 33.10 L67.18 34.24 Z"/>
+    <path android:fillColor="#FFFFF8E2" android:pathData="M61.59 41.83 L62.85 44.78 L65.83 43.59 L64.64 46.57 L67.59 47.83 L64.64 49.09 L65.83 52.07 L62.85 50.88 L61.59 53.83 L60.33 50.88 L57.35 52.07 L58.54 49.09 L55.59 47.83 L58.54 46.57 L57.35 43.59 L60.33 44.78 Z"/>
 </vector>

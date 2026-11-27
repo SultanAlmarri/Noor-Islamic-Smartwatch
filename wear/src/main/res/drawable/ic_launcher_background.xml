@@ -23,15 +23,15 @@
             </gradient>
         </aapt:attr>
     </path>
-    <path android:pathData="M-6 92.52 A150 150 0 0 1 114 92.52 L114 114 L-6 114 Z">
+    <path android:pathData="M-6 98.52 A150 150 0 0 1 114 98.52 L114 114 L-6 114 Z">
         <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="0" android:startY="80" android:endX="0" android:endY="108">
+            <gradient android:type="linear" android:startX="0" android:startY="86" android:endX="0" android:endY="108">
                 <item android:offset="0" android:color="#FF1B1838"/>
                 <item android:offset="1" android:color="#FF07081A"/>
             </gradient>
         </aapt:attr>
     </path>
-    <path android:pathData="M4 88.58 A150 150 0 0 1 104 88.58" android:strokeWidth="1.4" android:strokeLineCap="round" android:fillColor="#00000000">
+    <path android:pathData="M4 94.58 A150 150 0 0 1 104 94.58" android:strokeWidth="1.4" android:strokeLineCap="round" android:fillColor="#00000000">
         <aapt:attr name="android:strokeColor">
             <gradient android:type="linear" android:startX="4" android:startY="0" android:endX="104" android:endY="0">
                 <item android:offset="0" android:color="#00FFD9A0"/>

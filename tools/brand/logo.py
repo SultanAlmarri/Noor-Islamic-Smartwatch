@@ -21,10 +21,33 @@ import math, os, sys
 V = 108.0  # the adaptive icon's viewport; a launcher shows the middle 72 at most, and keeps the middle 66 safe
 
 # ---- the geometry -------------------------------------------------------------------------------------------------
-CX, CY, R = 52.5, 46.0, 22.0       # the crescent's outer circle
-INNER_R, INNER_OFF, INNER_ANG = 18.2, 8.0, -40.0   # the circle that bites it: radius, distance and bearing of its centre
-STAR = (68.4, 37.2, 5.8, 3.2)      # the star: centre, outer and inner radius (eight points: the khatam)
-LIMB_Y, EARTH_R = 80.0, 150.0      # the Earth's edge: its highest point, and the radius of the arc
+# 0.26: the crescent is in the middle of the icon, across and down (the owner: "I actually want the crescent
+# centered, like in the middle, vertically and horizontally"): the box of the drawn crescent (what is left of the
+# outer circle after the bite) is centred on the field's centre, and the star sits inside its curve. The Earth's edge
+# moved down to make room (82 -> 86). place() below works the circle's centre out from that.
+R = 21.0                           # the crescent's outer circle: its radius (its centre: place())
+INNER_R, INNER_OFF, INNER_ANG = 17.4, 7.6, -40.0   # the circle that bites it: radius, distance and bearing of its centre
+STAR_T, STAR_RO, STAR_RI = 2.0, 6.0, 3.3          # the star: past the bite's centre along its bearing; outer, inner radius
+LIMB_Y, EARTH_R = 86.0, 150.0      # the Earth's edge: its highest point, and the radius of the arc
+
+
+def place():
+    """The circle's centre that puts the drawn crescent's box on the field's centre, and the star from it."""
+    a = math.radians(INNER_ANG)
+    ix, iy = INNER_OFF * math.cos(a), INNER_OFF * math.sin(a)
+    n = 800
+    x0 = y0 = 1e9; x1 = y1 = -1e9
+    for i in range(n):
+        for j in range(n):
+            x = -R + 2 * R * (i + 0.5) / n; y = -R + 2 * R * (j + 0.5) / n
+            if x * x + y * y <= R * R and (x - ix) ** 2 + (y - iy) ** 2 > INNER_R ** 2:
+                x0 = min(x0, x); x1 = max(x1, x); y0 = min(y0, y); y1 = max(y1, y)
+    cx, cy = V / 2 - (x0 + x1) / 2, V / 2 - (y0 + y1) / 2
+    star = (cx + (INNER_OFF + STAR_T) * math.cos(a), cy + (INNER_OFF + STAR_T) * math.sin(a), STAR_RO, STAR_RI)
+    return round(cx, 2), round(cy, 2), star
+
+
+CX, CY, STAR = place()
 
 SKY = [(0.00, "#050920"), (0.42, "#101C52"), (0.68, "#2A3384"), (0.82, "#6A5598"), (0.91, "#DB8E70"), (0.97, "#F8C078")]
 SKY_END_Y = 83.0                   # the sky's gradient runs from the top to here
@@ -37,18 +60,20 @@ RIM = [(0.0, "#FFD9A0", 0.0), (0.28, "#FFE2B0", 0.75), (0.5, "#FFF6DC", 1.0), (0
 RIM_W = 1.4
 
 
-def crescent(cx=CX, cy=CY, R=R, r=INNER_R, off=INNER_OFF, ang=INNER_ANG):
+def crescent():
+    cx, cy, Ro, r, off, ang = CX, CY, R, INNER_R, INNER_OFF, INNER_ANG
     a = math.radians(ang)
-    x = (off * off - r * r + R * R) / (2 * off)
-    h = math.sqrt(max(R * R - x * x, 0.0))
+    x = (off * off - r * r + Ro * Ro) / (2 * off)
+    h = math.sqrt(max(Ro * Ro - x * x, 0.0))
     px, py = cx + x * math.cos(a), cy + x * math.sin(a)
     p1 = (px - h * math.sin(a), py + h * math.cos(a))
     p2 = (px + h * math.sin(a), py - h * math.cos(a))
-    return (f"M{p1[0]:.2f} {p1[1]:.2f} A{R:g} {R:g} 0 1 1 {p2[0]:.2f} {p2[1]:.2f} "
+    return (f"M{p1[0]:.2f} {p1[1]:.2f} A{Ro:g} {Ro:g} 0 1 1 {p2[0]:.2f} {p2[1]:.2f} "
             f"A{r:g} {r:g} 0 1 0 {p1[0]:.2f} {p1[1]:.2f} Z")
 
 
-def star(cx=STAR[0], cy=STAR[1], ro=STAR[2], ri=STAR[3]):
+def star():
+    cx, cy, ro, ri = STAR
     pts = []
     for i in range(16):
         rr = ro if i % 2 == 0 else ri
