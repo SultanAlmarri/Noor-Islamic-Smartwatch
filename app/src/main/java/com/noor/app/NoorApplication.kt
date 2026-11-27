@@ -116,17 +116,7 @@ class NoorApplication : Application(), AlertHost {
         container.scope.launch(kotlinx.coroutines.Dispatchers.Default) { com.noor.app.ui.today.CloudAtlas.preload(resources); com.noor.app.ui.today.Atmosphere.warmUp() }
         // (Testing only) A tester's demo the app was closed during gives the user's own scenery back.
         container.scope.launch { runCatching { com.noor.app.testing.Tester.restoreAfterDemo(this@NoorApplication) { container.settings.setScenery(it) } } }
-        // (0.24.1) The Adhan at its full volume from the start is the default now (the owner); the old default, a 10-second
-        // rise, is changed once on phones that still have it (any other value was chosen, and is kept).
-        container.scope.launch {
-            runCatching {
-                val prefs = getSharedPreferences("noor_migrations", 0)
-                if (!prefs.getBoolean("adhan_full_from_start", false)) {
-                    container.settings.updateAlerts { a -> if (a.gradualSeconds == 10) a.copy(gradualSeconds = 0) else a }
-                    prefs.edit().putBoolean("adhan_full_from_start", true).apply()
-                }
-            }
-        }
+        container.scope.launch { runCatching { adhanMigrations(this@NoorApplication, container.settings) } }
         container.scope.launch {
             val s = container.settings.current()
             LocationWorker.sync(this@NoorApplication, s.backgroundUpdates && container.location.hasBackgroundPermission())
@@ -173,5 +163,26 @@ class NoorApplication : Application(), AlertHost {
                 .collect { com.noor.app.widget.Widgets.refresh(this@NoorApplication) }
         }
         container
+    }
+}
+
+/**
+ * The one-time changes to the alert settings, each run once on a phone (remembered in "noor_migrations"):
+ * - (0.24.1) The Adhan at its full volume from the start became the default (the owner); the old default, a 10-second
+ *   rise, was changed on phones that still had it (any other value was taken as chosen, and kept).
+ * - (0.26) Every rise is turned off, whatever its length, the prayers' and the alarms' (the owner, 27 November 2026: "why
+ *   is it that the Adhan is still starting up gradually? I want it to be on its normal volume from the beginning"; a
+ *   phone left at 5, 20 or 30 seconds by an earlier version still rose). From 0.26 "Start softly" is each prayer's own
+ *   switch, off unless the user turns it on.
+ */
+internal suspend fun adhanMigrations(context: Context, settings: SettingsRepository) {
+    val prefs = context.getSharedPreferences("noor_migrations", 0)
+    if (!prefs.getBoolean("adhan_full_from_start", false)) {
+        settings.updateAlerts { a -> if (a.gradualSeconds == 10) a.copy(gradualSeconds = 0) else a }
+        prefs.edit().putBoolean("adhan_full_from_start", true).apply()
+    }
+    if (!prefs.getBoolean("adhan_full_from_start_026", false)) {
+        settings.updateAlerts { it.fullVolumeFromStart() }
+        prefs.edit().putBoolean("adhan_full_from_start_026", true).apply()
     }
 }

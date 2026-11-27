@@ -260,7 +260,7 @@
     <string name="adhan_prayers">الصلوات</string>
     <string name="adhan_off">متوقف</string>
     <string name="adhan_mode_adhan">الأذان</string>
-    <string name="adhan_mode_short">أذان مختصر</string>
+    <string name="adhan_mode_short">مطلع الأذان</string>
     <string name="adhan_mode_sound">صوت</string>
     <string name="adhan_mode_custom">صوتي</string>
     <string name="adhan_mode_notification">إشعار</string>
@@ -991,4 +991,28 @@
     <string name="accuracy_source_bosnia">تقويم المشيخة لسراييفو، 2026</string>
     <string name="accuracy_show">عرض التفاصيل</string>
     <string name="accuracy_hide">إخفاء التفاصيل</string>
+    <!-- 0.26 adhan -->
+    <string name="a026_every_prayer">كل الصلوات</string>
+    <string name="a026_every_prayer_footer">تُضبط هنا الصلوات كلها معًا. اضغط على صلاة في الأعلى لتجعل لها إعدادها الخاص.</string>
+    <string name="a026_devices">الأجهزة والوضع الصامت</string>
+    <string name="a026_some_prayers">مفعّل لبعض الصلوات</string>
+    <string name="a026_start_softly">البدء بهدوء</string>
+    <string name="a026_soft_on">يرتفع إلى الصوت الكامل خلال %1$s&#160;ثوانٍ</string>
+    <string name="a026_soft_off">بالصوت الكامل من البداية</string>
+    <string name="a026_today_at">اليوم الساعة %1$s</string>
+    <string name="a026_sound_for_all">صوت كل الصلوات</string>
+    <string name="a026_sound_for">صوت %1$s</string>
+    <string name="a026_fajr_note_all">عند الفجر يُرفع أذان الفجر بالصوت نفسه، وفيه «الصلاة خير من النوم». والصوت الذي ليس له أذان فجر يُبقي الفجر على أذان الفجر الذي له.</string>
+    <string name="a026_fajr_note_fajr">الصوت الذي ليس له أذان فجر ليس فيه «الصلاة خير من النوم».</string>
+    <string name="a026_whole">الأذان كاملًا</string>
+    <string name="a026_opening">المطلع فقط</string>
+    <string name="a026_whole_note">الأذان كله حتى آخره.</string>
+    <string name="a026_opening_note">«الله أكبر، الله أكبر» الأولى فقط.</string>
+    <string name="a026_no_fajr">ليس له أذان فجر</string>
+    <string name="a026_fajr_version">أذان الفجر</string>
+    <string name="a026_alert_sounds_note">صوت قصير عند دخول الوقت بدل الأذان.</string>
+    <string name="a026_notification_only">إشعار فقط</string>
+    <string name="a026_notification_sound">صوت الإشعارات</string>
+    <string name="a026_silent">إشعار صامت</string>
+    <string name="a026_silent_detail">على الشاشة، بلا صوت</string>
 </resources>

@@ -294,7 +294,8 @@ internal object AlertDispatcher {
         val record = log(AlertOutcome.STARTING, if (locked) "before the first unlock: own recording unreadable, the default Adhan played" else null).let { r -> resolved.entry?.id?.takeIf { alert.soundId == com.noor.prayer.alerts.SoundIds.RANDOM }
             ?.let { picked -> r.copy(sound = picked).also { AlertLog.add(context, it) } } ?: r }
         val req = PlayRequest(id, title, body, at.toEpochMilli(), detail, text.string(R.string.noor_alert_stop), resolved.source,
-            alert.volumePercent, alerts.gradualSeconds, alert.maxSeconds, alert.vibrate, keepNotification = true,
+            // (0.26: the prayer's own rise, "Start softly"; 0, the default, is full volume from the first second.)
+            alert.volumePercent, alert.gradualSeconds, alert.maxSeconds, alert.vibrate, keepNotification = true,
             logId = record.id, fallback = library.emergencySource(resolved.source),
             fallbackNote = text.string(R.string.noor_alert_fallback_played), failedNote = text.string(R.string.noor_alert_failed),
             nextPrayerAtMs = nextAtMs)

@@ -257,7 +257,7 @@
     <string name="adhan_prayers">Prayers</string>
     <string name="adhan_off">Off</string>
     <string name="adhan_mode_adhan">Adhan</string>
-    <string name="adhan_mode_short">Short Adhan</string>
+    <string name="adhan_mode_short">Adhan opening</string>
     <string name="adhan_mode_sound">Sound</string>
     <string name="adhan_mode_custom">My sound</string>
     <string name="adhan_mode_notification">Notification</string>
@@ -967,4 +967,28 @@
     <string name="accuracy_source_bosnia">The Takvim’s Sarajevo year, 2026</string>
     <string name="accuracy_show">Show details</string>
     <string name="accuracy_hide">Hide details</string>
+    <!-- 0.26 adhan -->
+    <string name="a026_every_prayer">Every prayer</string>
+    <string name="a026_every_prayer_footer">Sets all prayers at once. Tap a prayer above to give it its own.</string>
+    <string name="a026_devices">Devices and silent mode</string>
+    <string name="a026_some_prayers">On for some prayers</string>
+    <string name="a026_start_softly">Start softly</string>
+    <string name="a026_soft_on">Rises to full volume over %1$s&#160;seconds</string>
+    <string name="a026_soft_off">Full volume from the start</string>
+    <string name="a026_today_at">Today at %1$s</string>
+    <string name="a026_sound_for_all">Sound for every prayer</string>
+    <string name="a026_sound_for">Sound for %1$s</string>
+    <string name="a026_fajr_note_all">At Fajr a voice plays its Fajr version, with “As-salatu khayrun min an-nawm”. A voice without one leaves Fajr on the Fajr Adhan it has.</string>
+    <string name="a026_fajr_note_fajr">A voice without a Fajr version has no “As-salatu khayrun min an-nawm”.</string>
+    <string name="a026_whole">Whole Adhan</string>
+    <string name="a026_opening">Opening only</string>
+    <string name="a026_whole_note">The whole call, to its end.</string>
+    <string name="a026_opening_note">Only the first “Allahu Akbar, Allahu Akbar”.</string>
+    <string name="a026_no_fajr">No Fajr version</string>
+    <string name="a026_fajr_version">Fajr version</string>
+    <string name="a026_alert_sounds_note">A short sound at the prayer time, in place of the Adhan.</string>
+    <string name="a026_notification_only">Notification only</string>
+    <string name="a026_notification_sound">Notification sound</string>
+    <string name="a026_silent">Silent notice</string>
+    <string name="a026_silent_detail">On the screen, without a sound</string>
 </resources>
