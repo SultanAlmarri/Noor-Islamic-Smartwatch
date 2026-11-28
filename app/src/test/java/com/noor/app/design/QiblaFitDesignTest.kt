@@ -53,6 +53,7 @@ class QiblaFitDesignTest {
             QiblaContent(pad, QiblaPlace(s, place, place?.let { Qibla.from(it.point) }), compass, false, {})
         }
         h.start()
+        val dialAt = mutableMapOf<String, androidx.compose.ui.geometry.Rect>()
         fun fitsOneScreen(name: String) {
             val limit = (740 - 82 - 24) * rule.density.density
             val accuracy = rule.onAllNodesWithText(if (h.arabic) "الدقة" else "Accuracy").onFirst().fetchSemanticsNode().boundsInRoot
@@ -60,6 +61,10 @@ class QiblaFitDesignTest {
             val dial = rule.onNode(androidx.compose.ui.test.hasTestTag("qiblaDial"), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
             println("$name: accuracy ends at ${accuracy.bottom / rule.density.density} dp, dial ${dial.width / rule.density.density} dp")
             assertTrue("$name: the dial is ${dial.width / rule.density.density} dp", dial.width >= 280 * rule.density.density)
+            // (0.27) The compass stays where it is whatever the line under it says: turning, aligned, or unsure with the
+            // figure 8 (the owner: "why does it go up and down? It should stay stationary").
+            val key = name.substringAfter(' ')
+            dialAt[key]?.let { assertTrue("$name: the dial moved from $it to $dial", it == dial) } ?: run { dialAt[key] = dial }
             assertTrue("$name: the accuracy ends at ${accuracy.bottom / rule.density.density} dp", accuracy.bottom <= limit)
         }
         val qibla = Qibla.from(PrayerProvider.place(h.settings)!!.point).bearingDeg

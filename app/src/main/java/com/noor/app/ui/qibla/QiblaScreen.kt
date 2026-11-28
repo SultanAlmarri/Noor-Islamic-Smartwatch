@@ -62,6 +62,9 @@ import com.noor.app.ui.settings.SectionFooter
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -197,10 +200,15 @@ fun QiblaContent(
                     uncertaintyDeg = reading?.headingAccuracyDeg)
             }
             // 3. What to do: "Turn right 83°" with the way to turn drawn beside it, or "Facing the Qibla"; while the
-            // compass is unsure, the figure 8 that fixes it (0.22.1) in the line's place.
+            // compass is unsure, the figure 8 that fixes it (0.22.1) in the line's place. (0.27) Both are always laid out
+            // in one slot as tall as the taller, one shown and the other invisible, so the compass never moves when the
+            // accuracy changes between Fair and Poor (the owner: "why does it go up and down? It should stay stationary").
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                if (unsure) CalibrateNudge(onOpen = { showCalibration = true }, compact = true)
-                else Row(Modifier.fillMaxWidth().heightIn(min = 34.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                val nudge by animateFloatAsState(if (unsure) 1f else 0f, tween(NoorMotion.Standard), label = "nudge")
+                Box(Modifier.graphicsLayer { alpha = nudge }.then(if (unsure) Modifier else Modifier.clearAndSetSemantics { })) {
+                    CalibrateNudge(onOpen = { if (unsure) showCalibration = true }, compact = true, phase = if (unsure) null else NUDGE_STILL_PHASE)
+                }
+                if (nudge < 1f) Row(Modifier.fillMaxWidth().heightIn(min = 34.dp).graphicsLayer { alpha = 1f - nudge }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(24.dp))
                     if (turning) Icon(
                         if (turn!! > 0) Icons.Rounded.RotateRight else Icons.Rounded.RotateLeft, null, tint = c.goldText,
