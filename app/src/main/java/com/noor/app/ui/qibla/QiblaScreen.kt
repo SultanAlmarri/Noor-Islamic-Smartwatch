@@ -62,9 +62,6 @@ import com.noor.app.ui.settings.SectionFooter
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -201,20 +198,19 @@ fun QiblaContent(
             }
             // 3. What to do: "Turn right 83°" with the way to turn drawn beside it, or "Facing the Qibla"; while the
             // compass is unsure, the figure 8 that fixes it (0.22.1) in the line's place. (0.27) Both are always laid out
-            // in one slot as tall as the taller, one shown and the other invisible, so the compass never moves when the
+            // in one slot as tall as the calibrate card (ReservedSlot), so the compass never moves when the
             // accuracy changes between Fair and Poor (the owner: "why does it go up and down? It should stay stationary").
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                val nudge by animateFloatAsState(if (unsure) 1f else 0f, tween(NoorMotion.Standard), label = "nudge")
-                Box(Modifier.graphicsLayer { alpha = nudge }.then(if (unsure) Modifier else Modifier.clearAndSetSemantics { })) {
-                    CalibrateNudge(onOpen = { if (unsure) showCalibration = true }, compact = true, phase = if (unsure) null else NUDGE_STILL_PHASE)
-                }
-                if (nudge < 1f) Row(Modifier.fillMaxWidth().heightIn(min = 34.dp).graphicsLayer { alpha = 1f - nudge }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(24.dp))
-                    if (turning) Icon(
-                        if (turn!! > 0) Icons.Rounded.RotateRight else Icons.Rounded.RotateLeft, null, tint = c.goldText,
-                        modifier = Modifier.padding(end = 8.dp).size(24.dp),
-                    )
-                    if (status != null) Text(status, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold), color = statusColor, textAlign = TextAlign.Center)
+            ReservedSlot(reserve = { CalibrateNudge(onOpen = {}, compact = true, phase = NUDGE_STILL_PHASE) }) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    if (unsure) CalibrateNudge(onOpen = { showCalibration = true }, compact = true)
+                    else Row(Modifier.fillMaxWidth().heightIn(min = 34.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        if (aligned) Icon(Icons.Rounded.CheckCircle, null, tint = c.success, modifier = Modifier.padding(end = 8.dp).size(24.dp))
+                        if (turning) Icon(
+                            if (turn!! > 0) Icons.Rounded.RotateRight else Icons.Rounded.RotateLeft, null, tint = c.goldText,
+                            modifier = Modifier.padding(end = 8.dp).size(24.dp),
+                        )
+                        if (status != null) Text(status, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold), color = statusColor, textAlign = TextAlign.Center)
+                    }
                 }
             }
             // 4. The readings in one card: where the Qibla is, where the phone points, and how sure the compass is
@@ -352,6 +348,21 @@ private fun QiblaFit(room: androidx.compose.ui.unit.Dp, content: @Composable () 
             others.getValue(2).placeRelative(0, y); y += others.getValue(2).height + gaps[2]
             others.getValue(3).placeRelative(0, y)
         }
+    }
+}
+
+/**
+ * (0.27) A slot as tall as the taller of [content] and [reserve], with [content] placed in it centred. [reserve] is
+ * only measured, never placed: it is not drawn and not in the semantics tree, it only holds the room.
+ */
+@Composable
+private fun ReservedSlot(reserve: @Composable () -> Unit, content: @Composable () -> Unit) {
+    androidx.compose.ui.layout.SubcomposeLayout(Modifier.fillMaxWidth()) { constraints ->
+        val loose = constraints.copy(minHeight = 0)
+        val held = subcompose("reserve", reserve).maxOfOrNull { it.measure(loose).height } ?: 0
+        val shown = subcompose("content", content).map { it.measure(loose) }
+        val h = maxOf(held, shown.maxOfOrNull { it.height } ?: 0)
+        layout(constraints.maxWidth, h) { shown.forEach { it.placeRelative(0, (h - it.height) / 2) } }
     }
 }
 
